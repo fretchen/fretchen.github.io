@@ -1,14 +1,16 @@
 import React from "react";
 import { css } from "../../styled-system/css";
 import * as styles from "../../layouts/styles";
+import { AgentChecker } from "../../components/AgentChecker";
 
 const LLM_ORIGIN = "https://llm-agent.fretchen.eu";
 const GH_BLOB = "https://github.com/fretchen/fretchen.github.io/blob/main";
+const X402_DOCS = "https://docs.x402.org";
 
 // Small presentational helpers ------------------------------------------------
 
 const sectionCard = css({
-  mb: "10",
+  mb: "8",
   p: "6",
   bg: "gray.50",
   borderRadius: "lg",
@@ -16,7 +18,7 @@ const sectionCard = css({
   borderColor: "gray.200",
 });
 
-const h2 = css({ fontSize: "xl", fontWeight: "semibold", mb: "4", color: "gray.800" });
+const h2 = css({ fontSize: "xl", fontWeight: "semibold", mb: "3", color: "gray.800" });
 const para = css({ fontSize: "sm", color: "gray.600", mb: "3", lineHeight: "1.6" });
 const codeBlock = css({
   bg: "gray.900",
@@ -35,6 +37,18 @@ const extLink = css({ color: "indigo.600", textDecoration: "underline", _hover: 
 
 function Code({ children }: { children: string }) {
   return <pre className={codeBlock}>{children}</pre>;
+}
+
+/** One requirement line in the checklist. */
+function Req({ children }: { children: React.ReactNode }) {
+  return (
+    <li className={css({ display: "flex", gap: "2", alignItems: "flex-start", mb: "2" })}>
+      <span aria-hidden className={css({ color: "indigo.500", flexShrink: 0, fontWeight: "bold" })}>
+        ☐
+      </span>
+      <span className={css({ fontSize: "sm", color: "gray.700", lineHeight: "1.6" })}>{children}</span>
+    </li>
+  );
 }
 
 function Challenge({ title, children }: { title: string; children: React.ReactNode }) {
@@ -72,54 +86,112 @@ export default function Page() {
           })}
         >
           <span className={css({ fontSize: "sm", color: "alphaBanner.text" })}>
-            <span className={css({ color: "alphaBanner.icon" })}>🧪</span> <strong>Beta</strong> — this documents the{" "}
-            <code className={inlineCode}>llm/v1</code> agent contract. The client-facing contract is stable and
-            self-checkable; the rough edges are on the ecosystem side (thin tooling, few facilitators) — see{" "}
+            <span className={css({ color: "alphaBanner.icon" })}>🧪</span> <strong>Beta</strong> — the payment rails
+            behind this are new. The endpoint contract below is stable and you can verify yours with the checker on this
+            page, but the surrounding ecosystem is still thin (see{" "}
             <a href="#challenges" className={css({ color: "alphaBanner.icon", textDecoration: "underline" })}>
-              Known Challenges
+              Known limitations
             </a>
-            .
+            ).
           </span>
         </div>
 
         {/* Hero */}
         <div className={css({ textAlign: "center", mb: "8", pt: "2" })}>
           <h1 className={css({ fontSize: "3xl", fontWeight: "bold", mb: "4", color: "gray.800" })}>
-            🤖 Build an <code className={inlineCode}>llm/v1</code> Agent
+            🤖 Build your own agent
           </h1>
           <p
             className={css({
               fontSize: "lg",
               color: "gray.600",
-              maxWidth: "620px",
+              maxWidth: "640px",
               margin: "0 auto",
               lineHeight: "1.6",
             })}
           >
-            An open, machine-checkable contract for an x402-paid chat endpoint. Any agent that meets it can be used by
-            the{" "}
+            Build a chat endpoint that earns a small crypto payment per message. If it meets the requirements below, the{" "}
             <a href="/assistent" className={extLink}>
               assistant
             </a>{" "}
-            — no account, no manual approval.
+            can use it — no account and no manual approval. Paste your URL into the{" "}
+            <a href="#checker" className={extLink}>
+              checker
+            </a>{" "}
+            to see if you&apos;re there.
           </p>
         </div>
 
-        {/* SECTION 1 — what llm/v1 is */}
+        {/* SECTION 1 — how payment works (plain + links out) */}
         <div className={sectionCard}>
-          <h2 className={h2}>
-            📡 What <code className={inlineCode}>llm/v1</code> is
-          </h2>
+          <h2 className={h2}>💸 How payment works (in one paragraph)</h2>
           <p className={para}>
-            An <code className={inlineCode}>llm/v1</code> agent is a single HTTP endpoint that speaks the{" "}
-            <strong>OpenAI chat-completions</strong> body and is paid per message via{" "}
-            <strong>x402 batch-settlement</strong> (a USDC payment channel). The OpenAI shape is there so the
-            request/response is easy to read and reuse types against — it is <em>not</em> a promise that a stock OpenAI
-            SDK can pay it (it can&apos;t; see Known Challenges).
+            When someone calls your endpoint without paying, you answer with HTTP <strong>402 Payment Required</strong>{" "}
+            and a header describing how to pay. Their client pays in <strong>USDC</strong> (a dollar stablecoin) and
+            retries. Instead of one on-chain transaction per message — too slow and too expensive for chat — payment
+            uses a <strong>channel</strong>: the user deposits once into an on-chain escrow, then each message is a tiny
+            signed IOU (&quot;voucher&quot;), and you redeem the accumulated vouchers on-chain later in one batch. This
+            channel scheme is called <strong>x402 batch-settlement</strong>.
+          </p>
+          <p className={para}>
+            You don&apos;t implement any of this yourself — the <code className={inlineCode}>@x402/evm</code> SDK does
+            the protocol work. This page only covers what&apos;s specific to being usable by the assistant. New to x402?
+            Start here:
+          </p>
+          <ul className={css({ fontSize: "sm", color: "gray.600", pl: "4", lineHeight: "1.8", mb: "0" })}>
+            <li>
+              <a
+                href={`${X402_DOCS}/core-concepts/http-402`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={extLink}
+              >
+                What the 402 challenge is →
+              </a>
+            </li>
+            <li>
+              <a
+                href={`${X402_DOCS}/getting-started/quickstart-for-sellers`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={extLink}
+              >
+                Quickstart for sellers (accept payments) →
+              </a>
+            </li>
+            <li>
+              <a
+                href={`${X402_DOCS}/schemes/batch-settlement`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={extLink}
+              >
+                The batch-settlement channel scheme →
+              </a>
+            </li>
+            <li>
+              <a
+                href={`${X402_DOCS}/core-concepts/facilitator`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={extLink}
+              >
+                What a facilitator is (it submits the on-chain transactions for you) →
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        {/* SECTION 2 — the API */}
+        <div className={sectionCard}>
+          <h2 className={h2}>📡 The API your endpoint exposes</h2>
+          <p className={para}>
+            The request and response are the <strong>OpenAI chat-completions</strong> format — so it looks like any
+            other LLM API and you can reuse existing types.
           </p>
 
-          <p className={css({ fontSize: "xs", color: "gray.500", mb: "1" })}>Request:</p>
-          <Code>{`POST /  (no auth header; the 402 challenge drives payment)
+          <p className={css({ fontSize: "xs", color: "gray.500", mb: "1" })}>Request (a plain POST, no auth header):</p>
+          <Code>{`POST /
 {
   "model": "mistral-large-latest",
   "messages": [{ "role": "user", "content": "Hello" }]
@@ -138,218 +210,167 @@ export default function Page() {
 
           <ul className={css({ fontSize: "sm", color: "gray.600", pl: "4", lineHeight: "1.7", mb: "3" })}>
             <li>
-              <code className={inlineCode}>usage</code> is <strong>required</strong> — the per-message charge is settled
-              from it.
+              <code className={inlineCode}>usage</code> is <strong>required</strong> — the per-message charge is
+              computed from the token counts.
             </li>
             <li>
-              Streaming (<code className={inlineCode}>stream: true</code>) is <strong>not supported</strong> —
-              settlement needs the final usage, which needs the whole completion.
+              Streaming (<code className={inlineCode}>stream: true</code>) is <strong>not supported</strong> (settlement
+              needs the final token count, which needs the whole reply).
             </li>
             <li>
-              <code className={inlineCode}>model</code> is validated against the advertised ids; an unknown model
-              returns <code className={inlineCode}>404 model_not_found</code>.
+              Reject unknown <code className={inlineCode}>model</code> values with{" "}
+              <code className={inlineCode}>404</code>; only serve the model ids you advertise.
             </li>
           </ul>
 
           <div className={css({ display: "flex", gap: "3", flexWrap: "wrap", mt: "2" })}>
             <a href={`${LLM_ORIGIN}/openapi.json`} target="_blank" rel="noopener noreferrer" className={extLink}>
-              📄 Live spec (openapi.json) →
+              📄 A live example spec →
             </a>
             <a href={`${GH_BLOB}/scw_js/sc_llm_x402.ts`} target="_blank" rel="noopener noreferrer" className={extLink}>
-              💬 Reference implementation →
+              💬 A working reference implementation →
             </a>
           </div>
         </div>
 
-        {/* SECTION 2 — interop floor + self-check */}
+        {/* SECTION 3 — requirements checklist */}
         <div className={sectionCard}>
-          <h2 className={h2}>✅ The contract, and how to self-check it</h2>
+          <h2 className={h2}>✅ Requirements</h2>
           <p className={para}>
-            Compatibility is <strong>objective and automated</strong> — there is no human approval step. An agent
-            qualifies when it publishes the right discovery document and advertises the right payment option. These are
-            exactly the two checks the assistant runs before it will talk to an endpoint.
+            Everything an endpoint must do to be usable by the assistant. The checker below tests each of these.
           </p>
-
-          <p className={css({ fontSize: "sm", fontWeight: "medium", color: "gray.800", mb: "1" })}>
-            Check 1 — discovery document
-          </p>
-          <p className={para}>
-            Serve <code className={inlineCode}>GET &lt;origin&gt;/openapi.json</code> returning{" "}
-            <code className={inlineCode}>200</code> with{" "}
-            <code className={inlineCode}>x-service-type: &quot;llm/v1&quot;</code>, plus{" "}
-            <code className={inlineCode}>x-interop-floor</code>, <code className={inlineCode}>x-payment-info</code>, and{" "}
-            <code className={inlineCode}>x-discovery.ownershipProofs</code>.
-          </p>
-          <Code>{`curl -s https://your-agent.example/openapi.json | jq '."x-service-type"'
-# => "llm/v1"`}</Code>
-
-          <p className={css({ fontSize: "sm", fontWeight: "medium", color: "gray.800", mb: "1" })}>
-            Check 2 — payment challenge meets the interop floor
-          </p>
-          <p className={para}>
-            A bare unpaid <code className={inlineCode}>POST</code> must return <code className={inlineCode}>402</code>{" "}
-            with a base64 <code className={inlineCode}>Payment-Required</code> header whose decoded{" "}
-            <code className={inlineCode}>accepts[]</code> has at least one entry with{" "}
-            <strong>
-              network Base mainnet (<code className={inlineCode}>eip155:8453</code>)
-            </strong>
-            ,{" "}
-            <strong>
-              scheme <code className={inlineCode}>batch-settlement</code>
-            </strong>
-            , asset <strong>USDC</strong>.
-          </p>
-          <Code>{`curl -si https://your-agent.example/ \\
-  -X POST -H 'Content-Type: application/json' \\
-  -d '{"model":"probe","messages":[]}' | grep -i '^payment-required'
-# decode the base64 value → accepts[] must include { network: "eip155:8453", scheme: "batch-settlement" }`}</Code>
-
-          <p className={para}>
-            Pass both and any <code className={inlineCode}>llm/v1</code> client can use you. Ownership proofs are an
-            EIP-191 signature over your origin; the repo ships a signer you can reuse:{" "}
-            <a
-              href={`${GH_BLOB}/scw_js/scripts/sign_ownership_proof.ts`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={extLink}
-            >
-              sign_ownership_proof.ts
-            </a>
-            .
-          </p>
-        </div>
-
-        {/* SECTION 3 — what running a provider takes */}
-        <div className={sectionCard}>
-          <h2 className={h2}>🛠️ What running a provider takes</h2>
-          <p className={para}>
-            Most of the stack is stock <code className={inlineCode}>@x402/evm</code>. One piece is currently
-            bring-your-own.
-          </p>
-
-          <p className={css({ fontSize: "sm", fontWeight: "medium", color: "green.700", mb: "1" })}>
-            Standard / reusable
-          </p>
-          <ul className={css({ fontSize: "sm", color: "gray.600", pl: "4", lineHeight: "1.7", mb: "3" })}>
-            <li>
-              Build the 402 with the SDK&apos;s <code className={inlineCode}>BatchSettlementEvmScheme</code> +{" "}
-              <code className={inlineCode}>enhancePaymentRequirements</code>; verify each message&apos;s voucher with{" "}
-              <code className={inlineCode}>verifyPayment</code>.
-            </li>
-            <li>
-              Channel storage is stock: <code className={inlineCode}>InMemoryChannelStorage</code> for dev,{" "}
-              <code className={inlineCode}>RedisChannelStorage</code>/
-              <code className={inlineCode}>FileChannelStorage</code> for prod. A custom backend only has to provide
-              atomic compare-and-swap on <code className={inlineCode}>updateChannel</code>.
-            </li>
-            <li>
-              Run a <strong>recurring claim/settle job</strong>. Per-message voucher settlements are local bookkeeping
-              only — funds move on-chain solely through{" "}
-              <code className={inlineCode}>scheme.createChannelManager().claimAndSettle()</code>. Skip it and earned
-              vouchers never become revenue.
-            </li>
-            <li>
-              Config: a receiver wallet, an off-chain <code className={inlineCode}>receiverAuthorizer</code> signing
-              key, per-network RPC URLs, your inference key, and pricing / withdraw-delay knobs.
-            </li>
+          <ul className={css({ listStyle: "none", pl: "0" })}>
+            <Req>
+              Serve the OpenAI-shaped chat endpoint at <code className={inlineCode}>POST /</code> (above).
+            </Req>
+            <Req>
+              Serve a discovery document at <code className={inlineCode}>GET /openapi.json</code> that includes{" "}
+              <code className={inlineCode}>&quot;x-service-type&quot;: &quot;llm/v1&quot;</code> (the tag that marks it
+              assistant-compatible), plus <code className={inlineCode}>x-payment-info</code> and{" "}
+              <code className={inlineCode}>x-discovery.ownershipProofs</code>.
+            </Req>
+            <Req>
+              On an unpaid request, return <code className={inlineCode}>402</code> whose payment options include{" "}
+              <strong>USDC on Base</strong> (<code className={inlineCode}>eip155:8453</code>) via{" "}
+              <strong>batch-settlement</strong>. That&apos;s the one payment method the assistant&apos;s wallet can
+              currently fulfil.
+            </Req>
+            <Req>
+              Allow the browser to read your responses: set{" "}
+              <code className={inlineCode}>Access-Control-Allow-Origin: *</code> and{" "}
+              <code className={inlineCode}>Access-Control-Expose-Headers: Payment-Required</code>. The assistant runs in
+              a browser, so without this it can&apos;t see your 402.
+            </Req>
+            <Req>
+              Use an x402 <strong>facilitator that supports batch-settlement</strong> — the service that submits the
+              on-chain deposit/claim/settle transactions. Point at a public one from{" "}
+              <a
+                href={`${X402_DOCS}/dev-tools/facilitators`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={extLink}
+              >
+                the facilitator list
+              </a>{" "}
+              (e.g.{" "}
+              <a
+                href="https://api.solvador.com/supported"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={extLink}
+              >
+                Solvador
+              </a>
+              ), or run your own.
+            </Req>
+            <Req>
+              Publish an <strong>ownership proof</strong> (recommended) — an EIP-191 signature over your origin, so
+              clients can confirm you control the address they&apos;ll pay. Reusable signer:{" "}
+              <a
+                href={`${GH_BLOB}/scw_js/scripts/sign_ownership_proof.ts`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={extLink}
+              >
+                sign_ownership_proof.ts
+              </a>
+              .
+            </Req>
+            <Req>
+              Run a <strong>recurring claim job</strong> — per-message vouchers are just IOUs until you batch-redeem
+              them on-chain (<code className={inlineCode}>claimAndSettle()</code>). Skip it and you never actually get
+              paid.
+            </Req>
           </ul>
-
-          <p className={css({ fontSize: "sm", fontWeight: "medium", color: "amber.700", mb: "1" })}>
-            The one external dependency: a facilitator
-          </p>
-          <p className={css({ fontSize: "sm", color: "gray.600", lineHeight: "1.7", mb: "0" })}>
-            You need an <strong>x402 batch-settlement facilitator</strong> — the process that submits the on-chain
-            deposit / claim / settle transactions. Unlike the <code className={inlineCode}>exact</code> scheme, only a
-            handful of public facilitators enable batch-settlement on EVM mainnet today (
-            <a href="https://api.solvador.com/supported" target="_blank" rel="noopener noreferrer" className={extLink}>
-              Solvador
-            </a>{" "}
-            is one; this project runs its own). You can point at one of those or run your own — but the small pool is a
-            real constraint, so check{" "}
-            <a
-              href="https://docs.x402.org/dev-tools/facilitators"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={extLink}
-            >
-              the facilitator list
-            </a>{" "}
-            for one that advertises <code className={inlineCode}>batch-settlement</code> on your network.
-          </p>
         </div>
 
-        {/* SECTION 4 — known challenges */}
-        <div id="challenges" className={sectionCard}>
-          <h2 className={h2}>⚠️ Known challenges (beta)</h2>
+        {/* SECTION 4 — the live checker */}
+        <div id="checker" className={sectionCard}>
+          <h2 className={h2}>🔎 Check your endpoint</h2>
           <p className={para}>
-            We&apos;re documenting these openly because <code className={inlineCode}>llm/v1</code> is genuinely beta —
-            these are the sharp edges we&apos;ve actually hit.
+            Paste your endpoint URL. This runs the exact checks the assistant runs — reachability, the discovery tag,
+            the 402 challenge, and the payment option — and reports each one.
+          </p>
+          <AgentChecker />
+        </div>
+
+        {/* SECTION 5 — known limitations */}
+        <div id="challenges" className={sectionCard}>
+          <h2 className={h2}>⚠️ Known limitations (beta)</h2>
+          <p className={para}>
+            We document these openly — they&apos;re the rough edges of a young ecosystem, not of your code.
           </p>
 
-          <Challenge title="Few facilitators run batch-settlement">
-            Batch-settlement is a Coinbase-blessed standard scheme, but most public facilitators (Coinbase&apos;s CDP
-            among them) only enable <code className={inlineCode}>exact</code>. A handful advertise batch-settlement on
-            EVM mainnet —{" "}
+          <Challenge title="Few facilitators support batch-settlement">
+            Most public facilitators (including Coinbase&apos;s) only support the simpler{" "}
+            <code className={inlineCode}>exact</code> scheme. A handful run batch-settlement on mainnet —{" "}
             <a href="https://api.solvador.com/supported" target="_blank" rel="noopener noreferrer" className={extLink}>
               Solvador
             </a>{" "}
-            and this project — so you can point at one or run your own, but the pool is small. Part of the reason: the
-            abstract scheme is standardized, yet the EVM wire binding is currently defined by the{" "}
-            <code className={inlineCode}>@x402/evm</code> code rather than a ratified spec doc, which slows adoption.
+            and this project — so your facilitator options are limited today. (The scheme is standard; its EVM wire
+            binding is still defined by the <code className={inlineCode}>@x402/evm</code> code rather than a ratified
+            spec, which is why adoption is thin.)
           </Challenge>
 
-          <Challenge title="A stock OpenAI SDK can't pay the endpoint">
-            The SDK has no client-side register helper for batch-settlement (unlike{" "}
-            <code className={inlineCode}>registerExactEvmScheme</code> for exact). A caller must hand-wire the scheme,
-            channel storage, deposit, and voucher signing. So the OpenAI body shape buys legibility, not drop-in SDK use
-            — a plain <code className={inlineCode}>Authorization: Bearer</code> request just hits the 402 and stops.
+          <Challenge title="A plain OpenAI SDK can't pay it">
+            There is no drop-in client helper for batch-settlement yet, so a caller has to hand-wire the payment
+            (channel storage, deposit, voucher signing). The OpenAI-shaped body keeps it familiar to read, but a plain{" "}
+            <code className={inlineCode}>Authorization: Bearer</code> request just hits the 402 and stops.
           </Challenge>
 
-          <Challenge title="channel_busy has no client auto-recovery">
-            Each channel is serialized: a second concurrent request returns{" "}
-            <code className={inlineCode}>channel_busy</code>, and the client SDK does not auto-recover. An interrupted
-            request (tab close, network drop) orphans the lock for up to the request timeout (~2 min). The fix is
-            &quot;wait a few seconds and retry.&quot;
+          <Challenge title="One message at a time per channel">
+            A channel processes requests one at a time — a concurrent second request is rejected until the first
+            settles, and an interrupted request can hold the lock for up to ~2 minutes. The client handles this by
+            waiting and retrying.
           </Challenge>
 
           <Challenge title="Base mainnet only">
-            Optimism mainnet is excluded by a gap in <code className={inlineCode}>@x402/evm</code>&apos;s{" "}
-            <code className={inlineCode}>DEFAULT_STABLECOINS</code> registry (it throws while enhancing the 402), even
-            though the contract is deployed there. The interop floor is Base (
-            <code className={inlineCode}>eip155:8453</code>).
+            The payment option must be on Base (<code className={inlineCode}>eip155:8453</code>). Optimism is currently
+            blocked by a gap in the <code className={inlineCode}>@x402/evm</code> stablecoin registry, even though the
+            contract is deployed there.
           </Challenge>
 
-          <Challenge title="Withdraw delay must exceed your claim interval">
-            A channel&apos;s unilateral-exit withdraw delay has to stay well above your claim/settle job&apos;s
-            interval, or a channel can become withdrawable before you ever claim it — and you lose earned revenue. The
-            reference uses a 24h delay against a 12h job. (Also: cache on-chain channel state briefly, or a user&apos;s
-            first message right after depositing can spuriously fail.)
-          </Challenge>
-
-          <Challenge title="Cumulative-amount desync needs corrective 402s">
-            If client and server disagree on the channel&apos;s cumulative total, recovery requires the client signer to
-            expose <code className={inlineCode}>readContract</code> and the server to re-emit the 402 via the SDK&apos;s{" "}
-            <code className={inlineCode}>createPaymentRequiredResponse</code> (a hand-rolled 402 body breaks recovery).
-            Get either wrong and a recoverable desync becomes a hard failure.
+          <Challenge title="Getting the claim timing right matters">
+            Your channel&apos;s withdraw delay must stay well above how often you run the claim job, or a channel can
+            become withdrawable before you claim it — losing you earned revenue. The reference uses a 24h delay against
+            a 12h job.
           </Challenge>
         </div>
 
-        {/* SECTION 5 — what's next / contact */}
+        {/* SECTION 6 — contact */}
         <div className={sectionCard}>
           <h2 className={h2}>🧭 Where this is going</h2>
           <p className={para}>
-            The contract itself is stable. The open questions are ecosystem-level: client ergonomics (the SDK has no
-            batch-settlement register helper, so every client hand-wires the scheme) and the still-thin set of
-            facilitators and agents running it. Until that ecosystem fills in, the realistic pool of third-party{" "}
-            <code className={inlineCode}>llm/v1</code> agents is small — which is exactly why the assistant doesn&apos;t
-            yet expose a &quot;pick another agent&quot; box.
+            The endpoint contract is stable; what&apos;s still filling in is the ecosystem around it — a drop-in client,
+            more facilitators, more agents. Until then the pool of compatible third-party agents is small, which is why
+            the assistant doesn&apos;t yet let you pick one from a list.
           </p>
           <p className={css({ fontSize: "sm", color: "gray.600", lineHeight: "1.6", mb: "0" })}>
             Building one, or want to be listed when a picker ships? Reach out at{" "}
             <a href="mailto:fretchen.dev@proton.me" className={extLink}>
               fretchen.dev@proton.me
             </a>{" "}
-            or via{" "}
+            or on{" "}
             <a
               href="https://github.com/fretchen/fretchen.github.io"
               target="_blank"
@@ -358,7 +379,7 @@ export default function Page() {
             >
               GitHub
             </a>
-            . The full design record lives in{" "}
+            . The reference implementation and full spec live in{" "}
             <a href={`${GH_BLOB}/scw_js/README.md`} target="_blank" rel="noopener noreferrer" className={extLink}>
               scw_js/README.md
             </a>{" "}

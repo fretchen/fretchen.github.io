@@ -190,3 +190,174 @@ export async function precheckLlmV1Agent(agentUrl: string): Promise<PreCheckResu
     },
   };
 }
+
+// ---------------------------------------------------------------------------
+// Build-your-own-agent checker: a per-step diagnostic (vs. precheckLlmV1Agent's
+// first-fail gate). Runs the exact checks the assistant applies, but reports every
+// step so a builder can see all their problems at once. Powers AgentChecker.tsx.
+// ---------------------------------------------------------------------------
+
+export type CheckStatus = "pass" | "fail" | "warn";
+
+export interface CheckStep {
+  id: string;
+  /** Short imperative label, e.g. "Serves /openapi.json". */
+  label: string;
+  status: CheckStatus;
+  /** One-line explanation / fix hint shown under the label. */
+  detail: string;
+}
+
+export interface CheckReport {
+  /** True only if every non-warn step passed. */
+  ok: boolean;
+  steps: CheckStep[];
+}
+
+// A browser cross-origin fetch that the server received but didn't allow throws a
+// generic TypeError ("Failed to fetch") — indistinguishable from DNS/network failure at
+// the JS level. So we can't *prove* CORS from the client; we name it as the likely cause
+// and give the fix, which is far more useful to a builder than a bare "could not reach".
+const CORS_HINT =
+  "add `Access-Control-Allow-Origin: *` and `Access-Control-Expose-Headers: Payment-Required` to your responses (a browser can't tell a CORS block apart from a network error)";
+
+/**
+ * Run all llm/v1 compatibility checks against an agent URL and report each step's result.
+ * Never throws — every failure becomes a `fail`/`warn` step with an actionable `detail`.
+ */
+export async function checkLlmV1Agent(agentUrl: string): Promise<CheckReport> {
+  const steps: CheckStep[] = [];
+  const push = (id: string, label: string, status: CheckStatus, detail: string) =>
+    steps.push({ id, label, status, detail });
+
+  // 1. URL parseable.
+  let origin: string;
+  try {
+    origin = agentOrigin(agentUrl);
+  } catch {
+    push("url", "Valid URL", "fail", "That does not look like a valid URL (e.g. https://your-agent.example).");
+    return { ok: false, steps };
+  }
+  push("url", "Valid URL", "pass", origin);
+
+  // 2 + 3. /openapi.json reachable cross-origin, with x-service-type: llm/v1.
+  let doc: OpenApiDoc | null = null;
+  try {
+    const res = await fetch(`${origin}/openapi.json`, { method: "GET" });
+    if (!res.ok) {
+      push("openapi", "Serves /openapi.json", "fail", `GET ${origin}/openapi.json returned ${res.status}.`);
+    } else {
+      doc = (await res.json().catch(() => null)) as OpenApiDoc | null;
+      if (!doc) {
+        push("openapi", "Serves /openapi.json", "fail", "The document was reached but is not valid JSON.");
+      } else {
+        push("openapi", "Serves /openapi.json", "pass", `Reachable at ${origin}/openapi.json.`);
+      }
+    }
+  } catch {
+    push(
+      "openapi",
+      "Serves /openapi.json",
+      "fail",
+      `Could not read ${origin}/openapi.json from the browser — likely CORS: ${CORS_HINT}.`,
+    );
+  }
+
+  if (doc) {
+    if (doc["x-service-type"] === "llm/v1") {
+      push("service-type", 'Declares x-service-type: "llm/v1"', "pass", "The discovery tag is present.");
+    } else {
+      push(
+        "service-type",
+        'Declares x-service-type: "llm/v1"',
+        "fail",
+        `Found x-service-type: ${JSON.stringify(doc["x-service-type"]) ?? "(none)"}. Set it to "llm/v1".`,
+      );
+    }
+  }
+
+  // 4 + 5. Bare POST → 402 with a readable Payment-Required header.
+  let accepts: AcceptsEntry[] | null = null;
+  let got402 = false;
+  try {
+    const res = await fetch(agentUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "probe", messages: [] }),
+    });
+    if (res.status === 402) {
+      got402 = true;
+      push("challenge", "Returns a 402 payment challenge", "pass", "An unpaid request is asked to pay.");
+      const header = res.headers.get("Payment-Required");
+      if (header === null) {
+        push(
+          "payment-required",
+          "Exposes the Payment-Required header",
+          "fail",
+          `The 402 has no readable Payment-Required header — if the server sets it, it isn't exposed to the browser: ${CORS_HINT}.`,
+        );
+      } else {
+        accepts = decodePaymentRequired(header);
+        push(
+          "payment-required",
+          "Exposes the Payment-Required header",
+          accepts ? "pass" : "fail",
+          accepts
+            ? "Header present and decodable."
+            : "Header present but not valid base64 JSON with an accepts[] array.",
+        );
+      }
+    } else {
+      push(
+        "challenge",
+        "Returns a 402 payment challenge",
+        "fail",
+        `An unpaid POST returned ${res.status}, expected 402. Let unauthenticated probes reach the payment challenge.`,
+      );
+    }
+  } catch {
+    push(
+      "challenge",
+      "Returns a 402 payment challenge",
+      "fail",
+      `Could not POST to ${agentUrl} from the browser — likely CORS: ${CORS_HINT}.`,
+    );
+  }
+
+  // 6. accepts[] meets the payment requirement (USDC on Base via batch-settlement).
+  if (got402) {
+    if (meetsLlmV1Floor(accepts)) {
+      push(
+        "floor",
+        "Offers USDC on Base via batch-settlement",
+        "pass",
+        `accepts[] includes ${LLM_V1_FLOOR.scheme} on ${LLM_V1_FLOOR.network}.`,
+      );
+    } else {
+      push(
+        "floor",
+        "Offers USDC on Base via batch-settlement",
+        "fail",
+        `accepts[] must include an entry with network ${LLM_V1_FLOOR.network} (Base) and scheme ${LLM_V1_FLOOR.scheme}.`,
+      );
+    }
+  }
+
+  // 7. Ownership proof (warn-only — recommended, not required to be usable).
+  if (doc) {
+    const proofs = (doc as { "x-discovery"?: { ownershipProofs?: unknown[] } })["x-discovery"]?.ownershipProofs;
+    if (Array.isArray(proofs) && proofs.length > 0) {
+      push("ownership", "Publishes an ownership proof", "pass", "x-discovery.ownershipProofs is present.");
+    } else {
+      push(
+        "ownership",
+        "Publishes an ownership proof",
+        "warn",
+        "Recommended: sign your origin and add it to x-discovery.ownershipProofs so clients can verify you control the payTo address.",
+      );
+    }
+  }
+
+  const ok = steps.every((s) => s.status !== "fail");
+  return { ok, steps };
+}

@@ -261,8 +261,8 @@ export default function Page() {
                 >
                   scw_js/package.json
                 </a>{" "}
-                for what we actually run) — batch-settlement is young and its APIs still move between minor versions,
-                so pin what you test against.
+                for what we actually run) — batch-settlement is young and its APIs still move between minor versions, so
+                pin what you test against.
               </li>
               <li>
                 <strong>An EVM wallet</strong> (two keys: one to receive funds, one off-chain signer — explained in step

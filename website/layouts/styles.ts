@@ -2593,8 +2593,14 @@ export const messageRole = css({
 });
 
 export const messageContent = css({
-  whiteSpace: "pre-wrap",
   lineHeight: "1.5",
+});
+
+// Plain-text messages (user input) preserve literal newlines/spacing.
+// Markdown-rendered messages (assistant output) skip this — Markdown's own
+// block spacing would otherwise double up with pre-wrap.
+export const messageContentPlain = css({
+  whiteSpace: "pre-wrap",
 });
 
 // Loading message

@@ -111,7 +111,16 @@ export async function callLLMAPI(
       choices: [
         {
           index: 0,
-          message: { role: "assistant", content: "I am a placeholder for the LLM response" },
+          message: {
+            role: "assistant",
+            content:
+              "**Placeholder response**\n\n" +
+              "This is a *mock* answer used for local/testnet testing. It includes:\n\n" +
+              "- a list item\n" +
+              "- some `inline code`\n" +
+              "- a [link](https://example.com)\n\n" +
+              "```js\nconsole.log('mock code block');\n```",
+          },
           finish_reason: "stop",
         },
       ],

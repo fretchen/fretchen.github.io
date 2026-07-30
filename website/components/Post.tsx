@@ -3,6 +3,7 @@ import { PostProps } from "../types/components";
 import MetadataLine from "./MetadataLine";
 import { Link } from "./Link";
 import { NFTFloatImage } from "./NFTFloatImage";
+import { MdxPre } from "./MdxCodeBlock";
 import { post, titleBar } from "../layouts/styles";
 import { loadLazyModuleFromDirectory } from "../utils/lazyGlobRegistry";
 import { isSupportedDirectory, getSupportedDirectories } from "../utils/supportedDirectories";
@@ -15,6 +16,10 @@ import { TableOfContents } from "./TableOfContents";
 import { Webmentions } from "./Webmentions";
 import { CommentsSection } from "./CommentsSection";
 
+// MDX components accept an extra `components` override prop (used to route `pre` through
+// MdxPre); plain TSX posts simply ignore it.
+type PostComponent = React.ComponentType<{ components?: Record<string, React.ComponentType> }>;
+
 // Dynamic React component renderer
 const ReactPostRenderer: React.FC<{
   componentPath: string;
@@ -22,7 +27,7 @@ const ReactPostRenderer: React.FC<{
   contentRef: React.RefObject<HTMLDivElement>;
   onReady?: () => void;
 }> = ({ componentPath, tokenID, contentRef, onReady }) => {
-  const [Component, setComponent] = React.useState<React.ComponentType | null>(null);
+  const [Component, setComponent] = React.useState<PostComponent | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState<boolean>(true);
 
@@ -139,7 +144,7 @@ const ReactPostRenderer: React.FC<{
   return (
     <div className={post.contentContainer} ref={contentRef}>
       {tokenID && <NFTFloatImage tokenId={tokenID} />}
-      <Component />
+      <Component components={{ pre: MdxPre }} />
     </div>
   );
 };

@@ -28,7 +28,7 @@ const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ definition, title, clas
   const configKey = config ? JSON.stringify(config) : "";
 
   const resolvedConfig = useMemo(() => {
-    const caller = (configKey ? (JSON.parse(configKey) as Record<string, unknown>) : {}) as Record<string, unknown>;
+    const caller: Record<string, unknown> = configKey ? JSON.parse(configKey) : {};
     return {
       startOnLoad: false,
       theme: "default" as const,

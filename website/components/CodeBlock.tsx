@@ -13,7 +13,7 @@
  * Visual treatment matches the dark blocks on pages/x402 (#1e1e1e / sm type), so that page
  * can adopt this component later without any visual change.
  */
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import hljs from "highlight.js/lib/core";
 import typescript from "highlight.js/lib/languages/typescript";
 import json from "highlight.js/lib/languages/json";
@@ -67,19 +67,26 @@ export interface CodeBlockProps {
   lang?: CodeLang;
 }
 
+/**
+ * Clipboard availability, read the hydration-safe way: the server snapshot is always false
+ * (no navigator there), so the SSR markup and the first client render agree, and React
+ * re-renders with the real value straight after hydration.
+ */
+const subscribeNoop = () => () => {};
+const clipboardAvailable = () => typeof navigator !== "undefined" && !!navigator.clipboard;
+const clipboardUnavailableOnServer = () => false;
+
 export function CodeBlock({ children, lang = "typescript" }: CodeBlockProps) {
   const [copied, setCopied] = useState(false);
-  // Rendered server-side too, where there is no navigator — resolve after mount so the
-  // button's presence never differs between the SSR markup and the hydrated DOM.
-  const [canCopy, setCanCopy] = useState(false);
+  const canCopy = useSyncExternalStore(subscribeNoop, clipboardAvailable, clipboardUnavailableOnServer);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    setCanCopy(typeof navigator !== "undefined" && !!navigator.clipboard);
-    return () => {
+  useEffect(
+    () => () => {
       if (timer.current) clearTimeout(timer.current);
-    };
-  }, []);
+    },
+    [],
+  );
 
   const copy = useCallback(() => {
     void navigator.clipboard.writeText(children).then(

@@ -6,6 +6,8 @@
  */
 
 import React, { useState, useMemo, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { AgentInfoPanel } from "./AgentInfoPanel";
 import { AgentSelector } from "./AgentSelector";
 import * as styles from "../layouts/styles";
@@ -291,7 +293,13 @@ export function AssistantChat() {
                     }`}
                   >
                     <div className={styles.messageRole}>{message.role === "user" ? youLabel : assistantLabel}</div>
-                    <div className={styles.messageContent}>{message.content}</div>
+                    <div className={styles.messageContent}>
+                      {message.role === "assistant" ? (
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+                      ) : (
+                        <div className={styles.messageContentPlain}>{message.content}</div>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))

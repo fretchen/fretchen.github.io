@@ -93,7 +93,7 @@ describe("ImageGenerator Reference Image Integration", () => {
     it("sollte JPEG Dateien akzeptieren", () => {
       renderWithQuery(<ImageGenerator />);
 
-      const fileInput = screen.getByTestId("reference-image-input");
+      const fileInput = screen.getByTestId("reference-image-input") as HTMLInputElement;
 
       // Simuliere JPEG File Upload
       const jpegFile = new File(["jpeg content"], "test.jpg", { type: "image/jpeg" });
@@ -108,7 +108,7 @@ describe("ImageGenerator Reference Image Integration", () => {
     it("sollte PNG Dateien akzeptieren", () => {
       renderWithQuery(<ImageGenerator />);
 
-      const fileInput = screen.getByTestId("reference-image-input");
+      const fileInput = screen.getByTestId("reference-image-input") as HTMLInputElement;
 
       // Simuliere PNG File Upload
       const pngFile = new File(["png content"], "test.png", { type: "image/png" });

@@ -35,20 +35,33 @@ export const mockChainId = vi.fn(() => 10); // Default: Optimism
 export const mockSwitchChainAsync = vi.fn().mockResolvedValue(undefined);
 
 // Account Mocks
-export const mockAccountData = vi.fn(() => ({
-  address: "0x123456789abcdef" as `0x${string}`,
-  isConnected: false,
-  status: "disconnected" as const,
-  isConnecting: false,
-  isDisconnected: true,
-  isReconnecting: false,
-}));
+interface MockAccountData {
+  address: `0x${string}` | undefined;
+  isConnected: boolean;
+  status: "connected" | "reconnecting" | "connecting" | "disconnected";
+  isConnecting: boolean;
+  isDisconnected: boolean;
+  isReconnecting: boolean;
+  chainId?: number;
+}
+
+export const mockAccountData = vi.fn(
+  (): MockAccountData => ({
+    address: "0x123456789abcdef" as `0x${string}`,
+    isConnected: false,
+    status: "disconnected",
+    isConnecting: false,
+    isDisconnected: true,
+    isReconnecting: false,
+  }),
+);
 
 // Contract Mocks
 export const mockReadContractData = vi.fn(() => ({
-  data: undefined,
+  data: undefined as unknown,
   error: null,
   isPending: false,
+  isLoading: false,
   refetch: vi.fn(),
 }));
 
@@ -57,6 +70,7 @@ export const mockWriteContractData = vi.fn(() => ({
   writeContractAsync: vi.fn(),
   isPending: false,
   error: null,
+  data: undefined as unknown,
 }));
 
 // =============================================================================

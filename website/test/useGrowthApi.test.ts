@@ -16,7 +16,7 @@ describe("useGrowthApi", () => {
     vi.mocked(useAccount).mockReturnValue({
       address: OWNER_ADDRESS,
       isConnected: true,
-    } as ReturnType<typeof useAccount>);
+    } as unknown as ReturnType<typeof useAccount>);
 
     vi.mocked(useSignMessage).mockReturnValue({
       signMessageAsync: mockSignMessageAsync,
@@ -151,7 +151,7 @@ describe("useGrowthApi", () => {
     vi.mocked(useAccount).mockReturnValue({
       address: undefined,
       isConnected: false,
-    } as ReturnType<typeof useAccount>);
+    } as unknown as ReturnType<typeof useAccount>);
 
     const { result } = renderHook(() => useGrowthApi());
     await expect(result.current.fetchDrafts()).rejects.toThrow("Wallet not connected");
@@ -221,7 +221,7 @@ describe("useGrowthApi", () => {
       vi.mocked(useAccount).mockReturnValue({
         address: "0x1111111111111111111111111111111111111111",
         isConnected: true,
-      } as ReturnType<typeof useAccount>);
+      } as unknown as ReturnType<typeof useAccount>);
       rerender();
 
       await result.current.fetchDrafts();

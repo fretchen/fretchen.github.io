@@ -43,7 +43,7 @@ function slugify(text: string): string {
  * const headings = useTableOfContents(contentRef);
  * ```
  */
-export function useTableOfContents(contentRef: RefObject<HTMLElement>, isReady: boolean = true): TocItem[] {
+export function useTableOfContents(contentRef: RefObject<HTMLElement | null>, isReady: boolean = true): TocItem[] {
   const [headings, setHeadings] = useState<TocItem[]>([]);
 
   useEffect(() => {

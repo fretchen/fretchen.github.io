@@ -5,7 +5,7 @@ import React from "react";
 import "@testing-library/jest-dom";
 
 describe("Modal (shared shell)", () => {
-  let onClose: ReturnType<typeof vi.fn>;
+  let onClose: ReturnType<typeof vi.fn<() => void>>;
 
   beforeEach(() => {
     onClose = vi.fn();

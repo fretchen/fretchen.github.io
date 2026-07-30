@@ -130,6 +130,7 @@ global.fetch = vi.fn();
 describe("NFTCard Component", () => {
   const mockProps: NFTCardProps = {
     tokenId: BigInt(1),
+    network: "eip155:10",
     onImageClick: vi.fn(),
     onNftBurned: vi.fn(),
     isHighlighted: false,
@@ -254,6 +255,7 @@ describe("NFTCard Component", () => {
   it("should handle missing optional callbacks", () => {
     const minimalProps = {
       tokenId: BigInt(1),
+      network: "eip155:10",
       onImageClick: vi.fn(),
       onNftBurned: vi.fn(),
     };

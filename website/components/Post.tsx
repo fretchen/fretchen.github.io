@@ -19,7 +19,7 @@ import { CommentsSection } from "./CommentsSection";
 const ReactPostRenderer: React.FC<{
   componentPath: string;
   tokenID?: number;
-  contentRef: React.RefObject<HTMLDivElement>;
+  contentRef: React.RefObject<HTMLDivElement | null>;
   onReady?: () => void;
 }> = ({ componentPath, tokenID, contentRef, onReady }) => {
   const [Component, setComponent] = React.useState<React.ComponentType | null>(null);

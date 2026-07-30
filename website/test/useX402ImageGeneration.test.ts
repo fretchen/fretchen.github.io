@@ -22,7 +22,7 @@ describe("useX402ImageGeneration", () => {
       vi.mocked(useAccount).mockReturnValue({
         isConnected: false,
         address: undefined,
-      } as ReturnType<typeof useAccount>);
+      } as unknown as ReturnType<typeof useAccount>);
 
       const { result } = renderHook(() => useX402ImageGeneration());
 
@@ -42,7 +42,7 @@ describe("useX402ImageGeneration", () => {
       vi.mocked(useAccount).mockReturnValue({
         isConnected: true,
         address: "0x1234567890123456789012345678901234567890",
-      } as ReturnType<typeof useAccount>);
+      } as unknown as ReturnType<typeof useAccount>);
 
       const { result } = renderHook(() => useX402ImageGeneration());
 
@@ -57,12 +57,13 @@ describe("useX402ImageGeneration", () => {
       vi.mocked(useAccount).mockReturnValue({
         isConnected: false,
         address: undefined,
-      } as ReturnType<typeof useAccount>);
+      } as unknown as ReturnType<typeof useAccount>);
 
       const { result } = renderHook(() => useX402ImageGeneration());
 
       const request: X402GenImgRequest = {
         prompt: "Test image",
+        network: "eip155:10",
       };
 
       await expect(result.current.generateImage(request)).rejects.toThrow("Wallet not connected");
@@ -80,7 +81,7 @@ describe("useX402ImageGeneration", () => {
       vi.mocked(useAccount).mockReturnValue({
         isConnected: true,
         address: "0x1234567890123456789012345678901234567890",
-      } as ReturnType<typeof useAccount>);
+      } as unknown as ReturnType<typeof useAccount>);
 
       const { result } = renderHook(() => useX402ImageGeneration());
 
@@ -99,6 +100,7 @@ describe("useX402ImageGeneration", () => {
     it("should accept valid request with prompt only", () => {
       const request: X402GenImgRequest = {
         prompt: "A beautiful sunset over mountains",
+        network: "eip155:10",
       };
 
       expect(request.prompt).toBeDefined();

@@ -7,9 +7,9 @@ import "@testing-library/jest-dom";
 // useLocale is globally mocked (test/setup.ts) to echo the raw label key.
 
 describe("SupportChainModal — two states", () => {
-  let onClose: ReturnType<typeof vi.fn>;
-  let onSwitchNetwork: ReturnType<typeof vi.fn>;
-  let onRetry: ReturnType<typeof vi.fn>;
+  let onClose: ReturnType<typeof vi.fn<() => void>>;
+  let onSwitchNetwork: ReturnType<typeof vi.fn<() => void | Promise<void>>>;
+  let onRetry: ReturnType<typeof vi.fn<() => void | Promise<void>>>;
 
   beforeEach(() => {
     onClose = vi.fn();

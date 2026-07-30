@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { getPublicClient } from "wagmi/actions";
-import { config } from "../wagmi.config";
+import { config, asConfiguredChainId } from "../wagmi.config";
 import { fromCAIP2 } from "@fretchen/chain-utils";
 
 /**
@@ -15,7 +15,7 @@ import { fromCAIP2 } from "@fretchen/chain-utils";
  */
 export function useConfiguredPublicClient(network: string) {
   return useMemo(() => {
-    const chainId = fromCAIP2(network);
+    const chainId = asConfiguredChainId(fromCAIP2(network));
     // Must pass chainId explicitly to get the correct chain's public client
     return getPublicClient(config, { chainId });
   }, [network]);

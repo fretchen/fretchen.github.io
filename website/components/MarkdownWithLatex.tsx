@@ -1,9 +1,9 @@
 import React from "react";
-import ReactMarkdown, { type Components } from "react-markdown";
+import ReactMarkdown, { type Components, type Options } from "react-markdown";
 
 interface MarkdownWithLatexProps {
   children: string;
-  remarkPlugins?: unknown[];
+  remarkPlugins?: Options["remarkPlugins"];
   components?: Partial<Components>;
 }
 
@@ -20,10 +20,9 @@ export const MarkdownWithLatex: React.FC<MarkdownWithLatexProps> = ({ children, 
   // Client-side LaTeX rendering after content is mounted
   React.useEffect(() => {
     if (containerRef.current) {
-      type RenderMathInElement = (element: Element, options?: Record<string, unknown>) => void;
       import("katex/dist/contrib/auto-render")
         .then((module) => {
-          const renderMathInElement = (module as { default: RenderMathInElement }).default;
+          const renderMathInElement = module.default;
           if (containerRef.current) {
             renderMathInElement(containerRef.current, {
               delimiters: [

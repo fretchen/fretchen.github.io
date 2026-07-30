@@ -168,7 +168,9 @@ export function FacilitatorApproval({
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   const networks = showTestnets ? APPROVAL_NETWORKS_WITH_TESTNETS : APPROVAL_NETWORKS;
-  const [selectedNetwork, setSelectedNetwork] = useState(networks[0].network);
+  const [selectedNetwork, setSelectedNetwork] = useState<(typeof APPROVAL_NETWORKS_WITH_TESTNETS)[number]["network"]>(
+    networks[0].network,
+  );
 
   const usdcConfig = getNetworkUSDCConfig(selectedNetwork);
   const targetChainId = usdcConfig ? usdcConfig.chainId : fromCAIP2(selectedNetwork);

@@ -46,7 +46,7 @@ describe("WalletOptions Component", () => {
       isDisconnected: true,
       isReconnecting: false,
       status: "disconnected",
-    });
+    } as unknown as ReturnType<typeof wagmi.useAccount>);
 
     vi.mocked(wagmi.useEnsName).mockReturnValue({
       data: undefined,
@@ -58,7 +58,7 @@ describe("WalletOptions Component", () => {
       isRefetchError: false,
       isSuccess: false,
       isPlaceholderData: false,
-      status: "idle",
+      status: "pending",
       dataUpdatedAt: 0,
       errorUpdatedAt: 0,
       failureCount: 0,
@@ -72,7 +72,7 @@ describe("WalletOptions Component", () => {
       isStale: false,
       refetch: vi.fn(),
       queryKey: ["ensName"],
-    });
+    } as unknown as ReturnType<typeof wagmi.useEnsName>);
 
     vi.mocked(wagmi.useConnect).mockReturnValue({
       connectors: [],
@@ -92,7 +92,7 @@ describe("WalletOptions Component", () => {
       mutateAsync: vi.fn(),
       submittedAt: 0,
       variables: undefined,
-    });
+    } as unknown as ReturnType<typeof wagmi.useConnect>);
 
     vi.mocked(wagmi.useDisconnect).mockReturnValue({
       disconnect: vi.fn(),
@@ -111,7 +111,7 @@ describe("WalletOptions Component", () => {
       mutateAsync: vi.fn(),
       submittedAt: 0,
       variables: undefined,
-    });
+    } as unknown as ReturnType<typeof wagmi.useDisconnect>);
   });
 
   it("always shows 'Connect Account' initially (hydration safety)", () => {
@@ -131,7 +131,7 @@ describe("WalletOptions Component", () => {
       isDisconnected: false,
       isReconnecting: false,
       status: "connected",
-    });
+    } as unknown as ReturnType<typeof wagmi.useAccount>);
 
     render(<WalletOptions />);
 
@@ -154,7 +154,7 @@ describe("WalletOptions Component", () => {
       isDisconnected: false,
       isReconnecting: false,
       status: "connected",
-    });
+    } as unknown as ReturnType<typeof wagmi.useAccount>);
 
     vi.mocked(wagmi.useEnsName).mockReturnValue({
       data: "test.eth",
@@ -180,7 +180,7 @@ describe("WalletOptions Component", () => {
       isStale: false,
       refetch: vi.fn(),
       queryKey: ["ensName"],
-    });
+    } as unknown as ReturnType<typeof wagmi.useEnsName>);
 
     render(<WalletOptions />);
 
@@ -309,7 +309,7 @@ describe("WalletOptions Component", () => {
       isDisconnected: false,
       isReconnecting: false,
       status: "connected",
-    });
+    } as unknown as ReturnType<typeof wagmi.useAccount>);
 
     const disconnect = vi.fn();
     vi.mocked(wagmi.useDisconnect).mockReturnValue({

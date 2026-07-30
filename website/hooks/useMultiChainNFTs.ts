@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAccount } from "wagmi";
 import { readContract } from "wagmi/actions";
-import { config } from "../wagmi.config";
+import { config, asConfiguredChainId } from "../wagmi.config";
 import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS, fromCAIP2, isTestnet } from "@fretchen/chain-utils";
 
 export interface MultiChainNFTToken {
@@ -23,7 +23,7 @@ interface UseMultiChainUserNFTsResult {
 
 async function fetchUserTokensOnNetwork(network: string, address: `0x${string}`): Promise<MultiChainNFTToken[]> {
   const contractAddress = getGenAiNFTAddress(network);
-  const chainId = fromCAIP2(network);
+  const chainId = asConfiguredChainId(fromCAIP2(network));
 
   const balance = await readContract(config, {
     address: contractAddress,
@@ -99,7 +99,7 @@ interface UseMultiChainPublicNFTsResult {
 
 async function fetchPublicTokensOnNetwork(network: string): Promise<MultiChainNFTToken[]> {
   const contractAddress = getGenAiNFTAddress(network);
-  const chainId = fromCAIP2(network);
+  const chainId = asConfiguredChainId(fromCAIP2(network));
 
   const tokenIds = (await readContract(config, {
     address: contractAddress,

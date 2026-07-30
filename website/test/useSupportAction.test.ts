@@ -93,7 +93,7 @@ describe("useSupportAction", () => {
       chainId: 10, // Optimism Mainnet
       address: "0x1234567890abcdef1234567890abcdef12345678",
       connector: { name: "MetaMask" },
-    } as ReturnType<typeof useAccount>);
+    } as unknown as ReturnType<typeof useAccount>);
 
     vi.mocked(useChainId).mockReturnValue(10);
 
@@ -143,7 +143,7 @@ describe("useSupportAction", () => {
         chainId: 10, // Optimism Mainnet
         address: "0x1234",
         connector: { name: "MetaMask" },
-      } as ReturnType<typeof useAccount>);
+      } as unknown as ReturnType<typeof useAccount>);
 
       const { result } = renderHook(() => useSupportAction("/blog/test"));
 
@@ -158,7 +158,7 @@ describe("useSupportAction", () => {
         chainId: 8453, // Base Mainnet
         address: "0x1234",
         connector: { name: "MetaMask" },
-      } as ReturnType<typeof useAccount>);
+      } as unknown as ReturnType<typeof useAccount>);
 
       const { result } = renderHook(() => useSupportAction("/blog/test"));
 
@@ -172,7 +172,7 @@ describe("useSupportAction", () => {
         chainId: 1, // Ethereum mainnet - not supported
         address: "0x1234",
         connector: { name: "MetaMask" },
-      } as ReturnType<typeof useAccount>);
+      } as unknown as ReturnType<typeof useAccount>);
 
       const { result } = renderHook(() => useSupportAction("/blog/test"));
 
@@ -221,7 +221,7 @@ describe("useSupportAction", () => {
         chainId: 10, // Optimism Mainnet
         address: "0x1234",
         connector: { name: "MetaMask" },
-      } as ReturnType<typeof useAccount>);
+      } as unknown as ReturnType<typeof useAccount>);
 
       const { result } = renderHook(() => useSupportAction("/blog/test"));
 
@@ -256,7 +256,7 @@ describe("useSupportAction", () => {
         chainId: 8453, // Base Mainnet
         address: "0x1234",
         connector: { name: "MetaMask" },
-      } as ReturnType<typeof useAccount>);
+      } as unknown as ReturnType<typeof useAccount>);
 
       const { result } = renderHook(() => useSupportAction("/blog/test"));
 
@@ -277,7 +277,7 @@ describe("useSupportAction", () => {
         chainId: 10,
         address: "0x1234",
         connector: { name: "MetaMask" },
-      } as ReturnType<typeof useAccount>);
+      } as unknown as ReturnType<typeof useAccount>);
 
       // Simulate wagmi surfacing a raw contract-revert error via useWriteContract's `error`
       vi.mocked(useWriteContract).mockReturnValue({
@@ -304,7 +304,7 @@ describe("useSupportAction", () => {
         chainId: 10,
         address: "0x1234",
         connector: { name: "MetaMask" },
-      } as ReturnType<typeof useAccount>);
+      } as unknown as ReturnType<typeof useAccount>);
 
       const rejection = new Error("User rejected the request.");
       rejection.name = "UserRejectedRequestError";
@@ -328,7 +328,7 @@ describe("useSupportAction", () => {
         chainId: 10,
         address: "0x1234",
         connector: { name: "MetaMask" },
-      } as ReturnType<typeof useAccount>);
+      } as unknown as ReturnType<typeof useAccount>);
       // wagmi's getWalletClient can throw (e.g. ConnectorNotConnectedError) instead of resolving falsy.
       vi.mocked(getWalletClient).mockRejectedValue(new Error("ConnectorNotConnectedError"));
 
@@ -348,7 +348,7 @@ describe("useSupportAction", () => {
         chainId: 1, // Ethereum mainnet (unsupported)
         address: "0x1234",
         connector: { name: "MetaMask" },
-      } as ReturnType<typeof useAccount>);
+      } as unknown as ReturnType<typeof useAccount>);
       vi.mocked(useChainId).mockReturnValue(1);
 
       const { result } = renderHook(() => useSupportAction("/blog/test"));
@@ -372,7 +372,7 @@ describe("useSupportAction", () => {
         chainId: 8453, // Base Mainnet (supported)
         address: "0x1234",
         connector: { name: "MetaMask" },
-      } as ReturnType<typeof useAccount>);
+      } as unknown as ReturnType<typeof useAccount>);
 
       const { result } = renderHook(() => useSupportAction("/blog/test"));
 
@@ -394,7 +394,7 @@ describe("useSupportAction", () => {
         chainId: 10,
         address: "0x1234",
         connector: { name: "MetaMask" },
-      } as ReturnType<typeof useAccount>);
+      } as unknown as ReturnType<typeof useAccount>);
 
       const { result } = renderHook(() => useSupportAction("/blog/test"));
 
@@ -414,7 +414,7 @@ describe("useSupportAction", () => {
         chainId: 10,
         address: "0x1234",
         connector: { name: "MetaMask" },
-      } as ReturnType<typeof useAccount>);
+      } as unknown as ReturnType<typeof useAccount>);
       vi.mocked(getWalletClient).mockResolvedValue(null as unknown as Awaited<ReturnType<typeof getWalletClient>>);
 
       const { result } = renderHook(() => useSupportAction("/blog/test"));

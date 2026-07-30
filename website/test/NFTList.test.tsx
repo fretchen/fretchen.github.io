@@ -76,6 +76,7 @@ describe("NFTList Component", () => {
       newlyCreatedNFT: {
         tokenId: BigInt(123),
         imageUrl: "https://example.com/image.png",
+        network: "eip155:10",
         metadata: {
           name: "Test NFT",
           description: "A test NFT",
@@ -118,6 +119,7 @@ describe("NFTList Component", () => {
         newlyCreatedNFT: {
           tokenId,
           imageUrl: "https://example.com/image.png",
+          network: "eip155:10",
         },
       };
 
@@ -144,6 +146,7 @@ describe("NFTList Component", () => {
       newlyCreatedNFT: {
         tokenId: BigInt(456),
         imageUrl: "https://example.com/image.png",
+        network: "eip155:10",
         metadata: fullMetadata,
       },
     };
@@ -181,6 +184,7 @@ describe("NFTList Component", () => {
       newlyCreatedNFT: {
         tokenId: BigInt(1),
         imageUrl: "test.jpg",
+        network: "eip155:10",
         metadata: {
           name: "Test",
           description: "Test description",
@@ -211,6 +215,7 @@ describe("NFTList Component", () => {
       newlyCreatedNFT: {
         tokenId: BigInt(999),
         imageUrl: "https://example.com/no-metadata.png",
+        network: "eip155:10",
         // No metadata property
       },
     };
@@ -225,6 +230,7 @@ describe("NFTList Component", () => {
       newlyCreatedNFT: {
         tokenId: BigInt(777),
         imageUrl: "https://example.com/partial.png",
+        network: "eip155:10",
         metadata: {
           name: "Partial NFT",
           // Missing description and other optional fields
@@ -282,6 +288,7 @@ describe("NFTList Component", () => {
       const newNFT = {
         tokenId: 123n,
         imageUrl: "test.png",
+        network: "eip155:10",
         metadata: { name: "Test NFT", description: "Test", image: "test.png" },
       };
 

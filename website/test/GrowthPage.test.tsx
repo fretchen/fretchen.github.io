@@ -83,7 +83,7 @@ describe("Growth Page", () => {
       address: undefined,
       isConnected: false,
       status: "disconnected",
-    } as ReturnType<typeof useAccount>);
+    } as unknown as ReturnType<typeof useAccount>);
 
     vi.mocked(useConnect).mockReturnValue({
       connectors: [{ name: "MetaMask" }],
@@ -99,7 +99,7 @@ describe("Growth Page", () => {
       address: undefined,
       isConnected: false,
       status: "disconnected",
-    } as ReturnType<typeof useAccount>);
+    } as unknown as ReturnType<typeof useAccount>);
 
     vi.mocked(useConnect).mockReturnValue({
       connectors: [{ name: "MetaMask" }],
@@ -115,7 +115,7 @@ describe("Growth Page", () => {
       address: "0x1111111111111111111111111111111111111111",
       isConnected: true,
       status: "connected",
-    } as ReturnType<typeof useAccount>);
+    } as unknown as ReturnType<typeof useAccount>);
 
     render(<Page />);
     expect(screen.getByText("This page is restricted to the site owner.")).toBeInTheDocument();
@@ -126,7 +126,7 @@ describe("Growth Page", () => {
       address: OWNER_ADDRESS,
       isConnected: true,
       status: "connected",
-    } as ReturnType<typeof useAccount>);
+    } as unknown as ReturnType<typeof useAccount>);
 
     render(<Page />);
 
@@ -144,7 +144,7 @@ describe("Growth Page", () => {
       address: OWNER_ADDRESS,
       isConnected: true,
       status: "connected",
-    } as ReturnType<typeof useAccount>);
+    } as unknown as ReturnType<typeof useAccount>);
 
     render(<Page />);
 
@@ -164,7 +164,7 @@ describe("Growth Page", () => {
       address: OWNER_ADDRESS,
       isConnected: true,
       status: "connected",
-    } as ReturnType<typeof useAccount>);
+    } as unknown as ReturnType<typeof useAccount>);
 
     render(<Page />);
 
@@ -193,7 +193,7 @@ describe("Growth Page", () => {
       address: OWNER_ADDRESS,
       isConnected: true,
       status: "connected",
-    } as ReturnType<typeof useAccount>);
+    } as unknown as ReturnType<typeof useAccount>);
 
     render(<Page />);
 
@@ -213,7 +213,7 @@ describe("Growth Page", () => {
       address: OWNER_ADDRESS,
       isConnected: true,
       status: "connected",
-    } as ReturnType<typeof useAccount>);
+    } as unknown as ReturnType<typeof useAccount>);
 
     render(<Page />);
 
@@ -235,7 +235,7 @@ describe("Growth Page", () => {
       address: OWNER_ADDRESS,
       isConnected: true,
       status: "connected",
-    } as ReturnType<typeof useAccount>);
+    } as unknown as ReturnType<typeof useAccount>);
 
     render(<Page />);
 
@@ -249,7 +249,7 @@ describe("Growth Page", () => {
       address: OWNER_ADDRESS,
       isConnected: true,
       status: "connected",
-    } as ReturnType<typeof useAccount>);
+    } as unknown as ReturnType<typeof useAccount>);
 
     render(<Page />);
 
@@ -275,7 +275,7 @@ describe("Growth Page", () => {
       address: OWNER_ADDRESS,
       isConnected: true,
       status: "connected",
-    } as ReturnType<typeof useAccount>);
+    } as unknown as ReturnType<typeof useAccount>);
 
     render(<Page />);
 
@@ -301,7 +301,7 @@ describe("Growth Page", () => {
       address: OWNER_ADDRESS,
       isConnected: true,
       status: "connected",
-    } as ReturnType<typeof useAccount>);
+    } as unknown as ReturnType<typeof useAccount>);
 
     render(<Page />);
 
@@ -318,7 +318,7 @@ describe("Growth Page", () => {
       address: OWNER_ADDRESS,
       isConnected: true,
       status: "connected",
-    } as ReturnType<typeof useAccount>);
+    } as unknown as ReturnType<typeof useAccount>);
 
     render(<Page />);
 
@@ -332,7 +332,7 @@ describe("Growth Page", () => {
       address: OWNER_ADDRESS,
       isConnected: true,
       status: "connected",
-    } as ReturnType<typeof useAccount>);
+    } as unknown as ReturnType<typeof useAccount>);
 
     render(<Page />);
 
@@ -358,7 +358,7 @@ describe("Growth Page", () => {
       address: OWNER_ADDRESS,
       isConnected: true,
       status: "connected",
-    } as ReturnType<typeof useAccount>);
+    } as unknown as ReturnType<typeof useAccount>);
 
     const { rerender } = render(<Page />);
 

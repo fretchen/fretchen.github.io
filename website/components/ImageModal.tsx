@@ -39,7 +39,7 @@ export function ImageModal({ image, onClose }: ImageModalProps) {
             {image.description && <p className={styles.nftCard.modalDescription}>{image.description}</p>}
             {image.network && <ChainInfoDisplay network={image.network} tokenId={image.tokenId} />}
             <div className={styles.nftCard.actions} style={{ justifyContent: "center", marginTop: "12px" }}>
-              <button onClick={handleDownload} className={`${styles.nftCard.actionButton} ${styles.primaryButton}`}>
+              <button onClick={handleDownload} className={`${styles.actionButton} ${styles.primaryButton}`}>
                 ⬇️ Download Full Size
               </button>
             </div>

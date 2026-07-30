@@ -16,6 +16,10 @@ import { TableOfContents } from "./TableOfContents";
 import { Webmentions } from "./Webmentions";
 import { CommentsSection } from "./CommentsSection";
 
+// MDX components accept an extra `components` override prop (used to route `pre` through
+// MdxPre); plain TSX posts simply ignore it.
+type PostComponent = React.ComponentType<{ components?: Record<string, React.ComponentType> }>;
+
 // Dynamic React component renderer
 const ReactPostRenderer: React.FC<{
   componentPath: string;
@@ -23,8 +27,7 @@ const ReactPostRenderer: React.FC<{
   contentRef: React.RefObject<HTMLDivElement>;
   onReady?: () => void;
 }> = ({ componentPath, tokenID, contentRef, onReady }) => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- MDX components accept an extra `components` override prop; plain TSX posts ignore it.
-  const [Component, setComponent] = React.useState<React.ComponentType<any> | null>(null);
+  const [Component, setComponent] = React.useState<PostComponent | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState<boolean>(true);
 

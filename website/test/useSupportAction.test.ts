@@ -90,7 +90,12 @@ describe("useSupportAction", () => {
 
     // Default mock implementations - use Optimism Mainnet (10)
     vi.mocked(useAccount).mockReturnValue(
-      buildAccountData({ isConnected: true, chainId: 10, address: "0x1234567890abcdef1234567890abcdef12345678", connector: { name: "MetaMask" } }), // Optimism Mainnet
+      buildAccountData({
+        isConnected: true,
+        chainId: 10,
+        address: "0x1234567890abcdef1234567890abcdef12345678",
+        connector: { name: "MetaMask" },
+      }), // Optimism Mainnet
     );
 
     vi.mocked(useChainId).mockReturnValue(10);

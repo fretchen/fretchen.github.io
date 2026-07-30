@@ -186,7 +186,7 @@ export default function Page() {
       <div className={styles.post.articleLayout}>
         <div />
         <article ref={contentRef} className={css({ padding: "4" })}>
-          {/* Beta banner */}
+          {/* Status banner: scope + honesty, not a warning label. */}
           <div
             className={css({
               bg: "alphaBanner.bg",
@@ -198,18 +198,18 @@ export default function Page() {
             })}
           >
             <span className={css({ fontSize: "sm", color: "alphaBanner.text", lineHeight: "1.6" })}>
-              <span className={css({ color: "alphaBanner.icon" })}>🧪</span> <strong>Alpha</strong> — what you build
-              against is stable: the endpoint contract and the{" "}
+              <span className={css({ color: "alphaBanner.icon" })}>🧪</span> <strong>Alpha, and still moving.</strong>{" "}
+              This guide does exactly one thing, end to end: it puts an OpenAI-shaped API behind x402 and gets it paid
+              in stablecoin. Not a platform, not a standard — a working proof you can run today, check with the{" "}
               <a href="#checker" className={css({ color: "alphaBanner.icon", textDecoration: "underline" })}>
                 checker
-              </a>{" "}
-              won&apos;t change under you. What&apos;s still moving is the tooling around it — the{" "}
-              <code className={inlineCode}>@x402/evm</code> APIs shift between minor versions, and there is no drop-in
-              client yet, so your callers have to hand-wire the payment side. Read{" "}
+              </a>
+              , and take apart. Expect the surroundings to keep changing: <code className={inlineCode}>@x402/evm</code>{" "}
+              shifts between versions and the client tooling is thin.{" "}
               <a href="#challenges" className={css({ color: "alphaBanner.icon", textDecoration: "underline" })}>
                 Known limitations
               </a>{" "}
-              before you commit to this.
+              is the honest list.
             </span>
           </div>
 
@@ -906,7 +906,7 @@ export default function Page() {
 
           {/* SECTION — known limitations */}
           <section id="challenges" className={section}>
-            <h2 className={h2}>Known limitations (beta)</h2>
+            <h2 className={h2}>Known limitations</h2>
             <p className={para}>Documented openly — these are rough edges of a young ecosystem, not of your code.</p>
 
             <Challenge title="Few facilitators support batch-settlement">

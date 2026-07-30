@@ -1,5 +1,12 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useMemo } from "react";
 import { css } from "../styled-system/css";
+
+/**
+ * Sequence-diagram defaults. `mirrorActors` defaults to true in mermaid, which redraws the
+ * entire participant row again at the bottom of the diagram — on these pages that is ~75px
+ * of dead whitespace, since the labels are already visible at the top.
+ */
+const SEQUENCE_DEFAULTS = { mirrorActors: false };
 
 interface MermaidDiagramProps {
   /** The mermaid diagram definition string */
@@ -12,8 +19,26 @@ interface MermaidDiagramProps {
   config?: Record<string, unknown>;
 }
 
-const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ definition, title, className, config = {} }) => {
+const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ definition, title, className, config }) => {
   const mermaidRef = useRef<HTMLDivElement>(null);
+
+  // Callers pass `config` as an inline object literal, which is a fresh reference on every
+  // render — depending on it directly would re-render the diagram on every parent render.
+  // Key the effect on its serialized form instead.
+  const configKey = config ? JSON.stringify(config) : "";
+
+  const resolvedConfig = useMemo(() => {
+    const caller = (configKey ? (JSON.parse(configKey) as Record<string, unknown>) : {}) as Record<string, unknown>;
+    return {
+      startOnLoad: false,
+      theme: "default" as const,
+      securityLevel: "sandbox" as const,
+      ...caller,
+      // Merge one level deeper than the spread above: a caller passing any `sequence` key
+      // (e.g. { sequence: { wrap: true } }) would otherwise silently drop mirrorActors.
+      sequence: { ...SEQUENCE_DEFAULTS, ...((caller.sequence as Record<string, unknown>) ?? {}) },
+    };
+  }, [configKey]);
 
   useEffect(() => {
     const renderDiagram = async () => {
@@ -22,14 +47,7 @@ const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ definition, title, clas
       try {
         const mermaid = (await import("mermaid")).default;
 
-        // Initialize mermaid with custom config merged with defaults
-        const defaultConfig = {
-          startOnLoad: false,
-          theme: "default" as const,
-          securityLevel: "sandbox" as const,
-        };
-
-        mermaid.initialize({ ...defaultConfig, ...config });
+        mermaid.initialize(resolvedConfig);
 
         // Generate unique ID for this diagram
         const id = `mermaid-diagram-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -50,7 +68,7 @@ const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ definition, title, clas
     };
 
     void renderDiagram();
-  }, [definition, config]);
+  }, [definition, resolvedConfig]);
 
   return (
     <div

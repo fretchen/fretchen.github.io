@@ -5,6 +5,7 @@ import { AgentChecker } from "../../components/AgentChecker";
 import { CommentsSection } from "../../components/CommentsSection";
 import { ParamTable } from "../../components/ParamTable";
 import { Foldable } from "../../components/Foldable";
+import { CodeBlock } from "../../components/CodeBlock";
 import MermaidDiagram from "../../components/MermaidDiagram";
 import { useOpenApiSpec } from "../../hooks/useOpenApiSpec";
 
@@ -59,18 +60,6 @@ const sectionCard = css({
 const h2 = css({ fontSize: "xl", fontWeight: "semibold", mb: "3", color: "gray.800" });
 const h3 = css({ fontSize: "md", fontWeight: "semibold", mb: "2", color: "gray.800" });
 const para = css({ fontSize: "sm", color: "gray.600", mb: "3", lineHeight: "1.6" });
-const codeBlock = css({
-  bg: "gray.900",
-  color: "gray.100",
-  p: "3",
-  borderRadius: "md",
-  overflow: "auto",
-  fontSize: "xs",
-  lineHeight: "1.5",
-  mt: "1",
-  mb: "2",
-  whiteSpace: "pre",
-});
 const inlineCode = css({ fontFamily: "mono", fontSize: "0.9em", bg: "gray.100", px: "1", borderRadius: "sm" });
 const extLink = css({ color: "indigo.600", textDecoration: "underline", _hover: { color: "indigo.800" } });
 const caption = css({ fontSize: "xs", color: "gray.500", mb: "1" });
@@ -85,10 +74,6 @@ const note = css({
   mb: "3",
   lineHeight: "1.6",
 });
-
-function Code({ children }: { children: string }) {
-  return <pre className={codeBlock}>{children}</pre>;
-}
 
 /**
  * Deep link into the reference implementation at a pinned commit, e.g.
@@ -359,15 +344,15 @@ export default function Page() {
             Send an unpaid request to our live agent. You can run this verbatim — it costs nothing, and the 402 it
             returns is exactly what your own endpoint has to produce:
           </p>
-          <Code>{`curl -i -X POST ${LLM_ORIGIN}/ \\
+          <CodeBlock lang="bash">{`curl -i -X POST ${LLM_ORIGIN}/ \\
   -H "Content-Type: application/json" \\
-  -d '{"model":"mistral-large-latest","messages":[{"role":"user","content":"Hello"}]}'`}</Code>
+  -d '{"model":"mistral-large-latest","messages":[{"role":"user","content":"Hello"}]}'`}</CodeBlock>
           <p className={caption}>
             The interesting part of the response — note <code className={inlineCode}>receiverAuthorizer</code> and{" "}
             <code className={inlineCode}>withdrawDelay</code>: those are the fields{" "}
             <code className={inlineCode}>enhancePaymentRequirements</code> injects for you in step 3.
           </p>
-          <Code>{`HTTP/2 402
+          <CodeBlock lang="plaintext">{`HTTP/2 402
 access-control-expose-headers: Payment-Required, X-Payment, PAYMENT-REQUIRED
 payment-required: eyJ4NDAyVmVyc2lvbiI6MiwicmVzb3VyY2UiOnsidXJs...   ← same JSON, base64
 
@@ -387,7 +372,7 @@ payment-required: eyJ4NDAyVmVyc2lvbiI6MiwicmVzb3VyY2UiOnsidXJs...   ← same JSO
       "withdrawDelay": 86400                             ← injected by the SDK
     }
   }, { "network": "eip155:84532", "...": "the same, for Base Sepolia" }]
-}`}</Code>
+}`}</CodeBlock>
 
           <p className={para}>
             You can&apos;t get past this point with curl — the next request has to carry a signed payment, which means
@@ -435,7 +420,7 @@ payment-required: eyJ4NDAyVmVyc2lvbiI6MiwicmVzb3VyY2UiOnsidXJs...   ← same JSO
             these slots, so you always know whether code belongs at module scope (runs once) or inside the handler (runs
             per request).
           </p>
-          <Code>{`// ═══ server.ts ════════════════════════════════════════════ MODULE SCOPE (once)
+          <CodeBlock>{`// ═══ server.ts ════════════════════════════════════════════ MODULE SCOPE (once)
 import { x402ResourceServer, HTTPFacilitatorClient } from "@x402/core/server";
 import { BatchSettlementEvmScheme } from "@x402/evm/batch-settlement/server";
 import { RedisChannelStorage } from "@x402/evm/batch-settlement/server/redis-storage";
@@ -473,7 +458,7 @@ export async function handler(event) {
 
 // ═══ two more files ═══════════════════════════════════════
 // cron.ts        — claim your money on a schedule              ── step 5
-// openapi.json   — discovery doc + the route that serves it    ── step 6`}</Code>
+// openapi.json   — discovery doc + the route that serves it    ── step 6`}</CodeBlock>
 
           <Step n={1} title="Start from an OpenAI-shaped endpoint">
             <p className={para}>
@@ -481,7 +466,7 @@ export async function handler(event) {
               and reject streaming. Nothing here is x402-specific yet.
             </p>
             <Foldable label="Show the request validation + the json/CORS helpers">
-              <Code>{`// Every response needs these — the assistant is a browser client, and
+              <CodeBlock>{`// Every response needs these — the assistant is a browser client, and
 // Allow-Headers must cover PAYMENT-SIGNATURE or the preflight fails.
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -510,7 +495,7 @@ if (!MODELS.includes(body.model)) {
   return json(404, {
     error: { message: \`Unknown model '\${body.model}'.\`, type: "invalid_request_error", code: "model_not_found" },
   });
-}`}</Code>
+}`}</CodeBlock>
               <p className={caption}>
                 Ours: <SrcRef path="scw_js/sc_llm_x402.ts" lines="169-215" /> (validation),{" "}
                 <SrcRef path="scw_js/sc_llm_x402.ts" lines="78-113" /> (CORS + error helpers).
@@ -548,7 +533,7 @@ if (!MODELS.includes(body.model)) {
               ), or you can run your own.
             </p>
             <Foldable label="Show the setup (fills the setupX402() slot)">
-              <Code>{`function setupX402() {
+              <CodeBlock>{`function setupX402() {
   const facilitator = new HTTPFacilitatorClient({ url: process.env.FACILITATOR_URL });
   const authorizer = privateKeyToAccount(process.env.RECEIVER_AUTHORIZER_PRIVATE_KEY);
 
@@ -566,7 +551,7 @@ if (!MODELS.includes(body.model)) {
 
   for (const network of NETWORKS) resourceServer.register(network, scheme);
   return { resourceServer, scheme, facilitator };
-}`}</Code>
+}`}</CodeBlock>
               <p className={caption}>
                 Ours: <SrcRef path="scw_js/x402_server.ts" lines="89-109" /> — same thing, with S3 for storage.
               </p>
@@ -580,10 +565,10 @@ if (!MODELS.includes(body.model)) {
               encoded how — is yours to write. It&apos;s three ~15-line helpers, shown in this step and the next.
             </p>
             <p className={caption}>The USDC constants you&apos;ll need:</p>
-            <Code>{`const USDC = {
+            <CodeBlock>{`const USDC = {
   "eip155:8453":  { address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", name: "USD Coin", version: "2" }, // Base
   "eip155:84532": { address: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", name: "USDC",     version: "2" }, // Base Sepolia
-};`}</Code>
+};`}</CodeBlock>
             <div className={note}>
               The EIP-712 domain name is <code className={inlineCode}>&quot;USD Coin&quot;</code> on mainnet but{" "}
               <code className={inlineCode}>&quot;USDC&quot;</code> on testnet. Mix them up and payment verification
@@ -600,7 +585,7 @@ if (!MODELS.includes(body.model)) {
               <code className={inlineCode}>receiver_authorizer_mismatch</code>.
             </div>
             <Foldable label="Show the requirements builder + the 402 body">
-              <Code>{`// One enhanced accepts[] entry for a single network. Step 4 calls this again for the
+              <CodeBlock>{`// One enhanced accepts[] entry for a single network. Step 4 calls this again for the
 // network the client picked — which is why it takes \`network\` and \`amount\` as arguments
 // instead of hard-coding them.
 async function requirementsFor(network, amount) {
@@ -631,7 +616,7 @@ async function build402Body() {
 
 // ── in the handler ──
 const payment = extractPaymentPayload(event.headers);
-if (!payment) return respond402(await build402Body());`}</Code>
+if (!payment) return respond402(await build402Body());`}</CodeBlock>
               <p className={caption}>
                 Ours: <SrcRef path="scw_js/x402_server.ts" lines="127-171" /> (the 402 body),{" "}
                 <SrcRef path="scw_js/sc_llm_x402.ts" lines="244-258" /> (the handler branch).
@@ -645,14 +630,14 @@ if (!payment) return respond402(await build402Body());`}</Code>
               body there is the most common way to get this wrong.
             </div>
             <Foldable label="Show the 402 transport helper (respond402)">
-              <Code>{`// The 402 body must ALSO go, base64-encoded, into the Payment-Required header —
+              <CodeBlock>{`// The 402 body must ALSO go, base64-encoded, into the Payment-Required header —
 // browser clients read the header, not the body. CORS already exposes it (step 1),
 // which is exactly what the checker at the bottom of this page verifies.
 function respond402(body402) {
   return json(402, body402, {
     "Payment-Required": Buffer.from(JSON.stringify(body402)).toString("base64"),
   });
-}`}</Code>
+}`}</CodeBlock>
               <p className={caption}>
                 Ours: <SrcRef path="scw_js/x402_server.ts" lines="233-255" />.
               </p>
@@ -666,7 +651,7 @@ function respond402(body402) {
               <strong>settle the amount actually used</strong>, so a short reply costs the user less.
             </p>
             <Foldable label="Show the handler flow">
-              <Code>{`// 0. Which network did the client choose? It's in the payload — you can't build the
+              <CodeBlock>{`// 0. Which network did the client choose? It's in the payload — you can't build the
 //    verify requirements without it, and you must reject anything you don't serve.
 const network = payment.accepted?.network;
 if (!network || !NETWORKS.includes(network)) {
@@ -707,7 +692,7 @@ if (!settlement.success) {
 }
 
 // 5. 200 + the settlement receipt (json() already merges CORS).
-return json(200, completion, settlementHeaders(settlement));`}</Code>
+return json(200, completion, settlementHeaders(settlement));`}</CodeBlock>
               <p className={caption}>
                 Ours: <SrcRef path="scw_js/sc_llm_x402.ts" lines="260-268" /> (network check),{" "}
                 <SrcRef path="scw_js/sc_llm_x402.ts" lines="287-362" /> (verify + corrective 402),{" "}
@@ -715,7 +700,7 @@ return json(200, completion, settlementHeaders(settlement));`}</Code>
               </p>
             </Foldable>
             <Foldable label="Show the other two transport helpers (extract + settlement headers)">
-              <Code>{`// The payment arrives base64-encoded in the PAYMENT-SIGNATURE header.
+              <CodeBlock>{`// The payment arrives base64-encoded in the PAYMENT-SIGNATURE header.
 // Returns null when there's no payment — that's the "send a 402" case in step 3.
 function extractPaymentPayload(headers) {
   const header = headers["payment-signature"] ?? headers["Payment-Signature"];
@@ -731,14 +716,14 @@ function extractPaymentPayload(headers) {
 // (merge these into your 200 response's headers).
 function settlementHeaders(settlement) {
   return { "Payment-Response": Buffer.from(JSON.stringify(settlement)).toString("base64") };
-}`}</Code>
+}`}</CodeBlock>
               <p className={caption}>
                 Ours: <SrcRef path="scw_js/x402_server.ts" lines="257-282" /> and{" "}
                 <SrcRef path="scw_js/x402_server.ts" lines="300-308" />.
               </p>
             </Foldable>
             <Foldable label="Show priceFromUsage (tokens → USDC atomic units)">
-              <Code>{`// Rates are quoted per 1,000,000 tokens; USDC has 6 decimals — the two 1e6
+              <CodeBlock>{`// Rates are quoted per 1,000,000 tokens; USDC has 6 decimals — the two 1e6
 // factors cancel exactly, so no separate decimals conversion is needed.
 // Keep rates as integer fractions (num/den) to stay exact in bigint math.
 const INPUT_PER_M  = { num: 1n, den: 2n };  // $0.50 per 1M prompt tokens
@@ -753,7 +738,7 @@ function priceFromUsage(usage) {
   // Never settle above the ceiling you verified against in the 402.
   const max = BigInt(MAX_PRICE_PER_MESSAGE);
   return (cost > max ? max : cost).toString();
-}`}</Code>
+}`}</CodeBlock>
               <p className={caption}>
                 Ours: <SrcRef path="scw_js/llm_service.ts" lines="215-231" /> (the rate maths) and{" "}
                 <SrcRef path="scw_js/sc_llm_x402.ts" lines="72-76" /> (the ceiling clamp).
@@ -767,7 +752,7 @@ function priceFromUsage(usage) {
               accumulated vouchers on-chain. Skip this and you never get paid. It&apos;s genuinely this short:
             </p>
             <Foldable label="Show the claim job (cron.ts — a separate entry point)">
-              <Code>{`// Same setupX402() as step 2 — this runs in its own process, on a schedule
+              <CodeBlock>{`// Same setupX402() as step 2 — this runs in its own process, on a schedule
 // (we use every 12h). Must run far more often than the withdrawDelay you set in
 // step 2, or a channel can be withdrawn before you claim it.
 const { scheme, facilitator } = setupX402();
@@ -776,7 +761,7 @@ for (const network of NETWORKS) {
   const manager = scheme.createChannelManager(facilitator, network);
   const { claims, settle } = await manager.claimAndSettle();
   console.log({ network, claims: claims.length, settled: settle !== undefined });
-}`}</Code>
+}`}</CodeBlock>
               <p className={caption}>
                 Ours: <SrcRef path="scw_js/llm_x402_cron.ts" lines="62-75" /> (a 12-hourly scheduled function).
               </p>
@@ -794,7 +779,7 @@ for (const network of NETWORKS) {
               validates against (step 1) — the spec is a promise, the validation enforces it.
             </p>
             <Foldable label="Show the discovery doc + the route that serves it">
-              <Code>{`// openapi.json (excerpt)
+              <CodeBlock>{`// openapi.json (excerpt)
 {
   "openapi": "3.1.0",
   "x-service-type": "llm/v1",
@@ -808,9 +793,9 @@ for (const network of NETWORKS) {
     "LLMChatRequest":  { /* model enum must match MODELS from step 1 */ },
     "LLMChatResponse": { /* ... */ }
   } }
-}`}</Code>
+}`}</CodeBlock>
               <p className={caption}>And the route that serves it — the first branch of your handler:</p>
-              <Code>{`import openapiSpec from "./openapi.json" with { type: "json" };
+              <CodeBlock>{`import openapiSpec from "./openapi.json" with { type: "json" };
 
 // ── in the handler, before the POST logic ──
 if (event.httpMethod === "GET" && (event.path ?? "").replace(/^\\/+/, "") === "openapi.json") {
@@ -819,20 +804,20 @@ if (event.httpMethod === "GET" && (event.path ?? "").replace(/^\\/+/, "") === "o
   const spec = structuredClone(openapiSpec);
   spec.paths["/"].post["x-payment-info"].price.max = (Number(MAX_PRICE_PER_MESSAGE) / 1e6).toString();
   return json(200, spec);
-}`}</Code>
+}`}</CodeBlock>
               <p className={caption}>
                 Ours: <SrcRef path="scw_js/sc_llm_x402.ts" lines="120-134" /> (with an exact bigint formatter,{" "}
                 <SrcRef path="scw_js/x402_server.ts" lines="290-298" />, instead of the float division above).
               </p>
             </Foldable>
             <Foldable label="Show how to sign the ownership proof">
-              <Code>{`// One-off: sign your bare origin (scheme + host, no path, no trailing slash)
+              <CodeBlock>{`// One-off: sign your bare origin (scheme + host, no path, no trailing slash)
 // and paste the signature into x-discovery.ownershipProofs.
 import { privateKeyToAccount } from "viem/accounts";
 
 const account = privateKeyToAccount(process.env.RECEIVER_PRIVATE_KEY);
 const signature = await account.signMessage({ message: "https://your-agent.example" });
-console.log(signature);`}</Code>
+console.log(signature);`}</CodeBlock>
               <p className={caption}>
                 Ours: <SrcRef path="scw_js/scripts/sign_ownership_proof.ts" />.
               </p>

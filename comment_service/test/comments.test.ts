@@ -3,6 +3,7 @@
  */
 
 import { describe, test, expect, beforeAll, beforeEach, afterEach, vi } from "vitest";
+import type { ScalewayEvent, HandlerResponse } from "../comments";
 
 // Mock the shared S3 client
 const mockListObjects = vi.fn();
@@ -19,10 +20,10 @@ vi.mock("@fretchen/s3-utils", () => ({
 global.fetch = vi.fn() as any;
 
 describe("comments.ts", () => {
-  let handle: (event: Record<string, any>, context: unknown) => Promise<any>;
+  let handle: (event: ScalewayEvent, context: unknown) => Promise<HandlerResponse>;
 
   beforeAll(async () => {
-    const module = await import("../comments.ts");
+    const module = await import("../comments");
     handle = module.handle;
   });
 

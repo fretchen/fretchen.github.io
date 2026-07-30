@@ -35,6 +35,7 @@ import { screen, fireEvent } from "@testing-library/react";
 import { renderWithQuery } from "./testUtils";
 import { ImageGenerator } from "../components/ImageGenerator";
 import { useAccount, useConnect, useWalletClient } from "wagmi";
+import { buildAccountData, buildConnectData, buildWalletClientData } from "./setup";
 
 // No need to mock getChain - it's just reading env vars and returning constants
 // The real implementation works fine in tests
@@ -64,11 +65,9 @@ describe("ImageGenerator Component", () => {
   describe("Collapsed State (First-time visitors)", () => {
     it("should render collapsed state when wallet is not connected", () => {
       // Mock disconnected wallet to ensure collapsed state
-      vi.mocked(useAccount).mockReturnValueOnce({
-        address: undefined,
-        isConnected: false,
-        status: "disconnected",
-      } as ReturnType<typeof useAccount>);
+      vi.mocked(useAccount).mockReturnValueOnce(
+        buildAccountData({ address: undefined, isConnected: false, status: "disconnected" }),
+      );
 
       renderWithQuery(<ImageGenerator />);
 
@@ -93,11 +92,9 @@ describe("ImageGenerator Component", () => {
       };
 
       // Ensure disconnected state
-      vi.mocked(useAccount).mockReturnValueOnce({
-        address: undefined,
-        isConnected: false,
-        status: "disconnected",
-      } as ReturnType<typeof useAccount>);
+      vi.mocked(useAccount).mockReturnValueOnce(
+        buildAccountData({ address: undefined, isConnected: false, status: "disconnected" }),
+      );
 
       renderWithQuery(<ImageGenerator {...mockProps} />);
 
@@ -111,16 +108,13 @@ describe("ImageGenerator Component", () => {
       // Create a new mock that we can track
       const mockConnect = vi.fn();
 
-      vi.mocked(useAccount).mockReturnValue({
-        address: undefined,
-        isConnected: false,
-        status: "disconnected",
-      } as ReturnType<typeof useAccount>);
+      vi.mocked(useAccount).mockReturnValue(
+        buildAccountData({ address: undefined, isConnected: false, status: "disconnected" }),
+      );
 
-      vi.mocked(useConnect).mockReturnValue({
-        connect: mockConnect,
-        connectors: [{ id: "mockConnector", name: "Mock Wallet" }],
-      } as unknown as ReturnType<typeof useConnect>);
+      vi.mocked(useConnect).mockReturnValue(
+        buildConnectData({ connect: mockConnect, connectors: [{ id: "mockConnector", name: "Mock Wallet" }] }),
+      );
 
       renderWithQuery(<ImageGenerator />);
 
@@ -140,20 +134,24 @@ describe("ImageGenerator Component", () => {
   describe("Expanded State (Connected users)", () => {
     it("should render expanded state when wallet is connected", () => {
       // Mock connected wallet to ensure expanded state
-      vi.mocked(useAccount).mockReturnValue({
-        address: "0x1234567890123456789012345678901234567890" as `0x${string}`,
-        isConnected: true,
-        status: "connected",
-      } as ReturnType<typeof useAccount>);
+      vi.mocked(useAccount).mockReturnValue(
+        buildAccountData({
+          address: "0x1234567890123456789012345678901234567890" as `0x${string}`,
+          isConnected: true,
+          status: "connected",
+        }),
+      );
 
       // Mock wallet client for x402 hook
 
-      vi.mocked(useWalletClient).mockReturnValue({
-        data: {
-          account: { address: "0x1234567890123456789012345678901234567890" },
-          signTypedData: vi.fn(),
-        },
-      } as ReturnType<typeof useWalletClient>);
+      vi.mocked(useWalletClient).mockReturnValue(
+        buildWalletClientData({
+          data: {
+            account: { address: "0x1234567890123456789012345678901234567890" },
+            signTypedData: vi.fn(),
+          },
+        }),
+      );
 
       renderWithQuery(<ImageGenerator />);
 

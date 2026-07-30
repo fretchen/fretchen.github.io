@@ -4,6 +4,7 @@ import { useAccount, useWriteContract, useReadContracts, useSwitchChain, useChai
 import { getWalletClient } from "wagmi/actions";
 import { useSupportAction } from "../hooks/useSupportAction";
 import { getSupportV2Config, DEFAULT_SUPPORT_CHAIN, SUPPORT_RECIPIENT_ADDRESS } from "../utils/getChain";
+import { buildAccountData } from "./setup";
 
 // The hook fetches the signer on-demand via getWalletClient(config, { chainId }) from
 // wagmi/actions (avoids the reactive-useWalletClient race right after a chain switch).
@@ -88,12 +89,9 @@ describe("useSupportAction", () => {
     mockSignTypedData.mockResolvedValue(mockSignature);
 
     // Default mock implementations - use Optimism Mainnet (10)
-    vi.mocked(useAccount).mockReturnValue({
-      isConnected: true,
-      chainId: 10, // Optimism Mainnet
-      address: "0x1234567890abcdef1234567890abcdef12345678",
-      connector: { name: "MetaMask" },
-    } as unknown as ReturnType<typeof useAccount>);
+    vi.mocked(useAccount).mockReturnValue(
+      buildAccountData({ isConnected: true, chainId: 10, address: "0x1234567890abcdef1234567890abcdef12345678", connector: { name: "MetaMask" } }), // Optimism Mainnet
+    );
 
     vi.mocked(useChainId).mockReturnValue(10);
 
@@ -138,12 +136,9 @@ describe("useSupportAction", () => {
 
   describe("Chain Detection", () => {
     it("should initialize hook when on Optimism Mainnet", () => {
-      vi.mocked(useAccount).mockReturnValue({
-        isConnected: true,
-        chainId: 10, // Optimism Mainnet
-        address: "0x1234",
-        connector: { name: "MetaMask" },
-      } as unknown as ReturnType<typeof useAccount>);
+      vi.mocked(useAccount).mockReturnValue(
+        buildAccountData({ isConnected: true, chainId: 10, address: "0x1234", connector: { name: "MetaMask" } }), // Optimism Mainnet
+      );
 
       const { result } = renderHook(() => useSupportAction("/blog/test"));
 
@@ -153,12 +148,9 @@ describe("useSupportAction", () => {
     });
 
     it("should initialize hook when on Base Mainnet", () => {
-      vi.mocked(useAccount).mockReturnValue({
-        isConnected: true,
-        chainId: 8453, // Base Mainnet
-        address: "0x1234",
-        connector: { name: "MetaMask" },
-      } as unknown as ReturnType<typeof useAccount>);
+      vi.mocked(useAccount).mockReturnValue(
+        buildAccountData({ isConnected: true, chainId: 8453, address: "0x1234", connector: { name: "MetaMask" } }), // Base Mainnet
+      );
 
       const { result } = renderHook(() => useSupportAction("/blog/test"));
 
@@ -167,12 +159,9 @@ describe("useSupportAction", () => {
     });
 
     it("should initialize hook when on unsupported chain", () => {
-      vi.mocked(useAccount).mockReturnValue({
-        isConnected: true,
-        chainId: 1, // Ethereum mainnet - not supported
-        address: "0x1234",
-        connector: { name: "MetaMask" },
-      } as unknown as ReturnType<typeof useAccount>);
+      vi.mocked(useAccount).mockReturnValue(
+        buildAccountData({ isConnected: true, chainId: 1, address: "0x1234", connector: { name: "MetaMask" } }), // Ethereum mainnet - not supported
+      );
 
       const { result } = renderHook(() => useSupportAction("/blog/test"));
 
@@ -216,12 +205,9 @@ describe("useSupportAction", () => {
 
   describe("handleSupport", () => {
     it("should call writeContract with correct args on supported chain", async () => {
-      vi.mocked(useAccount).mockReturnValue({
-        isConnected: true,
-        chainId: 10, // Optimism Mainnet
-        address: "0x1234",
-        connector: { name: "MetaMask" },
-      } as unknown as ReturnType<typeof useAccount>);
+      vi.mocked(useAccount).mockReturnValue(
+        buildAccountData({ isConnected: true, chainId: 10, address: "0x1234", connector: { name: "MetaMask" } }), // Optimism Mainnet
+      );
 
       const { result } = renderHook(() => useSupportAction("/blog/test"));
 
@@ -251,12 +237,9 @@ describe("useSupportAction", () => {
     });
 
     it("should use Base Mainnet contract when on Base Mainnet", async () => {
-      vi.mocked(useAccount).mockReturnValue({
-        isConnected: true,
-        chainId: 8453, // Base Mainnet
-        address: "0x1234",
-        connector: { name: "MetaMask" },
-      } as unknown as ReturnType<typeof useAccount>);
+      vi.mocked(useAccount).mockReturnValue(
+        buildAccountData({ isConnected: true, chainId: 8453, address: "0x1234", connector: { name: "MetaMask" } }), // Base Mainnet
+      );
 
       const { result } = renderHook(() => useSupportAction("/blog/test"));
 
@@ -272,12 +255,9 @@ describe("useSupportAction", () => {
     });
 
     it("shows a friendly message instead of the raw on-chain revert error (e.g. insufficient USDC)", async () => {
-      vi.mocked(useAccount).mockReturnValue({
-        isConnected: true,
-        chainId: 10,
-        address: "0x1234",
-        connector: { name: "MetaMask" },
-      } as unknown as ReturnType<typeof useAccount>);
+      vi.mocked(useAccount).mockReturnValue(
+        buildAccountData({ isConnected: true, chainId: 10, address: "0x1234", connector: { name: "MetaMask" } }),
+      );
 
       // Simulate wagmi surfacing a raw contract-revert error via useWriteContract's `error`
       vi.mocked(useWriteContract).mockReturnValue({
@@ -299,12 +279,9 @@ describe("useSupportAction", () => {
     });
 
     it("maps a user-cancelled transaction to a 'cancelled' message, not 'no USDC'", async () => {
-      vi.mocked(useAccount).mockReturnValue({
-        isConnected: true,
-        chainId: 10,
-        address: "0x1234",
-        connector: { name: "MetaMask" },
-      } as unknown as ReturnType<typeof useAccount>);
+      vi.mocked(useAccount).mockReturnValue(
+        buildAccountData({ isConnected: true, chainId: 10, address: "0x1234", connector: { name: "MetaMask" } }),
+      );
 
       const rejection = new Error("User rejected the request.");
       rejection.name = "UserRejectedRequestError";
@@ -323,12 +300,9 @@ describe("useSupportAction", () => {
     });
 
     it("shows the friendly wallet-not-connected message when getWalletClient throws", async () => {
-      vi.mocked(useAccount).mockReturnValue({
-        isConnected: true,
-        chainId: 10,
-        address: "0x1234",
-        connector: { name: "MetaMask" },
-      } as unknown as ReturnType<typeof useAccount>);
+      vi.mocked(useAccount).mockReturnValue(
+        buildAccountData({ isConnected: true, chainId: 10, address: "0x1234", connector: { name: "MetaMask" } }),
+      );
       // wagmi's getWalletClient can throw (e.g. ConnectorNotConnectedError) instead of resolving falsy.
       vi.mocked(getWalletClient).mockRejectedValue(new Error("ConnectorNotConnectedError"));
 
@@ -343,12 +317,9 @@ describe("useSupportAction", () => {
     });
 
     it("should NOT auto-switch or donate on an unsupported chain — surfaces guidance instead", async () => {
-      vi.mocked(useAccount).mockReturnValue({
-        isConnected: true,
-        chainId: 1, // Ethereum mainnet (unsupported)
-        address: "0x1234",
-        connector: { name: "MetaMask" },
-      } as unknown as ReturnType<typeof useAccount>);
+      vi.mocked(useAccount).mockReturnValue(
+        buildAccountData({ isConnected: true, chainId: 1, address: "0x1234", connector: { name: "MetaMask" } }), // Ethereum mainnet (unsupported)
+      );
       vi.mocked(useChainId).mockReturnValue(1);
 
       const { result } = renderHook(() => useSupportAction("/blog/test"));
@@ -367,12 +338,9 @@ describe("useSupportAction", () => {
     });
 
     it("should NOT trigger chain switch on supported chain", async () => {
-      vi.mocked(useAccount).mockReturnValue({
-        isConnected: true,
-        chainId: 8453, // Base Mainnet (supported)
-        address: "0x1234",
-        connector: { name: "MetaMask" },
-      } as unknown as ReturnType<typeof useAccount>);
+      vi.mocked(useAccount).mockReturnValue(
+        buildAccountData({ isConnected: true, chainId: 8453, address: "0x1234", connector: { name: "MetaMask" } }), // Base Mainnet (supported)
+      );
 
       const { result } = renderHook(() => useSupportAction("/blog/test"));
 
@@ -389,12 +357,9 @@ describe("useSupportAction", () => {
       // Regression for the post-switch race: the reactive useWalletClient() is transiently
       // undefined right after a chain switch; getWalletClient resolves the correct client,
       // so no "wallet not connected" error should surface and the donation should proceed.
-      vi.mocked(useAccount).mockReturnValue({
-        isConnected: true,
-        chainId: 10,
-        address: "0x1234",
-        connector: { name: "MetaMask" },
-      } as unknown as ReturnType<typeof useAccount>);
+      vi.mocked(useAccount).mockReturnValue(
+        buildAccountData({ isConnected: true, chainId: 10, address: "0x1234", connector: { name: "MetaMask" } }),
+      );
 
       const { result } = renderHook(() => useSupportAction("/blog/test"));
 
@@ -409,12 +374,9 @@ describe("useSupportAction", () => {
     });
 
     it("shows wallet-not-connected only when no signer can be resolved", async () => {
-      vi.mocked(useAccount).mockReturnValue({
-        isConnected: true,
-        chainId: 10,
-        address: "0x1234",
-        connector: { name: "MetaMask" },
-      } as unknown as ReturnType<typeof useAccount>);
+      vi.mocked(useAccount).mockReturnValue(
+        buildAccountData({ isConnected: true, chainId: 10, address: "0x1234", connector: { name: "MetaMask" } }),
+      );
       vi.mocked(getWalletClient).mockResolvedValue(null as unknown as Awaited<ReturnType<typeof getWalletClient>>);
 
       const { result } = renderHook(() => useSupportAction("/blog/test"));

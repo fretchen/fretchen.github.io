@@ -153,11 +153,6 @@ ax.legend()
 
     The circuit has an accuracy of 0.85
 
-
-
-
-
-
 ![png](./qml_001_12_2.png)
 
 As we can see above there is quite a regime, where the model does to predict the labels very well. This can be improved by training the model parameters systematically.
@@ -178,7 +173,6 @@ for ii, bias_val in enumerate(tqdm(biases)):
     accuracies[ii] = accuracy
 ```
 
-
 ```python
 opt_bias = biases[accuracies.argmax()]
 
@@ -189,7 +183,6 @@ ax.set_ylabel("accuracy")
 ax.set_xlabel("biases")
 ax.legend()
 ```
-
 
 ![png](./qml_001_16_1.png)
 

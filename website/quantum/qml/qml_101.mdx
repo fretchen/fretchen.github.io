@@ -170,11 +170,6 @@ ax.legend()
 
     The circuit has an accuracy of 0.9
 
-
-
-
-
-
 ![png](./qml_101_13_2.png)
 
 ## Training
@@ -190,7 +185,6 @@ for ii, weight_val in enumerate(tqdm(weights)):
     accuracies[ii] = accuracy
 ```
 
-
 ```python
 opt_weight = weights[accuracies.argmax()]
 
@@ -201,7 +195,6 @@ ax.set_ylabel("accuracy")
 ax.set_xlabel("weights")
 ax.legend()
 ```
-
 
 ![png](./qml_101_16_1.png)
 
@@ -250,11 +243,6 @@ ax.legend()
 ```
 
     The circuit has a test accuracy of 1.0
-
-
-
-
-
 
 ![png](./qml_101_20_2.png)
 

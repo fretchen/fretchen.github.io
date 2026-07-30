@@ -26,6 +26,13 @@ export interface AgentSelectorProps {
 const rowStyle = css({ display: "flex", gap: "2", flexWrap: "wrap", alignItems: "center", mt: "2" });
 const monoStyle = css({ fontFamily: "mono", fontSize: "xs", color: "gray.600", wordBreak: "break-all" });
 const errorStyle = css({ fontSize: "xs", color: "red.600", mt: "1" });
+const hintStyle = css({ mt: "2" });
+const hintLinkStyle = css({
+  fontSize: "xs",
+  color: "brand",
+  textDecoration: "none",
+  _hover: { textDecoration: "underline" },
+});
 const inputStyle = css({
   width: "100%",
   fontSize: "xs",
@@ -96,6 +103,12 @@ export function AgentSelector({
             </button>
           </div>
           {checkState === "error" && checkError && <div className={errorStyle}>{checkError}</div>}
+          {/* This box is exactly where someone wonders how to get their own agent here. */}
+          <div className={hintStyle}>
+            <a href="/agent-onboarding" className={hintLinkStyle}>
+              How to bring your own agent →
+            </a>
+          </div>
         </div>
       )}
     </div>

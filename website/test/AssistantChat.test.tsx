@@ -29,6 +29,7 @@ vi.mock("../hooks/useX402Chat", () => ({
 
 vi.mock("../hooks/x402Discovery", () => ({
   fetchAgentCard: vi.fn(() => Promise.resolve(null)),
+  precheckLlmV1Agent: vi.fn(() => Promise.resolve({ ok: false, reason: "nope" })),
 }));
 
 vi.mock("../hooks/useWalletConnection", () => ({
@@ -58,6 +59,7 @@ vi.mock("../components/AgentInfoPanel", () => ({
 }));
 
 import { AssistantChat } from "../components/AssistantChat";
+import { precheckLlmV1Agent } from "../hooks/x402Discovery";
 import { useX402Chat } from "../hooks/useX402Chat";
 import { useWalletConnection } from "../hooks/useWalletConnection";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
@@ -183,5 +185,71 @@ describe("AssistantChat", () => {
     render(<AssistantChat />);
 
     expect(screen.queryByRole("link", { name: /assistent\.viewPayment/ })).not.toBeInTheDocument();
+  });
+
+  /**
+   * The custom-agent escape hatch. It is also the only ready-made batch-settlement client,
+   * so builders following /agent-onboarding use it to pay their own agent end-to-end —
+   * which makes "the pasted URL is what actually gets paid" the load-bearing assertion here.
+   */
+  describe("custom agent selection", () => {
+    const CUSTOM_URL = "https://another-agent.example";
+    const CUSTOM_CARD = {
+      origin: CUSTOM_URL,
+      title: "Another agent",
+      operator: "Someone Else",
+      contactUrl: null,
+      payTo: "0xabcdef0123456789abcdef0123456789abcdef01",
+      network: "eip155:8453",
+    };
+
+    function pasteAndTry(url: string) {
+      fireEvent.change(screen.getByPlaceholderText("https://another-agent.example"), { target: { value: url } });
+      fireEvent.click(screen.getByRole("button", { name: "Use this agent" }));
+    }
+
+    it("renders the selector and pays the default agent until one is chosen", () => {
+      render(<AssistantChat />);
+
+      expect(screen.getByPlaceholderText("https://another-agent.example")).toBeInTheDocument();
+      expect(useX402Chat).toHaveBeenCalledWith("eip155:8453", "https://llm-agent.fretchen.eu");
+    });
+
+    it("pre-checks a pasted URL and then pays that agent instead", async () => {
+      vi.mocked(precheckLlmV1Agent).mockResolvedValue({ ok: true, card: CUSTOM_CARD });
+
+      render(<AssistantChat />);
+      pasteAndTry(CUSTOM_URL);
+
+      await waitFor(() => expect(precheckLlmV1Agent).toHaveBeenCalledWith(CUSTOM_URL));
+      await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:8453", CUSTOM_URL));
+      // Provenance of who is about to be paid.
+      expect(screen.getByText("Someone Else")).toBeInTheDocument();
+    });
+
+    it("shows the reason and keeps the default agent when the pre-check fails", async () => {
+      vi.mocked(precheckLlmV1Agent).mockResolvedValue({
+        ok: false,
+        reason: "Expected a 402 payment challenge, got 200.",
+      });
+
+      render(<AssistantChat />);
+      pasteAndTry("https://not-an-agent.example");
+
+      expect(await screen.findByText(/Expected a 402 payment challenge/)).toBeInTheDocument();
+      expect(useX402Chat).not.toHaveBeenCalledWith(expect.anything(), "https://not-an-agent.example");
+    });
+
+    it("returns to the default agent", async () => {
+      vi.mocked(precheckLlmV1Agent).mockResolvedValue({ ok: true, card: CUSTOM_CARD });
+
+      render(<AssistantChat />);
+      pasteAndTry(CUSTOM_URL);
+
+      const back = await screen.findByRole("button", { name: "Back to default agent" });
+      fireEvent.click(back);
+
+      await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:8453", "https://llm-agent.fretchen.eu"));
+    });
   });
 });

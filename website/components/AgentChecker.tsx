@@ -22,7 +22,7 @@ const inputStyle = css({
   border: "1px solid",
   borderColor: "gray.300",
   borderRadius: "md",
-  _focus: { outline: "none", borderColor: "indigo.500" },
+  _focus: { outline: "none", borderColor: "brand" },
 });
 
 const buttonStyle = css({
@@ -30,11 +30,11 @@ const buttonStyle = css({
   py: "2",
   fontSize: "sm",
   fontWeight: "medium",
-  bg: "indigo.600",
+  bg: "brand",
   color: "white",
   borderRadius: "md",
   cursor: "pointer",
-  _hover: { bg: "indigo.700" },
+  _hover: { bg: "blue.700" },
   _disabled: { opacity: 0.5, cursor: "not-allowed" },
 });
 

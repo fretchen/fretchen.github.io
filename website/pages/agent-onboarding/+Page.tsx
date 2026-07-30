@@ -178,6 +178,10 @@ function ApiReference() {
 
 export default function Page() {
   // The ToC finds its own headings by scanning this subtree — see components/TableOfContents.
+  // TableOfContentsProps.contentRef is typed as RefObject<HTMLElement> (non-null), but
+  // useRef(null) always returns RefObject<T | null> — a pre-existing mismatch also present
+  // at Post.tsx:230,268 (not something to silently fix here; it needs a
+  // TableOfContentsProps change to `RefObject<HTMLElement | null>` across all call sites).
   const contentRef = useRef<HTMLElement>(null!);
 
   return (
@@ -248,8 +252,17 @@ export default function Page() {
               <li>
                 <strong>Node + TypeScript</strong>, and the two SDK packages:{" "}
                 <code className={inlineCode}>npm install @x402/core @x402/evm</code>. The snippets below target{" "}
-                <strong>v2.19</strong> — batch-settlement is young and its APIs still move between minor versions, so
-                pin what you test against.
+                <strong>v2.20</strong> (check{" "}
+                <a
+                  href={`${GH_BLOB}/scw_js/package.json`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={extLink}
+                >
+                  scw_js/package.json
+                </a>{" "}
+                for what we actually run) — batch-settlement is young and its APIs still move between minor versions,
+                so pin what you test against.
               </li>
               <li>
                 <strong>An EVM wallet</strong> (two keys: one to receive funds, one off-chain signer — explained in step

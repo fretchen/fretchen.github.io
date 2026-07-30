@@ -32,7 +32,7 @@ const table = css({
 });
 
 const fieldName = css({ fontFamily: "mono", fontSize: "xs", fontWeight: "medium", color: "gray.800" });
-const typeCell = css({ fontFamily: "mono", fontSize: "xs", color: "indigo.700", whiteSpace: "nowrap" });
+const typeCell = css({ fontFamily: "mono", fontSize: "xs", color: "brand", whiteSpace: "nowrap" });
 const requiredYes = css({ fontSize: "xs", fontWeight: "medium", color: "red.600" });
 const requiredNo = css({ fontSize: "xs", color: "gray.400" });
 const descCell = css({ fontSize: "xs", color: "gray.600", lineHeight: "1.5" });

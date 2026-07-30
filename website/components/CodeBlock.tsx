@@ -59,7 +59,7 @@ const copyButton = css({
   opacity: 0.7,
   transition: "opacity 0.15s ease, background 0.15s ease",
   _hover: { opacity: 1, bg: "rgba(255,255,255,0.18)" },
-  _focusVisible: { opacity: 1, outline: "2px solid", outlineColor: "indigo.400", outlineOffset: "1px" },
+  _focusVisible: { opacity: 1, outline: "2px solid", outlineColor: "brand", outlineOffset: "1px" },
 });
 
 export interface CodeBlockProps {

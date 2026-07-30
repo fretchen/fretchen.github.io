@@ -11,19 +11,21 @@ const wrapper = css({
   mb: "3",
   border: "1px solid token(colors.border, #e5e7eb)",
   borderRadius: "md",
-  bg: "white",
   overflow: "hidden",
 });
 
+// The closed state is the one that has to read as a control, so tint the summary rather than
+// the whole wrapper — an expanded snippet then sits on the page ground, not in a second box.
 const summary = css({
   px: "3",
   py: "2",
   fontSize: "sm",
   fontWeight: "medium",
-  color: "indigo.700",
+  color: "brand",
+  bg: "gray.50",
   cursor: "pointer",
   userSelect: "none",
-  _hover: { bg: "gray.50" },
+  _hover: { bg: "gray.100" },
 });
 
 const body = css({ px: "3", pb: "3", pt: "1" });

@@ -28,11 +28,20 @@ const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ definition, title, clas
   const configKey = config ? JSON.stringify(config) : "";
 
   const resolvedConfig = useMemo(() => {
-    const caller: Record<string, unknown> = configKey ? JSON.parse(configKey) : {};
+    const caller = (configKey ? (JSON.parse(configKey) as unknown) : {}) as Record<string, unknown>;
     return {
       startOnLoad: false,
       theme: "default" as const,
-      securityLevel: "sandbox" as const,
+      // "strict" (mermaid's own default), NOT "sandbox". Under "sandbox" mermaid returns an
+      // <iframe> whose height is the diagram's *unscaled* viewBox height in px, while the SVG
+      // inside scales down to the container width — the difference is dead whitespace at the
+      // bottom, growing with the diagram's width, and no page CSS can reach inside to fix it.
+      // "strict" returns an inline <svg>, so the `& svg { height: auto }` rule below applies
+      // and the height tracks the scaled width exactly. Labels and the rendered SVG are still
+      // DOMPurify-sanitized under "strict"; the only thing given up is iframe isolation, which
+      // guards against untrusted diagram text — every definition we render is a hardcoded
+      // constant in our own source.
+      securityLevel: "strict" as const,
       ...caller,
       // Merge one level deeper than the spread above: a caller passing any `sequence` key
       // (e.g. { sequence: { wrap: true } }) would otherwise silently drop mirrorActors.

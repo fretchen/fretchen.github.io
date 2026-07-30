@@ -3,6 +3,7 @@ import { PostProps } from "../types/components";
 import MetadataLine from "./MetadataLine";
 import { Link } from "./Link";
 import { NFTFloatImage } from "./NFTFloatImage";
+import { MdxPre } from "./MdxCodeBlock";
 import { post, titleBar } from "../layouts/styles";
 import { loadLazyModuleFromDirectory } from "../utils/lazyGlobRegistry";
 import { isSupportedDirectory, getSupportedDirectories } from "../utils/supportedDirectories";
@@ -22,7 +23,8 @@ const ReactPostRenderer: React.FC<{
   contentRef: React.RefObject<HTMLDivElement>;
   onReady?: () => void;
 }> = ({ componentPath, tokenID, contentRef, onReady }) => {
-  const [Component, setComponent] = React.useState<React.ComponentType | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- MDX components accept an extra `components` override prop; plain TSX posts ignore it.
+  const [Component, setComponent] = React.useState<React.ComponentType<any> | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState<boolean>(true);
 
@@ -139,7 +141,7 @@ const ReactPostRenderer: React.FC<{
   return (
     <div className={post.contentContainer} ref={contentRef}>
       {tokenID && <NFTFloatImage tokenId={tokenID} />}
-      <Component />
+      <Component components={{ pre: MdxPre }} />
     </div>
   );
 };

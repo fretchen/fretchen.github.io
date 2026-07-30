@@ -1,7 +1,7 @@
 /**
  * CodeBlock — the shared docs code block: syntax-highlighted, copyable.
  *
- * Highlighting runs through highlight.js's *core* build with only the three languages we
+ * Highlighting runs through highlight.js's *core* build with only the languages we
  * actually use registered. The full `highlight.js` bundle registers ~190 grammars and would
  * push a client chunk past the 700 kB ceiling enforced by utils/checkChunkSizes.ts — never
  * import the default entry point here.
@@ -18,15 +18,21 @@ import hljs from "highlight.js/lib/core";
 import typescript from "highlight.js/lib/languages/typescript";
 import json from "highlight.js/lib/languages/json";
 import bash from "highlight.js/lib/languages/bash";
+import javascript from "highlight.js/lib/languages/javascript";
+import python from "highlight.js/lib/languages/python";
+import yaml from "highlight.js/lib/languages/yaml";
 import "highlight.js/styles/vs2015.css";
 import { css } from "../styled-system/css";
 
 hljs.registerLanguage("typescript", typescript);
 hljs.registerLanguage("json", json);
 hljs.registerLanguage("bash", bash);
+hljs.registerLanguage("javascript", javascript);
+hljs.registerLanguage("python", python);
+hljs.registerLanguage("yaml", yaml);
 
 /** `plaintext` opts out of highlighting — use it for terminal transcripts and annotated output. */
-export type CodeLang = "typescript" | "json" | "bash" | "plaintext";
+export type CodeLang = "typescript" | "json" | "bash" | "javascript" | "python" | "yaml" | "plaintext";
 
 const wrapper = css({ position: "relative", mt: "1", mb: "2" });
 

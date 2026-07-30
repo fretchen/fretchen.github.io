@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { css } from "../../styled-system/css";
 import MermaidDiagram from "../../components/MermaidDiagram";
 import { FacilitatorApproval } from "../../components/FacilitatorApproval";
+import { CodeBlock } from "../../components/CodeBlock";
 import { titleBar } from "../../layouts/styles";
 import * as styles from "../../layouts/styles";
 import { Link } from "../../components/Link";
@@ -327,8 +328,7 @@ export default function Page() {
             Replace <code>0xYourMerchantAddress</code> with your wallet address and set <code>amount</code> to your
             price in USDC (6 decimals — <code>100000</code> = $0.10).
           </p>
-          <pre>
-            <code>{`// HTTP 402 response body:
+          <CodeBlock lang="json">{`// HTTP 402 response body:
 {
   "x402Version": 2,
   "accepts": [{
@@ -341,8 +341,7 @@ export default function Page() {
     "extra": { "name": "USD Coin", "version": "2" }
   }],
   "facilitatorUrl": "https://facilitator.fretchen.eu"
-}`}</code>
-          </pre>
+}`}</CodeBlock>
         </div>
 
         <div className={stepContainer}>
@@ -364,8 +363,7 @@ export default function Page() {
             When a client sends a request with a <code>PAYMENT-SIGNATURE</code> header, verify the payment before
             delivering the resource, then settle it on-chain:
           </p>
-          <pre>
-            <code>{`// 1. Verify payment (before delivering resource)
+          <CodeBlock lang="javascript">{`// 1. Verify payment (before delivering resource)
 const verifyRes = await fetch("https://facilitator.fretchen.eu/verify", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
@@ -386,8 +384,7 @@ await fetch("https://facilitator.fretchen.eu/settle", {
     network: "eip155:10", payload, details })
 });
 
-return new Response(JSON.stringify(result), { status: 200 });`}</code>
-          </pre>
+return new Response(JSON.stringify(result), { status: 200 });`}</CodeBlock>
           <p>
             That&apos;s it — your service now accepts crypto payments. See the{" "}
             <Link href="/agent-onboarding">agent onboarding guide</Link> for a complete walkthrough.
@@ -500,8 +497,7 @@ return new Response(JSON.stringify(result), { status: 200 });`}</code>
             Validates a signed payment off-chain. Checks signature validity, sufficient balance, correct recipient, and
             expiration. Call this <strong>before</strong> delivering your resource.
           </p>
-          <pre>
-            <code>{`curl -X POST https://facilitator.fretchen.eu/verify \\
+          <CodeBlock lang="bash">{`curl -X POST https://facilitator.fretchen.eu/verify \\
   -H "Content-Type: application/json" \\
   -d '{
     "x402Version": 2,
@@ -515,8 +511,7 @@ return new Response(JSON.stringify(result), { status: 200 });`}</code>
       "asset": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
       "payTo": "0xYourMerchantAddress"
     }
-  }'`}</code>
-          </pre>
+  }'`}</CodeBlock>
           <p>
             Response: <code>{`{ "valid": true }`}</code> or <code>{`{ "valid": false, "invalidReason": "..." }`}</code>
           </p>
@@ -528,8 +523,7 @@ return new Response(JSON.stringify(result), { status: 200 });`}</code>
             Executes the payment on-chain via EIP-3009 <code>transferWithAuthorization</code>. Call this{" "}
             <strong>after</strong> successful verification and resource delivery.
           </p>
-          <pre>
-            <code>{`curl -X POST https://facilitator.fretchen.eu/settle \\
+          <CodeBlock lang="bash">{`curl -X POST https://facilitator.fretchen.eu/settle \\
   -H "Content-Type: application/json" \\
   -d '{
     "x402Version": 2,
@@ -543,8 +537,7 @@ return new Response(JSON.stringify(result), { status: 200 });`}</code>
       "asset": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
       "payTo": "0xYourMerchantAddress"
     }
-  }'`}</code>
-          </pre>
+  }'`}</CodeBlock>
           <p>
             Response: <code>{`{ "success": true, "txHash": "0x..." }`}</code>
           </p>
@@ -553,9 +546,7 @@ return new Response(JSON.stringify(result), { status: 200 });`}</code>
         <h3>GET /supported</h3>
         <div className={endpointBox}>
           <p>Returns supported networks, payment schemes, and fee configuration.</p>
-          <pre>
-            <code>{`curl https://facilitator.fretchen.eu/supported`}</code>
-          </pre>
+          <CodeBlock lang="bash">{`curl https://facilitator.fretchen.eu/supported`}</CodeBlock>
           <p>
             Returns a JSON object with <code>kinds</code> (supported network/scheme pairs), <code>extensions</code>{" "}
             (advertised extension keys), <code>signers</code> (facilitator addresses per network), and{" "}
@@ -579,8 +570,7 @@ return new Response(JSON.stringify(result), { status: 200 });`}</code>
         <p>
           Using the official <code>@x402/fetch</code> SDK, a client can pay for any x402 resource automatically:
         </p>
-        <pre>
-          <code>{`import { x402Client, wrapFetchWithPayment } from "@x402/fetch";
+        <CodeBlock lang="typescript">{`import { x402Client, wrapFetchWithPayment } from "@x402/fetch";
 import { registerExactEvmScheme } from "@x402/evm/exact/client";
 import { privateKeyToAccount } from "viem/accounts";
 
@@ -602,13 +592,11 @@ const response = await fetchWithPayment(
 
 const result = await response.json();
 console.log("Image:", result.imageUrl);
-console.log("NFT:", result.tokenId);`}</code>
-        </pre>
+console.log("NFT:", result.tokenId);`}</CodeBlock>
 
         <h3>Your server (resource server)</h3>
         <p>Full example of a Node.js endpoint protected by x402. Adapt the resource generation to your use case:</p>
-        <pre>
-          <code>{`// Express / Node.js example
+        <CodeBlock lang="javascript">{`// Express / Node.js example
 app.post("/api/resource", async (req, res) => {
   const paymentHeader = req.headers["payment-signature"];
 
@@ -658,8 +646,7 @@ app.post("/api/resource", async (req, res) => {
   });
 
   return res.json(result);
-});`}</code>
-        </pre>
+});`}</CodeBlock>
 
         {/* ── 7. Supported networks ────────────────────────────────────── */}
 

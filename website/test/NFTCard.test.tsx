@@ -38,6 +38,7 @@ vi.mock("viem/chains", () => ({
 
 vi.mock("../wagmi.config", () => ({
   config: {},
+  asConfiguredChainId: (id: number) => id,
 }));
 
 // No need to mock getChain - it's just reading env vars and returning constants

@@ -19,7 +19,7 @@ export function Link({
   const { urlPathname } = pageContext;
 
   if (!locale && pageContext.locale) {
-    locale = pageContext.locale as string;
+    locale = pageContext.locale;
   }
   if (!locale && !pageContext.locale) {
     locale = defaultLocale;

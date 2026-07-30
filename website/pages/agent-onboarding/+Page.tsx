@@ -5,12 +5,45 @@ import { AgentChecker } from "../../components/AgentChecker";
 import { CommentsSection } from "../../components/CommentsSection";
 import { ParamTable } from "../../components/ParamTable";
 import { Foldable } from "../../components/Foldable";
+import MermaidDiagram from "../../components/MermaidDiagram";
 import { useOpenApiSpec } from "../../hooks/useOpenApiSpec";
 
 const LLM_ORIGIN = "https://llm-agent.fretchen.eu";
 const SPEC_URL = `${LLM_ORIGIN}/openapi.json`;
 const GH_BLOB = "https://github.com/fretchen/fretchen.github.io/blob/main";
+// Line-anchored links are pinned to a commit: anchors against `main` silently drift onto
+// unrelated code the moment the referenced file changes. GH_BLOB stays unpinned for
+// "browse the current version" links.
+const GH_PIN = "https://github.com/fretchen/fretchen.github.io/blob/7f517783fcac7c7a2f4c5bc08b967e4164088a7d";
 const X402_DOCS = "https://docs.x402.org";
+
+/** The payment flow, as a sequence — same style as the /x402 page's diagrams. */
+const paymentFlowDiagram = `
+sequenceDiagram
+    participant Client as Client / Wallet
+    participant Server as Your endpoint
+    participant Facilitator as Facilitator
+    participant Chain as Blockchain<br/>(USDC)
+
+    Client->>Server: POST (no payment)
+    Server-->>Client: 402 + how to pay
+
+    Note over Client,Chain: First message only — open the channel
+    Client->>Chain: Deposit USDC into escrow
+    Client->>Server: POST + deposit payload
+    Server->>Facilitator: verify → settle
+    Server-->>Client: 200 + reply
+
+    Note over Client,Server: Every later message — off-chain, no tx
+    Client->>Server: POST + signed voucher (IOU)
+    Server->>Facilitator: verify → settle (bookkeeping only)
+    Server-->>Client: 200 + reply
+
+    Note over Server,Chain: Your cron job, on a schedule
+    Server->>Facilitator: claimAndSettle()
+    Facilitator->>Chain: Redeem accumulated vouchers
+    Chain-->>Server: 💰 Paid
+`;
 
 // Small presentational helpers ------------------------------------------------
 
@@ -55,6 +88,20 @@ const note = css({
 
 function Code({ children }: { children: string }) {
   return <pre className={codeBlock}>{children}</pre>;
+}
+
+/**
+ * Deep link into the reference implementation at a pinned commit, e.g.
+ * <SrcRef path="scw_js/sc_llm_x402.ts" lines="288-324" /> → "sc_llm_x402.ts:288-324".
+ */
+function SrcRef({ path, lines, label }: { path: string; lines?: string; label?: string }) {
+  const file = path.split("/").pop();
+  const anchor = lines ? `#L${lines.replace("-", "-L")}` : "";
+  return (
+    <a href={`${GH_PIN}/${path}${anchor}`} target="_blank" rel="noopener noreferrer" className={extLink}>
+      {label ?? `${file}${lines ? `:${lines}` : ""}`}
+    </a>
+  );
 }
 
 /** A numbered build step. */
@@ -190,7 +237,7 @@ export default function Page() {
         </div>
 
         <div className={sectionCard}>
-          <h2 className={h2}>👤 Who this is for</h2>
+          <h2 className={h2}>Who this is for</h2>
           <p className={para}>
             A backend developer comfortable with <strong>Node and TypeScript</strong> who already has (or can put
             together) an LLM endpoint. <strong>No prior x402 or crypto-payments experience assumed</strong> — the one
@@ -230,7 +277,7 @@ export default function Page() {
 
         {/* SECTION — how payment works */}
         <div className={sectionCard}>
-          <h2 className={h2}>💸 How the payment works</h2>
+          <h2 className={h2}>How the payment works</h2>
           <p className={para}>
             When someone calls your endpoint without paying, you reply <strong>402 Payment Required</strong> plus a
             header describing how to pay. Their client pays in <strong>USDC</strong> (a dollar stablecoin) and retries.
@@ -240,18 +287,7 @@ export default function Page() {
             That scheme is called <strong>batch-settlement</strong>.
           </p>
 
-          <Code>{`  client                        your endpoint                 chain
-    │                               │                           │
-    ├── POST (no payment) ─────────►│                           │
-    │◄── 402 + how to pay ──────────┤                           │
-    │                               │                           │
-    ├── deposit (once) ────────────►│───── escrow opened ──────►│
-    │◄── 200 + reply ───────────────┤                           │
-    │                               │                           │
-    ├── voucher + POST ────────────►│  (off-chain, per message) │
-    │◄── 200 + reply ───────────────┤                           │
-    │            …                  │                           │
-    │                          your cron job ───── claim ──────►│  💰`}</Code>
+          <MermaidDiagram definition={paymentFlowDiagram} title="Batch-settlement payment flow" />
 
           <p className={para}>
             You don&apos;t implement the protocol yourself — the <code className={inlineCode}>@x402/evm</code> SDK does
@@ -303,7 +339,7 @@ export default function Page() {
 
         {/* SECTION — the API */}
         <div className={sectionCard}>
-          <h2 className={h2}>📡 The API you expose</h2>
+          <h2 className={h2}>The API you expose</h2>
           <p className={para}>
             One route: <code className={inlineCode}>POST /</code>, in the OpenAI chat-completions format — so it looks
             like any other LLM API and existing types just work.
@@ -318,32 +354,63 @@ export default function Page() {
             which needs the whole reply).
           </div>
 
-          <p className={caption}>Example request:</p>
-          <Code>{`POST /
-{
-  "model": "mistral-large-latest",
-  "messages": [{ "role": "user", "content": "Hello" }]
-}`}</Code>
+          <h3 className={`${h3} ${css({ mt: "5" })}`}>Try it right now</h3>
+          <p className={para}>
+            Send an unpaid request to our live agent. You can run this verbatim — it costs nothing, and the 402 it
+            returns is exactly what your own endpoint has to produce:
+          </p>
+          <Code>{`curl -i -X POST ${LLM_ORIGIN}/ \\
+  -H "Content-Type: application/json" \\
+  -d '{"model":"mistral-large-latest","messages":[{"role":"user","content":"Hello"}]}'`}</Code>
+          <p className={caption}>
+            The interesting part of the response — note <code className={inlineCode}>receiverAuthorizer</code> and{" "}
+            <code className={inlineCode}>withdrawDelay</code>: those are the fields{" "}
+            <code className={inlineCode}>enhancePaymentRequirements</code> injects for you in step 3.
+          </p>
+          <Code>{`HTTP/2 402
+access-control-expose-headers: Payment-Required, X-Payment, PAYMENT-REQUIRED
+payment-required: eyJ4NDAyVmVyc2lvbiI6MiwicmVzb3VyY2UiOnsidXJs...   ← same JSON, base64
 
-          <p className={caption}>Example response:</p>
-          <Code>{`{
-  "id": "chatcmpl-...",
-  "object": "chat.completion",
-  "model": "mistral-large-latest",
-  "choices": [{ "index": 0, "message": { "role": "assistant", "content": "Hi!" }, "finish_reason": "stop" }],
-  "usage": { "prompt_tokens": 10, "completion_tokens": 9, "total_tokens": 19 }
+{
+  "x402Version": 2,
+  "resource": { "url": "/", "description": "AI Assistant chat message", "mimeType": "application/json" },
+  "accepts": [{
+    "scheme": "batch-settlement",
+    "network": "eip155:8453",
+    "amount": "3000",                                    ← ceiling: 0.003 USDC
+    "asset":  "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "payTo":  "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+    "maxTimeoutSeconds": 120,
+    "extra": {
+      "name": "USD Coin", "version": "2",
+      "receiverAuthorizer": "0xF9B7...2c93",             ← injected by the SDK
+      "withdrawDelay": 86400                             ← injected by the SDK
+    }
+  }, { "network": "eip155:84532", "...": "the same, for Base Sepolia" }]
 }`}</Code>
 
           <p className={para}>
-            Errors use the OpenAI shape — <code className={inlineCode}>{`{ error: { message, type, code } }`}</code>{" "}
-            with <code className={inlineCode}>model_not_found</code> for an unadvertised model and{" "}
+            You can&apos;t get past this point with curl — the next request has to carry a signed payment, which means
+            opening a channel. For a <strong>real, runnable paid round-trip</strong>, use the buyer notebook: it drives
+            a server through deposit → voucher → verify → settle over plain HTTP, on testnet by default (
+            <code className={inlineCode}>USE_MAINNET = false</code>).
+          </p>
+          <p className={para}>
+            <SrcRef path="scw_js/notebooks/sc_llm_x402_buyer.ipynb" label="→ sc_llm_x402_buyer.ipynb (Deno notebook)" />
+          </p>
+
+          <p className={para}>
+            After payment your endpoint returns the ordinary OpenAI completion object shown in the response table above
+            — <code className={inlineCode}>usage</code> included. Errors use the OpenAI shape,{" "}
+            <code className={inlineCode}>{`{ error: { message, type, code } }`}</code>, with{" "}
+            <code className={inlineCode}>model_not_found</code> for an unadvertised model and{" "}
             <code className={inlineCode}>stream_unsupported</code> for a streaming request.
           </p>
         </div>
 
         {/* SECTION — build it */}
         <div className={sectionCard}>
-          <h2 className={h2}>🛠️ Build it, step by step</h2>
+          <h2 className={h2}>Build it, step by step</h2>
           <p className={para}>
             Each step shows the requirement and the real code from our implementation (
             <a href={`${GH_BLOB}/scw_js/sc_llm_x402.ts`} target="_blank" rel="noopener noreferrer" className={extLink}>
@@ -353,16 +420,83 @@ export default function Page() {
             <a href={`${GH_BLOB}/scw_js/x402_server.ts`} target="_blank" rel="noopener noreferrer" className={extLink}>
               x402_server.ts
             </a>
-            ), trimmed for readability and with our infrastructure swapped for portable equivalents.
+            ), trimmed for readability and with our infrastructure swapped for portable equivalents. Each snippet ends
+            with a line-anchored link to the original, so you can always diff against something that runs in production.
           </p>
+          <p className={para}>
+            Snippets use a <strong>plain-object handler</strong> — an event in, a{" "}
+            <code className={inlineCode}>{`{ statusCode, headers, body }`}</code> out. That&apos;s what serverless
+            platforms hand you, and it maps to Express or Fetch handlers in a couple of lines.
+          </p>
+
+          <h3 className={h3}>Where everything goes</h3>
+          <p className={para}>
+            This is the whole thing, with a slot for each step. Read it once — every later snippet fills exactly one of
+            these slots, so you always know whether code belongs at module scope (runs once) or inside the handler (runs
+            per request).
+          </p>
+          <Code>{`// ═══ server.ts ════════════════════════════════════════════ MODULE SCOPE (once)
+import { x402ResourceServer, HTTPFacilitatorClient } from "@x402/core/server";
+import { BatchSettlementEvmScheme } from "@x402/evm/batch-settlement/server";
+import { RedisChannelStorage } from "@x402/evm/batch-settlement/server/redis-storage";
+import { privateKeyToAccount } from "viem/accounts";
+import { createClient } from "redis";
+
+const MODELS = ["mistral-large-latest"];        // must match the enum you publish (step 6)
+const NETWORKS = ["eip155:8453"];               // Base mainnet; add "eip155:84532" to test
+const RESOURCE = { url: "https://your-agent.example/", description: "chat", mimeType: "application/json" };
+
+// Your price ceiling per message, in USDC atomic units (6 decimals). Pick it as
+// (tokens you expect per message) x (your OUTPUT rate) — pricing the whole estimate at the
+// dearer output rate guarantees the ceiling is never an underestimate. 3000 = 0.003 USDC.
+const MAX_PRICE_PER_MESSAGE = "3000";
+
+const redis = createClient({ url: process.env.REDIS_URL });
+await redis.connect();
+
+const USDC = { /* ... */ };                                    // ── step 3
+const { resourceServer, scheme } = setupX402();                // ── step 2
+
+export async function handler(event) {
+  // ── preflight: browsers send OPTIONS before a paid POST (step 3)
+  if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: CORS, body: "" };
+
+  // ── step 1: parse + validate the OpenAI body
+  // ── step 3: no payment? advertise how to pay, return 402
+  // ── step 4: verify → run your model → settle → 200
+}
+
+// ═══ helpers (module scope) ═══════════════════════════════
+// json() / CORS                                                ── step 1
+// respond402()                                                 ── step 3
+// extractPaymentPayload(), settlementHeaders(), priceFromUsage() ── step 4
+
+// ═══ two more files ═══════════════════════════════════════
+// cron.ts        — claim your money on a schedule              ── step 5
+// openapi.json   — discovery doc + the route that serves it    ── step 6`}</Code>
 
           <Step n={1} title="Start from an OpenAI-shaped endpoint">
             <p className={para}>
               If you already proxy an OpenAI-compatible model, you&apos;re done with this step — just validate the input
-              and reject streaming.
+              and reject streaming. Nothing here is x402-specific yet.
             </p>
-            <Foldable label="Show the request validation">
-              <Code>{`const body = await req.json();
+            <Foldable label="Show the request validation + the json/CORS helpers">
+              <Code>{`// Every response needs these — the assistant is a browser client, and
+// Allow-Headers must cover PAYMENT-SIGNATURE or the preflight fails.
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "Content-Type, PAYMENT-SIGNATURE, X-PAYMENT",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Expose-Headers": "Payment-Required",
+  "Content-Type": "application/json",
+};
+
+function json(statusCode, payload, extraHeaders = {}) {
+  return { statusCode, headers: { ...CORS, ...extraHeaders }, body: JSON.stringify(payload) };
+}
+
+// ── in the handler ──
+const body = JSON.parse(event.body);
 
 if (body.stream === true) {
   return json(400, {
@@ -377,6 +511,10 @@ if (!MODELS.includes(body.model)) {
     error: { message: \`Unknown model '\${body.model}'.\`, type: "invalid_request_error", code: "model_not_found" },
   });
 }`}</Code>
+              <p className={caption}>
+                Ours: <SrcRef path="scw_js/sc_llm_x402.ts" lines="169-215" /> (validation),{" "}
+                <SrcRef path="scw_js/sc_llm_x402.ts" lines="78-113" /> (CORS + error helpers).
+              </p>
             </Foldable>
           </Step>
 
@@ -387,14 +525,9 @@ if (!MODELS.includes(body.model)) {
               <strong>authorizer</strong> key that signs channel configuration off-chain (it never needs funding).
             </p>
             <p className={para}>
-              For <code className={inlineCode}>FACILITATOR_URL</code> you can use ours:{" "}
-              <code className={inlineCode}>https://facilitator.fretchen.eu</code> — it supports batch-settlement on
-              Optimism and Base, charges a flat 0.01 USDC per settlement, and needs a one-time USDC approval from your
-              receiver wallet (details and the approval widget are on{" "}
-              <a href="/x402" className={extLink}>
-                the x402 page
-              </a>
-              ). Alternatives: any facilitator advertising <code className={inlineCode}>batch-settlement</code> in the{" "}
+              For <code className={inlineCode}>FACILITATOR_URL</code>, pick a facilitator that advertises{" "}
+              <code className={inlineCode}>batch-settlement</code> on your network — check its{" "}
+              <code className={inlineCode}>/supported</code> endpoint. Public options are listed in the{" "}
               <a
                 href={`${X402_DOCS}/dev-tools/facilitators`}
                 target="_blank"
@@ -412,32 +545,31 @@ if (!MODELS.includes(body.model)) {
               >
                 Solvador
               </a>
-              ), or run your own.
+              ), or you can run your own.
             </p>
-            <Foldable label="Show the setup">
-              <Code>{`import { x402ResourceServer, HTTPFacilitatorClient } from "@x402/core/server";
-import { BatchSettlementEvmScheme } from "@x402/evm/batch-settlement/server";
-import { RedisChannelStorage } from "@x402/evm/batch-settlement/server/redis-storage";
-import { privateKeyToAccount } from "viem/accounts";
+            <Foldable label="Show the setup (fills the setupX402() slot)">
+              <Code>{`function setupX402() {
+  const facilitator = new HTTPFacilitatorClient({ url: process.env.FACILITATOR_URL });
+  const authorizer = privateKeyToAccount(process.env.RECEIVER_AUTHORIZER_PRIVATE_KEY);
 
-const NETWORKS = ["eip155:8453"];                        // Base mainnet
-const facilitator = new HTTPFacilitatorClient({ url: process.env.FACILITATOR_URL });
-const authorizer = privateKeyToAccount(process.env.RECEIVER_AUTHORIZER_PRIVATE_KEY);
+  const resourceServer = new x402ResourceServer(facilitator);
 
-const resourceServer = new x402ResourceServer(facilitator);
+  const scheme = new BatchSettlementEvmScheme(process.env.RECEIVER_ADDRESS, {
+    storage: new RedisChannelStorage({ client: redis }),   // or FileChannelStorage for one instance
+    receiverAuthorizerSigner: {
+      address: authorizer.address,
+      signTypedData: (params) => authorizer.signTypedData(params),
+    },
+    onchainStateTtlMs: 5_000,      // keep low, or a user's first message after depositing can fail
+    withdrawDelay: 86_400,         // must be >> your claim interval (step 5)
+  });
 
-const scheme = new BatchSettlementEvmScheme(process.env.RECEIVER_ADDRESS, {
-  storage: new RedisChannelStorage({ client: redis }),   // or FileChannelStorage for one instance
-  receiverAuthorizerSigner: {
-    address: authorizer.address,
-    signTypedData: (params) => authorizer.signTypedData(params),
-  },
-  onchainStateTtlMs: 5_000,      // keep low, or a user's first message after depositing can fail
-  withdrawDelay: 86_400,         // must be >> your claim interval (step 5)
-});
-
-for (const network of NETWORKS) resourceServer.register(network, scheme);`}</Code>
-              <p className={caption}>Ours: x402_server.ts → createLLMResourceServer (we use S3 for storage).</p>
+  for (const network of NETWORKS) resourceServer.register(network, scheme);
+  return { resourceServer, scheme, facilitator };
+}`}</Code>
+              <p className={caption}>
+                Ours: <SrcRef path="scw_js/x402_server.ts" lines="89-109" /> — same thing, with S3 for storage.
+              </p>
             </Foldable>
           </Step>
 
@@ -462,58 +594,68 @@ for (const network of NETWORKS) resourceServer.register(network, scheme);`}</Cod
                 Don&apos;t skip <code className={inlineCode}>enhancePaymentRequirements</code>.
               </strong>{" "}
               It injects the <code className={inlineCode}>receiverAuthorizer</code> and{" "}
-              <code className={inlineCode}>withdrawDelay</code> fields the client needs to build a deposit. And you must
-              reuse the <em>same enhanced</em> object when you verify (step 4) — a bare object gets every deposit
-              rejected.
+              <code className={inlineCode}>withdrawDelay</code> fields the client needs to build a deposit — you saw
+              both in the curl output above. The <em>same enhancement</em> has to be applied again at verify time (step
+              4); a bare, un-enhanced object gets every deposit rejected with{" "}
+              <code className={inlineCode}>receiver_authorizer_mismatch</code>.
             </div>
-            <Foldable label="Show the 402 builder">
-              <Code>{`async function paymentRequirements() {
-  const accepts = await Promise.all(
-    NETWORKS.map((network) => {
-      const usdc = USDC[network];                       // address + EIP-712 name/version
-      const base = {
-        scheme: "batch-settlement",
-        network,
-        amount: MAX_PRICE_PER_MESSAGE,                  // a ceiling, in USDC atomic units (6 dp)
-        asset: usdc.address,
-        payTo: process.env.RECEIVER_ADDRESS,
-        maxTimeoutSeconds: 120,
-        extra: { name: usdc.name, version: usdc.version },
-      };
-      return scheme.enhancePaymentRequirements(base, {
-        x402Version: 2,
-        scheme: "batch-settlement",
-        network,
-        extra: base.extra,
-      }, []);
-    }),
+            <Foldable label="Show the requirements builder + the 402 body">
+              <Code>{`// One enhanced accepts[] entry for a single network. Step 4 calls this again for the
+// network the client picked — which is why it takes \`network\` and \`amount\` as arguments
+// instead of hard-coding them.
+async function requirementsFor(network, amount) {
+  const usdc = USDC[network];                         // address + EIP-712 name/version
+  const base = {
+    scheme: "batch-settlement",
+    network,
+    amount,                                           // USDC atomic units (6 decimals)
+    asset: usdc.address,
+    payTo: process.env.RECEIVER_ADDRESS,
+    maxTimeoutSeconds: 120,                           // must be identical in the 402 and at verify
+    extra: { name: usdc.name, version: usdc.version },
+  };
+  return scheme.enhancePaymentRequirements(
+    base,
+    { x402Version: 2, scheme: "batch-settlement", network, extra: base.extra },
+    [],                                               // x402 extensions — none, unless you use them
   );
-  return { x402Version: 2, resource: { url: MY_URL, description: "chat", mimeType: "application/json" }, accepts };
 }
 
-// in the handler:
-const payment = extractPaymentPayload(req.headers);
-if (!payment) return respond402(await paymentRequirements());`}</Code>
-              <p className={caption}>Ours: x402_server.ts → createBatchSettlementPaymentRequirements.</p>
+// The 402 body advertises EVERY network you accept.
+async function build402Body() {
+  const accepts = await Promise.all(
+    NETWORKS.map((network) => requirementsFor(network, MAX_PRICE_PER_MESSAGE)),
+  );
+  return { x402Version: 2, resource: RESOURCE, accepts };
+}
+
+// ── in the handler ──
+const payment = extractPaymentPayload(event.headers);
+if (!payment) return respond402(await build402Body());`}</Code>
+              <p className={caption}>
+                Ours: <SrcRef path="scw_js/x402_server.ts" lines="127-171" /> (the 402 body),{" "}
+                <SrcRef path="scw_js/sc_llm_x402.ts" lines="244-258" /> (the handler branch).
+              </p>
             </Foldable>
+            <div className={note}>
+              <strong>Two different objects, one confusing name.</strong> The <em>402 body</em> is{" "}
+              <code className={inlineCode}>{`{ x402Version, resource, accepts: [...] }`}</code>. What you pass to{" "}
+              <code className={inlineCode}>verifyPayment</code>/<code className={inlineCode}>settlePayment</code> is a{" "}
+              <strong>single entry from that array</strong>, for the one network the client chose. Passing the whole 402
+              body there is the most common way to get this wrong.
+            </div>
             <Foldable label="Show the 402 transport helper (respond402)">
               <Code>{`// The 402 body must ALSO go, base64-encoded, into the Payment-Required header —
-// browser clients read the header, not the body. And that header must be CORS-exposed,
-// or a browser client can't see it at all.
-function respond402(paymentRequirements) {
-  return {
-    statusCode: 402,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Headers": "*",
-      "Access-Control-Expose-Headers": "Payment-Required",
-      "Content-Type": "application/json",
-      "Payment-Required": Buffer.from(JSON.stringify(paymentRequirements)).toString("base64"),
-    },
-    body: JSON.stringify(paymentRequirements),
-  };
+// browser clients read the header, not the body. CORS already exposes it (step 1),
+// which is exactly what the checker at the bottom of this page verifies.
+function respond402(body402) {
+  return json(402, body402, {
+    "Payment-Required": Buffer.from(JSON.stringify(body402)).toString("base64"),
+  });
 }`}</Code>
-              <p className={caption}>Ours: x402_server.ts → create402Response.</p>
+              <p className={caption}>
+                Ours: <SrcRef path="scw_js/x402_server.ts" lines="233-255" />.
+              </p>
             </Foldable>
           </Step>
 
@@ -524,34 +666,57 @@ function respond402(paymentRequirements) {
               <strong>settle the amount actually used</strong>, so a short reply costs the user less.
             </p>
             <Foldable label="Show the handler flow">
-              <Code>{`const requirements = await paymentRequirements();       // the SAME enhanced object as the 402
-
-// 1. Verify the client's voucher.
-const check = await resourceServer.verifyPayment(payment, requirements);
-if (!check.isValid) {
-  // Re-emit through the SDK so it can attach corrective channel state the client
-  // needs to resync — a hand-rolled 402 body breaks that recovery.
-  return respond402(
-    await resourceServer.createPaymentRequiredResponse([requirements], resource, check.invalidReason,
-      check.payer ? { payer: check.payer } : undefined, undefined, payment),
-  );
+              <Code>{`// 0. Which network did the client choose? It's in the payload — you can't build the
+//    verify requirements without it, and you must reject anything you don't serve.
+const network = payment.accepted?.network;
+if (!network || !NETWORKS.includes(network)) {
+  return json(402, { error: { message: "Unsupported network for this payment." } });
 }
 
-// 2. Do the actual work.
+// 1. Rebuild the SAME enhanced requirements — for that one network, at the ceiling price.
+//    (Not the 402 body: one accepts[] entry. See the note in step 3.)
+const requirements = await requirementsFor(network, MAX_PRICE_PER_MESSAGE);
+
+// 2. Verify the client's voucher.
+const check = await resourceServer.verifyPayment(payment, requirements);
+if (!check.isValid) {
+  // Re-emit through the SDK so it can attach corrective channel state the client needs to
+  // resync (passing the failed payload is what triggers that) — a hand-rolled 402 body
+  // breaks the client's automatic retry.
+  const corrective = await resourceServer.createPaymentRequiredResponse(
+    [requirements],
+    RESOURCE,
+    check.invalidReason,
+    check.payer ? { payer: check.payer } : undefined,
+    undefined,
+    payment,
+  );
+  return respond402(corrective);
+}
+
+// 3. Do the actual work.
 const completion = await callYourModel(body.messages);
 
-// 3. Settle what was really used (<= the ceiling verified above).
+// 4. Settle the amount actually used — same requirements, smaller amount.
 const settlement = await resourceServer.settlePayment(payment, {
   ...requirements,
   amount: priceFromUsage(completion.usage),
 });
-if (!settlement.success) return json(402, { error: { message: "Settlement failed" } });
+if (!settlement.success) {
+  return json(402, { error: { message: \`Settlement failed: \${settlement.errorReason ?? "unknown"}\` } });
+}
 
+// 5. 200 + the settlement receipt (json() already merges CORS).
 return json(200, completion, settlementHeaders(settlement));`}</Code>
-              <p className={caption}>Ours: sc_llm_x402.ts (the main handler).</p>
+              <p className={caption}>
+                Ours: <SrcRef path="scw_js/sc_llm_x402.ts" lines="260-268" /> (network check),{" "}
+                <SrcRef path="scw_js/sc_llm_x402.ts" lines="287-362" /> (verify + corrective 402),{" "}
+                <SrcRef path="scw_js/sc_llm_x402.ts" lines="396-418" /> (settle + response).
+              </p>
             </Foldable>
             <Foldable label="Show the other two transport helpers (extract + settlement headers)">
               <Code>{`// The payment arrives base64-encoded in the PAYMENT-SIGNATURE header.
+// Returns null when there's no payment — that's the "send a 402" case in step 3.
 function extractPaymentPayload(headers) {
   const header = headers["payment-signature"] ?? headers["Payment-Signature"];
   if (!header) return null;
@@ -567,7 +732,10 @@ function extractPaymentPayload(headers) {
 function settlementHeaders(settlement) {
   return { "Payment-Response": Buffer.from(JSON.stringify(settlement)).toString("base64") };
 }`}</Code>
-              <p className={caption}>Ours: x402_server.ts → extractPaymentPayload / createSettlementHeaders.</p>
+              <p className={caption}>
+                Ours: <SrcRef path="scw_js/x402_server.ts" lines="257-282" /> and{" "}
+                <SrcRef path="scw_js/x402_server.ts" lines="300-308" />.
+              </p>
             </Foldable>
             <Foldable label="Show priceFromUsage (tokens → USDC atomic units)">
               <Code>{`// Rates are quoted per 1,000,000 tokens; USDC has 6 decimals — the two 1e6
@@ -586,7 +754,10 @@ function priceFromUsage(usage) {
   const max = BigInt(MAX_PRICE_PER_MESSAGE);
   return (cost > max ? max : cost).toString();
 }`}</Code>
-              <p className={caption}>Ours: llm_service.ts → convertTokensToUsdcCost.</p>
+              <p className={caption}>
+                Ours: <SrcRef path="scw_js/llm_service.ts" lines="215-231" /> (the rate maths) and{" "}
+                <SrcRef path="scw_js/sc_llm_x402.ts" lines="72-76" /> (the ceiling clamp).
+              </p>
             </Foldable>
           </Step>
 
@@ -595,15 +766,20 @@ function priceFromUsage(usage) {
               Per-message settlements are <strong>bookkeeping only</strong> — no funds move. A scheduled job redeems the
               accumulated vouchers on-chain. Skip this and you never get paid. It&apos;s genuinely this short:
             </p>
-            <Foldable label="Show the claim job">
-              <Code>{`// Run on a schedule (we use every 12h). Must be far more often than
-// the withdrawDelay you set in step 2, or a channel can be withdrawn before you claim it.
+            <Foldable label="Show the claim job (cron.ts — a separate entry point)">
+              <Code>{`// Same setupX402() as step 2 — this runs in its own process, on a schedule
+// (we use every 12h). Must run far more often than the withdrawDelay you set in
+// step 2, or a channel can be withdrawn before you claim it.
+const { scheme, facilitator } = setupX402();
+
 for (const network of NETWORKS) {
   const manager = scheme.createChannelManager(facilitator, network);
   const { claims, settle } = await manager.claimAndSettle();
   console.log({ network, claims: claims.length, settled: settle !== undefined });
 }`}</Code>
-              <p className={caption}>Ours: llm_x402_cron.ts (a 12-hourly scheduled function).</p>
+              <p className={caption}>
+                Ours: <SrcRef path="scw_js/llm_x402_cron.ts" lines="62-75" /> (a 12-hourly scheduled function).
+              </p>
             </Foldable>
           </Step>
 
@@ -612,13 +788,12 @@ for (const network of NETWORKS) {
               Finally, make yourself findable. Serve an OpenAPI document at{" "}
               <code className={inlineCode}>GET /openapi.json</code> containing{" "}
               <code className={inlineCode}>&quot;x-service-type&quot;: &quot;llm/v1&quot;</code>, your{" "}
-              <code className={inlineCode}>x-payment-info</code>, and an ownership proof. And set CORS — the assistant
-              runs in a browser, so without it your 402 is invisible. One consistency rule: the model{" "}
-              <code className={inlineCode}>enum</code> in your published schema must match the{" "}
-              <code className={inlineCode}>MODELS</code> array your handler validates against (step 1) — the spec is a
-              promise, the validation enforces it.
+              <code className={inlineCode}>x-payment-info</code>, and an ownership proof. Your CORS setup from step 1
+              already covers the browser side. One consistency rule: the model <code className={inlineCode}>enum</code>{" "}
+              in your published schema must match the <code className={inlineCode}>MODELS</code> array your handler
+              validates against (step 1) — the spec is a promise, the validation enforces it.
             </p>
-            <Foldable label="Show the discovery doc + CORS headers">
+            <Foldable label="Show the discovery doc + the route that serves it">
               <Code>{`// openapi.json (excerpt)
 {
   "openapi": "3.1.0",
@@ -629,21 +804,26 @@ for (const network of NETWORKS) {
     "protocols": ["x402"],
     "price": { "mode": "dynamic", "currency": "USD", "min": "0", "max": "0.003" }
   } } } },
-  "components": { "schemas": { "LLMChatRequest": { /* ... */ }, "LLMChatResponse": { /* ... */ } } }
-}
-
-// Required on every response:
-"Access-Control-Allow-Origin": "*",
-"Access-Control-Expose-Headers": "Payment-Required"`}</Code>
-              <p className={caption}>And the route that serves it:</p>
-              <Code>{`if (req.method === "GET" && req.path.replace(/^\\/+/, "") === "openapi.json") {
-  // Patch the live ceiling in rather than let the static file drift from what
-  // your 402 actually charges.
-  const spec = structuredClone(openapiSpec);
-  spec.paths["/"].post["x-payment-info"].price.max = formatUsdcAsDecimal(MAX_PRICE_PER_MESSAGE);
-  return json(200, spec, { "Access-Control-Allow-Origin": "*" });
+  "components": { "schemas": {
+    "LLMChatRequest":  { /* model enum must match MODELS from step 1 */ },
+    "LLMChatResponse": { /* ... */ }
+  } }
 }`}</Code>
-              <p className={caption}>Ours: sc_llm_x402.ts (the openapi.json branch of the handler).</p>
+              <p className={caption}>And the route that serves it — the first branch of your handler:</p>
+              <Code>{`import openapiSpec from "./openapi.json" with { type: "json" };
+
+// ── in the handler, before the POST logic ──
+if (event.httpMethod === "GET" && (event.path ?? "").replace(/^\\/+/, "") === "openapi.json") {
+  // Patch the live ceiling in, so the published price can't drift from what you charge.
+  // MAX_PRICE_PER_MESSAGE is atomic units ("3000"); the spec wants decimal USD ("0.003").
+  const spec = structuredClone(openapiSpec);
+  spec.paths["/"].post["x-payment-info"].price.max = (Number(MAX_PRICE_PER_MESSAGE) / 1e6).toString();
+  return json(200, spec);
+}`}</Code>
+              <p className={caption}>
+                Ours: <SrcRef path="scw_js/sc_llm_x402.ts" lines="120-134" /> (with an exact bigint formatter,{" "}
+                <SrcRef path="scw_js/x402_server.ts" lines="290-298" />, instead of the float division above).
+              </p>
             </Foldable>
             <Foldable label="Show how to sign the ownership proof">
               <Code>{`// One-off: sign your bare origin (scheme + host, no path, no trailing slash)
@@ -654,16 +834,7 @@ const account = privateKeyToAccount(process.env.RECEIVER_PRIVATE_KEY);
 const signature = await account.signMessage({ message: "https://your-agent.example" });
 console.log(signature);`}</Code>
               <p className={caption}>
-                Ours:{" "}
-                <a
-                  href={`${GH_BLOB}/scw_js/scripts/sign_ownership_proof.ts`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={extLink}
-                >
-                  scripts/sign_ownership_proof.ts
-                </a>
-                .
+                Ours: <SrcRef path="scw_js/scripts/sign_ownership_proof.ts" />.
               </p>
             </Foldable>
           </Step>
@@ -671,7 +842,7 @@ console.log(signature);`}</Code>
 
         {/* SECTION — test it */}
         <div className={sectionCard}>
-          <h2 className={h2}>🧪 Test it</h2>
+          <h2 className={h2}>Test it</h2>
           <p className={para}>
             <strong>Start on Base Sepolia</strong> (<code className={inlineCode}>eip155:84532</code>) — same code path,
             no real money. Fund your test wallet from the{" "}
@@ -692,8 +863,15 @@ console.log(signature);`}</Code>
             <code className={inlineCode}>eip155:8453</code>. Everything above it — discovery, service type, the 402
             challenge — should already be green.
           </div>
+          <p className={para}>
+            <strong>The first real payment.</strong> Point the{" "}
+            <SrcRef path="scw_js/notebooks/sc_llm_x402_buyer.ipynb" label="buyer notebook" /> at your server and run it
+            top to bottom. It opens a channel, sends a paid message, and prints the settlement — the fastest way to see
+            deposit → voucher → verify → settle actually working, and it stays on testnet unless you set{" "}
+            <code className={inlineCode}>USE_MAINNET = true</code>.
+          </p>
           <p className={css({ fontSize: "sm", color: "gray.600", lineHeight: "1.6", mb: "0" })}>
-            <strong>The end-to-end test: pay yourself.</strong> Once the checker passes on mainnet, open the{" "}
+            <strong>Then: pay yourself from a browser.</strong> Once the checker passes on mainnet, open the{" "}
             <a href="/assistent" className={extLink}>
               assistant
             </a>
@@ -709,7 +887,7 @@ console.log(signature);`}</Code>
 
         {/* SECTION — checker */}
         <div id="checker" className={sectionCard}>
-          <h2 className={h2}>🔎 Check your endpoint</h2>
+          <h2 className={h2}>Check your endpoint</h2>
           <p className={para}>
             Paste your URL. This runs exactly the checks the assistant runs before it will talk to an endpoint — down to
             reading the base64 <code className={inlineCode}>Payment-Required</code> header from step 3 — and tells you
@@ -720,7 +898,7 @@ console.log(signature);`}</Code>
 
         {/* SECTION — known limitations */}
         <div id="challenges" className={sectionCard}>
-          <h2 className={h2}>⚠️ Known limitations (beta)</h2>
+          <h2 className={h2}>Known limitations (beta)</h2>
           <p className={para}>Documented openly — these are rough edges of a young ecosystem, not of your code.</p>
 
           <Challenge title="Few facilitators support batch-settlement">
@@ -729,13 +907,9 @@ console.log(signature);`}</Code>
             <a href="https://api.solvador.com/supported" target="_blank" rel="noopener noreferrer" className={extLink}>
               Solvador
             </a>{" "}
-            and{" "}
-            <a href="/x402" className={extLink}>
-              ours
-            </a>{" "}
-            — so your options are limited today. The scheme is standard; its EVM wire binding is still defined by the{" "}
-            <code className={inlineCode}>@x402/evm</code> code rather than a ratified spec, which is why adoption is
-            thin.
+            and this project — so your options are limited today. The scheme is standard; its EVM wire binding is still
+            defined by the <code className={inlineCode}>@x402/evm</code> code rather than a ratified spec, which is why
+            adoption is thin.
           </Challenge>
 
           <Challenge title="A plain OpenAI SDK can't pay it">
@@ -764,7 +938,7 @@ console.log(signature);`}</Code>
 
         {/* SECTION — contact */}
         <div className={sectionCard}>
-          <h2 className={h2}>🧭 Where this is going</h2>
+          <h2 className={h2}>Where this is going</h2>
           <p className={para}>
             The endpoint contract is stable; what&apos;s filling in is the ecosystem around it — a drop-in client, more
             facilitators, more agents. The assistant already lets you point it at any compatible agent by URL; a curated
@@ -794,7 +968,7 @@ console.log(signature);`}</Code>
 
         {/* SECTION — feedback */}
         <div className={sectionCard}>
-          <h2 className={h2}>💬 Feedback</h2>
+          <h2 className={h2}>Feedback</h2>
           <p className={para}>
             Stuck on a step, or built one? Leave a note — it helps the next builder as much as it helps us.
           </p>

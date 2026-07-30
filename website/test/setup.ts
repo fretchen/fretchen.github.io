@@ -68,7 +68,7 @@ export function buildAccountData(overrides: AccountDataOverrides = {}): ReturnTy
   } as unknown as ReturnType<typeof useAccount>;
 }
 
-interface WalletClientDataOverrides {
+export interface WalletClientDataOverrides {
   data?: Record<string, unknown> | undefined;
 }
 
@@ -76,7 +76,7 @@ export function buildWalletClientData(overrides: WalletClientDataOverrides = {})
   return { data: undefined, ...overrides } as unknown as ReturnType<typeof useWalletClient>;
 }
 
-interface ConnectDataOverrides {
+export interface ConnectDataOverrides {
   connectors?: unknown[];
   connect?: ReturnType<typeof vi.fn>;
 }

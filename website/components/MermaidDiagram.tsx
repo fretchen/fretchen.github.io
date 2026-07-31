@@ -92,7 +92,7 @@ const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ definition, title, clas
     >
       <h4
         className={css({
-          fontSize: "16px",
+          fontSize: "md",
           fontWeight: "medium",
           marginBottom: "16px",
           color: "gray.700",

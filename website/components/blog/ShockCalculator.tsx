@@ -65,7 +65,7 @@ export default function ShockCalculator() {
       {/* Header */}
       <p
         className={css({
-          fontSize: "1.1rem",
+          fontSize: "lg",
           fontWeight: "bold",
           color: "gray.800",
           marginBottom: "0.25rem",
@@ -76,7 +76,7 @@ export default function ShockCalculator() {
       </p>
       <p
         className={css({
-          fontSize: "0.85rem",
+          fontSize: "sm",
           color: "gray.500",
           marginBottom: "1.25rem",
           marginTop: 0,
@@ -101,7 +101,7 @@ export default function ShockCalculator() {
           <label
             className={css({
               display: "block",
-              fontSize: "0.8rem",
+              fontSize: "sm",
               color: "gray.700",
               fontWeight: "600",
               marginBottom: "0.3rem",
@@ -110,7 +110,7 @@ export default function ShockCalculator() {
             Monthly mortgage payment
           </label>
           <div className={css({ display: "flex", alignItems: "center", gap: "0.3rem" })}>
-            <span className={css({ fontSize: "0.85rem", color: "gray.500" })}>€</span>
+            <span className={css({ fontSize: "sm", color: "gray.500" })}>€</span>
             <input
               type="number"
               min={200}
@@ -123,7 +123,7 @@ export default function ShockCalculator() {
                 padding: "0.5rem",
                 borderRadius: "6px",
                 border: "1px solid #d1d5db",
-                fontSize: "0.9rem",
+                fontSize: "md",
                 _focus: { outline: "none", borderColor: "essayAccent" },
               })}
             />
@@ -133,7 +133,7 @@ export default function ShockCalculator() {
           <label
             className={css({
               display: "block",
-              fontSize: "0.8rem",
+              fontSize: "sm",
               color: "gray.700",
               fontWeight: "600",
               marginBottom: "0.3rem",
@@ -142,7 +142,7 @@ export default function ShockCalculator() {
             Liquid savings
           </label>
           <div className={css({ display: "flex", alignItems: "center", gap: "0.3rem" })}>
-            <span className={css({ fontSize: "0.85rem", color: "gray.500" })}>€</span>
+            <span className={css({ fontSize: "sm", color: "gray.500" })}>€</span>
             <input
               type="number"
               min={0}
@@ -155,7 +155,7 @@ export default function ShockCalculator() {
                 padding: "0.5rem",
                 borderRadius: "6px",
                 border: "1px solid #d1d5db",
-                fontSize: "0.9rem",
+                fontSize: "md",
                 _focus: { outline: "none", borderColor: "essayAccent" },
               })}
             />
@@ -185,9 +185,9 @@ export default function ShockCalculator() {
               onChange={(e) => setJobLossEnabled(e.target.checked)}
               className={css({ width: "16px", height: "16px", accentColor: "red.500" })}
             />
-            <span className={css({ fontSize: "0.9rem", fontWeight: "600", color: "gray.700" })}>Job loss</span>
+            <span className={css({ fontSize: "md", fontWeight: "600", color: "gray.700" })}>Job loss</span>
             {jobLossEnabled && (
-              <span className={css({ fontSize: "0.8rem", color: "red.500", fontWeight: "600" })}>
+              <span className={css({ fontSize: "sm", color: "red.500", fontWeight: "600" })}>
                 −€{(jobLossMonths * monthlyPayment).toLocaleString()}
               </span>
             )}
@@ -201,7 +201,7 @@ export default function ShockCalculator() {
                     onClick={() => setJobLossMonths(m)}
                     className={css({
                       padding: "0.3rem 0.6rem",
-                      fontSize: "0.8rem",
+                      fontSize: "sm",
                       borderRadius: "4px",
                       cursor: "pointer",
                       border: "1px solid",
@@ -242,9 +242,9 @@ export default function ShockCalculator() {
               onChange={(e) => setRepairEnabled(e.target.checked)}
               className={css({ width: "16px", height: "16px", accentColor: "red.500" })}
             />
-            <span className={css({ fontSize: "0.9rem", fontWeight: "600", color: "gray.700" })}>Emergency repair</span>
+            <span className={css({ fontSize: "md", fontWeight: "600", color: "gray.700" })}>Emergency repair</span>
             {repairEnabled && (
-              <span className={css({ fontSize: "0.8rem", color: "red.500", fontWeight: "600" })}>
+              <span className={css({ fontSize: "sm", color: "red.500", fontWeight: "600" })}>
                 −€{repairCost.toLocaleString()}
               </span>
             )}
@@ -252,7 +252,7 @@ export default function ShockCalculator() {
           {repairEnabled && (
             <div className={css({ marginTop: "0.5rem", paddingLeft: "1.75rem" })}>
               <div className={css({ display: "flex", alignItems: "center", gap: "0.5rem" })}>
-                <span className={css({ fontSize: "0.75rem", color: "gray.500" })}>€{REPAIR_MIN.toLocaleString()}</span>
+                <span className={css({ fontSize: "xs", color: "gray.500" })}>€{REPAIR_MIN.toLocaleString()}</span>
                 <input
                   type="range"
                   min={REPAIR_MIN}
@@ -267,9 +267,9 @@ export default function ShockCalculator() {
                     height: "6px",
                   })}
                 />
-                <span className={css({ fontSize: "0.75rem", color: "gray.500" })}>€{REPAIR_MAX.toLocaleString()}</span>
+                <span className={css({ fontSize: "xs", color: "gray.500" })}>€{REPAIR_MAX.toLocaleString()}</span>
               </div>
-              <div className={css({ textAlign: "center", fontSize: "0.8rem", color: "gray.700", fontWeight: "600" })}>
+              <div className={css({ textAlign: "center", fontSize: "sm", color: "gray.700", fontWeight: "600" })}>
                 €{repairCost.toLocaleString()}
               </div>
             </div>
@@ -294,9 +294,9 @@ export default function ShockCalculator() {
             marginBottom: "0.5rem",
           })}
         >
-          <span className={css({ fontSize: "0.8rem", color: "gray.700", fontWeight: "600" })}>Savings after shocks</span>
+          <span className={css({ fontSize: "sm", color: "gray.700", fontWeight: "600" })}>Savings after shocks</span>
           <span
-            className={css({ fontSize: "1.2rem", fontWeight: "bold" })}
+            className={css({ fontSize: "xl", fontWeight: "bold" })}
             style={{ color: isNegative ? "#991b1b" : barColor(result.remaining / monthlyPayment) }}
           >
             {isNegative ? "−" : ""}€{Math.abs(Math.round(result.remaining)).toLocaleString()}
@@ -326,7 +326,7 @@ export default function ShockCalculator() {
                 justifyContent: "center",
               }}
             >
-              <span className={css({ fontSize: "0.75rem", color: "white", fontWeight: "bold" })}>in the red</span>
+              <span className={css({ fontSize: "xs", color: "white", fontWeight: "bold" })}>in the red</span>
             </div>
           ) : (
             <div
@@ -346,7 +346,7 @@ export default function ShockCalculator() {
           className={css({
             display: "flex",
             justifyContent: "space-between",
-            fontSize: "0.65rem",
+            fontSize: "xs",
             color: "gray.400",
             marginTop: "0.2rem",
           })}
@@ -358,7 +358,7 @@ export default function ShockCalculator() {
         {/* Status text */}
         <p
           className={css({
-            fontSize: "0.85rem",
+            fontSize: "sm",
             marginTop: "0.5rem",
             marginBottom: 0,
             fontWeight: "500",
@@ -372,7 +372,7 @@ export default function ShockCalculator() {
         {/* Breakdown */}
         {anyShock && (
           <div className={css({ marginTop: "0.75rem", borderTop: "1px solid #f3f4f6", paddingTop: "0.5rem" })}>
-            <div className={css({ fontSize: "0.75rem", color: "gray.500" })}>
+            <div className={css({ fontSize: "xs", color: "gray.500" })}>
               <div className={css({ display: "flex", justifyContent: "space-between" })}>
                 <span>Starting savings</span>
                 <span>€{savings.toLocaleString()}</span>

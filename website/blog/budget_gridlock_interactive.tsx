@@ -178,7 +178,7 @@ const BudgetNegotiationWidget: React.FC = () => {
     >
       <h4
         className={css({
-          fontSize: "1rem",
+          fontSize: "md",
           fontWeight: "medium",
           textAlign: "center",
           marginBottom: "1rem",
@@ -193,7 +193,7 @@ const BudgetNegotiationWidget: React.FC = () => {
         <label
           className={css({
             display: "block",
-            fontSize: "0.85rem",
+            fontSize: "sm",
             color: "gray.700",
             marginBottom: "0.5rem",
           })}
@@ -204,7 +204,7 @@ const BudgetNegotiationWidget: React.FC = () => {
           className={css({
             display: "flex",
             justifyContent: "space-between",
-            fontSize: "0.75rem",
+            fontSize: "xs",
             color: "gray.500",
             marginBottom: "0.25rem",
           })}
@@ -228,7 +228,7 @@ const BudgetNegotiationWidget: React.FC = () => {
         <label
           className={css({
             display: "block",
-            fontSize: "0.85rem",
+            fontSize: "sm",
             color: "gray.700",
             marginBottom: "0.5rem",
           })}
@@ -239,7 +239,7 @@ const BudgetNegotiationWidget: React.FC = () => {
           className={css({
             display: "flex",
             justifyContent: "space-between",
-            fontSize: "0.75rem",
+            fontSize: "xs",
             color: "gray.500",
             marginBottom: "0.25rem",
           })}
@@ -261,7 +261,7 @@ const BudgetNegotiationWidget: React.FC = () => {
       {/* Expected payoff label */}
       <p
         className={css({
-          fontSize: "0.85rem",
+          fontSize: "sm",
           color: "gray.700",
           textAlign: "center",
           marginBottom: "0.75rem",
@@ -292,12 +292,12 @@ const BudgetNegotiationWidget: React.FC = () => {
             className={css({
               color: coopPayoffHigher ? "green.500" : "gray.500",
               fontWeight: "bold",
-              fontSize: "0.9rem",
+              fontSize: "md",
             })}
           >
             🤝 Cooperate {coopPayoffHigher && "⬅"}
           </div>
-          <div className={css({ fontSize: "1.3rem", fontWeight: "bold", marginTop: "0.5rem" })}>
+          <div className={css({ fontSize: "xl", fontWeight: "bold", marginTop: "0.5rem" })}>
             {results.cooperate.mean.toFixed(1)}
           </div>
         </div>
@@ -315,12 +315,12 @@ const BudgetNegotiationWidget: React.FC = () => {
             className={css({
               color: !coopPayoffHigher ? "red.500" : "gray.500",
               fontWeight: "bold",
-              fontSize: "0.9rem",
+              fontSize: "md",
             })}
           >
             👊 Winner-Takes-All {!coopPayoffHigher && "⬅"}
           </div>
-          <div className={css({ fontSize: "1.3rem", fontWeight: "bold", marginTop: "0.5rem" })}>
+          <div className={css({ fontSize: "xl", fontWeight: "bold", marginTop: "0.5rem" })}>
             {results.wta.mean.toFixed(1)}
           </div>
         </div>
@@ -329,7 +329,7 @@ const BudgetNegotiationWidget: React.FC = () => {
       {/* Explanation text */}
       <p
         className={css({
-          fontSize: "0.9rem",
+          fontSize: "md",
           color: "gray.700",
           textAlign: "center",
           fontStyle: "italic",
@@ -345,7 +345,7 @@ const BudgetNegotiationWidget: React.FC = () => {
           backgroundColor: "codeBg",
           padding: "0.75rem",
           borderRadius: "4px",
-          fontSize: "0.75rem",
+          fontSize: "xs",
           color: "gray.500",
         })}
       >
@@ -371,7 +371,7 @@ const BudgetNegotiationWidget: React.FC = () => {
               border: "none",
               borderRadius: "4px",
               cursor: "pointer",
-              fontSize: "0.7rem",
+              fontSize: "xs",
             })}
           >
             🎲 Re-run simulation

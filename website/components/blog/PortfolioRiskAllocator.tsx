@@ -212,7 +212,7 @@ export default function PortfolioRiskAllocator() {
       {/* ── Header ── */}
       <p
         className={css({
-          fontSize: "1.1rem",
+          fontSize: "lg",
           fontWeight: "bold",
           color: "gray.800",
           marginBottom: "0.25rem",
@@ -223,7 +223,7 @@ export default function PortfolioRiskAllocator() {
       </p>
       <p
         className={css({
-          fontSize: "0.85rem",
+          fontSize: "sm",
           color: "gray.500",
           marginBottom: "1.25rem",
           marginTop: 0,
@@ -241,7 +241,7 @@ export default function PortfolioRiskAllocator() {
               onClick={() => applyPreset(i)}
               className={css({
                 padding: "0.4rem 0.75rem",
-                fontSize: "0.8rem",
+                fontSize: "sm",
                 borderRadius: "6px",
                 cursor: "pointer",
                 border: "2px solid",
@@ -259,7 +259,7 @@ export default function PortfolioRiskAllocator() {
           ))}
         </div>
         {activePreset >= 0 && (
-          <p className={css({ fontSize: "0.75rem", color: "gray.500", marginTop: "0.3rem", fontStyle: "italic" })}>
+          <p className={css({ fontSize: "xs", color: "gray.500", marginTop: "0.3rem", fontStyle: "italic" })}>
             {PRESETS[activePreset].description}
           </p>
         )}
@@ -267,7 +267,7 @@ export default function PortfolioRiskAllocator() {
 
       {/* ── Draggable risk-budget bar ── */}
       <div className={css({ marginBottom: "1.25rem" })}>
-        <div className={css({ fontSize: "0.8rem", color: "gray.700", marginBottom: "0.35rem", fontWeight: "600" })}>
+        <div className={css({ fontSize: "sm", color: "gray.700", marginBottom: "0.35rem", fontWeight: "600" })}>
           Refine your mix — drag the ● circles to adjust
         </div>
         {/* Percentage labels above the track */}
@@ -291,7 +291,7 @@ export default function PortfolioRiskAllocator() {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: "0.7rem",
+                fontSize: "xs",
                 fontWeight: "bold",
                 overflow: "hidden",
                 whiteSpace: "nowrap",
@@ -387,7 +387,7 @@ export default function PortfolioRiskAllocator() {
                 className={css({ width: "8px", height: "8px", borderRadius: "50%", flexShrink: 0 })}
                 style={{ backgroundColor: cluster.color }}
               />
-              <span className={css({ fontSize: "0.65rem", color: "gray.500" })}>{cluster.name}</span>
+              <span className={css({ fontSize: "xs", color: "gray.500" })}>{cluster.name}</span>
             </div>
           ))}
         </div>
@@ -396,14 +396,14 @@ export default function PortfolioRiskAllocator() {
       {/* ── Bumpiness gauge (between drag bar and results) ── */}
       <div className={css({ marginBottom: "1.25rem" })}>
         <div className={css({ display: "flex", alignItems: "baseline", gap: "0.5rem", marginBottom: "0.3rem" })}>
-          <span className={css({ fontSize: "0.8rem", color: "gray.700" })}>How bumpy is this portfolio?</span>
+          <span className={css({ fontSize: "sm", color: "gray.700" })}>How bumpy is this portfolio?</span>
           <span
-            className={css({ fontSize: "1.1rem", fontWeight: "bold" })}
+            className={css({ fontSize: "lg", fontWeight: "bold" })}
             style={{ color: bumpinessColor(risk.portVol) }}
           >
             {risk.portVol.toFixed(1)}%
           </span>
-          <span className={css({ fontSize: "0.65rem", color: "gray.400" })}>per year</span>
+          <span className={css({ fontSize: "xs", color: "gray.400" })}>per year</span>
         </div>
         <div
           className={css({
@@ -428,7 +428,7 @@ export default function PortfolioRiskAllocator() {
           className={css({
             display: "flex",
             justifyContent: "space-between",
-            fontSize: "0.6rem",
+            fontSize: "xs",
             color: "gray.400",
             marginTop: "0.15rem",
           })}
@@ -449,7 +449,7 @@ export default function PortfolioRiskAllocator() {
       >
         {/* Capital allocation bar */}
         <div className={css({ marginBottom: "0.75rem" })}>
-          <div className={css({ fontSize: "0.7rem", color: "gray.500", marginBottom: "0.2rem" })}>
+          <div className={css({ fontSize: "xs", color: "gray.500", marginBottom: "0.2rem" })}>
             Capital allocation (computed)
           </div>
           <div
@@ -475,7 +475,7 @@ export default function PortfolioRiskAllocator() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontSize: "0.7rem",
+                    fontSize: "xs",
                     fontWeight: "bold",
                     color: "white",
                     overflow: "hidden",
@@ -523,21 +523,21 @@ export default function PortfolioRiskAllocator() {
                   })}
                 >
                   <div className={css({ display: "flex", alignItems: "center", gap: "0.5rem" })}>
-                    <span className={css({ fontSize: "0.85rem", fontWeight: "bold" })} style={{ color: cluster.color }}>
+                    <span className={css({ fontSize: "sm", fontWeight: "bold" })} style={{ color: cluster.color }}>
                       {cluster.name}
                     </span>
-                    <span className={css({ fontSize: "0.8rem", color: "gray.700", fontWeight: "600" })}>
+                    <span className={css({ fontSize: "sm", color: "gray.700", fontWeight: "600" })}>
                       {risk.clusterWeight[ci].toFixed(0)}% capital
                     </span>
                   </div>
-                  <span className={css({ fontSize: "0.75rem", color: "gray.500" })}>
+                  <span className={css({ fontSize: "xs", color: "gray.500" })}>
                     {isOpen ? "▾ Hide ETFs" : "▸ Show ETFs"}
                   </span>
                 </button>
 
                 {isOpen && (
                   <div className={css({ padding: "0 0.75rem 0.6rem" })}>
-                    <table className={css({ width: "100%", fontSize: "0.7rem", borderCollapse: "collapse" })}>
+                    <table className={css({ width: "100%", fontSize: "xs", borderCollapse: "collapse" })}>
                       <thead>
                         <tr className={css({ borderBottom: "1px solid #e5e7eb" })}>
                           <th className={css({ textAlign: "left", padding: "0.2rem 0.3rem", color: "gray.500" })}>

@@ -129,7 +129,7 @@ const Segment: React.FC<{ move: Move; active: boolean; idx: number; player: stri
       aria-label={`${player}: ${info.label}`}
       onClick={onSelect}
       className={css({
-        fontSize: "0.72rem",
+        fontSize: "xs",
         fontWeight: "600",
         padding: "0.4rem 0.3rem",
         whiteSpace: "nowrap",
@@ -184,7 +184,7 @@ const MoveMatrix: React.FC<MoveMatrixProps> = ({ moveW, moveJ, onSelectW, onSele
       {MOVES.map((m) => (
         <span
           key={m}
-          className={css({ fontSize: "0.72rem", fontWeight: "700", textAlign: "center" })}
+          className={css({ fontSize: "xs", fontWeight: "700", textAlign: "center" })}
           style={{ color: MOVE_INFO[m].color }}
         >
           {MOVE_INFO[m].label}
@@ -195,7 +195,7 @@ const MoveMatrix: React.FC<MoveMatrixProps> = ({ moveW, moveJ, onSelectW, onSele
       {players.map((p) => (
         <React.Fragment key={p.name}>
           <span
-            className={css({ fontSize: "0.8rem", fontWeight: "700", paddingRight: "0.6rem" })}
+            className={css({ fontSize: "sm", fontWeight: "700", paddingRight: "0.6rem" })}
             style={{ color: p.color }}
           >
             {p.name}
@@ -247,10 +247,10 @@ export default function QuantumPDCircuit() {
         border: "1px solid rgba(123, 63, 160, 0.15)",
       })}
     >
-      <p className={css({ fontSize: "0.95rem", fontWeight: "bold", marginBottom: "0.35rem", color: "gray.700" })}>
+      <p className={css({ fontSize: "md", fontWeight: "bold", marginBottom: "0.35rem", color: "gray.700" })}>
         Try it yourself: can loyalty become the smart move?
       </p>
-      <p className={css({ fontSize: "0.8rem", color: "gray.500", marginBottom: "1rem" })}>
+      <p className={css({ fontSize: "sm", color: "gray.500", marginBottom: "1rem" })}>
         Right now, Walter and Jesse both betray — the classic trap, five years each. Set each man&rsquo;s move in the
         grid below and watch Saul&rsquo;s file, and the sentences, update live. Try setting both to{" "}
         <strong>Flip both</strong>.
@@ -316,7 +316,7 @@ export default function QuantumPDCircuit() {
 
       <p
         aria-live="polite"
-        className={css({ fontSize: "0.85rem", color: "gray.700", textAlign: "center", marginTop: "1rem" })}
+        className={css({ fontSize: "sm", color: "gray.700", textAlign: "center", marginTop: "1rem" })}
       >
         {verdict} <span className={css({ color: "gray.500" })}>(lower is better)</span>
       </p>

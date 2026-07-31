@@ -388,7 +388,7 @@ export const walletOptions = {
     },
     "@media (max-width: 480px)": {
       padding: "4px 8px",
-      fontSize: "12px",
+      fontSize: "xs",
       marginLeft: "token(spacing.xs)",
     },
   }),
@@ -734,7 +734,7 @@ export const layout = {
         top: "50%",
         right: "6px",
         transform: "translateY(-50%)",
-        fontSize: "12px",
+        fontSize: "xs",
         color: "rgba(59, 130, 246, 0.7)",
         fontWeight: "bold",
         animation: "pulse 2s ease-in-out infinite",

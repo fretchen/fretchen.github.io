@@ -79,7 +79,7 @@ const badgeSm = css({
 });
 
 const badgeMd = css({
-  fontSize: "12px",
+  fontSize: "xs",
   padding: "4px 8px",
 });
 
@@ -137,7 +137,7 @@ const infoRow = css({
   display: "flex",
   alignItems: "center",
   gap: "8px",
-  fontSize: "14px",
+  fontSize: "sm",
   color: "gray.600",
   marginTop: "8px",
 });

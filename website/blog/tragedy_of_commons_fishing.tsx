@@ -311,7 +311,7 @@ const FishingScenarioSelector: React.FC<{
         background: "zinc.50",
       })}
     >
-      <div className={css({ fontSize: "16px", fontWeight: "600", marginBottom: "8px" })}>
+      <div className={css({ fontSize: "md", fontWeight: "600", marginBottom: "8px" })}>
         🌏 Neighboring Islands Culture
       </div>
       <div className={css({ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" })}>
@@ -336,7 +336,7 @@ const FishingScenarioSelector: React.FC<{
                 cursor: isDisabled ? "not-allowed" : "pointer",
                 textAlign: "left",
                 maxWidth: "200px",
-                fontSize: "14px",
+                fontSize: "sm",
                 opacity: isDisabled ? 0.6 : 1,
                 position: "relative",
               })}
@@ -348,7 +348,7 @@ const FishingScenarioSelector: React.FC<{
                     position: "absolute",
                     top: "4px",
                     right: "6px",
-                    fontSize: "12px",
+                    fontSize: "xs",
                     color: "gray.500",
                   })}
                 >
@@ -367,7 +367,7 @@ const FishingScenarioSelector: React.FC<{
               <div
                 className={css({
                   color: isDisabled ? "gray.400" : "slate.500",
-                  fontSize: "12px",
+                  fontSize: "xs",
                   lineHeight: "1.3",
                 })}
               >
@@ -380,7 +380,7 @@ const FishingScenarioSelector: React.FC<{
       <div className={css({ marginTop: "16px" })}>
         <div
           className={css({
-            fontSize: "14px",
+            fontSize: "sm",
             color: "slate.500",
             marginBottom: "8px",
             fontWeight: "500",
@@ -391,7 +391,7 @@ const FishingScenarioSelector: React.FC<{
         {gameStarted ? (
           <div
             className={css({
-              fontSize: "13px",
+              fontSize: "sm",
               color: "gray.400",
               fontStyle: "italic",
             })}
@@ -399,7 +399,7 @@ const FishingScenarioSelector: React.FC<{
             Scenario is locked during the game. Use &quot;Play again&quot; to change scenarios.
           </div>
         ) : (
-          <div className={css({ fontSize: "14px", color: "slate.500" })}>
+          <div className={css({ fontSize: "sm", color: "slate.500" })}>
             As Moana, you can choose to send {OPTIMAL_BOATS.low_fishing},{" "}
             {Math.floor((OPTIMAL_BOATS.low_fishing + OPTIMAL_BOATS.intensive_fishing) / 2)}, or{" "}
             {OPTIMAL_BOATS.intensive_fishing} boats. What&apos;s your strategy?
@@ -442,7 +442,7 @@ const FishingActionBar: React.FC<{
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: "14px",
+              fontSize: "sm",
               fontWeight: "600",
               background: roundNum < round ? "emerald.500" : roundNum === round ? "blue.500" : "gray.200",
               color: roundNum < round || roundNum === round ? "white" : "gray.400",
@@ -454,11 +454,11 @@ const FishingActionBar: React.FC<{
       </div>
 
       {/* Status */}
-      <div className={css({ fontSize: "16px", textAlign: "center", marginBottom: "8px" })}>
+      <div className={css({ fontSize: "md", textAlign: "center", marginBottom: "8px" })}>
         <div className={css({ fontWeight: "600", marginBottom: "4px" })}>
           Round {round} of 3 • Fish Stock: {round === 1 ? MODEL_PARAMS.s_init : history[round - 2].fishAfter} 🐟
         </div>
-        <div className={css({ color: "slate.500", fontSize: "14px" })}>How many boats should Moana send out today?</div>
+        <div className={css({ color: "slate.500", fontSize: "sm" })}>How many boats should Moana send out today?</div>
       </div>
 
       {/* Boat Choice Buttons */}
@@ -474,7 +474,7 @@ const FishingActionBar: React.FC<{
               color: "#222",
               cursor: "pointer",
               fontWeight: "500",
-              fontSize: "14px",
+              fontSize: "sm",
             })}
           >
             🌊 {OPTIMAL_BOATS.low_fishing} Boats (Sustainable)
@@ -489,7 +489,7 @@ const FishingActionBar: React.FC<{
               color: "#222",
               cursor: "pointer",
               fontWeight: "500",
-              fontSize: "14px",
+              fontSize: "sm",
             })}
           >
             ⚖️ {Math.floor((OPTIMAL_BOATS.low_fishing + OPTIMAL_BOATS.intensive_fishing) / 2)} Boats (Moderate)
@@ -504,7 +504,7 @@ const FishingActionBar: React.FC<{
               color: "#222",
               cursor: "pointer",
               fontWeight: "500",
-              fontSize: "14px",
+              fontSize: "sm",
             })}
           >
             ⚡ {OPTIMAL_BOATS.intensive_fishing} Boats (Intensive)
@@ -516,7 +516,7 @@ const FishingActionBar: React.FC<{
       {!gameOver && hasChosenBoats && (
         <div
           className={css({
-            fontSize: "14px",
+            fontSize: "sm",
             color: "slate.500",
             textAlign: "center",
             marginTop: "4px",
@@ -585,7 +585,7 @@ const FishingResultsTable: React.FC<{ history: RoundHistory[] }> = ({ history })
         <table
           className={css({
             borderCollapse: "collapse",
-            fontSize: "14px",
+            fontSize: "sm",
             minWidth: "480px",
           })}
         >
@@ -594,7 +594,7 @@ const FishingResultsTable: React.FC<{ history: RoundHistory[] }> = ({ history })
               <th className={css({ padding: "6px 8px" })}>Round</th>
               <th className={css({ padding: "6px 8px" })}>Moana</th>
               {otherChiefs.map((chief) => (
-                <th key={chief} className={css({ padding: "6px 8px", fontSize: "12px" })}>
+                <th key={chief} className={css({ padding: "6px 8px", fontSize: "xs" })}>
                   {chief.replace("Chief ", "")}
                 </th>
               ))}
@@ -754,7 +754,7 @@ const CommunityScenarioSelector: React.FC<{
         background: "zinc.50",
       })}
     >
-      <div className={css({ fontSize: "16px", fontWeight: "600", marginBottom: "8px" })}>
+      <div className={css({ fontSize: "md", fontWeight: "600", marginBottom: "8px" })}>
         🏛️ Community Governance System
       </div>
       <div className={css({ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" })}>
@@ -823,7 +823,7 @@ const IslandEfficiencyScenarioSelector: React.FC<{
         background: "zinc.50",
       })}
     >
-      <div className={css({ fontSize: "16px", fontWeight: "600", marginBottom: "8px" })}>
+      <div className={css({ fontSize: "md", fontWeight: "600", marginBottom: "8px" })}>
         🌏 Fishing Management System
       </div>
       <div className={css({ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" })}>

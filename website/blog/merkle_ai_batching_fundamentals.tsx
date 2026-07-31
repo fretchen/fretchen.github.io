@@ -317,7 +317,7 @@ const ProofDemo: React.FC = () => {
         backgroundColor: "codeBg",
       })}
     >
-      <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "16px" })}>
+      <h3 className={css({ fontSize: "lg", fontWeight: "bold", marginBottom: "16px" })}>
         🔍 Interactive Proof Demo: Alice&apos;s Story
       </h3>
 
@@ -331,7 +331,7 @@ const ProofDemo: React.FC = () => {
           border: "1px solid #d1d5db",
         })}
       >
-        <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "12px" })}>
+        <h4 className={css({ fontSize: "md", fontWeight: "medium", marginBottom: "12px" })}>
           Sample Batch (Merkle Root: {sampleBatch.merkleRoot.substring(0, 20)}...)
         </h4>
         <div className={css({ display: "grid", gap: "8px" })}>
@@ -343,7 +343,7 @@ const ProofDemo: React.FC = () => {
                 backgroundColor: "white",
                 borderRadius: "4px",
                 border: "1px solid #d1d5db",
-                fontSize: "13px",
+                fontSize: "sm",
               })}
             >
               <strong>{req.owner}</strong> (R<sub>{index + 1}</sub>): {req.prompt} - {req.leafData.tokenCount} tokens
@@ -365,7 +365,7 @@ const ProofDemo: React.FC = () => {
               borderBottom: activeTab === "generate" ? "1px solid #f9fafb" : "1px solid #e5e7eb",
               borderRadius: "4px 4px 0 0",
               cursor: "pointer",
-              fontSize: "14px",
+              fontSize: "sm",
               fontWeight: activeTab === "generate" ? "medium" : "normal",
             })}
           >
@@ -381,7 +381,7 @@ const ProofDemo: React.FC = () => {
               borderBottom: activeTab === "validate" ? "1px solid #f9fafb" : "1px solid #e5e7eb",
               borderRadius: "4px 4px 0 0",
               cursor: "pointer",
-              fontSize: "14px",
+              fontSize: "sm",
               fontWeight: activeTab === "validate" ? "medium" : "normal",
             })}
           >
@@ -402,7 +402,7 @@ const ProofDemo: React.FC = () => {
               border: "1px solid #e5e7eb",
             })}
           >
-            <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "12px" })}>
+            <h4 className={css({ fontSize: "md", fontWeight: "medium", marginBottom: "12px" })}>
               Step 1: Select User to Generate Proof
             </h4>
             <select
@@ -431,7 +431,7 @@ const ProofDemo: React.FC = () => {
                 border: "1px solid #374151",
                 borderRadius: "4px",
                 cursor: "pointer",
-                fontSize: "14px",
+                fontSize: "sm",
                 "&:hover": {
                   backgroundColor: "gray.600",
                   borderColor: "gray.600",
@@ -451,12 +451,12 @@ const ProofDemo: React.FC = () => {
                 border: "1px solid #e5e7eb",
               })}
             >
-              <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "12px", color: "gray.700" })}>
+              <h4 className={css({ fontSize: "md", fontWeight: "medium", marginBottom: "12px", color: "gray.700" })}>
                 Generated Proof for {sampleBatch.requests[selectedUser].owner}
               </h4>
               <div className={css({ marginBottom: "12px" })}>
                 <strong>Proof Path:</strong>
-                <div className={css({ fontSize: "12px", fontFamily: "monospace", marginTop: "4px" })}>
+                <div className={css({ fontSize: "xs", fontFamily: "monospace", marginTop: "4px" })}>
                   {generatedProof.proof.map((proofItem, index) => (
                     <div key={index}>
                       Level {index + 1}: {proofItem.data.substring(0, 20)}... ({proofItem.position})
@@ -469,7 +469,7 @@ const ProofDemo: React.FC = () => {
                 <div className={css({ position: "relative" })}>
                   <pre
                     className={css({
-                      fontSize: "11px",
+                      fontSize: "xs",
                       fontFamily: "monospace",
                       backgroundColor: "white",
                       padding: "8px",
@@ -493,7 +493,7 @@ const ProofDemo: React.FC = () => {
                       color: "white",
                       border: "none",
                       borderRadius: "4px",
-                      fontSize: "12px",
+                      fontSize: "xs",
                       cursor: "pointer",
                     })}
                   >
@@ -518,10 +518,10 @@ const ProofDemo: React.FC = () => {
               border: "1px solid #e5e7eb",
             })}
           >
-            <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "12px" })}>
+            <h4 className={css({ fontSize: "md", fontWeight: "medium", marginBottom: "12px" })}>
               Step 2: Validate a Proof
             </h4>
-            <label className={css({ display: "block", fontSize: "14px", marginBottom: "8px" })}>
+            <label className={css({ display: "block", fontSize: "sm", marginBottom: "8px" })}>
               Paste Proof JSON:
             </label>
             <textarea
@@ -534,7 +534,7 @@ const ProofDemo: React.FC = () => {
                 padding: "8px",
                 border: "1px solid #d1d5db",
                 borderRadius: "4px",
-                fontSize: "12px",
+                fontSize: "xs",
                 fontFamily: "monospace",
                 marginBottom: "12px",
                 resize: "vertical",
@@ -550,7 +550,7 @@ const ProofDemo: React.FC = () => {
                 border: "none",
                 borderRadius: "4px",
                 cursor: validationInput.trim() ? "pointer" : "not-allowed",
-                fontSize: "14px",
+                fontSize: "sm",
                 "&:hover": validationInput.trim()
                   ? {
                       backgroundColor: "gray.600",
@@ -571,12 +571,12 @@ const ProofDemo: React.FC = () => {
                 border: `1px solid ${validationResult.isValid ? "gray.300" : "red.200"}`,
               })}
             >
-              <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "12px" })}>
+              <h4 className={css({ fontSize: "md", fontWeight: "medium", marginBottom: "12px" })}>
                 Validation Result
               </h4>
               <div
                 className={css({
-                  fontSize: "14px",
+                  fontSize: "sm",
                   fontWeight: "medium",
                   marginBottom: "12px",
                   color: validationResult.isValid ? "green.800" : "red.600",
@@ -592,7 +592,7 @@ const ProofDemo: React.FC = () => {
                       <div
                         key={index}
                         className={css({
-                          fontSize: "12px",
+                          fontSize: "xs",
                           fontFamily: "monospace",
                           backgroundColor: "white",
                           padding: "4px 8px",
@@ -771,7 +771,7 @@ const BatchCreator: React.FC = () => {
         backgroundColor: "codeBg",
       })}
     >
-      <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "16px" })}>
+      <h3 className={css({ fontSize: "lg", fontWeight: "bold", marginBottom: "16px" })}>
         🧪 Interactive LLM Batch Processing Demo
       </h3>
 
@@ -784,7 +784,7 @@ const BatchCreator: React.FC = () => {
           border: "1px solid #bfdbfe",
         })}
       >
-        <p className={css({ fontSize: "14px", color: "blue.800", marginBottom: "8px" })}>
+        <p className={css({ fontSize: "sm", color: "blue.800", marginBottom: "8px" })}>
           <strong>How it works:</strong> Send LLM requests and get immediate responses. After {BATCH_SIZE_THRESHOLD}{" "}
           requests, a Merkle tree is automatically created for cost-efficient blockchain settlement.
         </p>
@@ -800,10 +800,10 @@ const BatchCreator: React.FC = () => {
           border: "1px solid #e5e7eb",
         })}
       >
-        <h4 className={css({ fontSize: "1rem", fontWeight: "medium", marginBottom: "1rem" })}>Send LLM Request</h4>
+        <h4 className={css({ fontSize: "md", fontWeight: "medium", marginBottom: "1rem" })}>Send LLM Request</h4>
 
         <div className={css({ marginBottom: "0.75rem" })}>
-          <label className={css({ display: "block", fontSize: "0.85rem", marginBottom: "0.25rem" })}>
+          <label className={css({ display: "block", fontSize: "sm", marginBottom: "0.25rem" })}>
             Wallet Address:
           </label>
           <select
@@ -815,7 +815,7 @@ const BatchCreator: React.FC = () => {
               border: "1px solid #d1d5db",
               borderRadius: "4px",
               fontFamily: "monospace",
-              fontSize: "0.85rem",
+              fontSize: "sm",
             })}
           >
             {mockWallets.map((wallet) => (
@@ -827,7 +827,7 @@ const BatchCreator: React.FC = () => {
         </div>
 
         <div className={css({ marginBottom: "0.75rem" })}>
-          <label className={css({ display: "block", fontSize: "0.85rem", marginBottom: "0.25rem" })}>Prompt:</label>
+          <label className={css({ display: "block", fontSize: "sm", marginBottom: "0.25rem" })}>Prompt:</label>
           <input
             type="text"
             value={currentPrompt}
@@ -838,13 +838,13 @@ const BatchCreator: React.FC = () => {
               padding: "0.5rem",
               border: "1px solid #d1d5db",
               borderRadius: "4px",
-              fontSize: "0.85rem",
+              fontSize: "sm",
             })}
             onKeyPress={(e) => e.key === "Enter" && handleSendRequest()}
           />
         </div>
 
-        <div className={css({ display: "flex", gap: "0.5rem", fontSize: "0.85rem" })}>
+        <div className={css({ display: "flex", gap: "0.5rem", fontSize: "sm" })}>
           <button
             onClick={handleSendRequest}
             disabled={!currentPrompt.trim()}
@@ -907,8 +907,8 @@ const BatchCreator: React.FC = () => {
             marginBottom: "1rem",
           })}
         >
-          <strong>🌳 Merkle Root:</strong> <code className={css({ fontSize: "0.8rem" })}>{merkleRoot}</code>
-          <div className={css({ fontSize: "0.8rem", color: "green.800", marginTop: "0.25rem" })}>
+          <strong>🌳 Merkle Root:</strong> <code className={css({ fontSize: "sm" })}>{merkleRoot}</code>
+          <div className={css({ fontSize: "sm", color: "green.800", marginTop: "0.25rem" })}>
             All requests can now be processed with a single blockchain transaction!
           </div>
           {/* Tree Visualization */}
@@ -917,7 +917,7 @@ const BatchCreator: React.FC = () => {
               <strong>Tree Structure:</strong>
               <pre
                 className={css({
-                  fontSize: "0.7rem",
+                  fontSize: "xs",
                   fontFamily: "monospace",
                   backgroundColor: "white",
                   padding: "0.5rem",
@@ -964,12 +964,12 @@ const BatchCreator: React.FC = () => {
             >
               {/* Prompt & Response (not part of leaf/hash) */}
               <div className={css({ marginBottom: "0.5rem" })}>
-                <div className={css({ fontWeight: 500, fontSize: "0.92rem", marginBottom: "0.15rem", color: "#444" })}>
+                <div className={css({ fontWeight: 500, fontSize: "md", marginBottom: "0.15rem", color: "#444" })}>
                   Prompt (not part of Merkle-Leafs):
                 </div>
                 <div
                   className={css({
-                    fontSize: "0.92rem",
+                    fontSize: "md",
                     fontFamily: "monospace",
                     backgroundColor: "#fafbfc",
                     padding: "0.35rem 0.6rem",
@@ -982,12 +982,12 @@ const BatchCreator: React.FC = () => {
                 >
                   {request.prompt}
                 </div>
-                <div className={css({ fontWeight: 500, fontSize: "0.92rem", marginBottom: "0.15rem", color: "#444" })}>
+                <div className={css({ fontWeight: 500, fontSize: "md", marginBottom: "0.15rem", color: "#444" })}>
                   Response (not part of Merkle-Leafs):
                 </div>
                 <div
                   className={css({
-                    fontSize: "0.92rem",
+                    fontSize: "md",
                     fontFamily: "monospace",
                     backgroundColor: "#fafbfc",
                     padding: "0.35rem 0.6rem",
@@ -1007,7 +1007,7 @@ const BatchCreator: React.FC = () => {
                   <div
                     className={css({
                       fontWeight: 500,
-                      fontSize: "0.92rem",
+                      fontSize: "md",
                       marginBottom: "0.18rem",
                       color: "#222",
                     })}
@@ -1016,7 +1016,7 @@ const BatchCreator: React.FC = () => {
                   </div>
                   <pre
                     className={css({
-                      fontSize: "0.78rem",
+                      fontSize: "sm",
                       fontFamily: "monospace",
                       backgroundColor: "#fafbfc",
                       padding: "0.45rem 0.6rem",
@@ -1037,7 +1037,7 @@ const BatchCreator: React.FC = () => {
                   <div
                     className={css({
                       fontWeight: 500,
-                      fontSize: "0.92rem",
+                      fontSize: "md",
                       marginBottom: "0.18rem",
                       color: "#222",
                     })}
@@ -1046,7 +1046,7 @@ const BatchCreator: React.FC = () => {
                   </div>
                   <code
                     className={css({
-                      fontSize: "0.78rem",
+                      fontSize: "sm",
                       fontFamily: "monospace",
                       backgroundColor: "gray.100",
                       padding: "0.22rem 0.5rem",

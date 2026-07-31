@@ -358,7 +358,7 @@ export default function DiversificationRandomWalk() {
     >
       <p
         className={css({
-          fontSize: "0.95rem",
+          fontSize: "md",
           fontWeight: "bold",
           marginBottom: "0.75rem",
           color: "gray.700",
@@ -368,7 +368,7 @@ export default function DiversificationRandomWalk() {
       </p>
       <p
         className={css({
-          fontSize: "0.8rem",
+          fontSize: "sm",
           color: "gray.500",
           marginBottom: "1rem",
         })}
@@ -382,7 +382,7 @@ export default function DiversificationRandomWalk() {
         <label
           className={css({
             display: "block",
-            fontSize: "0.85rem",
+            fontSize: "sm",
             color: "gray.700",
             marginBottom: "0.4rem",
           })}
@@ -394,7 +394,7 @@ export default function DiversificationRandomWalk() {
           className={css({
             display: "flex",
             justifyContent: "space-between",
-            fontSize: "0.7rem",
+            fontSize: "xs",
             color: "gray.500",
             marginBottom: "0.2rem",
           })}
@@ -428,14 +428,14 @@ export default function DiversificationRandomWalk() {
             border: "none",
             borderRadius: "4px",
             cursor: isAnimating ? "not-allowed" : "pointer",
-            fontSize: "0.8rem",
+            fontSize: "sm",
             fontWeight: "bold",
           })}
         >
           {isAnimating ? "Running…" : "🔄 New random scenario"}
         </button>
         {showVol && !hasMovedSlider && (
-          <span className={css({ fontSize: "0.8rem", color: "essayAccent", fontStyle: "italic" })}>
+          <span className={css({ fontSize: "sm", color: "essayAccent", fontStyle: "italic" })}>
             👆 Move the slider to see how the mix changes
           </span>
         )}
@@ -459,7 +459,7 @@ export default function DiversificationRandomWalk() {
               flexDirection: "column",
             })}
           >
-            <span className={css({ fontSize: "0.6rem", color: "gray.400", textAlign: "center", marginBottom: "2px" })}>
+            <span className={css({ fontSize: "xs", color: "gray.400", textAlign: "center", marginBottom: "2px" })}>
               Daily return spread
             </span>
             <div className={css({ flex: 1 })}>
@@ -478,7 +478,7 @@ export default function DiversificationRandomWalk() {
       {paths && stepsToShow > 0 && (
         <p
           className={css({
-            fontSize: "0.75rem",
+            fontSize: "xs",
             color: "gray.500",
             marginBottom: "1rem",
             fontStyle: "italic",
@@ -494,7 +494,7 @@ export default function DiversificationRandomWalk() {
         <div>
           <p
             className={css({
-              fontSize: "0.75rem",
+              fontSize: "xs",
               color: "gray.500",
               marginBottom: "0.5rem",
             })}
@@ -523,7 +523,7 @@ export default function DiversificationRandomWalk() {
                   gap: "0.3rem",
                   padding: "0.25rem 0.6rem",
                   borderRadius: "999px",
-                  fontSize: "0.75rem",
+                  fontSize: "xs",
                   fontWeight: "600",
                   border: "1px solid",
                   borderColor: item.color,
@@ -545,7 +545,7 @@ export default function DiversificationRandomWalk() {
           {mixVol! < bondVol! && (
             <p
               className={css({
-                fontSize: "0.8rem",
+                fontSize: "sm",
                 color: "essayAccent",
                 fontWeight: "600",
                 marginTop: "0.5rem",

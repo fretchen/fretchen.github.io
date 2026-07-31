@@ -99,35 +99,10 @@ export const imageGen = {
       lineHeight: "1.2",
     },
   }),
-  compactSubtitle: css({
-    fontSize: "sm",
-    color: "gray.600",
-    marginTop: "xs",
-    lineHeight: "1.4",
-  }),
-  compactSubtitleSimplified: css({
-    fontSize: "sm",
-    color: "gray.500",
-    marginTop: "xs",
-    marginBottom: "md",
-    lineHeight: "1.3",
-    fontWeight: "normal",
-  }),
   compactForm: css({
     display: "flex",
     flexDirection: "column",
     gap: "md",
-  }),
-  compactFormRow: css({
-    display: "flex",
-    gap: "md",
-    alignItems: "center",
-    flexWrap: "wrap",
-    "@media (max-width: 640px)": {
-      flexDirection: "column",
-      alignItems: "stretch",
-      gap: "sm",
-    },
   }),
   // Diskrete Kontrollleiste
   controlBar: css({
@@ -166,25 +141,6 @@ export const imageGen = {
     },
     _hover: {
       borderColor: "gray.400",
-    },
-  }),
-  compactLabel: css({
-    fontSize: "sm",
-    fontWeight: "semibold",
-    color: "gray.800",
-    minWidth: "auto",
-    whiteSpace: "nowrap",
-  }),
-  compactFormatGroup: css({
-    display: "flex",
-    alignItems: "center",
-    gap: "sm",
-    padding: "sm md",
-    backgroundColor: "gray.50",
-    borderRadius: "md",
-    border: "1px solid token(colors.border)",
-    "@media (max-width: 640px)": {
-      justifyContent: "center",
     },
   }),
   compactTextarea: css({
@@ -229,11 +185,6 @@ export const imageGen = {
     color: "token(colors.danger)",
   }),
 
-  // Wiederverwendbare Stile für Heading
-  columnHeading: css({
-    fontSize: "lg",
-    margin: 0,
-  }),
 };
 
 // ===== KOMPONENTEN-SPEZIFISCHE STILE =====
@@ -532,11 +483,6 @@ export const post = {
     },
   }),
 
-  publishingDate: css({
-    color: "gray.600",
-    fontSize: "sm",
-    marginBottom: "md",
-  }),
   contentContainer: css({
     // Container to handle floating layout
     overflow: "hidden", // Clears the float
@@ -676,20 +622,10 @@ const baseContentCardList = css({
 
 // EntryList component styles
 export const entryList = {
-  // Verwendung der einheitlichen Basis-Styles
   container: baseContentCardList,
-  entry: baseContentCard.container,
-  entryContent: baseContentCard.content,
-  entryText: baseContentCard.text,
-  entryTextCompact: baseContentCard.textCompact,
-  entryTitle: baseContentCard.title,
-  entryDescription: baseContentCard.description,
-  entryDate: baseContentCard.date,
-  entryDateWithDescription: baseContentCard.dateWithDescription,
-  entryNftImage: baseContentCard.image,
 
-  // Spezifische EntryList-Styles
-  entryTextContent: css({
+  // EntryList's own styles — everything else comes from baseContentCard directly.
+  textContent: css({
     flex: 1,
     display: "flex",
     flexDirection: "column",
@@ -717,21 +653,6 @@ export const layout = {
     },
     "@media (max-width: 480px)": {
       padding: "0 0.5rem", // Minimal margins on mobile
-    },
-  }),
-  title: css({
-    textAlign: "center",
-    margin: "token(spacing.md) token(spacing.0)",
-    padding: "token(spacing.sm)",
-    // Mobile responsive styles
-    "@media (max-width: 768px)": {
-      fontSize: "1.8rem",
-      margin: "token(spacing.sm) token(spacing.0)",
-      padding: "token(spacing.xs)",
-    },
-    "@media (max-width: 480px)": {
-      fontSize: "1.5rem",
-      margin: "token(spacing.xs) token(spacing.0)",
     },
   }),
   appbar: css({
@@ -944,9 +865,6 @@ export const nftList = {
   container: css({
     marginTop: "2xl",
   }),
-  heading: css({
-    marginBottom: "xl",
-  }),
   loadingContainer: css({
     textAlign: "center",
     padding: "xl",
@@ -1153,44 +1071,6 @@ export const nftCard = {
     },
   }),
 
-  description: css({
-    fontSize: "sm",
-    color: "gray.600",
-    marginBottom: "sm",
-    lineHeight: "1.4",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    maxHeight: "2.8em",
-    // Mobile: Smaller font and reduced max height
-    "@media (max-width: 768px)": {
-      fontSize: "xs",
-      maxHeight: "2.1em",
-      marginBottom: "xs",
-    },
-    "@media (max-width: 480px)": {
-      maxHeight: "1.4em", // Show only 1 line on very small screens
-      marginBottom: "2xs",
-    },
-  }),
-  footer: css({
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    fontSize: "xs",
-    color: "gray.400",
-    flexWrap: "wrap",
-    gap: "xs",
-    // Mobile: Stack vertically for better mobile layout
-    "@media (max-width: 768px)": {
-      flexDirection: "column",
-      alignItems: "flex-start",
-      gap: "sm",
-    },
-    "@media (max-width: 480px)": {
-      fontSize: "2xs",
-      gap: "xs",
-    },
-  }),
 
   // Checkbox für Listed Status
   checkboxLabel: css({
@@ -1235,70 +1115,6 @@ export const nftCard = {
   }),
 
 
-  // Vereinfachtes Modal
-  modalOverlay: css({
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: "rgba(0, 0, 0, 0.8)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1000,
-    padding: "lg",
-  }),
-  modalContent: css({
-    position: "relative",
-    maxWidth: "90vw",
-    maxHeight: "90vh",
-    background: "white",
-    borderRadius: "md",
-    overflow: "auto",
-    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-    display: "flex",
-    flexDirection: "column",
-  }),
-  modalImage: css({
-    width: "100%",
-    height: "auto",
-    maxHeight: "60vh",
-    objectFit: "contain",
-  }),
-  modalClose: css({
-    position: "absolute",
-    top: "sm",
-    right: "sm",
-    background: "rgba(0, 0, 0, 0.5)",
-    color: "white",
-    border: "none",
-    borderRadius: "50%",
-    width: "40px",
-    height: "40px",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "lg",
-    _hover: {
-      background: "rgba(0, 0, 0, 0.7)",
-    },
-  }),
-  modalInfo: css({
-    padding: "md",
-    borderTop: "1px solid rgba(229, 231, 235, 1)",
-  }),
-  modalTitle: css({
-    fontSize: "lg",
-    fontWeight: "bold",
-    marginBottom: "xs",
-  }),
-  modalDescription: css({
-    fontSize: "sm",
-    color: "gray.600",
-    lineHeight: "1.4",
-  }),
 };
 
 // Page-specific styles for blog entries
@@ -1754,36 +1570,6 @@ export const webmentions = {
       textDecoration: "underline",
     },
   }),
-  cta: css({
-    marginTop: "md",
-    padding: "md",
-    backgroundColor: "gray.50",
-    borderRadius: "sm",
-    border: "1px solid token(colors.border)",
-    "@media (max-width: 480px)": {
-      padding: "sm",
-    },
-  }),
-  ctaText: css({
-    fontSize: "md",
-    color: "text",
-    lineHeight: "1.6",
-    margin: 0,
-  }),
-  ctaSubtext: css({
-    fontSize: "sm",
-    color: "gray.600",
-    lineHeight: "1.6",
-  }),
-  ctaLink: css({
-    color: "brand",
-    textDecoration: "none",
-    fontWeight: "medium",
-    transition: "all 0.2s ease",
-    _hover: {
-      textDecoration: "underline",
-    },
-  }),
   loadingState: css({
     marginTop: "xl",
     paddingTop: "md",
@@ -1791,28 +1577,6 @@ export const webmentions = {
     textAlign: "center",
     color: "gray.600",
     fontSize: "sm",
-  }),
-  emptyState: css({
-    marginTop: "xl",
-    paddingTop: "md",
-    borderTop: "token(borders.light)",
-    textAlign: "center",
-    padding: "lg",
-  }),
-  emptyIcon: css({
-    fontSize: "3xl",
-    display: "block",
-    marginBottom: "sm",
-  }),
-  emptyTitle: css({
-    fontSize: "lg",
-    fontWeight: "medium",
-    color: "text",
-    marginBottom: "xs",
-  }),
-  emptyText: css({
-    fontSize: "sm",
-    color: "gray.600",
   }),
 };
 
@@ -2173,57 +1937,27 @@ export const modal = {
     margin: "sm 0 0 0",
     textAlign: "center",
   }),
-  // Full-width orange primary action for the support flow — carries the support pill's
-  // warm accent (metadataLine.supportButton) into the modal so the whole flow reads as one.
-  // Shares the shape/interaction of the site's primaryButton, only the color differs.
-  supportPrimary: css({
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "xs",
+  // ─── Image-modal content parts ───────────────────────────────────────
+  // Used with <Modal padded={false}>: the image is full-bleed and these supply
+  // the caption block beneath it (see components/ImageModal.tsx).
+  image: css({
     width: "100%",
-    paddingY: "sm",
-    paddingX: "lg",
-    background: "linear-gradient(135deg, token(colors.support) 0%, token(colors.supportLight) 100%)",
-    color: "token(colors.light)",
-    border: "none",
-    borderRadius: "md",
-    cursor: "pointer",
-    fontWeight: "bold",
-    fontSize: "sm",
-    textDecoration: "none",
-    transition: "all 0.2s ease",
-    boxShadow: "0 2px 4px rgba(255, 107, 53, 0.25)",
-    _hover: {
-      transform: "translateY(-1px)",
-      boxShadow: "0 4px 8px rgba(255, 107, 53, 0.35)",
-    },
-    _active: {
-      transform: "translateY(0)",
-      boxShadow: "0 2px 4px rgba(255, 107, 53, 0.25)",
-    },
-    _disabled: {
-      cursor: "default",
-      opacity: 0.6,
-      transform: "none",
-      boxShadow: "none",
-    },
+    height: "auto",
+    maxHeight: "60vh",
+    objectFit: "contain",
   }),
-  // Quiet secondary action beneath the primary (e.g. "Try again") — text-weight, neutral.
-  secondaryAction: css({
-    display: "block",
-    width: "100%",
-    marginTop: "sm",
-    padding: "sm",
-    background: "transparent",
-    color: "gray.600",
-    border: "none",
-    borderRadius: "md",
-    cursor: "pointer",
+  imageInfo: css({
+    padding: "md",
+    borderTop: "1px solid rgba(229, 231, 235, 1)",
+  }),
+  imageTitle: css({
+    fontSize: "lg",
+    fontWeight: "bold",
+    marginBottom: "xs",
+  }),
+  imageDescription: css({
     fontSize: "sm",
-    fontWeight: "medium",
-    textAlign: "center",
-    transition: "color 0.15s ease",
-    _hover: { color: "text" },
+    color: "gray.600",
+    lineHeight: "1.4",
   }),
 };

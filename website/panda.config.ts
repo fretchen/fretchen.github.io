@@ -129,6 +129,10 @@ const button = defineRecipe({
     fullWidthOnMobile: {
       true: { "@media (max-width: 640px)": { width: "100%", justifyContent: "center" } },
     },
+    // Spans its container — stacked modal actions, mobile CTAs.
+    fullWidth: {
+      true: { width: "100%", justifyContent: "center" },
+    },
   },
   compoundVariants: [
     {

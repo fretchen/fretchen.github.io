@@ -33,11 +33,11 @@ export function ImageModal({ image, onClose }: ImageModalProps) {
     <>
       {/* padded={false}: the image is full-bleed; modalInfo provides its own padding */}
       <Modal onClose={onClose} title={image.title} padded={false}>
-        <img src={image.src} alt={image.alt} className={styles.nftCard.modalImage} decoding="async" />
+        <img src={image.src} alt={image.alt} className={styles.modal.image} decoding="async" />
         {(image.title || image.description || image.network) && (
-          <div className={styles.nftCard.modalInfo}>
-            {image.title && <h3 className={styles.nftCard.modalTitle}>{image.title}</h3>}
-            {image.description && <p className={styles.nftCard.modalDescription}>{image.description}</p>}
+          <div className={styles.modal.imageInfo}>
+            {image.title && <h3 className={styles.modal.imageTitle}>{image.title}</h3>}
+            {image.description && <p className={styles.modal.imageDescription}>{image.description}</p>}
             {image.network && <ChainInfoDisplay network={image.network} tokenId={image.tokenId} />}
             <div className={styles.nftCard.actions} style={{ justifyContent: "center", marginTop: "12px" }}>
               <button onClick={handleDownload} className={button()}>

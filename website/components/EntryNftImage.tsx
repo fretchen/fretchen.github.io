@@ -1,5 +1,5 @@
 import * as React from "react";
-import { entryList } from "../layouts/styles";
+import { baseContentCard } from "../layouts/styles";
 import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS, isTestnet } from "@fretchen/chain-utils";
 import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
 import { NFTMetadata } from "../types/components";
@@ -95,7 +95,7 @@ export const EntryNftImage: React.FC<EntryNftImageProps> = ({ tokenId, fallbackI
     <>
       {isLoading ? (
         <div
-          className={entryList.entryNftImage}
+          className={baseContentCard.image}
           style={{ backgroundColor: "#f3f4f6" }}
           title="Loading NFT artwork..."
         />
@@ -103,7 +103,7 @@ export const EntryNftImage: React.FC<EntryNftImageProps> = ({ tokenId, fallbackI
         <img
           src={imageUrl!}
           alt={nftName || "NFT Artwork"}
-          className={entryList.entryNftImage}
+          className={baseContentCard.image}
           title={`NFT Artwork${nftName ? `: ${nftName}` : ""}`}
           onError={() => setImageUrl(null)}
           loading="lazy"

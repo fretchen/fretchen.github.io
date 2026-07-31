@@ -2,6 +2,11 @@ import React from "react";
 import * as styles from "../layouts/styles";
 import { useLocale } from "../hooks/useLocale";
 import { Modal } from "./Modal";
+import { button } from "../styled-system/recipes";
+import { css } from "../styled-system/css";
+
+// Stacked beneath the primary action; the recipe supplies the rest.
+const secondaryActionSpacing = css({ marginTop: "sm" });
 
 interface SupportChainModalProps {
   onClose: () => void;
@@ -74,7 +79,7 @@ export function SupportChainModal({
           {errorMessage && <p className={styles.modal.error}>{errorMessage}</p>}
           <div className={styles.modal.primaryAction}>
             <a
-              className={styles.modal.supportPrimary}
+              className={button({ visual: "support" })}
               href="https://app.optimism.io/bridge"
               target="_blank"
               rel="noopener noreferrer"
@@ -83,7 +88,7 @@ export function SupportChainModal({
             </a>
           </div>
           <button
-            className={styles.modal.secondaryAction}
+            className={`${button({ visual: "ghost", fullWidth: true })} ${secondaryActionSpacing}`}
             onClick={() => void onRetry()}
             disabled={isBusy}
             type="button"
@@ -98,7 +103,7 @@ export function SupportChainModal({
           {whyLine}
           <div className={styles.modal.primaryAction}>
             <button
-              className={styles.modal.supportPrimary}
+              className={button({ visual: "support" })}
               onClick={() => void onSwitchNetwork()}
               disabled={isBusy}
               type="button"

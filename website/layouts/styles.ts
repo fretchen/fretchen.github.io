@@ -11,38 +11,11 @@ export const container = css({
   width: "100%", // Take full width up to maxWidth
 });
 
-export const flexColumn = css({
-  display: "flex",
-  flexDirection: "column",
-  gap: "md",
-});
-
-export const flexCenter = css({
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-});
-
-// ===== TYPOGRAFIE =====
-
-export const heading = css({
-  fontSize: "2xl",
-  fontWeight: "bold",
-  marginBottom: "sm",
-  color: "text",
-});
-
 export const paragraph = css({
   marginBottom: "sm",
   lineHeight: "1.5",
 });
 
-export const list = css({
-  paddingLeft: "2em",
-  marginBottom: "sm",
-});
-
-// Hero section styles
 export const heroContainer = css({
   textAlign: "center",
   marginY: "8",
@@ -71,28 +44,6 @@ export const blogSection = css({ marginTop: "10" });
 
 // ===== VEREINFACHTE INTERAKTIVE ELEMENTE =====
 
-// Universeller Button-Stil
-export const baseButton = css({
-  padding: "sm lg",
-  border: "none",
-  borderRadius: "sm",
-  cursor: "pointer",
-  fontWeight: "medium",
-  fontSize: "sm",
-  transition: "all 0.2s",
-  _disabled: {
-    opacity: 0.6,
-    cursor: "not-allowed",
-  },
-});
-
-export const secondaryButton = css({
-  backgroundColor: "gray.200",
-  color: "gray.800",
-  _hover: { backgroundColor: "gray.300" },
-});
-
-// Category filter button styles
 export const categoryFilterButton = css({
   padding: "sm md",
   border: "1px solid",
@@ -134,54 +85,6 @@ export const spinner = css({
   border: "2px solid token(colors.brand)",
   borderRightColor: "transparent",
   animation: "spin 1s linear infinite",
-});
-
-// Status-Nachrichten
-export const statusMessage = css({
-  padding: "sm",
-  borderRadius: "sm",
-  fontSize: "sm",
-  display: "flex",
-  alignItems: "center",
-  gap: "sm",
-});
-
-export const errorStatus = css({
-  backgroundColor: "rgba(220, 53, 69, 0.1)",
-  border: "1px solid #dc3545",
-  color: "#dc3545",
-});
-
-export const successStatus = css({
-  backgroundColor: "rgba(40, 167, 69, 0.1)",
-  border: "1px solid #28a745",
-  color: "#28a745",
-});
-
-export const infoStatus = css({
-  backgroundColor: "rgba(59, 130, 246, 0.1)",
-  border: "1px solid token(colors.brand)",
-  color: "brand",
-});
-
-export const link = css({
-  display: "inline-block",
-  color: "brand",
-  textDecoration: "none",
-  marginTop: "xs",
-  fontWeight: "medium",
-  _hover: { textDecoration: "underline" },
-});
-
-// ===== ZUSTANDSANZEIGEN =====
-
-export const errorMessage = css({
-  padding: "sm",
-  borderRadius: "sm",
-  backgroundColor: "rgba(220, 53, 69, 0.1)",
-  border: "1px solid #dc3545",
-  color: "#dc3545",
-  marginTop: "md",
 });
 
 export const successMessage = css({
@@ -573,29 +476,6 @@ export const baseContentCard = {
   }),
 };
 
-// Container für Listen von Karten
-export const baseContentCardList = css({
-  display: "flex",
-  flexDirection: "column",
-  gap: "4",
-  "@media (max-width: 768px)": {
-    gap: "2", // Engere Abstände auf mobile
-  },
-  "@media (max-width: 480px)": {
-    gap: "1.5", // Noch enger auf kleinen mobilen Geräten
-  },
-});
-
-// Übergangs-Stil für bestehende Card-Komponente (zur Kompatibilität)
-export const card = {
-  container: baseContentCard.container,
-  content: baseContentCard.content,
-  text: baseContentCard.text,
-  title: baseContentCard.title,
-  description: baseContentCard.description,
-};
-
-// WalletOptions component styles
 export const walletOptions = {
   dropdown: css({
     position: "relative",
@@ -855,6 +735,19 @@ export const toc = {
     paddingLeft: "lg",
   }),
 };
+
+// Container für Listen von Karten (nur intern von entryList genutzt)
+const baseContentCardList = css({
+  display: "flex",
+  flexDirection: "column",
+  gap: "4",
+  "@media (max-width: 768px)": {
+    gap: "2", // Engere Abstände auf mobile
+  },
+  "@media (max-width: 480px)": {
+    gap: "1.5", // Noch enger auf kleinen mobilen Geräten
+  },
+});
 
 // EntryList component styles
 export const entryList = {
@@ -1708,175 +1601,6 @@ export const titleBar = {
   }),
 };
 
-// StarSupport component styles - compact star-based support button
-export const starSupport = {
-  // Reading progress bar with integrated support button
-  progressContainer: css({
-    position: "sticky",
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
-    backdropFilter: "blur(10px)",
-    borderBottom: "1px solid token(colors.border)",
-    padding: "token(spacing.xs) token(spacing.md)",
-    display: "flex",
-    alignItems: "center",
-    gap: "token(spacing.md)",
-    zIndex: 100,
-    transition: "all 0.3s ease",
-    // Hide by default, show when scrolling
-    transform: "translateY(-100%)",
-    "&[data-visible='true']": {
-      transform: "translateY(0)",
-    },
-    "@media (max-width: 768px)": {
-      padding: "token(spacing.xs) token(spacing.sm)",
-      gap: "token(spacing.sm)",
-    },
-  }),
-  progressBar: css({
-    flex: 1,
-    height: "4px",
-    backgroundColor: "rgba(59, 130, 246, 0.1)",
-    borderRadius: "2px",
-    overflow: "hidden",
-    position: "relative",
-  }),
-  progressFill: css({
-    height: "100%",
-    backgroundColor: "brand",
-    borderRadius: "2px",
-    transition: "width 0.3s ease",
-  }),
-  supportButton: css({
-    display: "flex",
-    alignItems: "center",
-    gap: "token(spacing.xs)",
-    padding: "token(spacing.xs) token(spacing.sm)",
-    backgroundColor: "transparent",
-    border: "1px solid rgba(59, 130, 246, 0.3)",
-    borderRadius: "token(radii.full)",
-    cursor: "pointer",
-    fontSize: "sm",
-    fontWeight: "medium",
-    color: "brand",
-    transition: "all 0.2s ease",
-    minHeight: "32px",
-    whiteSpace: "nowrap",
-    _hover: {
-      backgroundColor: "rgba(59, 130, 246, 0.05)",
-      borderColor: "brand",
-      transform: "translateY(-1px)",
-    },
-    _active: {
-      transform: "translateY(0)",
-    },
-    _disabled: {
-      opacity: 0.6,
-      cursor: "not-allowed",
-      transform: "none",
-      _hover: {
-        transform: "none",
-        backgroundColor: "transparent",
-      },
-    },
-    "@media (max-width: 768px)": {
-      padding: "token(spacing.xs)",
-      fontSize: "xs",
-      minHeight: "28px",
-      gap: "2px",
-    },
-  }),
-  supportButtonActive: css({
-    backgroundColor: "rgba(59, 130, 246, 0.1)",
-    borderColor: "brand",
-    color: "brand",
-  }),
-  starIcon: css({
-    fontSize: "14px",
-    transition: "all 0.2s ease",
-    "@media (max-width: 768px)": {
-      fontSize: "12px",
-    },
-  }),
-  starIconFilled: css({
-    color: "#fbbf24", // Golden yellow for filled star
-  }),
-  supportCount: css({
-    fontSize: "sm",
-    fontWeight: "medium",
-    "@media (max-width: 768px)": {
-      fontSize: "xs",
-    },
-  }),
-  // Inline variant for content placement
-  inlineContainer: css({
-    display: "flex",
-    alignItems: "center",
-    gap: "token(spacing.sm)",
-    padding: "token(spacing.sm) 0",
-    borderTop: "1px solid rgba(59, 130, 246, 0.1)",
-    borderBottom: "1px solid rgba(59, 130, 246, 0.1)",
-    margin: "token(spacing.lg) 0",
-    fontSize: "sm",
-    color: "gray.600",
-  }),
-  inlineText: css({
-    flex: 1,
-    fontSize: "sm",
-    color: "gray.600",
-  }),
-  inlineButton: css({
-    display: "flex",
-    alignItems: "center",
-    gap: "token(spacing.xs)",
-    padding: "token(spacing.xs) token(spacing.sm)",
-    backgroundColor: "transparent",
-    border: "1px solid rgba(59, 130, 246, 0.3)",
-    borderRadius: "token(radii.sm)",
-    cursor: "pointer",
-    fontSize: "sm",
-    fontWeight: "medium",
-    color: "brand",
-    transition: "all 0.2s ease",
-    _hover: {
-      backgroundColor: "rgba(59, 130, 246, 0.05)",
-      borderColor: "brand",
-    },
-    _disabled: {
-      opacity: 0.6,
-      cursor: "not-allowed",
-    },
-  }),
-  // Tooltip for errors/warnings
-  tooltip: css({
-    position: "absolute",
-    top: "100%",
-    right: 0,
-    marginTop: "token(spacing.xs)",
-    padding: "token(spacing.xs) token(spacing.sm)",
-    backgroundColor: "background",
-    border: "1px solid token(colors.border)",
-    borderRadius: "token(radii.sm)",
-    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-    fontSize: "xs",
-    color: "text",
-    whiteSpace: "nowrap",
-    zIndex: 1000,
-    "@media (max-width: 768px)": {
-      position: "fixed",
-      top: "10px",
-      left: "10px",
-      right: "10px",
-      marginTop: 0,
-      whiteSpace: "normal",
-      textAlign: "center",
-    },
-  }),
-};
-
-// MetadataLine component styles - discrete content metadata integration
 export const metadataLine = {
   container: css({
     fontSize: "sm",
@@ -2415,39 +2139,6 @@ export const sidebarHeading = css({
   color: "text",
 });
 
-// Balance display
-export const balanceContainer = css({
-  display: "flex",
-  alignItems: "center",
-  gap: "xs",
-});
-
-export const balanceText = css({
-  fontSize: "sm",
-  color: "text",
-});
-
-export const balanceButton = css({
-  padding: "xs sm",
-  background: "transparent",
-  color: "text",
-  border: "1px solid",
-  borderColor: "border",
-  borderRadius: "xs",
-  cursor: "pointer",
-  fontSize: "xs",
-  fontWeight: "500",
-  transition: "all 0.2s ease",
-  _hover: {
-    backgroundColor: "#f0f0f0",
-  },
-  _disabled: {
-    cursor: "not-allowed",
-    opacity: 0.6,
-  },
-});
-
-// Actions section
 export const actionsContainer = css({
   display: "flex",
   flexDirection: "column",
@@ -2523,17 +2214,6 @@ export const mobileActionButton = css({
   fontSize: "xs",
 });
 
-// Desktop header
-export const desktopHeader = css({
-  padding: 0,
-});
-
-export const desktopTitle = css({
-  margin: 0,
-  fontSize: "xl",
-});
-
-// Messages container
 export const messagesContainer = css({
   flex: "1 1 auto", // Allow grow, shrink, and base on content
   overflow: "auto",
@@ -2886,40 +2566,3 @@ export const modal = {
     _hover: { color: "text" },
   }),
 };
-
-// Preset amount buttons
-export const presetButtons = css({
-  display: "flex",
-  gap: "xs",
-});
-
-export const presetButton = css({
-  padding: "xs lg",
-  border: "1px solid",
-  borderColor: "border",
-  background: "background",
-  borderRadius: "xs",
-  cursor: "pointer",
-  fontSize: "sm",
-  transition: "all 0.2s ease",
-});
-
-export const presetButtonActive = css({
-  borderColor: "text",
-  backgroundColor: "#f8f9fa",
-});
-
-// Disconnected state
-export const disconnectedContainer = css({
-  textAlign: "center",
-  padding: "2xl",
-});
-
-export const disconnectedTitle = css({
-  fontSize: "xl",
-  marginBottom: "sm",
-});
-
-export const disconnectedText = css({
-  color: "#666",
-});

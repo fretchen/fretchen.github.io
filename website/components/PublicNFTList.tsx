@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useMultiChainPublicNFTs } from "../hooks/useMultiChainNFTs";
 import { ModalImageData } from "../types/components";
-import * as styles from "../layouts/styles";
+import * as styles from "../layouts/shared";
 import { nftList } from "./nft/styles";
 import { NFTCard } from "./NFTCard";
 import { ImageModal } from "./ImageModal";

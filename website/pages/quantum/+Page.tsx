@@ -1,7 +1,7 @@
 import React from "react";
 import { Card } from "../../components/Card";
-import { titleBar } from "../../layouts/styles";
-import * as styles from "../../layouts/styles";
+import { titleBar } from "../../layouts/shared";
+import * as styles from "../../layouts/shared";
 
 const QuantumPage: React.FC = () => {
   return (

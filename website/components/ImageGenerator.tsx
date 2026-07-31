@@ -3,7 +3,7 @@ import { css } from "../styled-system/css";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
 import { GENAI_NFT_NETWORKS, fromCAIP2, getViemChain } from "@fretchen/chain-utils";
 import { ImageGeneratorProps } from "../types/components";
-import * as styles from "../layouts/styles";
+import * as styles from "../layouts/shared";
 import { nftCard } from "./nft/styles";
 import { imageGen, successMessage } from "./ImageGenerator.styles";
 import InfoIcon from "./InfoIcon";

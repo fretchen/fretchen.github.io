@@ -4,7 +4,7 @@ import { useState } from "react";
 // Dynamic blog loading with hot reload support
 import EntryList from "../../components/EntryList";
 import { usePageContext } from "vike-react/usePageContext";
-import * as styles from "../../layouts/styles";
+import * as styles from "../../layouts/shared";
 import { css } from "../../styled-system/css";
 import { CATEGORIES, getCategoryIds, type CategoryId } from "../../types/Categories";
 import type { BlogPost } from "../../types/BlogPost";

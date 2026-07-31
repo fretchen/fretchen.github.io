@@ -1,6 +1,7 @@
 import React, { useRef } from "react";
 import { css } from "../../styled-system/css";
-import * as styles from "../../layouts/styles";
+import * as styles from "../../layouts/shared";
+import { post } from "../../components/Post.styles";
 import { AgentChecker } from "../../components/AgentChecker";
 import { TableOfContents } from "../../components/TableOfContents";
 import { CommentsSection } from "../../components/CommentsSection";
@@ -187,7 +188,7 @@ export default function Page() {
   return (
     <div className={styles.container}>
       {/* Same breakout grid blog posts use: empty | content | sticky ToC, collapsing < 1200px. */}
-      <div className={styles.post.articleLayout}>
+      <div className={post.articleLayout}>
         <div />
         <article ref={contentRef} className={css({ padding: "4" })}>
           {/* Status banner: scope + honesty, not a warning label. */}
@@ -1002,7 +1003,7 @@ export default function Page() {
             <CommentsSection />
           </section>
         </article>
-        <aside className={styles.post.articleSidebar}>
+        <aside className={post.articleSidebar}>
           <TableOfContents contentRef={contentRef} />
         </aside>
       </div>

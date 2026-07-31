@@ -9,7 +9,7 @@ import {
 import { formatEther } from "viem";
 import { getCollectorNFTAddress, CollectorNFTv1ABI, COLLECTOR_NFT_NETWORKS, fromCAIP2 } from "@fretchen/chain-utils";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
-import * as styles from "../layouts/styles";
+import * as styles from "../layouts/shared";
 import { useLocale } from "../hooks/useLocale";
 import { button } from "../styled-system/recipes";
 

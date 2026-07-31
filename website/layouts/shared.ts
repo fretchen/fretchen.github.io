@@ -1,6 +1,23 @@
 import { css } from "../styled-system/css";
 import { stack } from "../styled-system/patterns";
 
+/**
+ * Shared style primitives ONLY.
+ *
+ * Everything here has three or more consumers. Add to this file on a style's THIRD
+ * consumer — not its second, and never in anticipation. Component styles live next to
+ * their component (`components/Webmentions.styles.ts`) or inline in the page that owns
+ * them; a feature cluster owns its own module (`components/nft/styles.ts`).
+ *
+ * Values come from tokens, never from literals:
+ *   colours / spacing / type  ->  panda.config.ts
+ *   buttons                   ->  the `button` recipe, never a fresh css({})
+ *
+ * Panda compiles css({}) statically, so several ways of writing a style silently emit
+ * no CSS at all. See the styling rules in CLAUDE.md; test/styleConventions.test.ts
+ * enforces them.
+ */
+
 // ===== ALLGEMEINE LAYOUTSTILE =====
 
 // Container styles

@@ -3,7 +3,7 @@ import { Card } from "../../components/Card";
 import EntryList from "../../components/EntryList";
 import { useData } from "vike-react/useData";
 import type { BlogPost } from "../../types/BlogPost";
-import * as styles from "../../layouts/styles";
+import * as styles from "../../layouts/shared";
 import { css } from "../../styled-system/css";
 import { stack } from "../../styled-system/patterns";
 

@@ -26,7 +26,7 @@ vi.mock("../hooks/useMultiChainNFTs", () => ({
 }));
 
 // Mock styles
-vi.mock("../layouts/styles", () => ({
+vi.mock("../layouts/shared", () => ({
   nftList: {
     walletPrompt: "wallet-prompt",
     loadingContainer: "loading-container",

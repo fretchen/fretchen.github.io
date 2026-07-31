@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useAccount } from "wagmi";
 import { useMultiChainUserNFTs } from "../hooks/useMultiChainNFTs";
 import { NFTMetadata, ModalImageData } from "../types/components";
-import * as styles from "../layouts/styles";
+import * as styles from "../layouts/shared";
 import { nftList } from "./nft/styles";
 import { NFTCard } from "./NFTCard";
 import { ImageModal } from "./ImageModal";

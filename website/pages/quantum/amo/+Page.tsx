@@ -3,7 +3,7 @@ import * as React from "react";
 // Direkte Imports der benötigten Komponenten und Daten
 import EntryList from "../../../components/EntryList";
 import { usePageContext } from "vike-react/usePageContext";
-import { titleBar } from "../../../layouts/styles";
+import { titleBar } from "../../../layouts/shared";
 import { css } from "../../../styled-system/css";
 import type { BlogPost } from "../../../types/BlogPost";
 

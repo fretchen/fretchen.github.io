@@ -8,7 +8,7 @@
  */
 import React from "react";
 import { css } from "../styled-system/css";
-import * as styles from "../layouts/styles";
+import * as styles from "../layouts/shared";
 import type { AgentCard } from "../hooks/x402Discovery";
 import { button } from "../styled-system/recipes";
 

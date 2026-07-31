@@ -1,5 +1,5 @@
 import * as React from "react";
-import { baseContentCard } from "../layouts/styles";
+import { baseContentCard } from "../layouts/shared";
 import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS, isTestnet } from "@fretchen/chain-utils";
 import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
 import { NFTMetadata } from "../types/components";

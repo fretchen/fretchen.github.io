@@ -26,7 +26,7 @@ vi.mock("../components/NFTList", () => ({
 }));
 
 // Mock styles
-vi.mock("../layouts/styles", () => ({
+vi.mock("../layouts/shared", () => ({
   container: "mock-container-class",
   heading: "mock-heading-class",
 }));

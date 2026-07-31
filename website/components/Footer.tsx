@@ -1,5 +1,5 @@
 import * as React from "react";
-import { layout } from "../layouts/styles";
+import { layout } from "../layouts/LayoutDefault.styles";
 import { SITE, getSocialLinks } from "../utils/siteData";
 
 /**

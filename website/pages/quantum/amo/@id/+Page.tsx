@@ -1,7 +1,7 @@
 import * as React from "react";
 import { usePageContext } from "vike-react/usePageContext";
 import { Post } from "../../../../components/Post";
-import { pageContainer } from "../../../../layouts/styles";
+import { pageContainer } from "../../../../layouts/shared";
 import type { BlogPost } from "../../../../types/BlogPost";
 
 type PageData = { blog: BlogPost; prevBlog: BlogPost | null; nextBlog: BlogPost | null };

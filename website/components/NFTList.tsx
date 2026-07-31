@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { useMultiChainUserNFTs } from "../hooks/useMultiChainNFTs";
 import { NFTListProps } from "../types/components";
-import * as styles from "../layouts/styles";
+import * as styles from "../layouts/shared";
 import { nftList } from "./nft/styles";
 import { Tab } from "./Tab";
 import { MyNFTList } from "./MyNFTList";

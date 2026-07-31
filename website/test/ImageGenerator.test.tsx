@@ -40,7 +40,7 @@ import { buildAccountData, buildConnectData, buildWalletClientData } from "./set
 // No need to mock getChain - it's just reading env vars and returning constants
 // The real implementation works fine in tests
 
-vi.mock("../layouts/styles", () => ({
+vi.mock("../layouts/shared", () => ({
   imageGen: {},
   nftCard: {},
   spinner: "mock-spinner",

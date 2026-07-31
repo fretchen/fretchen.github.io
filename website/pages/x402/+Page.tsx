@@ -3,8 +3,8 @@ import { css } from "../../styled-system/css";
 import MermaidDiagram from "../../components/MermaidDiagram";
 import { FacilitatorApproval } from "../../components/FacilitatorApproval";
 import { CodeBlock } from "../../components/CodeBlock";
-import { titleBar } from "../../layouts/styles";
-import * as styles from "../../layouts/styles";
+import { titleBar } from "../../layouts/shared";
+import * as styles from "../../layouts/shared";
 import { Link } from "../../components/Link";
 
 // ─── Mermaid diagram definitions ─────────────────────────────────────────────

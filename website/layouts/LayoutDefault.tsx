@@ -8,7 +8,7 @@ import Footer from "../components/Footer";
 
 import { WagmiProvider } from "wagmi";
 import { config } from "../wagmi.config";
-import { layout } from "./styles";
+import { layout } from "./LayoutDefault.styles";
 import { useWalletConnection } from "../hooks/useWalletConnection";
 import { OWNER_ADDRESS } from "../utils/getChain";
 import { installPreloadErrorHandler } from "../utils/preloadErrorHandler";

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { css } from "../../styled-system/css";
-import { titleBar, tabs as tabStyles } from "../../layouts/styles";
+import { titleBar, tabs as tabStyles } from "../../layouts/shared";
 import { button } from "../../styled-system/recipes";
 import { Tab } from "../../components/Tab";
 import {

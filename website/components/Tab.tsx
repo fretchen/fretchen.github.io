@@ -1,6 +1,6 @@
 import React from "react";
 import { TabProps } from "../types/components";
-import * as styles from "../layouts/styles";
+import * as styles from "../layouts/shared";
 
 // Tab Component
 export function Tab({ label, isActive, onClick }: TabProps) {

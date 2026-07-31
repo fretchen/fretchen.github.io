@@ -3,7 +3,7 @@ import { ImageModalProps } from "../types/components";
 import { useToast } from "./Toast";
 import { ChainInfoDisplay } from "./ChainBadge";
 import { Modal } from "./Modal";
-import * as styles from "../layouts/styles";
+import * as styles from "../layouts/shared";
 import { nftCard } from "./nft/styles";
 import { button } from "../styled-system/recipes";
 

@@ -54,7 +54,7 @@ vi.mock("../components/SimpleCollectButton", () => ({
   SimpleCollectButton: vi.fn(() => <button data-testid="collect-button">Collect</button>),
 }));
 
-vi.mock("../layouts/styles", () => ({
+vi.mock("../layouts/shared", () => ({
   nftCard: {
     container: "nft-card-container",
     highlighted: "nft-card-highlighted",

@@ -1,5 +1,5 @@
 import React from "react";
-import * as styles from "../layouts/styles";
+import * as styles from "../layouts/shared";
 import { useLocale } from "../hooks/useLocale";
 import { Modal } from "./Modal";
 import { button } from "../styled-system/recipes";

@@ -8,7 +8,7 @@ import { NFTCardProps, NFTMetadata } from "../types/components";
 import { useToast } from "./Toast";
 import { SimpleCollectButton } from "./SimpleCollectButton";
 import { ChainBadge } from "./ChainBadge";
-import * as styles from "../layouts/styles";
+import * as styles from "../layouts/shared";
 import { nftCard } from "./nft/styles";
 import { useLocale } from "../hooks/useLocale";
 import { button } from "../styled-system/recipes";

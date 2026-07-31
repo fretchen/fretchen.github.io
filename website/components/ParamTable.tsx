@@ -26,7 +26,7 @@ const table = css({
   },
   "& th": {
     fontWeight: "semibold",
-    backgroundColor: "token(colors.codeBg, #f9fafb)",
+    backgroundColor: "codeBg",
   },
   "& tr:last-child td": { borderBottom: "none" },
 });

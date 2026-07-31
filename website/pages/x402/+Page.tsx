@@ -127,13 +127,13 @@ const prose = css({
     lineHeight: "1.6",
   },
   "& a": {
-    color: "token(colors.link)",
+    color: "brand",
     textDecoration: "underline",
-    _hover: { color: "token(colors.linkHover)" },
+    _hover: { color: "brandHover" },
   },
   "& code": {
     fontSize: "sm",
-    backgroundColor: "token(colors.codeBg, #f3f4f6)",
+    backgroundColor: "codeBg",
     padding: "1px 4px",
     borderRadius: "3px",
     fontFamily: "monospace",
@@ -167,7 +167,7 @@ const table = css({
   },
   "& th": {
     fontWeight: "semibold",
-    backgroundColor: "token(colors.codeBg, #f9fafb)",
+    backgroundColor: "codeBg",
   },
   "& tr:last-child td": {
     borderBottom: "none",
@@ -205,7 +205,7 @@ const statusBadgeError = css({
 });
 
 const endpointBox = css({
-  backgroundColor: "token(colors.codeBg, #f9fafb)",
+  backgroundColor: "codeBg",
   border: "1px solid token(colors.border, #e5e7eb)",
   borderRadius: "8px",
   padding: "16px",
@@ -252,7 +252,7 @@ const stepContainer = css({
   borderRadius: "8px",
   padding: "20px",
   marginBottom: "4",
-  backgroundColor: "token(colors.codeBg, #f9fafb)",
+  backgroundColor: "codeBg",
 });
 
 const feeComparisonTable = css({
@@ -270,7 +270,7 @@ const feeComparisonTable = css({
   },
   "& th": {
     fontWeight: "semibold",
-    backgroundColor: "token(colors.codeBg, #f9fafb)",
+    backgroundColor: "codeBg",
   },
   "& tr:last-child td": {
     borderBottom: "none",

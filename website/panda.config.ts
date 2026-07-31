@@ -184,6 +184,9 @@ export default defineConfig({
           light: { value: "#ffffff" },
           // Quiet background for message bubbles and inset panels
           surface: { value: "#f8f9fa" },
+          // Inline code / spec-table background (was written as an undefined token with a
+          // literal fallback at every call site; 6 of 7 used this value)
+          codeBg: { value: "#f9fafb" },
           danger: { value: "#dc3545" },
           // Support/collect button gradient
           support: { value: "#FF6B35" },

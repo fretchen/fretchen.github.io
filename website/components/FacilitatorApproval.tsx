@@ -63,7 +63,7 @@ const container = css({
   borderRadius: "8px",
   padding: "20px",
   marginBottom: "6",
-  backgroundColor: "token(colors.codeBg, #f9fafb)",
+  backgroundColor: "codeBg",
 });
 
 const statusRow = css({

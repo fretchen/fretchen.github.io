@@ -759,7 +759,8 @@ export const layout = {
   content: css({
     padding: "token(spacing.md)",
     paddingBottom: "0", // Removed bottom padding
-    minHeight: "token(sizes.screen)",
+    // (a minHeight referencing a non-existent `sizes.screen` token used to sit here; it
+    // never produced valid CSS, so it is dropped rather than "fixed" into new behaviour)
     // Removed maxWidth to avoid conflicts with page-specific containers
     // Individual pages should define their own width constraints
   }),

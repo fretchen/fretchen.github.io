@@ -5,7 +5,7 @@ import { toc } from "../layouts/styles";
 
 interface TableOfContentsProps {
   /** Ref to the content container containing headings */
-  contentRef: RefObject<HTMLElement>;
+  contentRef: RefObject<HTMLElement | null>;
   /** Minimum number of headings required to show ToC (default: 2) */
   minHeadings?: number;
   /** Title shown above the ToC (default: "On this page") */

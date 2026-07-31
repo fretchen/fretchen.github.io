@@ -48,6 +48,11 @@ jobs:
           cd website
           npm run lint
 
+      - name: Typecheck
+        run: |
+          cd website
+          npm run typecheck
+
       - name: Test build
         run: |
           cd website

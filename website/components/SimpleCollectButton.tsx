@@ -144,7 +144,7 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
     <button
       onClick={handleCollect}
       disabled={!isConnected || !simulateMintData || isPending || isConfirming || isLoading}
-      className={`${styles.nftCard.actionButton} ${styles.primaryButton}`}
+      className={`${styles.actionButton} ${styles.primaryButton}`}
       title={`Collect this NFT (${getMintCount()} collected) | ${getPriceInfo()}`}
     >
       {isPending || isLoading

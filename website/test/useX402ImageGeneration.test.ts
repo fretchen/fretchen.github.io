@@ -10,6 +10,7 @@ import { renderHook, act } from "@testing-library/react";
 import { useX402ImageGeneration } from "../hooks/useX402ImageGeneration";
 import { useWalletClient, useAccount } from "wagmi";
 import type { X402GenImgRequest } from "../types/x402";
+import { buildAccountData, buildWalletClientData } from "./setup";
 
 describe("useX402ImageGeneration", () => {
   beforeEach(() => {
@@ -18,11 +19,8 @@ describe("useX402ImageGeneration", () => {
 
   describe("Initial State", () => {
     it("should initialize with idle status when wallet not connected", () => {
-      vi.mocked(useWalletClient).mockReturnValue({ data: undefined } as ReturnType<typeof useWalletClient>);
-      vi.mocked(useAccount).mockReturnValue({
-        isConnected: false,
-        address: undefined,
-      } as ReturnType<typeof useAccount>);
+      vi.mocked(useWalletClient).mockReturnValue(buildWalletClientData());
+      vi.mocked(useAccount).mockReturnValue(buildAccountData({ isConnected: false, address: undefined }));
 
       const { result } = renderHook(() => useX402ImageGeneration());
 
@@ -38,11 +36,10 @@ describe("useX402ImageGeneration", () => {
         signTypedData: vi.fn(),
       };
 
-      vi.mocked(useWalletClient).mockReturnValue({ data: mockWalletClient } as ReturnType<typeof useWalletClient>);
-      vi.mocked(useAccount).mockReturnValue({
-        isConnected: true,
-        address: "0x1234567890123456789012345678901234567890",
-      } as ReturnType<typeof useAccount>);
+      vi.mocked(useWalletClient).mockReturnValue(buildWalletClientData({ data: mockWalletClient }));
+      vi.mocked(useAccount).mockReturnValue(
+        buildAccountData({ isConnected: true, address: "0x1234567890123456789012345678901234567890" }),
+      );
 
       const { result } = renderHook(() => useX402ImageGeneration());
 
@@ -53,16 +50,14 @@ describe("useX402ImageGeneration", () => {
 
   describe("Error Handling", () => {
     it("should throw error when generateImage called without wallet", async () => {
-      vi.mocked(useWalletClient).mockReturnValue({ data: undefined } as ReturnType<typeof useWalletClient>);
-      vi.mocked(useAccount).mockReturnValue({
-        isConnected: false,
-        address: undefined,
-      } as ReturnType<typeof useAccount>);
+      vi.mocked(useWalletClient).mockReturnValue(buildWalletClientData());
+      vi.mocked(useAccount).mockReturnValue(buildAccountData({ isConnected: false, address: undefined }));
 
       const { result } = renderHook(() => useX402ImageGeneration());
 
       const request: X402GenImgRequest = {
         prompt: "Test image",
+        network: "eip155:10",
       };
 
       await expect(result.current.generateImage(request)).rejects.toThrow("Wallet not connected");
@@ -76,11 +71,10 @@ describe("useX402ImageGeneration", () => {
         signTypedData: vi.fn(),
       };
 
-      vi.mocked(useWalletClient).mockReturnValue({ data: mockWalletClient } as ReturnType<typeof useWalletClient>);
-      vi.mocked(useAccount).mockReturnValue({
-        isConnected: true,
-        address: "0x1234567890123456789012345678901234567890",
-      } as ReturnType<typeof useAccount>);
+      vi.mocked(useWalletClient).mockReturnValue(buildWalletClientData({ data: mockWalletClient }));
+      vi.mocked(useAccount).mockReturnValue(
+        buildAccountData({ isConnected: true, address: "0x1234567890123456789012345678901234567890" }),
+      );
 
       const { result } = renderHook(() => useX402ImageGeneration());
 
@@ -99,6 +93,7 @@ describe("useX402ImageGeneration", () => {
     it("should accept valid request with prompt only", () => {
       const request: X402GenImgRequest = {
         prompt: "A beautiful sunset over mountains",
+        network: "eip155:10",
       };
 
       expect(request.prompt).toBeDefined();

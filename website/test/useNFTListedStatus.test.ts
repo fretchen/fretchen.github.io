@@ -19,6 +19,7 @@ vi.mock("wagmi/actions", () => ({
 // Mock the wagmi config
 vi.mock("../wagmi.config", () => ({
   config: { testConfig: true },
+  asConfiguredChainId: (id: number) => id,
 }));
 
 // Mock chain-utils

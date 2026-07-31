@@ -7,7 +7,7 @@ import crypto from "crypto";
 
 // ── Types ───────────────────────────────────────────────────────────────
 
-interface ScalewayEvent {
+export interface ScalewayEvent {
   httpMethod: string;
   headers?: Record<string, string>;
   queryStringParameters?: Record<string, string>;
@@ -30,7 +30,7 @@ interface CommentPostBody {
   website?: string; // honeypot field
 }
 
-interface HandlerResponse {
+export interface HandlerResponse {
   statusCode: number;
   headers: Record<string, string>;
   body: string;

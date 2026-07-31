@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, fireEvent, cleanup } from "@testing-library/react";
 import WalletOptions from "../components/WalletOptions";
 import * as wagmi from "wagmi";
+import { buildAccountData } from "./setup";
 
 // Mock wagmi hooks
 vi.mock("wagmi", () => ({
@@ -35,18 +36,20 @@ describe("WalletOptions Component", () => {
     vi.clearAllMocks();
 
     // Default mocks for hooks
-    vi.mocked(wagmi.useAccount).mockReturnValue({
-      address: undefined,
-      isConnected: false,
-      addresses: undefined,
-      chain: undefined,
-      chainId: undefined,
-      connector: undefined,
-      isConnecting: false,
-      isDisconnected: true,
-      isReconnecting: false,
-      status: "disconnected",
-    });
+    vi.mocked(wagmi.useAccount).mockReturnValue(
+      buildAccountData({
+        address: undefined,
+        isConnected: false,
+        addresses: undefined,
+        chain: undefined,
+        chainId: undefined,
+        connector: undefined,
+        isConnecting: false,
+        isDisconnected: true,
+        isReconnecting: false,
+        status: "disconnected",
+      }),
+    );
 
     vi.mocked(wagmi.useEnsName).mockReturnValue({
       data: undefined,
@@ -58,7 +61,7 @@ describe("WalletOptions Component", () => {
       isRefetchError: false,
       isSuccess: false,
       isPlaceholderData: false,
-      status: "idle",
+      status: "pending",
       dataUpdatedAt: 0,
       errorUpdatedAt: 0,
       failureCount: 0,
@@ -72,7 +75,7 @@ describe("WalletOptions Component", () => {
       isStale: false,
       refetch: vi.fn(),
       queryKey: ["ensName"],
-    });
+    } as unknown as ReturnType<typeof wagmi.useEnsName>);
 
     vi.mocked(wagmi.useConnect).mockReturnValue({
       connectors: [],
@@ -92,7 +95,7 @@ describe("WalletOptions Component", () => {
       mutateAsync: vi.fn(),
       submittedAt: 0,
       variables: undefined,
-    });
+    } as unknown as ReturnType<typeof wagmi.useConnect>);
 
     vi.mocked(wagmi.useDisconnect).mockReturnValue({
       disconnect: vi.fn(),
@@ -111,7 +114,7 @@ describe("WalletOptions Component", () => {
       mutateAsync: vi.fn(),
       submittedAt: 0,
       variables: undefined,
-    });
+    } as unknown as ReturnType<typeof wagmi.useDisconnect>);
   });
 
   it("always shows 'Connect Account' initially (hydration safety)", () => {
@@ -120,18 +123,20 @@ describe("WalletOptions Component", () => {
   });
 
   it("prevents hydration mismatch when wallet is connected", async () => {
-    vi.mocked(wagmi.useAccount).mockReturnValue({
-      address: "0x1234567890abcdef1234567890abcdef12345678" as `0x${string}`,
-      isConnected: true,
-      addresses: ["0x1234567890abcdef1234567890abcdef12345678" as `0x${string}`],
-      chain: undefined,
-      chainId: undefined,
-      connector: undefined,
-      isConnecting: false,
-      isDisconnected: false,
-      isReconnecting: false,
-      status: "connected",
-    });
+    vi.mocked(wagmi.useAccount).mockReturnValue(
+      buildAccountData({
+        address: "0x1234567890abcdef1234567890abcdef12345678" as `0x${string}`,
+        isConnected: true,
+        addresses: ["0x1234567890abcdef1234567890abcdef12345678" as `0x${string}`],
+        chain: undefined,
+        chainId: undefined,
+        connector: undefined,
+        isConnecting: false,
+        isDisconnected: false,
+        isReconnecting: false,
+        status: "connected",
+      }),
+    );
 
     render(<WalletOptions />);
 
@@ -143,18 +148,20 @@ describe("WalletOptions Component", () => {
   });
 
   it("shows ENS name when available after mount", async () => {
-    vi.mocked(wagmi.useAccount).mockReturnValue({
-      address: "0x1234567890abcdef1234567890abcdef12345678" as `0x${string}`,
-      isConnected: true,
-      addresses: ["0x1234567890abcdef1234567890abcdef12345678" as `0x${string}`],
-      chain: undefined,
-      chainId: undefined,
-      connector: undefined,
-      isConnecting: false,
-      isDisconnected: false,
-      isReconnecting: false,
-      status: "connected",
-    });
+    vi.mocked(wagmi.useAccount).mockReturnValue(
+      buildAccountData({
+        address: "0x1234567890abcdef1234567890abcdef12345678" as `0x${string}`,
+        isConnected: true,
+        addresses: ["0x1234567890abcdef1234567890abcdef12345678" as `0x${string}`],
+        chain: undefined,
+        chainId: undefined,
+        connector: undefined,
+        isConnecting: false,
+        isDisconnected: false,
+        isReconnecting: false,
+        status: "connected",
+      }),
+    );
 
     vi.mocked(wagmi.useEnsName).mockReturnValue({
       data: "test.eth",
@@ -180,7 +187,7 @@ describe("WalletOptions Component", () => {
       isStale: false,
       refetch: vi.fn(),
       queryKey: ["ensName"],
-    });
+    } as unknown as ReturnType<typeof wagmi.useEnsName>);
 
     render(<WalletOptions />);
 
@@ -298,18 +305,20 @@ describe("WalletOptions Component", () => {
   });
 
   it("clicking disconnect calls disconnect", async () => {
-    vi.mocked(wagmi.useAccount).mockReturnValue({
-      address: "0x1234567890abcdef1234567890abcdef12345678" as `0x${string}`,
-      isConnected: true,
-      addresses: ["0x1234567890abcdef1234567890abcdef12345678" as `0x${string}`],
-      chain: undefined,
-      chainId: undefined,
-      connector: undefined,
-      isConnecting: false,
-      isDisconnected: false,
-      isReconnecting: false,
-      status: "connected",
-    });
+    vi.mocked(wagmi.useAccount).mockReturnValue(
+      buildAccountData({
+        address: "0x1234567890abcdef1234567890abcdef12345678" as `0x${string}`,
+        isConnected: true,
+        addresses: ["0x1234567890abcdef1234567890abcdef12345678" as `0x${string}`],
+        chain: undefined,
+        chainId: undefined,
+        connector: undefined,
+        isConnecting: false,
+        isDisconnected: false,
+        isReconnecting: false,
+        status: "connected",
+      }),
+    );
 
     const disconnect = vi.fn();
     vi.mocked(wagmi.useDisconnect).mockReturnValue({

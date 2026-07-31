@@ -8,6 +8,7 @@ vi.mock("../wagmi.config", () => ({
     chains: [],
     transports: {},
   },
+  asConfiguredChainId: (id: number) => id,
 }));
 
 vi.mock("wagmi/actions", () => ({
@@ -31,6 +32,7 @@ describe("Contract Chain Selection", () => {
     const chain = getViemChain(network);
     const client = getPublicClient({ ...config, chains: [chain] });
     expect(client).toBeDefined();
+    if (!client) throw new Error("client should be defined");
 
     // Try to read from contract using chain-utils
     const contractAddress = getGenAiNFTAddress(network);

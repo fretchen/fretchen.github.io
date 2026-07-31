@@ -13,6 +13,7 @@ import { renderHook, act } from "@testing-library/react";
 import { useWalletClient, useAccount } from "wagmi";
 import { useX402Chat, WebStorageClientChannelStorage } from "../hooks/useX402Chat";
 import type { X402ChatMessage } from "../types/x402";
+import { buildAccountData, buildWalletClientData } from "./setup";
 
 const mockRegister = vi.fn();
 const mockGetPaymentSettleResponse = vi.fn();
@@ -63,8 +64,8 @@ describe("useX402Chat", () => {
 
   describe("Initial State", () => {
     it("should not be ready when wallet not connected", () => {
-      vi.mocked(useWalletClient).mockReturnValue({ data: undefined } as ReturnType<typeof useWalletClient>);
-      vi.mocked(useAccount).mockReturnValue({ isConnected: false } as ReturnType<typeof useAccount>);
+      vi.mocked(useWalletClient).mockReturnValue(buildWalletClientData());
+      vi.mocked(useAccount).mockReturnValue(buildAccountData({ isConnected: false }));
 
       const { result } = renderHook(() => useX402Chat(NETWORK));
 
@@ -73,8 +74,8 @@ describe("useX402Chat", () => {
     });
 
     it("should be ready when wallet is connected", () => {
-      vi.mocked(useWalletClient).mockReturnValue({ data: mockWalletClient } as ReturnType<typeof useWalletClient>);
-      vi.mocked(useAccount).mockReturnValue({ isConnected: true } as ReturnType<typeof useAccount>);
+      vi.mocked(useWalletClient).mockReturnValue(buildWalletClientData({ data: mockWalletClient }));
+      vi.mocked(useAccount).mockReturnValue(buildAccountData({ isConnected: true }));
 
       const { result } = renderHook(() => useX402Chat(NETWORK));
 
@@ -84,8 +85,8 @@ describe("useX402Chat", () => {
 
   describe("Error Handling", () => {
     it("should throw when sendMessage called without a wallet", async () => {
-      vi.mocked(useWalletClient).mockReturnValue({ data: undefined } as ReturnType<typeof useWalletClient>);
-      vi.mocked(useAccount).mockReturnValue({ isConnected: false } as ReturnType<typeof useAccount>);
+      vi.mocked(useWalletClient).mockReturnValue(buildWalletClientData());
+      vi.mocked(useAccount).mockReturnValue(buildAccountData({ isConnected: false }));
 
       const { result } = renderHook(() => useX402Chat(NETWORK));
       const prompt: X402ChatMessage[] = [{ role: "user", content: "Hi" }];
@@ -96,8 +97,8 @@ describe("useX402Chat", () => {
 
   describe("Paid request (mocked SDK)", () => {
     beforeEach(() => {
-      vi.mocked(useWalletClient).mockReturnValue({ data: mockWalletClient } as ReturnType<typeof useWalletClient>);
-      vi.mocked(useAccount).mockReturnValue({ isConnected: true } as ReturnType<typeof useAccount>);
+      vi.mocked(useWalletClient).mockReturnValue(buildWalletClientData({ data: mockWalletClient }));
+      vi.mocked(useAccount).mockReturnValue(buildAccountData({ isConnected: true }));
     });
 
     it("registers the batch-settlement scheme on the requested network", async () => {
@@ -302,8 +303,8 @@ describe("useX402Chat", () => {
 
   describe("Agent URL targeting (open-agent-platform)", () => {
     beforeEach(() => {
-      vi.mocked(useWalletClient).mockReturnValue({ data: mockWalletClient } as ReturnType<typeof useWalletClient>);
-      vi.mocked(useAccount).mockReturnValue({ isConnected: true } as ReturnType<typeof useAccount>);
+      vi.mocked(useWalletClient).mockReturnValue(buildWalletClientData({ data: mockWalletClient }));
+      vi.mocked(useAccount).mockReturnValue(buildAccountData({ isConnected: true }));
     });
 
     it("POSTs to the provided agentUrl", async () => {
@@ -337,8 +338,8 @@ describe("useX402Chat", () => {
 
   describe("Reset Functionality", () => {
     it("should reset state to initial values", () => {
-      vi.mocked(useWalletClient).mockReturnValue({ data: mockWalletClient } as ReturnType<typeof useWalletClient>);
-      vi.mocked(useAccount).mockReturnValue({ isConnected: true } as ReturnType<typeof useAccount>);
+      vi.mocked(useWalletClient).mockReturnValue(buildWalletClientData({ data: mockWalletClient }));
+      vi.mocked(useAccount).mockReturnValue(buildAccountData({ isConnected: true }));
 
       const { result } = renderHook(() => useX402Chat(NETWORK));
 

@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from "react";
 import { css } from "../../styled-system/css";
-import { ESSAY_ACCENT } from "./palette";
 
 const JOB_LOSS_OPTIONS = [3, 6, 12] as const;
 const REPAIR_MIN = 2000;

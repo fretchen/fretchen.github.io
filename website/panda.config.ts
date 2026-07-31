@@ -75,10 +75,14 @@ const button = defineRecipe({
       },
       // Confirming: approve, or a completed support action.
       success: {
-        backgroundColor: "green.600",
+        // `success` (green.700), not green.600: white on .600 is 3.30:1 and fails AA.
+        // Same fill the toast uses, so a confirmed state looks the same wherever it appears.
+        backgroundColor: "success",
         color: "light",
         border: "none",
-        _hover: { backgroundColor: "green.700" },
+        // green.800, since `success` already *is* green.700 — the old hover would have
+        // matched the base and given no feedback at all.
+        _hover: { backgroundColor: "green.800" },
       },
       // The orange tip/collect CTA — deliberately warm and distinct from brand blue.
       support: {

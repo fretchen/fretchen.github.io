@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { token } from "../styled-system/tokens";
 
 /**
- * Guards against three ways Panda styling breaks *silently*.
+ * Guards against four ways Panda styling breaks *silently*.
  *
  * All three of these shipped at some point, and none of them is visible to
  * `tsc` or to a rendering test: the component still mounts, the class name is
@@ -23,6 +23,12 @@ import { token } from "../styled-system/tokens";
  *      resolves spacing tokens for single values only: `padding: "4"` is 16px,
  *      but `padding: "2 3"` is `2px 3px` — NOT 8px/12px. A bulk migration to
  *      grid tokens shrinks every shorthand it touches by roughly 4x.
+ *
+ *   4. The CSS-function form `"token(colors.x)"` written outside a `css({})` block —
+ *      typically in a JSX `style={{}}`. Only Panda resolves that syntax, and it never
+ *      sees an inline style, so the literal reaches the browser and the declaration is
+ *      dropped. Rule 1 does not catch it: the path is perfectly valid, just unresolved.
+ *      Use the imported `token("colors.x")` call there instead.
  */
 
 const ROOT = join(import.meta.dirname, "..");
@@ -38,10 +44,19 @@ function sourceFiles(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-/** Byte ranges of the object literal passed to each `css({ ... })` call. */
-function cssBlocks(source: string): Array<[number, number]> {
+/**
+ * Byte ranges of the style object passed to `css({…})`, `defineRecipe({…})` or
+ * `defineSlotRecipe({…})`.
+ *
+ * Recipes matter as much as `css()` here: they are style objects Panda compiles the same
+ * way, and they live in `panda.config.ts`, the file that is supposed to be the source of
+ * truth. A migration that scanned only `css({` once left raw `999px`, `2px` and
+ * `all 0.2s ease` sitting in the button recipe — the exact values it had just removed
+ * everywhere else.
+ */
+function styleBlocks(source: string): Array<[number, number]> {
   const blocks: Array<[number, number]> = [];
-  for (const match of source.matchAll(/\bcss\(\{/g)) {
+  for (const match of source.matchAll(/\b(?:css|defineRecipe|defineSlotRecipe)\(\{/g)) {
     const start = match.index + match[0].length - 1;
     let depth = 0;
     for (let i = start; i < source.length; i++) {
@@ -78,7 +93,7 @@ describe("style conventions", () => {
   it("no css({}) value is a bare JS identifier", () => {
     const offenders: string[] = [];
     for (const { path, source } of FILES) {
-      for (const [start, end] of cssBlocks(source)) {
+      for (const [start, end] of styleBlocks(source)) {
         const block = source.slice(start, end);
         // property: IDENTIFIER — excludes string/number/object/array/template values.
         for (const match of block.matchAll(/^\s*([a-zA-Z_$][\w$]*):\s*([A-Z][A-Z0-9_]{2,})\s*[,}]/gm)) {
@@ -101,7 +116,7 @@ describe("style conventions", () => {
     ]);
     const offenders: string[] = [];
     for (const { path, source } of FILES) {
-      for (const [start, end] of cssBlocks(source)) {
+      for (const [start, end] of styleBlocks(source)) {
         const block = source.slice(start, end);
         for (const match of block.matchAll(/\b([a-zA-Z]+):\s*"([^"]{1,40})"/g)) {
           if (!SPACING.has(match[1])) continue;
@@ -118,6 +133,27 @@ describe("style conventions", () => {
       offenders,
       'Panda reads shorthand numbers as px, not grid steps: padding "2 3" is 2px 3px, not 8px 12px. ' +
         "Use explicit px, or split into paddingX/paddingY.",
+    ).toEqual([]);
+  });
+
+  it("no token(...) CSS-function string sits outside a css({}) block", () => {
+    const offenders: string[] = [];
+    for (const { path, source } of FILES) {
+      // Config recipes are compiled by Panda itself, not through css() — different rules.
+      if (path === "panda.config.ts") continue;
+      const blocks = styleBlocks(source);
+      // Bare path = the CSS-function form. The imported helper always quotes its
+      // argument — `token("colors.x")` — so it can never match here.
+      for (const match of source.matchAll(/token\([a-zA-Z]+\.[a-zA-Z0-9.]+\)/g)) {
+        if (blocks.some(([start, end]) => match.index >= start && match.index < end)) continue;
+        offenders.push(`${path}:${source.slice(0, match.index).split("\n").length}`);
+      }
+    }
+    expect(
+      offenders,
+      'The CSS-function form "token(colors.x)" is resolved by Panda only inside css({}). ' +
+        'In a JSX style={{}} or a plain string it ships verbatim and the browser drops the ' +
+        'declaration — use the imported token("colors.x") call there instead.',
     ).toEqual([]);
   });
 });

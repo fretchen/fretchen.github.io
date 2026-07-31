@@ -160,6 +160,16 @@ before. The test file catches them; these are the rules it enforces.
    and the browser discards the whole declaration — e.g. `token(colors.primary)` when the token
    is named `brand` emits `color: colors.primary`.
 
+4. **The `"token(…)"` string form works only inside `css({})`.** Panda resolves it at build
+   time; a JSX inline style never reaches Panda, so the literal ships and the browser drops
+   the declaration.
+   ```tsx
+   style={{ border: "1px solid token(colors.danger)" }}   // ✗ no border at all
+   style={{ border: `1px solid ${token("colors.danger")}` }} // ✓ imported function
+   className={css({ border: "1px solid token(colors.danger)" })} // ✓ build-time
+   ```
+   Rule 3 does not catch this — the path is valid, just unresolved.
+
 **Verifying a bulk style change:** `npm run typecheck` and `npm test` cannot see a wrong colour
 or a dropped declaration. Diff the *emitted declarations* instead — build before and after,
 resolve `var(--…)` back to literals, and compare. For a pure rename the set must be identical;

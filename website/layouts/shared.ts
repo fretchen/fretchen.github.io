@@ -1,5 +1,4 @@
 import { css } from "../styled-system/css";
-import { stack } from "../styled-system/patterns";
 
 /**
  * Shared style primitives ONLY.
@@ -160,7 +159,9 @@ export const baseContentCard = {
   image: css({
     width: "20", // 80px Thumbnail-Größe
     height: "20", // 80px Thumbnail-Größe
-    borderRadius: "xl",
+    // lg, not xl: xl was this scale's only use, and one value for one element is drift.
+    // The responsive steps below shift down with it.
+    borderRadius: "lg",
     objectFit: "cover",
     border: "1px solid",
     borderColor: "gray.300",
@@ -170,12 +171,12 @@ export const baseContentCard = {
     "@media (max-width: 768px)": {
       width: "12", // 48px auf Tablet
       height: "12",
-      borderRadius: "lg",
+      borderRadius: "md",
     },
     "@media (max-width: 480px)": {
       width: "10", // 40px auf mobile - kleiner aber noch sichtbar
       height: "10",
-      borderRadius: "md",
+      borderRadius: "sm",
     },
   }),
   // Zusätzliche Styles für Datum

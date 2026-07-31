@@ -127,9 +127,11 @@ Shadows are neutral — no coloured glows. Focus is a real `outline`, never a bo
 ## Gotchas
 
 Panda compiles `css({})` **statically**, so several ways of writing a style silently emit no CSS
-at all — typecheck passes, tests pass, the styling is simply gone. The three that have bitten
+at all — typecheck passes, tests pass, the styling is simply gone. The four that have bitten
 this codebase are documented in [`../CLAUDE.md`](../CLAUDE.md) and enforced by
-`test/styleConventions.test.ts`.
+`test/styleConventions.test.ts`. The one worth repeating here: `"token(colors.x)"` is a
+*build-time* string, so it belongs inside `css({})` only. In a JSX `style={{}}` it never
+reaches Panda — use the imported `token("colors.x")` call there.
 
 **Verifying a bulk style change:** typecheck cannot see a wrong colour. Build before and after,
 resolve `var(--…)` back to literals, and diff the emitted declarations — for a pure rename the
@@ -141,4 +143,7 @@ Not everything is on a scale, and that is fine to know rather than discover:
 
 - Two blog essays use `4px 4px 0 0` corners for tab shapes — a multi-value radius that no single
   token covers.
+- A handful of essay widgets set `borderRadius` in a JSX `style={{}}` because the value is
+  computed at runtime. Inline styles are plain CSS and cannot take token *names*, so raw units
+  there are correct, not drift — reach for `token("radii.md")` if a real token is wanted.
 - The essay widgets carry their own type and colour scales, by design (see above).

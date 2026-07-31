@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from "react";
 import { css } from "../../styled-system/css";
-import { ESSAY_ACCENT } from "./palette";
 
 // Annualised volatilities from retail-portfolio-analysis NB05 + NB06b
 const SIGMA_HOUSE_MTM = 0.075; // mark-to-market housing vol (7.5% p.a.)

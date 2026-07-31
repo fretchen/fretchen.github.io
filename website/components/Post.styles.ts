@@ -57,6 +57,29 @@ export const post = {
     overflow: "hidden", // Clears the float
     lineHeight: "relaxed",
   }),
+  // Lazy-loaded interactive component is still resolving.
+  loadingBox: css({
+    padding: "5",
+    textAlign: "center",
+  }),
+  // Path line under the loading message — secondary to it, so muted and smaller.
+  loadingPath: css({
+    fontSize: "sm",
+    color: "textMuted",
+  }),
+  // Same shape as ImageGenerator's `compactError`, so error panels read alike site-wide.
+  errorBox: css({
+    padding: "5",
+    margin: "20px 0",
+    backgroundColor: "dangerSurface",
+    border: "1px solid token(colors.danger)",
+    borderRadius: "sm",
+    color: "token(colors.danger)",
+  }),
+  // Vertical rhythm for the reload button and the hints list inside `errorBox`.
+  errorSpacing: css({
+    marginTop: "2",
+  }),
   navigation: css({
     display: "flex",
     justifyContent: "space-between",

@@ -23,6 +23,7 @@ import python from "highlight.js/lib/languages/python";
 import yaml from "highlight.js/lib/languages/yaml";
 import "highlight.js/styles/vs2015.css";
 import { css } from "../styled-system/css";
+import { button } from "../styled-system/recipes";
 
 hljs.registerLanguage("typescript", typescript);
 hljs.registerLanguage("json", json);
@@ -53,18 +54,8 @@ const copyButton = css({
   position: "absolute",
   top: "2",
   right: "2",
-  px: "2",
-  py: "1",
-  fontSize: "xs",
-  fontFamily: "sans",
-  color: "#d4d4d4",
-  bg: "rgba(255,255,255,0.1)",
-  border: "1px solid rgba(255,255,255,0.2)",
-  borderRadius: "sm",
-  cursor: "pointer",
   opacity: 0.7,
-  transition: "opacity 0.15s ease, background 0.15s ease",
-  _hover: { opacity: 1, bg: "rgba(255,255,255,0.18)" },
+  _hover: { opacity: 1 },
   _focusVisible: { opacity: 1, outline: "2px solid", outlineColor: "brand", outlineOffset: "1px" },
 });
 
@@ -117,7 +108,7 @@ export function CodeBlock({ children, lang = "typescript" }: CodeBlockProps) {
         )}
       </pre>
       {canCopy && (
-        <button type="button" onClick={copy} className={copyButton} aria-label="Copy code to clipboard">
+        <button type="button" onClick={copy} className={`${button({ visual: "overlay", size: "sm" })} ${copyButton}`} aria-label="Copy code to clipboard">
           {copied ? "Copied!" : "Copy"}
         </button>
       )}

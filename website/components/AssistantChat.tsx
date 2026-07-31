@@ -19,6 +19,7 @@ import { useAutoNetwork } from "../hooks/useAutoNetwork";
 import { useX402Chat, DEFAULT_LLM_AGENT_URL } from "../hooks/useX402Chat";
 import { fetchAgentCard, precheckLlmV1Agent, type AgentCard } from "../hooks/x402Discovery";
 import { getViemChain } from "@fretchen/chain-utils";
+import { button } from "../styled-system/recipes";
 
 // The custom-URL escape hatch (AgentSelector) lets the chat pay any llm/v1 agent. It is also
 // the only ready-made batch-settlement client there is, so it doubles as the end-to-end test
@@ -238,7 +239,7 @@ export function AssistantChat() {
             <div className={styles.sidebarSection}>
               <h4 className={styles.sidebarHeading}>{actionsLabel}</h4>
               <div className={styles.actionsContainer}>
-                <button onClick={clearChat} className={`${styles.actionButton} ${styles.actionButtonSecondary}`}>
+                <button onClick={clearChat} className={button({ visual: "ghost", size: "sm" })}>
                   {clearChatLabel}
                 </button>
               </div>
@@ -268,7 +269,7 @@ export function AssistantChat() {
             <div className={styles.mobileHeader}>
               <h2 className={styles.mobileTitle}>{mobileTitleLabel}</h2>
               <div className={styles.mobileActions}>
-                <button onClick={clearChat} className={styles.mobileActionButton} title="Clear Chat">
+                <button onClick={clearChat} className={button({ visual: "secondary", size: "sm" })} title="Clear Chat">
                   🗑️
                 </button>
               </div>
@@ -339,7 +340,7 @@ export function AssistantChat() {
                 }
               }}
               disabled={isLoading || (!isConnected ? false : !currentInput.trim())}
-              className={styles.primaryButton}
+              className={button()}
             >
               {getButtonText(buttonState)}
             </button>

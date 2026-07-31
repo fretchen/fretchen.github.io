@@ -3,6 +3,7 @@ import { useAccount, useReadContract, useWriteContract, useWaitForTransactionRec
 import { formatUnits, parseUnits, type Address } from "viem";
 import { css } from "../styled-system/css";
 import { getUSDCConfig, fromCAIP2, type USDCConfig } from "@fretchen/chain-utils";
+import { button } from "../styled-system/recipes";
 
 // Minimal ERC-20 ABI for allowance + approve
 export const ERC20_ABI = [
@@ -90,43 +91,6 @@ const approveRow = css({
   alignItems: "center",
   gap: "8px",
   flexWrap: "wrap",
-});
-
-const presetButton = css({
-  padding: "6px 12px",
-  fontSize: "sm",
-  borderRadius: "6px",
-  border: "1px solid token(colors.border, #d1d5db)",
-  backgroundColor: "white",
-  cursor: "pointer",
-  fontWeight: "medium",
-  transition: "all 0.15s",
-  _hover: {
-    backgroundColor: "#f3f4f6",
-    borderColor: "#9ca3af",
-  },
-  _disabled: {
-    opacity: 0.5,
-    cursor: "not-allowed",
-  },
-});
-
-const activeButton = css({
-  backgroundColor: "#2563eb",
-  color: "white",
-  borderColor: "#2563eb",
-  _hover: {
-    backgroundColor: "#1d4ed8",
-  },
-});
-
-const selectedNetworkButton = css({
-  backgroundColor: "#1e293b",
-  color: "white",
-  borderColor: "#1e293b",
-  _hover: {
-    backgroundColor: "#334155",
-  },
 });
 
 const txStatus = css({
@@ -306,7 +270,7 @@ export function FacilitatorApproval({
         {networks.map((net) => (
           <button
             key={net.network}
-            className={`${presetButton} ${selectedNetwork === net.network ? selectedNetworkButton : ""}`}
+            className={button({ visual: "secondary", size: "sm", active: selectedNetwork === net.network })}
             onClick={() => setSelectedNetwork(net.network)}
           >
             {net.label}
@@ -343,7 +307,7 @@ export function FacilitatorApproval({
         {PRESETS.map((preset) => (
           <button
             key={preset.value}
-            className={presetButton}
+            className={button({ visual: "secondary", size: "sm" })}
             disabled={isApproving || isConfirming || !facilitatorAddress}
             onClick={() => handleApprove(preset.value)}
           >
@@ -351,7 +315,7 @@ export function FacilitatorApproval({
           </button>
         ))}
         <button
-          className={`${presetButton} ${activeButton}`}
+          className={button({ visual: "secondary", size: "sm", active: true })}
           disabled={isApproving || isConfirming || !facilitatorAddress}
           onClick={() => handleApprove("0")}
         >

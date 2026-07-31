@@ -9,6 +9,7 @@
 import React, { useState } from "react";
 import { css } from "../styled-system/css";
 import { checkLlmV1Agent, type CheckReport, type CheckStatus } from "../hooks/x402Discovery";
+import { button } from "../styled-system/recipes";
 
 const ICON: Record<CheckStatus, string> = { pass: "✅", fail: "❌", warn: "⚠️" };
 const COLOR: Record<CheckStatus, string> = { pass: "green.700", fail: "red.600", warn: "amber.700" };
@@ -23,19 +24,6 @@ const inputStyle = css({
   borderColor: "gray.300",
   borderRadius: "md",
   _focus: { outline: "none", borderColor: "brand" },
-});
-
-const buttonStyle = css({
-  px: "4",
-  py: "2",
-  fontSize: "sm",
-  fontWeight: "medium",
-  bg: "brand",
-  color: "white",
-  borderRadius: "md",
-  cursor: "pointer",
-  _hover: { bg: "blue.700" },
-  _disabled: { opacity: 0.5, cursor: "not-allowed" },
 });
 
 export function AgentChecker() {
@@ -73,7 +61,7 @@ export function AgentChecker() {
           disabled={checking}
           className={inputStyle}
         />
-        <button onClick={() => void run()} disabled={checking || !url.trim()} className={buttonStyle}>
+        <button onClick={() => void run()} disabled={checking || !url.trim()} className={button()}>
           {checking ? "Checking…" : "Check my endpoint"}
         </button>
       </div>

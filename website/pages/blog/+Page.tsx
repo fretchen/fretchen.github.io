@@ -8,6 +8,7 @@ import * as styles from "../../layouts/styles";
 import { css } from "../../styled-system/css";
 import { CATEGORIES, getCategoryIds, type CategoryId } from "../../types/Categories";
 import type { BlogPost } from "../../types/BlogPost";
+import { button } from "../../styled-system/recipes";
 
 const App: React.FC = function () {
   // Get pre-loaded data from +data.ts
@@ -45,7 +46,7 @@ const App: React.FC = function () {
       >
         <button
           onClick={() => setSelectedCategory(null)}
-          className={selectedCategory === null ? styles.categoryFilterButtonActive : styles.categoryFilterButton}
+          className={button({ visual: "secondary", size: "sm", active: selectedCategory === null })}
         >
           All Categories
         </button>
@@ -58,7 +59,7 @@ const App: React.FC = function () {
             <button
               key={categoryId}
               onClick={() => setSelectedCategory(categoryId)}
-              className={isSelected ? styles.categoryFilterButtonActive : styles.categoryFilterButton}
+              className={button({ visual: "secondary", size: "sm", active: isSelected })}
             >
               <span>{category.label}</span>
             </button>

@@ -74,8 +74,6 @@ vi.mock("../layouts/styles", () => ({
     checkboxLabel: "checkbox-label",
     checkbox: "nft-checkbox",
     actions: "nft-actions",
-    actionButton: "action-button",
-    compactSecondaryButton: "compact-secondary-button",
     actionsOverlay: "actions-overlay",
     ownerBadge: "owner-badge",
     modalOverlay: "modal-overlay",
@@ -87,7 +85,6 @@ vi.mock("../layouts/styles", () => ({
     modalDescription: "modal-description",
   },
   spinner: "spinner",
-  primaryButton: "primary-button",
   secondaryButton: "secondary-button",
   errorStatus: "error-status",
 }));

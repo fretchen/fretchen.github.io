@@ -44,39 +44,6 @@ export const blogSection = css({ marginTop: "10" });
 
 // ===== VEREINFACHTE INTERAKTIVE ELEMENTE =====
 
-export const categoryFilterButton = css({
-  padding: "sm md",
-  border: "1px solid",
-  borderColor: "gray.300",
-  borderRadius: "sm",
-  backgroundColor: "transparent",
-  cursor: "pointer",
-  fontSize: "sm",
-  fontWeight: "medium",
-  transition: "all 0.2s",
-  color: "gray.700",
-  _hover: {
-    backgroundColor: "gray.100",
-    borderColor: "gray.400",
-  },
-});
-
-export const categoryFilterButtonActive = css({
-  padding: "sm md",
-  border: "1px solid",
-  borderColor: "gray.600",
-  borderRadius: "sm",
-  backgroundColor: "gray.200",
-  cursor: "pointer",
-  fontSize: "sm",
-  fontWeight: "medium",
-  transition: "all 0.2s",
-  color: "gray.900",
-  _hover: {
-    backgroundColor: "gray.300",
-  },
-});
-
 // Universeller Spinner
 export const spinner = css({
   width: "20px",
@@ -201,48 +168,6 @@ export const imageGen = {
       borderColor: "gray.400",
     },
   }),
-  // Kompakter Generator Button
-  generatorButton: css({
-    paddingY: "xs",
-    paddingX: "md",
-    backgroundColor: "brand",
-    color: "light",
-    border: "none",
-    borderRadius: "md",
-    cursor: "pointer",
-    fontWeight: "bold",
-    fontSize: "sm",
-    whiteSpace: "nowrap",
-    display: "flex",
-    alignItems: "center",
-    gap: "xs",
-    transition: "all 0.2s ease",
-    boxShadow: "0 2px 4px rgba(59, 130, 246, 0.2)",
-    _hover: {
-      backgroundColor: "#0052a3",
-      transform: "translateY(-1px)",
-      boxShadow: "0 4px 8px rgba(59, 130, 246, 0.3)",
-    },
-    _active: {
-      transform: "translateY(0)",
-      boxShadow: "0 2px 4px rgba(59, 130, 246, 0.2)",
-    },
-    "@media (max-width: 640px)": {
-      width: "100%",
-      justifyContent: "center",
-    },
-  }),
-  generatorButtonDisabled: css({
-    backgroundColor: "gray.300",
-    color: "gray.500",
-    cursor: "not-allowed",
-    boxShadow: "none",
-    _hover: {
-      backgroundColor: "gray.300",
-      transform: "none",
-      boxShadow: "none",
-    },
-  }),
   compactLabel: css({
     fontSize: "sm",
     fontWeight: "semibold",
@@ -298,10 +223,10 @@ export const imageGen = {
   compactError: css({
     padding: "sm",
     backgroundColor: "rgba(220, 53, 69, 0.1)",
-    border: "1px solid #dc3545",
+    border: "1px solid token(colors.danger)",
     borderRadius: "sm",
     fontSize: "sm",
-    color: "#dc3545",
+    color: "token(colors.danger)",
   }),
 
   // Wiederverwendbare Stile für Heading
@@ -498,8 +423,8 @@ export const walletOptions = {
     justifyContent: "center",
     _hover: {
       backgroundColor: "rgba(59, 130, 246, 0.05)",
-      borderColor: "#0052a3",
-      color: "#0052a3",
+      borderColor: "token(colors.brandHover)",
+      color: "token(colors.brandHover)",
     },
     // Mobile responsive styles - smaller and more compact
     "@media (max-width: 768px)": {
@@ -1309,45 +1234,6 @@ export const nftCard = {
     },
   }),
 
-  // Einheitliche Icon-Buttons für alle Actions
-  compactSecondaryButton: css({
-    padding: "sm",
-    fontSize: "lg", // Für Emojis
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    color: "white",
-    border: "none",
-    borderRadius: "full",
-    cursor: "pointer",
-    width: "44px",
-    height: "44px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    transition: "all 0.2s ease",
-    backdropFilter: "blur(4px)",
-    _hover: {
-      backgroundColor: "rgba(0, 0, 0, 0.7)",
-      transform: "scale(1.1)",
-    },
-    _active: {
-      transform: "scale(0.95)",
-    },
-    _disabled: {
-      backgroundColor: "rgba(0, 0, 0, 0.3)",
-      color: "rgba(255, 255, 255, 0.5)",
-      cursor: "not-allowed",
-      _hover: {
-        backgroundColor: "rgba(0, 0, 0, 0.3)",
-        transform: "none",
-      },
-    },
-    // Mobile: Slightly larger for better touch targets
-    "@media (max-width: 768px)": {
-      width: "48px",
-      height: "48px",
-      fontSize: "xl",
-    },
-  }),
 
   // Vereinfachtes Modal
   modalOverlay: css({
@@ -1630,61 +1516,10 @@ export const metadataLine = {
   supportWrapper: css({
     display: "inline-block",
   }),
-  supportButton: css({
-    // Orange CTA button - complementary to blue, warm and inviting
-    background: "linear-gradient(135deg, #FF6B35 0%, #FF8255 100%)",
-    border: "none",
-    color: "#ffffff",
-    cursor: "pointer",
-    textDecoration: "none",
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "6px",
-    fontSize: "sm",
-    fontFamily: "inherit",
-    fontWeight: "semibold",
-    lineHeight: 1,
-    padding: "6px 14px",
-    margin: 0,
-    borderRadius: "999px", // Pill shape
-    transition: "all 0.2s ease",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-    _hover: {
-      transform: "scale(1.05)",
-      boxShadow: "0 2px 8px rgba(255, 107, 53, 0.4)",
-    },
-    _disabled: {
-      cursor: "default",
-      opacity: 0.7,
-      background: "linear-gradient(135deg, #e0e0e0 0%, #c0c0c0 100%)",
-      color: "#666",
-      transform: "none",
-      boxShadow: "none",
-    },
-  }),
   // Amount reads as secondary to the "Support" verb (lighter weight + slightly muted).
   supportAmount: css({
     fontWeight: "normal",
     opacity: 0.85,
-  }),
-  // Success state — shift the pill to the system's confirmation green so "Thank you!"
-  // visibly confirms the payment landed (instead of staying the idle orange).
-  supportButtonSuccess: css({
-    background: "#16a34a", // green.600
-    border: "none",
-    color: "#ffffff",
-    cursor: "default",
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "6px",
-    fontSize: "sm",
-    fontFamily: "inherit",
-    fontWeight: "semibold",
-    lineHeight: 1,
-    padding: "6px 14px",
-    margin: 0,
-    borderRadius: "999px",
-    boxShadow: "0 1px 3px rgba(22, 163, 74, 0.3)",
   }),
 };
 
@@ -1760,34 +1595,8 @@ export const commentSection = {
     alignItems: "center",
     gap: "sm",
   }),
-  submitButton: css({
-    padding: "sm lg",
-    backgroundColor: "brand",
-    color: "white",
-    border: "none",
-    borderRadius: "sm",
-    cursor: "pointer",
-    fontSize: "sm",
-    fontWeight: "medium",
-    transition: "all 0.2s ease",
-    _hover: { opacity: 0.9 },
-    _disabled: { opacity: 0.5, cursor: "not-allowed" },
-  }),
   successMsg: css({ color: "green.600", fontSize: "sm" }),
   errorMsg: css({ color: "red.600", fontSize: "sm" }),
-  toggleButton: css({
-    background: "none",
-    border: "none",
-    color: "brand",
-    cursor: "pointer",
-    fontSize: "sm",
-    fontWeight: "medium",
-    padding: 0,
-    textDecoration: "underline",
-    textUnderlineOffset: "3px",
-    transition: "all 0.2s ease",
-    _hover: { opacity: 0.7 },
-  }),
 };
 
 // ===== WEBMENTIONS STYLES =====
@@ -1832,14 +1641,6 @@ export const webmentions = {
     alignItems: "center",
     flexWrap: "wrap",
     marginTop: "sm",
-  }),
-  shareButton: css({
-    fontSize: "sm",
-    color: "brand",
-    textDecoration: "none",
-    fontWeight: "medium",
-    transition: "all 0.2s ease",
-    _hover: { textDecoration: "underline" },
   }),
   avatarGrid: css({
     display: "flex",
@@ -1969,58 +1770,6 @@ export const webmentions = {
     lineHeight: "1.6",
     margin: 0,
   }),
-  copyButtonInline: css({
-    display: "inline",
-    padding: "2px 8px",
-    margin: "0 4px",
-    backgroundColor: "brand",
-    color: "white",
-    border: "none",
-    borderRadius: "sm",
-    fontSize: "sm",
-    fontWeight: "medium",
-    cursor: "pointer",
-    transition: "all 0.2s ease",
-    verticalAlign: "baseline",
-    whiteSpace: "nowrap",
-    _hover: {
-      backgroundColor: "gray.700",
-      transform: "translateY(-1px)",
-      boxShadow: "sm",
-    },
-    _active: {
-      transform: "translateY(0)",
-    },
-    "@media (max-width: 480px)": {
-      padding: "2px 6px",
-      fontSize: "xs",
-    },
-  }),
-  copyButton: css({
-    display: "inline-block",
-    padding: "sm md",
-    marginBottom: "sm",
-    backgroundColor: "brand",
-    color: "white",
-    border: "none",
-    borderRadius: "sm",
-    fontSize: "sm",
-    fontWeight: "medium",
-    cursor: "pointer",
-    transition: "all 0.2s ease",
-    _hover: {
-      backgroundColor: "gray.700",
-      transform: "translateY(-1px)",
-      boxShadow: "md",
-    },
-    _active: {
-      transform: "translateY(0)",
-    },
-    "@media (max-width: 480px)": {
-      padding: "xs sm",
-      fontSize: "xs",
-    },
-  }),
   ctaSubtext: css({
     fontSize: "sm",
     color: "gray.600",
@@ -2145,32 +1894,6 @@ export const actionsContainer = css({
   gap: "xs",
 });
 
-export const actionButton = css({
-  padding: "xs",
-  background: "transparent",
-  color: "text",
-  border: "1px solid",
-  borderColor: "border",
-  borderRadius: "xs",
-  cursor: "pointer",
-  fontSize: "xs",
-  textAlign: "left",
-  transition: "all 0.2s ease",
-  _hover: {
-    backgroundColor: "#f0f0f0",
-  },
-});
-
-// Secondary variant of actionButton (which already supplies border/padding/hover-bg). Uses a
-// muted-but-readable text colour that darkens on hover, so the button reads as an actionable
-// control rather than looking permanently disabled.
-export const actionButtonSecondary = css({
-  color: "#555",
-  _hover: {
-    color: "#111",
-  },
-});
-
 // Chat area
 export const chatArea = css({
   display: "flex",
@@ -2201,17 +1924,6 @@ export const mobileActions = css({
   display: "flex",
   gap: "xs",
   alignItems: "center",
-});
-
-export const mobileActionButton = css({
-  padding: "xs",
-  background: "transparent",
-  color: "#666",
-  border: "1px solid",
-  borderColor: "border",
-  borderRadius: "xs",
-  cursor: "pointer",
-  fontSize: "xs",
 });
 
 export const messagesContainer = css({
@@ -2258,7 +1970,7 @@ export const messageBubbleUser = css({
 });
 
 export const messageBubbleAssistant = css({
-  backgroundColor: "#f8f9fa",
+  backgroundColor: "token(colors.surface)",
   color: "text",
   border: "1px solid #e2e8f0",
 });
@@ -2294,7 +2006,7 @@ export const loadingBubble = css({
   maxWidth: "80%",
   padding: "sm md",
   borderRadius: "sm",
-  backgroundColor: "#f8f9fa",
+  backgroundColor: "token(colors.surface)",
   color: "text",
   border: "1px solid #e2e8f0",
   fontStyle: "italic",
@@ -2326,57 +2038,6 @@ export const messageInput = css({
     borderColor: "brand",
   },
   minWidth: 0, // allow flexbox shrink on small screens
-});
-
-// Unified primary button style for actions (send, create, etc.)
-export const primaryButton = css({
-  paddingY: "sm",
-  paddingX: "lg",
-  backgroundColor: "brand",
-  color: "light",
-  border: "none",
-  borderRadius: "md",
-  cursor: "pointer",
-  fontWeight: "bold",
-  fontSize: "sm",
-  whiteSpace: "nowrap",
-  display: "flex",
-  alignItems: "center",
-  gap: "xs",
-  transition: "all 0.2s ease",
-  boxShadow: "0 2px 4px rgba(59, 130, 246, 0.2)",
-  _hover: {
-    backgroundColor: "#0052a3",
-    transform: "translateY(-1px)",
-    boxShadow: "0 4px 8px rgba(59, 130, 246, 0.3)",
-  },
-  _active: {
-    transform: "translateY(0)",
-    boxShadow: "0 2px 4px rgba(59, 130, 246, 0.2)",
-  },
-  _disabled: {
-    backgroundColor: "gray.300",
-    color: "gray.500",
-    cursor: "not-allowed",
-    boxShadow: "none",
-    _hover: {
-      backgroundColor: "gray.300",
-      transform: "none",
-      boxShadow: "none",
-    },
-  },
-});
-
-export const primaryButtonDisabled = css({
-  backgroundColor: "gray.300",
-  color: "gray.500",
-  cursor: "not-allowed",
-  boxShadow: "none",
-  _hover: {
-    backgroundColor: "gray.300",
-    transform: "none",
-    boxShadow: "none",
-  },
 });
 
 // ─── Shared Modal shell ───────────────────────────────────────────────
@@ -2523,8 +2184,8 @@ export const modal = {
     width: "100%",
     paddingY: "sm",
     paddingX: "lg",
-    background: "linear-gradient(135deg, #FF6B35 0%, #FF8255 100%)",
-    color: "#ffffff",
+    background: "linear-gradient(135deg, token(colors.support) 0%, token(colors.supportLight) 100%)",
+    color: "token(colors.light)",
     border: "none",
     borderRadius: "md",
     cursor: "pointer",

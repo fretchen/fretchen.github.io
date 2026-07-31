@@ -11,6 +11,7 @@ import { useUmami } from "../hooks/useUmami";
 import { useX402ImageGeneration } from "../hooks/useX402ImageGeneration";
 import { AgentInfoPanel } from "./AgentInfoPanel";
 import { useWalletConnection } from "../hooks/useWalletConnection";
+import { button } from "../styled-system/recipes";
 
 // Image compression helpers
 const calculateOptimalDimensions = (originalWidth: number, originalHeight: number, maxDimension: number = 1920) => {
@@ -95,7 +96,7 @@ function CreateArtworkButton({ buttonState, onClick, buttonText, mintingInfoLabe
     <button
       onClick={onClick}
       disabled={isDisabled}
-      className={`${styles.primaryButton} ${isDisabled ? styles.primaryButtonDisabled : ""}`}
+      className={button()}
       title={mintingInfoLabel}
       aria-describedby="create-artwork-info"
     >
@@ -551,7 +552,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
             <button
               onClick={handleExpand}
               onMouseEnter={() => trackEvent("imagegen-connect-hover")}
-              className={styles.primaryButton}
+              className={button()}
             >
               {connectWalletButtonText}
             </button>

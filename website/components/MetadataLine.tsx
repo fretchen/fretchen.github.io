@@ -6,6 +6,7 @@ import { metadataLine } from "../layouts/styles";
 import { useUmami } from "../hooks/useUmami";
 import { useLocale } from "../hooks/useLocale";
 import { SupportChainModal } from "./SupportChainModal";
+import { button } from "../styled-system/recipes";
 
 interface MetadataLineProps {
   publishingDate?: string;
@@ -173,7 +174,7 @@ export default function MetadataLine({
     if (isReadPending) {
       return (
         <div className={metadataLine.supportWrapper}>
-          <span className={metadataLine.supportButton} style={{ opacity: 0.7 }}>
+          <span className={button({ visual: "support", size: "sm" })} style={{ opacity: 0.7 }}>
             ☕ {loadingLabel}
           </span>
         </div>
@@ -191,7 +192,7 @@ export default function MetadataLine({
     if (isSuccess) {
       return (
         <div className={metadataLine.supportWrapper}>
-          <span className={metadataLine.supportButtonSuccess}>
+          <span className={button({ visual: "success", size: "sm" })}>
             ☕ {thankYouLabel.replace("{count}", String(count))}
           </span>
         </div>
@@ -223,7 +224,7 @@ export default function MetadataLine({
         <button
           onClick={handleSupportClick}
           disabled={isLoading}
-          className={metadataLine.supportButton}
+          className={button({ visual: "support", size: "sm" })}
           title={getTooltip()}
         >
           {getButtonContent()}

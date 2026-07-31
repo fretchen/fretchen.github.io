@@ -10,6 +10,7 @@ import { SimpleCollectButton } from "./SimpleCollectButton";
 import { ChainBadge } from "./ChainBadge";
 import * as styles from "../layouts/styles";
 import { useLocale } from "../hooks/useLocale";
+import { button } from "../styled-system/recipes";
 
 type NFTQueryData = {
   tokenURI: string;
@@ -380,7 +381,7 @@ export function NFTCard({
                     e.stopPropagation();
                     void handleDownload();
                   }}
-                  className={styles.nftCard.compactSecondaryButton}
+                  className={button({ visual: "overlay", shape: "circle" })}
                   title={`${downloadLabel} image`}
                 >
                   ⬇️
@@ -394,7 +395,7 @@ export function NFTCard({
                     e.stopPropagation();
                     handleImageClick();
                   }}
-                  className={styles.nftCard.compactSecondaryButton}
+                  className={button({ visual: "overlay", shape: "circle" })}
                   title="View full size"
                 >
                   🔍
@@ -407,7 +408,7 @@ export function NFTCard({
                   e.stopPropagation();
                   void handleShare();
                 }}
-                className={styles.nftCard.compactSecondaryButton}
+                className={button({ visual: "overlay", shape: "circle" })}
                 title="Share artwork"
               >
                 📤
@@ -421,7 +422,7 @@ export function NFTCard({
                     void handleToggleListing();
                   }}
                   disabled={isToggling || isListingConfirming || !simulateListingData}
-                  className={styles.nftCard.compactSecondaryButton}
+                  className={button({ visual: "overlay", shape: "circle" })}
                   title={`${isListed ? "Make private" : "Make public"}`}
                 >
                   {isListed ? "🔓" : "🔒"}
@@ -439,7 +440,7 @@ export function NFTCard({
                     void handleBurn();
                   }}
                   disabled={isBurning || isConfirming || !simulateBurnData}
-                  className={styles.nftCard.compactSecondaryButton}
+                  className={button({ visual: "overlay", shape: "circle" })}
                   title={`${deleteLabel} artwork (permanent)`}
                   style={{
                     backgroundColor:

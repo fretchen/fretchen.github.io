@@ -4,6 +4,7 @@ import { useToast } from "./Toast";
 import { ChainInfoDisplay } from "./ChainBadge";
 import { Modal } from "./Modal";
 import * as styles from "../layouts/styles";
+import { button } from "../styled-system/recipes";
 
 // Bildvergrößerungs-Modal Komponente
 export function ImageModal({ image, onClose }: ImageModalProps) {
@@ -39,7 +40,7 @@ export function ImageModal({ image, onClose }: ImageModalProps) {
             {image.description && <p className={styles.nftCard.modalDescription}>{image.description}</p>}
             {image.network && <ChainInfoDisplay network={image.network} tokenId={image.tokenId} />}
             <div className={styles.nftCard.actions} style={{ justifyContent: "center", marginTop: "12px" }}>
-              <button onClick={handleDownload} className={`${styles.actionButton} ${styles.primaryButton}`}>
+              <button onClick={handleDownload} className={button()}>
                 ⬇️ Download Full Size
               </button>
             </div>

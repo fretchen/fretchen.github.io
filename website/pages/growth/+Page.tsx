@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { css } from "../../styled-system/css";
-import { titleBar, tabs as tabStyles, primaryButton } from "../../layouts/styles";
+import { titleBar, tabs as tabStyles } from "../../layouts/styles";
+import { button } from "../../styled-system/recipes";
 import { Tab } from "../../components/Tab";
 import {
   useGrowthDrafts,
@@ -96,49 +97,6 @@ const cardActions = css({
   gap: "xs",
   flexWrap: "wrap",
   alignItems: "center",
-});
-
-const actionButton = css({
-  padding: "xs md",
-  border: "none",
-  borderRadius: "sm",
-  cursor: "pointer",
-  fontSize: "sm",
-  fontWeight: "medium",
-  transition: "all 0.2s",
-  _disabled: { opacity: 0.6, cursor: "not-allowed" },
-});
-
-const approveButton = css({
-  backgroundColor: "green.600",
-  color: "white",
-  _hover: { backgroundColor: "green.700" },
-});
-
-const rejectButton = css({
-  backgroundColor: "red.600",
-  color: "white",
-  _hover: { backgroundColor: "red.700" },
-});
-
-const editButton = css({
-  backgroundColor: "gray.200",
-  color: "gray.800",
-  _hover: { backgroundColor: "gray.300" },
-});
-
-const saveButton = css({
-  backgroundColor: "blue.600",
-  color: "white",
-  _hover: { backgroundColor: "blue.700" },
-});
-
-const cancelButton = css({
-  backgroundColor: "transparent",
-  color: "gray.600",
-  border: "1px solid",
-  borderColor: "gray.300",
-  _hover: { backgroundColor: "gray.100" },
 });
 
 const editTextarea = css({
@@ -393,13 +351,13 @@ function DraftCardView({
           />
           <div className={cardActions}>
             <button
-              className={`${actionButton} ${saveButton}`}
+              className={button({ visual: "primary", size: "sm" })}
               onClick={handleSave}
               disabled={busy || editContent.length > limit}
             >
               Save
             </button>
-            <button className={`${actionButton} ${cancelButton}`} onClick={() => setEditing(false)} disabled={busy}>
+            <button className={button({ visual: "secondary", size: "sm" })} onClick={() => setEditing(false)} disabled={busy}>
               Cancel
             </button>
           </div>
@@ -459,13 +417,13 @@ function DraftCardView({
                 onChange={(e) => setReviewComment(e.target.value)}
               />
               <div className={cardActions}>
-                <button className={`${actionButton} ${editButton}`} onClick={() => setEditing(true)} disabled={busy}>
+                <button className={button({ visual: "secondary", size: "sm" })} onClick={() => setEditing(true)} disabled={busy}>
                   Edit
                 </button>
                 {draft.status !== "approved" && draft.status !== "published" && (
                   <>
                     <button
-                      className={`${actionButton} ${approveButton}`}
+                      className={button({ visual: "success", size: "sm" })}
                       onClick={handleApprove}
                       disabled={busy || draft.content.length > limit}
                     >
@@ -481,7 +439,7 @@ function DraftCardView({
                     )}
                     {showSchedule && (
                       <button
-                        className={`${actionButton} ${cancelButton}`}
+                        className={button({ visual: "secondary", size: "sm" })}
                         onClick={() => {
                           setShowSchedule(false);
                           setScheduleDate("");
@@ -493,7 +451,7 @@ function DraftCardView({
                   </>
                 )}
                 {draft.status !== "rejected" && draft.status !== "published" && (
-                  <button className={`${actionButton} ${rejectButton}`} onClick={handleReject} disabled={busy}>
+                  <button className={button({ visual: "danger", size: "sm" })} onClick={handleReject} disabled={busy}>
                     Reject
                   </button>
                 )}
@@ -645,7 +603,7 @@ export default function Page() {
         <h1 className={titleBar.title}>Growth Agent</h1>
         <div className={infoBox}>
           <div className={css({ display: "flex", justifyContent: "center" })}>
-            <button className={primaryButton} onClick={() => connectWallet("growth")}>
+            <button className={button()} onClick={() => connectWallet("growth")}>
               Connect Wallet
             </button>
           </div>

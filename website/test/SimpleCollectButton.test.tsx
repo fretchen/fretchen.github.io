@@ -38,8 +38,6 @@ vi.mock("../utils/wagmi", () => ({
 
 vi.mock("../layouts/styles", () => ({
   nftCard: {},
-  actionButton: "action-button",
-  primaryButton: "primary-button",
 }));
 
 vi.mock("../hooks/useLocale", () => ({

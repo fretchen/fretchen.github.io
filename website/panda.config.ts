@@ -83,7 +83,8 @@ const button = defineRecipe({
       // The orange tip/collect CTA — deliberately warm and distinct from brand blue.
       support: {
         background: "linear-gradient(135deg, {colors.support} 0%, {colors.supportLight} 100%)",
-        color: "light",
+        // Dark ink, not white: white on this fill is 2.84:1 and fails AA.
+        color: "onSupport",
         border: "none",
         borderRadius: "999px",
         fontWeight: "semibold",
@@ -154,6 +155,34 @@ const button = defineRecipe({
   defaultVariants: { visual: "primary", size: "md" },
 });
 
+/**
+ * The territory accent: a short rule beneath a section's title, in the hue that section owns.
+ *
+ * This is the whole visible expression of the colour system — no tinted surfaces, no coloured
+ * body text. The rule is short on purpose; a full-width border reads as a divider, a 48px stub
+ * reads as a mark. Route -> territory lives in `utils/territory.ts`.
+ */
+const sectionRule = defineRecipe({
+  className: "sectionRule",
+  jsx: [],
+  base: {
+    display: "block",
+    width: "48px",
+    height: "3px",
+    borderRadius: "2px",
+    // Sits under the h1, which already carries its own bottom margin.
+    marginBottom: "6",
+  },
+  variants: {
+    territory: {
+      voice: { backgroundColor: "brand" },
+      explore: { backgroundColor: "explore" },
+      value: { backgroundColor: "supportStrong" },
+    },
+  },
+  defaultVariants: { territory: "voice" },
+});
+
 export default defineConfig({
   // Whether to use css reset
   preflight: true,
@@ -189,11 +218,45 @@ export default defineConfig({
           codeBg: { value: "#f9fafb" },
           danger: { value: "#dc3545" },
           // Support/collect button gradient
+          // ─── Identity hues ────────────────────────────────────────────────────
+          // Three hues, one job each. Green and red are status only and never decorate;
+          // that rule is what keeps this from reading as too many colours.
+          //
+          //   brand   — voice:          links, nav, primary actions (the default)
+          //   support — value exchange: collect, support, tip, pay
+          //   explore — exploration:    essays, simulations, quantum, lab
+
+          // Value exchange. The gradient is a FILL only — at L 0.70 it is too light to
+          // carry text, so ink on it uses `onSupport`, and orange-as-text uses `value`.
           support: { value: "#FF6B35" },
           supportLight: { value: "#FF8255" },
-          // Carries the "mix"/combined series through the interactive essays, tying prose to
-          // chart. Read from JS via token("colors.essayAccent") — see components/blog/palette.ts.
-          essayAccent: { value: "#7b3fa0" },
+          // Ink on the orange fill. 5.52:1 — white was 2.84:1 and failed even the
+          // large-text floor. Warm-dark on warm-light rather than pure black.
+          onSupport: { value: "#431407" },
+          // Orange as text / rule / border, where the fill colour is too light. 5.18:1.
+          // Not darker than this: below ~H33 it starts colliding with danger red (H21).
+          // (Not named `value` — that key collides with Panda's own token shape and
+          // breaks codegen with "token.value.includes is not a function".)
+          supportStrong: { value: "#C2410C" },
+
+          // Exploration. Also carries the "mix" series through the interactive essays,
+          // tying prose to chart. Read from JS via token("colors.explore") — see
+          // components/blog/palette.ts.
+          explore: { value: "#7b3fa0" },
+          exploreHover: { value: "#68348a" },
+
+          // ─── Status ───────────────────────────────────────────────────────────
+          // Reserved. Never decorative, and never carried by colour alone.
+          // `warning` is amber.700, not .600: .600 is only 3.19:1 on white and fails AA.
+          warning: { value: "#b45309" },
+          warningSurface: { value: "#fffbeb" },
+          warningBorder: { value: "#fde68a" },
+          warningInk: { value: "#92400e" },
+
+          // Dark code block. The `codeBg` above is the *inline* code background (light);
+          // these two are the fenced-block pair. 11.25:1.
+          codeSurface: { value: "#1e1e1e" },
+          codeText: { value: "#d4d4d4" },
         },
       },
       semanticTokens: {
@@ -227,6 +290,7 @@ export default defineConfig({
       },
       recipes: {
         button,
+        sectionRule,
       },
     },
   },

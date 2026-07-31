@@ -6,6 +6,7 @@ import { usePageContext } from "vike-react/usePageContext";
 import { titleBar } from "../../../layouts/shared";
 import { css } from "../../../styled-system/css";
 import type { BlogPost } from "../../../types/BlogPost";
+import { sectionRule } from "../../../styled-system/recipes";
 
 const App: React.FC = function () {
   // Get pre-loaded data from +data.ts
@@ -15,6 +16,7 @@ const App: React.FC = function () {
   return (
     <div className={css({ maxWidth: "900px", mx: "auto", px: "md" })}>
       <h1 className={titleBar.title}>AMO lecture notes</h1>
+      <span className={sectionRule({ territory: "explore" })} aria-hidden="true" />
       <p className={css({ marginBottom: "md", lineHeight: "1.5" })}>
         Welcome to my lecture notes on Atomic, Molecular and Optical physics that I prepared in my time in Heidelberg.
         They consist of a total of 20 lectures, which I will recollect here again.

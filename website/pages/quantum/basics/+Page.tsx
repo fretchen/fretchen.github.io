@@ -6,6 +6,7 @@ import { usePageContext } from "vike-react/usePageContext";
 import { titleBar } from "../../../layouts/shared";
 import { css } from "../../../styled-system/css";
 import type { BlogPost } from "../../../types/BlogPost";
+import { sectionRule } from "../../../styled-system/recipes";
 
 const App: React.FC = function () {
   // Get pre-loaded data from +data.ts
@@ -15,6 +16,7 @@ const App: React.FC = function () {
   return (
     <div className={css({ maxWidth: "900px", mx: "auto", px: "md" })}>
       <h1 className={titleBar.title}>Quantum Basics</h1>
+      <span className={sectionRule({ territory: "explore" })} aria-hidden="true" />
       <p className={css({ marginBottom: "md", lineHeight: "1.5" })}>
         The hipster role is rather new to the quantum sector which has largely evolved under the radar to the greater
         public for the last one hundred years. To bring this into context, we will summarize some basic concepts of

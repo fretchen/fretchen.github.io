@@ -69,9 +69,9 @@ const caption = css({ fontSize: "sm", color: "gray.500", mb: "1" });
 const note = css({
   fontSize: "sm",
   color: "gray.700",
-  bg: "amber.50",
+  bg: "warningSurface",
   border: "1px solid",
-  borderColor: "amber.200",
+  borderColor: "warningBorder",
   borderRadius: "md",
   p: "2",
   mb: "3",

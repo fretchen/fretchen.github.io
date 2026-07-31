@@ -9,6 +9,7 @@ import { css } from "../../styled-system/css";
 import { CATEGORIES, getCategoryIds, type CategoryId } from "../../types/Categories";
 import type { BlogPost } from "../../types/BlogPost";
 import { button } from "../../styled-system/recipes";
+import { sectionRule } from "../../styled-system/recipes";
 
 // Page-local style — nothing else uses it.
 const paragraph = css({
@@ -38,6 +39,7 @@ const App: React.FC = function () {
   return (
     <div className={styles.container}>
       <h1 className={styles.titleBar.title}>Welcome to my blog!</h1>
+      <span className={sectionRule({ territory: "voice" })} aria-hidden="true" />
       <p className={paragraph}>It contains notes about all kind of topic, ideas etc.</p>
 
       {/* Category Filter Buttons */}

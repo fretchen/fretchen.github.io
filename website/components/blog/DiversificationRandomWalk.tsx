@@ -423,7 +423,7 @@ export default function DiversificationRandomWalk() {
           disabled={isAnimating}
           className={css({
             padding: "6px 16px",
-            backgroundColor: isAnimating ? "gray.400" : "essayAccent",
+            backgroundColor: isAnimating ? "gray.400" : "explore",
             color: "white",
             border: "none",
             borderRadius: "4px",
@@ -435,7 +435,7 @@ export default function DiversificationRandomWalk() {
           {isAnimating ? "Running…" : "🔄 New random scenario"}
         </button>
         {showVol && !hasMovedSlider && (
-          <span className={css({ fontSize: "sm", color: "essayAccent", fontStyle: "italic" })}>
+          <span className={css({ fontSize: "sm", color: "explore", fontStyle: "italic" })}>
             👆 Move the slider to see how the mix changes
           </span>
         )}
@@ -546,7 +546,7 @@ export default function DiversificationRandomWalk() {
             <p
               className={css({
                 fontSize: "sm",
-                color: "essayAccent",
+                color: "explore",
                 fontWeight: "600",
                 marginTop: "2",
               })}

@@ -220,3 +220,16 @@ export const layout = {
     },
   }),
 };
+
+/**
+ * Active nav item, tinted with the hue its section owns (see utils/territory.ts).
+ *
+ * Set on the wrapper rather than the anchor: Panda's reset gives `a { color: inherit }`,
+ * so the link picks this up, and the shared `Link` primitive stays colourless — it wraps
+ * whole cards elsewhere (Card.tsx, EntryList.tsx), where a colour would tint card content.
+ */
+export const navActive = {
+  voice: css({ color: "brand", fontWeight: "semibold" }),
+  explore: css({ color: "explore", fontWeight: "semibold" }),
+  value: css({ color: "supportStrong", fontWeight: "semibold" }),
+};

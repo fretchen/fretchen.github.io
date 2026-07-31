@@ -13,7 +13,7 @@ import { useUmami } from "../hooks/useUmami";
 import { useX402ImageGeneration } from "../hooks/useX402ImageGeneration";
 import { AgentInfoPanel } from "./AgentInfoPanel";
 import { useWalletConnection } from "../hooks/useWalletConnection";
-import { button } from "../styled-system/recipes";
+import { button, sectionRule } from "../styled-system/recipes";
 
 // Image compression helpers
 const calculateOptimalDimensions = (originalWidth: number, originalHeight: number, maxDimension: number = 1920) => {
@@ -569,6 +569,9 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
                 🎨
                 <LocaleText label="imagegen.title" />
               </h3>
+              {/* /imagegen is "value" territory. The rule hangs off this heading because the
+                  page has no <h1> of its own — see the note in the styling plan. */}
+              <span className={sectionRule({ territory: "value" })} aria-hidden="true" />
             </div>
 
             <div className={imageGen.compactForm}>

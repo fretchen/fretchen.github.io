@@ -6,6 +6,7 @@ import { CodeBlock } from "../../components/CodeBlock";
 import { titleBar } from "../../layouts/shared";
 import * as styles from "../../layouts/shared";
 import { Link } from "../../components/Link";
+import { sectionRule } from "../../styled-system/recipes";
 
 // ─── Mermaid diagram definitions ─────────────────────────────────────────────
 
@@ -139,8 +140,8 @@ const prose = css({
     fontFamily: "monospace",
   },
   "& pre": {
-    backgroundColor: "#1e1e1e",
-    color: "neutral.300",
+    backgroundColor: "codeSurface",
+    color: "codeText",
     padding: "4",
     borderRadius: "8px",
     overflowX: "auto",
@@ -283,6 +284,7 @@ export default function Page() {
   return (
     <div className={styles.container}>
       <h1 className={titleBar.title}>x402 Facilitator</h1>
+      <span className={sectionRule({ territory: "value" })} aria-hidden="true" />
 
       <div className={prose}>
         {/* ── 1. Hero ──────────────────────────────────────────────────── */}

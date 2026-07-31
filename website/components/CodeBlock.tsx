@@ -38,8 +38,8 @@ export type CodeLang = "typescript" | "json" | "bash" | "javascript" | "python" 
 const wrapper = css({ position: "relative", mt: "1", mb: "2" });
 
 const block = css({
-  bg: "#1e1e1e",
-  color: "neutral.300",
+  bg: "codeSurface",
+  color: "codeText",
   p: "4",
   borderRadius: "8px",
   overflowX: "auto",

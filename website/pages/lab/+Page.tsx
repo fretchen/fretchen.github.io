@@ -2,11 +2,13 @@ import React from "react";
 import { Card } from "../../components/Card";
 import { titleBar } from "../../layouts/shared";
 import * as styles from "../../layouts/shared";
+import { sectionRule } from "../../styled-system/recipes";
 
 const LabPage: React.FC = () => {
   return (
     <div className={styles.container}>
       <h1 className={titleBar.title}>Lab</h1>
+      <span className={sectionRule({ territory: "explore" })} aria-hidden="true" />
       <p>
         A collection of experiments around decentralized AI services. Everything here runs on Optimism and Base — pay
         per use with a wallet, no subscriptions, no accounts.

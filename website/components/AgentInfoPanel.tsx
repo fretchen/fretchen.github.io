@@ -65,7 +65,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
           </div>
         )}
         {isThirdParty && (
-          <div className={css({ color: "amber.600", mt: "1" })}>third-party agent · at your own risk</div>
+          <div className={css({ color: "warning", mt: "1" })}>third-party agent · at your own risk</div>
         )}
       </div>
     );

@@ -124,7 +124,7 @@ export default function ShockCalculator() {
                 borderRadius: "6px",
                 border: "1px solid #d1d5db",
                 fontSize: "md",
-                _focus: { outline: "none", borderColor: "essayAccent" },
+                _focus: { outline: "none", borderColor: "explore" },
               })}
             />
           </div>
@@ -156,7 +156,7 @@ export default function ShockCalculator() {
                 borderRadius: "6px",
                 border: "1px solid #d1d5db",
                 fontSize: "md",
-                _focus: { outline: "none", borderColor: "essayAccent" },
+                _focus: { outline: "none", borderColor: "explore" },
               })}
             />
           </div>

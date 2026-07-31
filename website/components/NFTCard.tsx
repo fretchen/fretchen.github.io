@@ -9,6 +9,7 @@ import { useToast } from "./Toast";
 import { SimpleCollectButton } from "./SimpleCollectButton";
 import { ChainBadge } from "./ChainBadge";
 import * as styles from "../layouts/styles";
+import { nftCard } from "./nft/styles";
 import { useLocale } from "../hooks/useLocale";
 import { button } from "../styled-system/recipes";
 
@@ -314,30 +315,30 @@ export function NFTCard({
 
   return (
     <div
-      className={`${styles.nftCard.container} ${isHighlighted ? styles.nftCard.highlighted : ""} group`}
+      className={`${nftCard.container} ${isHighlighted ? nftCard.highlighted : ""} group`}
       onClick={handleImageClick}
     >
       {nft.isLoading ? (
-        <div className={styles.nftCard.loadingContainer}>
+        <div className={nftCard.loadingContainer}>
           <div className={styles.spinner}></div>
-          <p className={styles.nftCard.loadingText}>Loading artwork...</p>
+          <p className={nftCard.loadingText}>Loading artwork...</p>
         </div>
       ) : nft.error ? (
-        <div className={styles.nftCard.errorContainer}>
-          <div className={styles.nftCard.errorBox}>
-            <p className={styles.nftCard.errorText}>{nft.error}</p>
+        <div className={nftCard.errorContainer}>
+          <div className={nftCard.errorBox}>
+            <p className={nftCard.errorText}>{nft.error}</p>
           </div>
-          <p className={styles.nftCard.tokenIdText}>ID: {nft.tokenId.toString()}</p>
+          <p className={nftCard.tokenIdText}>ID: {nft.tokenId.toString()}</p>
         </div>
       ) : (
         <>
           {/* Vollbild Image/Placeholder */}
           {nft.imageUrl ? (
-            <div className={styles.nftCard.imageContainer}>
+            <div className={nftCard.imageContainer}>
               <img
                 src={nft.imageUrl}
                 alt={nft.metadata?.name || `Artwork #${nft.tokenId}`}
-                className={styles.nftCard.image}
+                className={nftCard.image}
                 loading="lazy"
                 decoding="async"
                 onError={(e) => {
@@ -346,34 +347,34 @@ export function NFTCard({
                   target.nextElementSibling!.classList.remove("hidden");
                 }}
               />
-              <div className={styles.nftCard.imageError} style={{ display: "none" }}>
+              <div className={nftCard.imageError} style={{ display: "none" }}>
                 📷 Image not available
               </div>
             </div>
           ) : (
-            <div className={styles.nftCard.imagePlaceholder}>📷 No image available</div>
+            <div className={nftCard.imagePlaceholder}>📷 No image available</div>
           )}
 
           {/* Corner Badge - Token ID */}
-          <div className={styles.nftCard.cornerBadge}>#{nft.tokenId.toString()}</div>
+          <div className={nftCard.cornerBadge}>#{nft.tokenId.toString()}</div>
 
           {/* Chain Badge - shows which network this NFT is on */}
           <ChainBadge network={network} size="sm" position="bottom-right" />
 
           {/* Listed Badge (nur wenn listed) */}
-          {!isPublicView && isListed && <div className={styles.nftCard.listedBadge}>✓ {listedLabel}</div>}
+          {!isPublicView && isListed && <div className={nftCard.listedBadge}>✓ {listedLabel}</div>}
 
           {/* Owner Badge (nur in Public View) */}
           {isPublicView && owner && (
-            <div className={styles.nftCard.ownerBadge}>
+            <div className={nftCard.ownerBadge}>
               👤 {owner.slice(0, 6)}...{owner.slice(-4)}
             </div>
           )}
 
           {/* Actions Overlay (nur bei Hover sichtbar) */}
-          <div className={styles.nftCard.actionsOverlay}>
+          <div className={nftCard.actionsOverlay}>
             {/* Alle Actions als einheitliche Icon-Buttons in einer Zeile */}
-            <div className={styles.nftCard.actions}>
+            <div className={nftCard.actions}>
               {/* Download */}
               {nft.imageUrl && (
                 <button

@@ -1,7 +1,7 @@
 import React, { RefObject, useMemo } from "react";
 import { useTableOfContents, TocItem as TocItemType } from "../hooks/useTableOfContents";
 import { useActiveHeading } from "../hooks/useActiveHeading";
-import { toc } from "../layouts/styles";
+import { toc } from "./TableOfContents.styles";
 
 interface TableOfContentsProps {
   /** Ref to the content container containing headings */

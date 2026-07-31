@@ -2,7 +2,8 @@ import * as React from "react";
 import { Link } from "./Link";
 import { EntryNftImage } from "./EntryNftImage";
 import { EntryListProps } from "../types/components";
-import { entryList, baseContentCard } from "../layouts/styles";
+import { baseContentCard } from "../layouts/styles";
+import { entryList } from "./EntryList.styles";
 import { SITE } from "../utils/siteData";
 
 /**

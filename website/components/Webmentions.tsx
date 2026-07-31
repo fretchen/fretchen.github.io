@@ -1,6 +1,6 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { webmentions } from "../layouts/styles";
+import { webmentions } from "./Webmentions.styles";
 import { useWebmentionUrls } from "../hooks/useWebmentionUrls";
 import { fetchWebmentions } from "../utils/webmentionUtils";
 import { button } from "../styled-system/recipes";

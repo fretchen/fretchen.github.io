@@ -4,6 +4,8 @@ import { useAutoNetwork } from "../hooks/useAutoNetwork";
 import { GENAI_NFT_NETWORKS, fromCAIP2, getViemChain } from "@fretchen/chain-utils";
 import { ImageGeneratorProps } from "../types/components";
 import * as styles from "../layouts/styles";
+import { nftCard } from "./nft/styles";
+import { imageGen, successMessage } from "./ImageGenerator.styles";
 import InfoIcon from "./InfoIcon";
 import { LocaleText } from "./LocaleText";
 import { useLocale } from "../hooks/useLocale";
@@ -560,16 +562,16 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
         </div>
       ) : (
         // Expanded State - Current Full Design
-        <div className={styles.imageGen.compactLayout}>
-          <div className={styles.imageGen.compactContainer}>
-            <div className={styles.imageGen.compactHeader}>
-              <h3 className={styles.imageGen.compactTitle}>
+        <div className={imageGen.compactLayout}>
+          <div className={imageGen.compactContainer}>
+            <div className={imageGen.compactHeader}>
+              <h3 className={imageGen.compactTitle}>
                 🎨
                 <LocaleText label="imagegen.title" />
               </h3>
             </div>
 
-            <div className={styles.imageGen.compactForm}>
+            <div className={imageGen.compactForm}>
               {/* Unified Preview/Upload Area */}
               <div
                 data-testid="drop-zone"
@@ -824,17 +826,17 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder={previewState === "reference" ? editPromptPlaceholderText : promptPlaceholderText}
                 disabled={isLoading || x402Status !== "idle"}
-                className={styles.imageGen.compactTextarea}
+                className={imageGen.compactTextarea}
               />
 
-              <div className={styles.imageGen.controlBar}>
-                <div className={styles.imageGen.optionsGroup}>
+              <div className={imageGen.controlBar}>
+                <div className={imageGen.optionsGroup}>
                   <select
                     id="imageSizeSelect"
                     value={size}
                     onChange={(e) => setSize(e.target.value as "1024x1024" | "1792x1024")}
                     disabled={isLoading || x402Status !== "idle"}
-                    className={styles.imageGen.compactSelect}
+                    className={imageGen.compactSelect}
                     aria-label="Select image format for your artwork"
                   >
                     <option value="1024x1024">{squareText}</option>
@@ -842,7 +844,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
                   </select>
 
                   <label
-                    className={styles.nftCard.checkboxLabel}
+                    className={nftCard.checkboxLabel}
                     title={
                       isListed
                         ? "NFT will be publicly visible in the 'All Public Artworks' gallery"
@@ -854,7 +856,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
                       checked={isListed}
                       onChange={(e) => setIsListed(e.target.checked)}
                       disabled={isLoading || x402Status !== "idle"}
-                      className={styles.nftCard.checkbox}
+                      className={nftCard.checkbox}
                     />
                     <LocaleText label="imagegen.listed" />
                   </label>
@@ -903,14 +905,14 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
 
             {/* Status-Anzeige for x402 */}
             {(x402Status === "awaiting-signature" || x402Status === "processing") && (
-              <div className={styles.imageGen.compactStatus}>
+              <div className={imageGen.compactStatus}>
                 <div className={styles.spinner}></div>
                 <span>{x402Status === "awaiting-signature" ? awaitingSignatureText : generatingImageText}</span>
               </div>
             )}
 
             {/* Error display - show x402 error or local error */}
-            {(error || x402Error) && <div className={styles.imageGen.compactError}>{error || x402Error}</div>}
+            {(error || x402Error) && <div className={imageGen.compactError}>{error || x402Error}</div>}
 
             {/* Payment receipt display */}
             {paymentReceipt && (
@@ -944,7 +946,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
 
             {/* Erfolgreiche Erstellung */}
             {tokenId && generatedImageUrl && (
-              <div className={styles.successMessage}>
+              <div className={successMessage}>
                 <h4 className={css({ margin: 0, fontSize: "sm" })}>{artworkCreatedText}</h4>
                 <p className={css({ margin: "xs 0", fontSize: "sm" })}>
                   ID: {tokenId.toString()} - {checkGalleryText}

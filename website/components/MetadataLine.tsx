@@ -2,7 +2,7 @@ import * as React from "react";
 import { useSupportAction } from "../hooks/useSupportAction";
 import { useWalletConnection } from "../hooks/useWalletConnection";
 import { usePageContext } from "vike-react/usePageContext";
-import { metadataLine } from "../layouts/styles";
+import { metadataLine } from "./MetadataLine.styles";
 import { useUmami } from "../hooks/useUmami";
 import { useLocale } from "../hooks/useLocale";
 import { SupportChainModal } from "./SupportChainModal";

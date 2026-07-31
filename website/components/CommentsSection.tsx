@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePageContext } from "vike-react/usePageContext";
-import { commentSection } from "../layouts/styles";
+import { commentSection } from "./CommentsSection.styles";
 import { button } from "../styled-system/recipes";
 
 const API_URL = (import.meta.env.VITE_COMMENTS_API as string | undefined) ?? "https://comments.fretchen.eu";

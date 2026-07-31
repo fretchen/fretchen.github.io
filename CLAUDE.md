@@ -126,6 +126,44 @@ Image generation flow: `genimg_bfl.js` → Black Forest Labs API → S3 upload �
 
 **Panda CSS** — run `npm run prepare` after config changes to regenerate `styled-system/` (never edit generated files directly).
 
+#### Styling rules (enforced by `test/styleConventions.test.ts`)
+
+Panda compiles `css({})` **statically at build time**. Three mistakes therefore break styling
+*silently* — the component still renders, the class name is still emitted, `tsc` and the
+component tests all pass, and only the CSS is wrong or missing. All three have shipped here
+before. The test file catches them; these are the rules it enforces.
+
+1. **Never pass a JS variable as a `css({})` value.** Panda cannot read it, so it emits no CSS.
+   ```ts
+   css({ color: ACCENT })        // ✗ silently produces nothing
+   css({ color: "essayAccent" }) // ✓ token name, resolved at build time
+   ```
+   When a value is needed in both CSS and JS (a Chart.js dataset, an SVG `fill`, an inline
+   `style={{}}`), define it once as a token in `panda.config.ts`, use the token *name* inside
+   `css({})`, and read it via `token("colors.essayAccent")` everywhere else. Pattern:
+   `components/blog/palette.ts`.
+
+2. **Spacing tokens resolve for single values only, never inside a shorthand.**
+   ```ts
+   padding: "4"        // ✓ var(--spacing-4) = 16px
+   padding: "2 3"      // ✗ emits `2px 3px` — NOT 8px/12px
+   padding: "8px 12px" // ✓ explicit
+   paddingY: "2", paddingX: "3"  // ✓ longhands do tokenise
+   ```
+   This makes a bulk raw→token migration shrink every shorthand it touches by ~4×.
+
+3. **Only reference tokens that exist.** An unknown path is passed through as a literal string
+   and the browser discards the whole declaration — e.g. `token(colors.primary)` when the token
+   is named `brand` emits `color: colors.primary`.
+
+**Verifying a bulk style change:** `npm run typecheck` and `npm test` cannot see a wrong colour
+or a dropped declaration. Diff the *emitted declarations* instead — build before and after,
+resolve `var(--…)` back to literals, and compare. For a pure rename the set must be identical;
+anything else is either an intended change or a bug, and the list should be short enough to read.
+Note that Panda escapes `.`, `(`, `)` **and commas** in class names
+(`.bg-c_rgba\(123\,_63\,_160\,_0\.04\)`), so a naive `grep -F` for an unescaped class reports
+false misses.
+
 **Wagmi v2 + TanStack Query** for blockchain state. Wagmi hooks auto-generated from `wagmi.config.ts` — not manually written.
 
 Blog posts are `.md` or `.mdx` in `website/blog/` with frontmatter (`title`, `publishing_date`, `category`, `description`, `tokenID`). MDX supports remark-math (KaTeX renders client-side) and interactive React components.

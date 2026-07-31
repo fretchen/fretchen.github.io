@@ -3,6 +3,7 @@ import { useAccount } from "wagmi";
 import { useMultiChainUserNFTs } from "../hooks/useMultiChainNFTs";
 import { NFTMetadata, ModalImageData } from "../types/components";
 import * as styles from "../layouts/styles";
+import { nftList } from "./nft/styles";
 import { NFTCard } from "./NFTCard";
 import { ImageModal } from "./ImageModal";
 
@@ -62,7 +63,7 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
 
   if (!isConnected) {
     return (
-      <div className={styles.nftList.walletPrompt}>
+      <div className={nftList.walletPrompt}>
         <h3>🔗 Connect Your Wallet</h3>
         <p>To view and manage your personal NFT artworks, please connect your wallet using the button above.</p>
         <p>Your artworks are stored on the blockchain and linked to your wallet address.</p>
@@ -76,7 +77,7 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
 
   if (isLoading && displayTokens.length === 0) {
     return (
-      <div className={styles.nftList.loadingContainer}>
+      <div className={nftList.loadingContainer}>
         <div className={styles.spinner}></div>
         <p>Loading your artworks from all networks...</p>
       </div>
@@ -85,8 +86,8 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
 
   if (displayTokens.length === 0) {
     return (
-      <div className={styles.nftList.emptyStateContainer}>
-        <p className={styles.nftList.emptyStateText}>
+      <div className={nftList.emptyStateContainer}>
+        <p className={nftList.emptyStateText}>
           You haven&apos;t created any artworks yet. Use the generator above to create your first one!
         </p>
       </div>
@@ -95,7 +96,7 @@ export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps
 
   return (
     <>
-      <div className={styles.nftList.grid}>
+      <div className={nftList.grid}>
         {displayTokens.map((token, index) => {
           // Check if this is the newly created NFT with preloaded data
           const isNewlyCreated =

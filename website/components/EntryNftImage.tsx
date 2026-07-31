@@ -94,11 +94,7 @@ export const EntryNftImage: React.FC<EntryNftImageProps> = ({ tokenId, fallbackI
   return (
     <>
       {isLoading ? (
-        <div
-          className={baseContentCard.image}
-          style={{ backgroundColor: "#f3f4f6" }}
-          title="Loading NFT artwork..."
-        />
+        <div className={baseContentCard.image} style={{ backgroundColor: "#f3f4f6" }} title="Loading NFT artwork..." />
       ) : (
         <img
           src={imageUrl!}

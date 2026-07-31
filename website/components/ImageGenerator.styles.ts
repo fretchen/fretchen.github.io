@@ -128,7 +128,6 @@ export const imageGen = {
     fontSize: "sm",
     color: "token(colors.danger)",
   }),
-
 };
 /** The one success block: mint confirmation and payment receipt together. */
 export const successMessage = css({

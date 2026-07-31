@@ -521,9 +521,7 @@ const ProofDemo: React.FC = () => {
             <h4 className={css({ fontSize: "md", fontWeight: "semibold", marginBottom: "3" })}>
               Step 2: Validate a Proof
             </h4>
-            <label className={css({ display: "block", fontSize: "sm", marginBottom: "2" })}>
-              Paste Proof JSON:
-            </label>
+            <label className={css({ display: "block", fontSize: "sm", marginBottom: "2" })}>Paste Proof JSON:</label>
             <textarea
               value={validationInput}
               onChange={(e) => setValidationInput(e.target.value)}
@@ -571,9 +569,7 @@ const ProofDemo: React.FC = () => {
                 border: `1px solid ${validationResult.isValid ? "gray.300" : "red.200"}`,
               })}
             >
-              <h4 className={css({ fontSize: "md", fontWeight: "semibold", marginBottom: "3" })}>
-                Validation Result
-              </h4>
+              <h4 className={css({ fontSize: "md", fontWeight: "semibold", marginBottom: "3" })}>Validation Result</h4>
               <div
                 className={css({
                   fontSize: "sm",
@@ -803,9 +799,7 @@ const BatchCreator: React.FC = () => {
         <h4 className={css({ fontSize: "md", fontWeight: "semibold", marginBottom: "4" })}>Send LLM Request</h4>
 
         <div className={css({ marginBottom: "3" })}>
-          <label className={css({ display: "block", fontSize: "sm", marginBottom: "1" })}>
-            Wallet Address:
-          </label>
+          <label className={css({ display: "block", fontSize: "sm", marginBottom: "1" })}>Wallet Address:</label>
           <select
             value={currentWallet}
             onChange={(e) => setCurrentWallet(e.target.value)}

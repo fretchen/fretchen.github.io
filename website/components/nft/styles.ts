@@ -217,7 +217,6 @@ export const nftCard = {
       gap: "md",
     },
   }),
-
 };
 // NFT List component styles
 export const nftList = {

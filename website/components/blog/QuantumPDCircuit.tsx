@@ -194,10 +194,7 @@ const MoveMatrix: React.FC<MoveMatrixProps> = ({ moveW, moveJ, onSelectW, onSele
       {/* One row per player */}
       {players.map((p) => (
         <React.Fragment key={p.name}>
-          <span
-            className={css({ fontSize: "sm", fontWeight: "bold", paddingRight: "2.5" })}
-            style={{ color: p.color }}
-          >
+          <span className={css({ fontSize: "sm", fontWeight: "bold", paddingRight: "2.5" })} style={{ color: p.color }}>
             {p.name}
           </span>
           {MOVES.map((m, idx) => (
@@ -314,10 +311,7 @@ export default function QuantumPDCircuit() {
         </text>
       </svg>
 
-      <p
-        aria-live="polite"
-        className={css({ fontSize: "sm", color: "gray.700", textAlign: "center", marginTop: "4" })}
-      >
+      <p aria-live="polite" className={css({ fontSize: "sm", color: "gray.700", textAlign: "center", marginTop: "4" })}>
         {verdict} <span className={css({ color: "gray.500" })}>(lower is better)</span>
       </p>
     </div>

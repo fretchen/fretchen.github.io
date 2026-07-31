@@ -357,7 +357,11 @@ function DraftCardView({
             >
               Save
             </button>
-            <button className={button({ visual: "secondary", size: "sm" })} onClick={() => setEditing(false)} disabled={busy}>
+            <button
+              className={button({ visual: "secondary", size: "sm" })}
+              onClick={() => setEditing(false)}
+              disabled={busy}
+            >
               Cancel
             </button>
           </div>
@@ -417,7 +421,11 @@ function DraftCardView({
                 onChange={(e) => setReviewComment(e.target.value)}
               />
               <div className={cardActions}>
-                <button className={button({ visual: "secondary", size: "sm" })} onClick={() => setEditing(true)} disabled={busy}>
+                <button
+                  className={button({ visual: "secondary", size: "sm" })}
+                  onClick={() => setEditing(true)}
+                  disabled={busy}
+                >
                   Edit
                 </button>
                 {draft.status !== "approved" && draft.status !== "published" && (

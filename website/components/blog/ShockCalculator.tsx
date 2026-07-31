@@ -293,7 +293,9 @@ export default function ShockCalculator() {
             marginBottom: "2",
           })}
         >
-          <span className={css({ fontSize: "sm", color: "gray.700", fontWeight: "semibold" })}>Savings after shocks</span>
+          <span className={css({ fontSize: "sm", color: "gray.700", fontWeight: "semibold" })}>
+            Savings after shocks
+          </span>
           <span
             className={css({ fontSize: "xl", fontWeight: "bold" })}
             style={{ color: isNegative ? "#991b1b" : barColor(result.remaining / monthlyPayment) }}

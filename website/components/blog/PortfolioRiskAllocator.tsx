@@ -397,10 +397,7 @@ export default function PortfolioRiskAllocator() {
       <div className={css({ marginBottom: "5" })}>
         <div className={css({ display: "flex", alignItems: "baseline", gap: "2", marginBottom: "1" })}>
           <span className={css({ fontSize: "sm", color: "gray.700" })}>How bumpy is this portfolio?</span>
-          <span
-            className={css({ fontSize: "lg", fontWeight: "bold" })}
-            style={{ color: bumpinessColor(risk.portVol) }}
-          >
+          <span className={css({ fontSize: "lg", fontWeight: "bold" })} style={{ color: bumpinessColor(risk.portVol) }}>
             {risk.portVol.toFixed(1)}%
           </span>
           <span className={css({ fontSize: "xs", color: "gray.400" })}>per year</span>
@@ -540,12 +537,8 @@ export default function PortfolioRiskAllocator() {
                     <table className={css({ width: "100%", fontSize: "xs", borderCollapse: "collapse" })}>
                       <thead>
                         <tr className={css({ borderBottom: "1px solid #e5e7eb" })}>
-                          <th className={css({ textAlign: "left", padding: "4px 4px", color: "gray.500" })}>
-                            ETF
-                          </th>
-                          <th className={css({ textAlign: "right", padding: "4px 4px", color: "gray.500" })}>
-                            Weight
-                          </th>
+                          <th className={css({ textAlign: "left", padding: "4px 4px", color: "gray.500" })}>ETF</th>
+                          <th className={css({ textAlign: "right", padding: "4px 4px", color: "gray.500" })}>Weight</th>
                           <th className={css({ textAlign: "right", padding: "4px 4px", color: "gray.500" })}>
                             Vol (ann.)
                           </th>
@@ -578,9 +571,7 @@ export default function PortfolioRiskAllocator() {
                               <td className={css({ textAlign: "right", padding: "4px 4px" })}>
                                 {(weights[idx] * 100).toFixed(1)}%
                               </td>
-                              <td className={css({ textAlign: "right", padding: "4px 4px" })}>
-                                {etfVol.toFixed(1)}%
-                              </td>
+                              <td className={css({ textAlign: "right", padding: "4px 4px" })}>{etfVol.toFixed(1)}%</td>
                               <td
                                 className={css({
                                   textAlign: "right",

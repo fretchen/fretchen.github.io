@@ -8,8 +8,7 @@ import * as styles from "../../layouts/shared";
 import { css } from "../../styled-system/css";
 import { CATEGORIES, getCategoryIds, type CategoryId } from "../../types/Categories";
 import type { BlogPost } from "../../types/BlogPost";
-import { button } from "../../styled-system/recipes";
-import { sectionRule } from "../../styled-system/recipes";
+import { button, sectionRule } from "../../styled-system/recipes";
 
 // Page-local style — nothing else uses it.
 const paragraph = css({

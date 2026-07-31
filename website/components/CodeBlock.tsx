@@ -108,7 +108,12 @@ export function CodeBlock({ children, lang = "typescript" }: CodeBlockProps) {
         )}
       </pre>
       {canCopy && (
-        <button type="button" onClick={copy} className={`${button({ visual: "overlay", size: "sm" })} ${copyButton}`} aria-label="Copy code to clipboard">
+        <button
+          type="button"
+          onClick={copy}
+          className={`${button({ visual: "overlay", size: "sm" })} ${copyButton}`}
+          aria-label="Copy code to clipboard"
+        >
           {copied ? "Copied!" : "Copy"}
         </button>
       )}

@@ -64,9 +64,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
             pays → {agentCard.payTo.slice(0, 6)}…{agentCard.payTo.slice(-4)}
           </div>
         )}
-        {isThirdParty && (
-          <div className={css({ color: "warning", mt: "1" })}>third-party agent · at your own risk</div>
-        )}
+        {isThirdParty && <div className={css({ color: "warning", mt: "1" })}>third-party agent · at your own risk</div>}
       </div>
     );
   }

@@ -109,10 +109,37 @@ describe("style conventions", () => {
 
   it("no multi-value spacing shorthand uses bare grid numbers", () => {
     const SPACING = new Set([
-      "padding", "paddingX", "paddingY", "paddingTop", "paddingBottom", "paddingLeft", "paddingRight",
-      "margin", "marginX", "marginY", "marginTop", "marginBottom", "marginLeft", "marginRight",
-      "gap", "rowGap", "columnGap",
-      "p", "px", "py", "pt", "pb", "pl", "pr", "m", "mx", "my", "mt", "mb", "ml", "mr",
+      "padding",
+      "paddingX",
+      "paddingY",
+      "paddingTop",
+      "paddingBottom",
+      "paddingLeft",
+      "paddingRight",
+      "margin",
+      "marginX",
+      "marginY",
+      "marginTop",
+      "marginBottom",
+      "marginLeft",
+      "marginRight",
+      "gap",
+      "rowGap",
+      "columnGap",
+      "p",
+      "px",
+      "py",
+      "pt",
+      "pb",
+      "pl",
+      "pr",
+      "m",
+      "mx",
+      "my",
+      "mt",
+      "mb",
+      "ml",
+      "mr",
     ]);
     const offenders: string[] = [];
     for (const { path, source } of FILES) {
@@ -152,7 +179,7 @@ describe("style conventions", () => {
     expect(
       offenders,
       'The CSS-function form "token(colors.x)" is resolved by Panda only inside css({}). ' +
-        'In a JSX style={{}} or a plain string it ships verbatim and the browser drops the ' +
+        "In a JSX style={{}} or a plain string it ships verbatim and the browser drops the " +
         'declaration — use the imported token("colors.x") call there instead.',
     ).toEqual([]);
   });

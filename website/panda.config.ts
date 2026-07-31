@@ -191,6 +191,9 @@ export default defineConfig({
           // Support/collect button gradient
           support: { value: "#FF6B35" },
           supportLight: { value: "#FF8255" },
+          // Carries the "mix"/combined series through the interactive essays, tying prose to
+          // chart. Read from JS via token("colors.essayAccent") — see components/blog/palette.ts.
+          essayAccent: { value: "#7b3fa0" },
         },
       },
       semanticTokens: {

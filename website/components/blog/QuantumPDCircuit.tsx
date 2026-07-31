@@ -140,7 +140,7 @@ const Segment: React.FC<{ move: Move; active: boolean; idx: number; player: stri
         borderBottomLeftRadius: isFirst ? "6px" : "0",
         borderTopRightRadius: isLast ? "6px" : "0",
         borderBottomRightRadius: isLast ? "6px" : "0",
-        color: active ? "#fff" : "#374151",
+        color: active ? "white" : "gray.700",
         transition: "opacity 0.15s",
         _hover: { opacity: 0.85 },
       })}
@@ -247,10 +247,10 @@ export default function QuantumPDCircuit() {
         border: "1px solid rgba(123, 63, 160, 0.15)",
       })}
     >
-      <p className={css({ fontSize: "0.95rem", fontWeight: "bold", marginBottom: "0.35rem", color: "#374151" })}>
+      <p className={css({ fontSize: "0.95rem", fontWeight: "bold", marginBottom: "0.35rem", color: "gray.700" })}>
         Try it yourself: can loyalty become the smart move?
       </p>
-      <p className={css({ fontSize: "0.8rem", color: "#6b7280", marginBottom: "1rem" })}>
+      <p className={css({ fontSize: "0.8rem", color: "gray.500", marginBottom: "1rem" })}>
         Right now, Walter and Jesse both betray — the classic trap, five years each. Set each man&rsquo;s move in the
         grid below and watch Saul&rsquo;s file, and the sentences, update live. Try setting both to{" "}
         <strong>Flip both</strong>.
@@ -316,9 +316,9 @@ export default function QuantumPDCircuit() {
 
       <p
         aria-live="polite"
-        className={css({ fontSize: "0.85rem", color: "#374151", textAlign: "center", marginTop: "1rem" })}
+        className={css({ fontSize: "0.85rem", color: "gray.700", textAlign: "center", marginTop: "1rem" })}
       >
-        {verdict} <span className={css({ color: "#6b7280" })}>(lower is better)</span>
+        {verdict} <span className={css({ color: "gray.500" })}>(lower is better)</span>
       </p>
     </div>
   );

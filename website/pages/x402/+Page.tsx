@@ -140,7 +140,7 @@ const prose = css({
   },
   "& pre": {
     backgroundColor: "#1e1e1e",
-    color: "#d4d4d4",
+    color: "neutral.300",
     padding: "16px",
     borderRadius: "8px",
     overflowX: "auto",
@@ -180,8 +180,8 @@ const statusBadge = css({
   borderRadius: "9999px",
   fontSize: "sm",
   fontWeight: "medium",
-  backgroundColor: "#f3f4f6",
-  color: "#6b7280",
+  backgroundColor: "gray.100",
+  color: "gray.500",
 });
 
 const statusBadgeOk = css({
@@ -190,8 +190,8 @@ const statusBadgeOk = css({
   borderRadius: "9999px",
   fontSize: "sm",
   fontWeight: "medium",
-  backgroundColor: "#dcfce7",
-  color: "#166534",
+  backgroundColor: "green.100",
+  color: "green.800",
 });
 
 const statusBadgeError = css({
@@ -200,8 +200,8 @@ const statusBadgeError = css({
   borderRadius: "9999px",
   fontSize: "sm",
   fontWeight: "medium",
-  backgroundColor: "#fee2e2",
-  color: "#991b1b",
+  backgroundColor: "red.100",
+  color: "red.800",
 });
 
 const endpointBox = css({
@@ -226,7 +226,7 @@ const valuePropList = css({
       content: '"✓"',
       position: "absolute",
       left: "0",
-      color: "#16a34a",
+      color: "green.600",
       fontWeight: "bold",
     },
   },
@@ -239,7 +239,7 @@ const stepNumber = css({
   width: "28px",
   height: "28px",
   borderRadius: "9999px",
-  backgroundColor: "#2563eb",
+  backgroundColor: "blue.600",
   color: "white",
   fontSize: "sm",
   fontWeight: "bold",

@@ -77,7 +77,7 @@ const statusRow = css({
 
 const label = css({
   fontSize: "sm",
-  color: "#6b7280",
+  color: "gray.500",
   fontWeight: "medium",
 });
 
@@ -102,7 +102,7 @@ const txStatus = css({
 
 const connectHint = css({
   fontSize: "sm",
-  color: "#6b7280",
+  color: "gray.500",
   textAlign: "center",
   padding: "12px",
 });
@@ -282,20 +282,20 @@ export function FacilitatorApproval({
       <div className={statusRow}>
         <div>
           <p className={label}>Your current USDC approval on {usdcConfig.name}</p>
-          <p className={`${valueText} ${hasAllowance ? css({ color: "#166534" }) : css({ color: "#6b7280" })}`}>
+          <p className={`${valueText} ${hasAllowance ? css({ color: "green.800" }) : css({ color: "gray.500" })}`}>
             {isReadingAllowance ? "Loading…" : `${formattedAllowance} USDC`}
           </p>
         </div>
         {facilitatorAddress && (
           <div>
             <p className={label}>Facilitator address</p>
-            <p className={css({ fontSize: "xs", fontFamily: "monospace", color: "#374151" })}>{facilitatorAddress}</p>
+            <p className={css({ fontSize: "xs", fontFamily: "monospace", color: "gray.700" })}>{facilitatorAddress}</p>
           </div>
         )}
       </div>
 
       {/* USDC contract info */}
-      <p className={css({ fontSize: "xs", color: "#9ca3af", marginBottom: "3" })}>
+      <p className={css({ fontSize: "xs", color: "gray.400", marginBottom: "3" })}>
         USDC on {usdcConfig.name}: <code>{usdcConfig.address}</code>
       </p>
 
@@ -324,13 +324,13 @@ export function FacilitatorApproval({
       </div>
 
       {(isApproving || isConfirming) && (
-        <div className={`${txStatus} ${css({ backgroundColor: "#eff6ff", color: "#1e40af" })}`}>
+        <div className={`${txStatus} ${css({ backgroundColor: "blue.50", color: "blue.800" })}`}>
           {isApproving ? "⏳ Confirm in your wallet…" : "⏳ Waiting for confirmation…"}
         </div>
       )}
 
       {isSuccess && (
-        <div className={`${txStatus} ${css({ backgroundColor: "#dcfce7", color: "#166534" })}`}>
+        <div className={`${txStatus} ${css({ backgroundColor: "green.100", color: "green.800" })}`}>
           ✓ Approval updated successfully
         </div>
       )}

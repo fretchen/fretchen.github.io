@@ -314,7 +314,7 @@ const ProofDemo: React.FC = () => {
         borderRadius: "8px",
         padding: "20px",
         margin: "20px 0",
-        backgroundColor: "#f9fafb",
+        backgroundColor: "codeBg",
       })}
     >
       <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "16px" })}>
@@ -326,7 +326,7 @@ const ProofDemo: React.FC = () => {
         className={css({
           marginBottom: "20px",
           padding: "16px",
-          backgroundColor: "#f9fafb",
+          backgroundColor: "codeBg",
           borderRadius: "8px",
           border: "1px solid #d1d5db",
         })}
@@ -340,7 +340,7 @@ const ProofDemo: React.FC = () => {
               key={req.id}
               className={css({
                 padding: "8px 12px",
-                backgroundColor: "#fff",
+                backgroundColor: "white",
                 borderRadius: "4px",
                 border: "1px solid #d1d5db",
                 fontSize: "13px",
@@ -359,8 +359,8 @@ const ProofDemo: React.FC = () => {
             onClick={() => setActiveTab("generate")}
             className={css({
               padding: "8px 16px",
-              backgroundColor: activeTab === "generate" ? "#f9fafb" : "transparent",
-              color: activeTab === "generate" ? "#374151" : "#6b7280",
+              backgroundColor: activeTab === "generate" ? "codeBg" : "transparent",
+              color: activeTab === "generate" ? "gray.700" : "gray.500",
               border: activeTab === "generate" ? "1px solid #d1d5db" : "1px solid transparent",
               borderBottom: activeTab === "generate" ? "1px solid #f9fafb" : "1px solid #e5e7eb",
               borderRadius: "4px 4px 0 0",
@@ -375,8 +375,8 @@ const ProofDemo: React.FC = () => {
             onClick={() => setActiveTab("validate")}
             className={css({
               padding: "8px 16px",
-              backgroundColor: activeTab === "validate" ? "#f9fafb" : "transparent",
-              color: activeTab === "validate" ? "#374151" : "#6b7280",
+              backgroundColor: activeTab === "validate" ? "codeBg" : "transparent",
+              color: activeTab === "validate" ? "gray.700" : "gray.500",
               border: activeTab === "validate" ? "1px solid #d1d5db" : "1px solid transparent",
               borderBottom: activeTab === "validate" ? "1px solid #f9fafb" : "1px solid #e5e7eb",
               borderRadius: "4px 4px 0 0",
@@ -397,7 +397,7 @@ const ProofDemo: React.FC = () => {
             className={css({
               marginBottom: "16px",
               padding: "16px",
-              backgroundColor: "#fff",
+              backgroundColor: "white",
               borderRadius: "4px",
               border: "1px solid #e5e7eb",
             })}
@@ -426,15 +426,15 @@ const ProofDemo: React.FC = () => {
               onClick={handleGenerateProof}
               className={css({
                 padding: "8px 16px",
-                backgroundColor: "#374151",
+                backgroundColor: "gray.700",
                 color: "white",
                 border: "1px solid #374151",
                 borderRadius: "4px",
                 cursor: "pointer",
                 fontSize: "14px",
                 "&:hover": {
-                  backgroundColor: "#4b5563",
-                  borderColor: "#4b5563",
+                  backgroundColor: "gray.600",
+                  borderColor: "gray.600",
                 },
               })}
             >
@@ -446,12 +446,12 @@ const ProofDemo: React.FC = () => {
             <div
               className={css({
                 padding: "16px",
-                backgroundColor: "#f9fafb",
+                backgroundColor: "codeBg",
                 borderRadius: "4px",
                 border: "1px solid #e5e7eb",
               })}
             >
-              <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "12px", color: "#374151" })}>
+              <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "12px", color: "gray.700" })}>
                 Generated Proof for {sampleBatch.requests[selectedUser].owner}
               </h4>
               <div className={css({ marginBottom: "12px" })}>
@@ -471,7 +471,7 @@ const ProofDemo: React.FC = () => {
                     className={css({
                       fontSize: "11px",
                       fontFamily: "monospace",
-                      backgroundColor: "#fff",
+                      backgroundColor: "white",
                       padding: "8px",
                       borderRadius: "4px",
                       border: "1px solid #d1d5db",
@@ -489,7 +489,7 @@ const ProofDemo: React.FC = () => {
                       top: "8px",
                       right: "8px",
                       padding: "4px 8px",
-                      backgroundColor: "#6b7280",
+                      backgroundColor: "gray.500",
                       color: "white",
                       border: "none",
                       borderRadius: "4px",
@@ -513,7 +513,7 @@ const ProofDemo: React.FC = () => {
             className={css({
               marginBottom: "16px",
               padding: "16px",
-              backgroundColor: "#fff",
+              backgroundColor: "white",
               borderRadius: "4px",
               border: "1px solid #e5e7eb",
             })}
@@ -545,7 +545,7 @@ const ProofDemo: React.FC = () => {
               disabled={!validationInput.trim()}
               className={css({
                 padding: "8px 16px",
-                backgroundColor: validationInput.trim() ? "#374151" : "#9ca3af",
+                backgroundColor: validationInput.trim() ? "gray.700" : "gray.400",
                 color: "white",
                 border: "none",
                 borderRadius: "4px",
@@ -553,7 +553,7 @@ const ProofDemo: React.FC = () => {
                 fontSize: "14px",
                 "&:hover": validationInput.trim()
                   ? {
-                      backgroundColor: "#4b5563",
+                      backgroundColor: "gray.600",
                     }
                   : {},
               })}
@@ -566,9 +566,9 @@ const ProofDemo: React.FC = () => {
             <div
               className={css({
                 padding: "16px",
-                backgroundColor: validationResult.isValid ? "#f9fafb" : "#fef2f2",
+                backgroundColor: validationResult.isValid ? "codeBg" : "red.50",
                 borderRadius: "4px",
-                border: `1px solid ${validationResult.isValid ? "#d1d5db" : "#fecaca"}`,
+                border: `1px solid ${validationResult.isValid ? "gray.300" : "red.200"}`,
               })}
             >
               <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "12px" })}>
@@ -579,7 +579,7 @@ const ProofDemo: React.FC = () => {
                   fontSize: "14px",
                   fontWeight: "medium",
                   marginBottom: "12px",
-                  color: validationResult.isValid ? "#166534" : "#dc2626",
+                  color: validationResult.isValid ? "green.800" : "red.600",
                 })}
               >
                 {validationResult.message}
@@ -594,7 +594,7 @@ const ProofDemo: React.FC = () => {
                         className={css({
                           fontSize: "12px",
                           fontFamily: "monospace",
-                          backgroundColor: "#fff",
+                          backgroundColor: "white",
                           padding: "4px 8px",
                           borderRadius: "4px",
                           border: "1px solid #e5e7eb",
@@ -768,7 +768,7 @@ const BatchCreator: React.FC = () => {
         borderRadius: "8px",
         padding: "20px",
         margin: "20px 0",
-        backgroundColor: "#f9fafb",
+        backgroundColor: "codeBg",
       })}
     >
       <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "16px" })}>
@@ -779,12 +779,12 @@ const BatchCreator: React.FC = () => {
         className={css({
           marginBottom: "20px",
           padding: "16px",
-          backgroundColor: "#eff6ff",
+          backgroundColor: "blue.50",
           borderRadius: "8px",
           border: "1px solid #bfdbfe",
         })}
       >
-        <p className={css({ fontSize: "14px", color: "#1e40af", marginBottom: "8px" })}>
+        <p className={css({ fontSize: "14px", color: "blue.800", marginBottom: "8px" })}>
           <strong>How it works:</strong> Send LLM requests and get immediate responses. After {BATCH_SIZE_THRESHOLD}{" "}
           requests, a Merkle tree is automatically created for cost-efficient blockchain settlement.
         </p>
@@ -795,7 +795,7 @@ const BatchCreator: React.FC = () => {
         className={css({
           marginBottom: "1.5rem",
           padding: "1rem",
-          backgroundColor: "#fff",
+          backgroundColor: "white",
           borderRadius: "4px",
           border: "1px solid #e5e7eb",
         })}
@@ -850,13 +850,13 @@ const BatchCreator: React.FC = () => {
             disabled={!currentPrompt.trim()}
             className={css({
               padding: "0.5rem 1rem",
-              backgroundColor: currentPrompt.trim() ? "#374151" : "#9ca3af",
+              backgroundColor: currentPrompt.trim() ? "gray.700" : "gray.400",
               color: "white",
               border: "none",
               borderRadius: "4px",
               cursor: currentPrompt.trim() ? "pointer" : "not-allowed",
               transition: "background-color 0.2s",
-              "&:hover": { backgroundColor: currentPrompt.trim() ? "#4b5563" : "#9ca3af" },
+              "&:hover": { backgroundColor: currentPrompt.trim() ? "gray.600" : "gray.400" },
             })}
           >
             Send Request
@@ -866,13 +866,13 @@ const BatchCreator: React.FC = () => {
             onClick={handleRandomRequest}
             className={css({
               padding: "0.5rem 1rem",
-              backgroundColor: "#374151",
+              backgroundColor: "gray.700",
               color: "white",
               border: "none",
               borderRadius: "4px",
               cursor: "pointer",
               transition: "background-color 0.2s",
-              "&:hover": { backgroundColor: "#4b5563" },
+              "&:hover": { backgroundColor: "gray.600" },
             })}
           >
             Send Random Request
@@ -882,13 +882,13 @@ const BatchCreator: React.FC = () => {
             onClick={resetDemo}
             className={css({
               padding: "0.5rem 1rem",
-              backgroundColor: "#ef4444",
+              backgroundColor: "red.500",
               color: "white",
               border: "none",
               borderRadius: "4px",
               cursor: "pointer",
               transition: "background-color 0.2s",
-              "&:hover": { backgroundColor: "#dc2626" },
+              "&:hover": { backgroundColor: "red.600" },
             })}
           >
             Reset Demo
@@ -901,14 +901,14 @@ const BatchCreator: React.FC = () => {
         <div
           className={css({
             padding: "0.75rem",
-            backgroundColor: "#f0fdf4",
+            backgroundColor: "green.50",
             border: "1px solid #bbf7d0",
             borderRadius: "4px",
             marginBottom: "1rem",
           })}
         >
           <strong>🌳 Merkle Root:</strong> <code className={css({ fontSize: "0.8rem" })}>{merkleRoot}</code>
-          <div className={css({ fontSize: "0.8rem", color: "#166534", marginTop: "0.25rem" })}>
+          <div className={css({ fontSize: "0.8rem", color: "green.800", marginTop: "0.25rem" })}>
             All requests can now be processed with a single blockchain transaction!
           </div>
           {/* Tree Visualization */}
@@ -919,7 +919,7 @@ const BatchCreator: React.FC = () => {
                 className={css({
                   fontSize: "0.7rem",
                   fontFamily: "monospace",
-                  backgroundColor: "#fff",
+                  backgroundColor: "white",
                   padding: "0.5rem",
                   borderRadius: "4px",
                   border: "1px solid #bbf7d0",
@@ -942,8 +942,8 @@ const BatchCreator: React.FC = () => {
             className={css({
               padding: "1.5rem",
               textAlign: "center",
-              color: "#6b7280",
-              backgroundColor: "#fff",
+              color: "gray.500",
+              backgroundColor: "white",
               borderRadius: "4px",
               border: "1px solid #e5e7eb",
             })}
@@ -956,7 +956,7 @@ const BatchCreator: React.FC = () => {
               key={request.id}
               className={css({
                 padding: "1rem",
-                backgroundColor: "#fff",
+                backgroundColor: "white",
                 border: "1px solid #e5e7eb",
                 borderRadius: "4px",
                 marginBottom: "0.75rem",
@@ -1048,7 +1048,7 @@ const BatchCreator: React.FC = () => {
                     className={css({
                       fontSize: "0.78rem",
                       fontFamily: "monospace",
-                      backgroundColor: "#f3f4f6",
+                      backgroundColor: "gray.100",
                       padding: "0.22rem 0.5rem",
                       borderRadius: "3px",
                       border: "1px solid #e5e7eb",

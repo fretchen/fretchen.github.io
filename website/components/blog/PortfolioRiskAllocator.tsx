@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { css } from "../../styled-system/css";
 import { DATA } from "./etfData";
+import { ESSAY_ACCENT } from "./palette";
 
 const N_ETF = DATA.etf_names.length;
 const ETF_INDEX = new Map(DATA.etf_names.map((name, i) => [name, i]));
@@ -213,7 +214,7 @@ export default function PortfolioRiskAllocator() {
         className={css({
           fontSize: "1.1rem",
           fontWeight: "bold",
-          color: "#1f2937",
+          color: "gray.800",
           marginBottom: "0.25rem",
           marginTop: 0,
         })}
@@ -223,7 +224,7 @@ export default function PortfolioRiskAllocator() {
       <p
         className={css({
           fontSize: "0.85rem",
-          color: "#6b7280",
+          color: "gray.500",
           marginBottom: "1.25rem",
           marginTop: 0,
         })}
@@ -248,9 +249,9 @@ export default function PortfolioRiskAllocator() {
                 transition: "all 0.15s",
               })}
               style={{
-                borderColor: activePreset === i ? "#7b3fa0" : "#d1d5db",
+                borderColor: activePreset === i ? ESSAY_ACCENT : "#d1d5db",
                 backgroundColor: activePreset === i ? "rgba(123,63,160,0.08)" : "white",
-                color: activePreset === i ? "#7b3fa0" : "#374151",
+                color: activePreset === i ? ESSAY_ACCENT : "#374151",
               }}
             >
               {p.label}
@@ -258,7 +259,7 @@ export default function PortfolioRiskAllocator() {
           ))}
         </div>
         {activePreset >= 0 && (
-          <p className={css({ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.3rem", fontStyle: "italic" })}>
+          <p className={css({ fontSize: "0.75rem", color: "gray.500", marginTop: "0.3rem", fontStyle: "italic" })}>
             {PRESETS[activePreset].description}
           </p>
         )}
@@ -266,7 +267,7 @@ export default function PortfolioRiskAllocator() {
 
       {/* ── Draggable risk-budget bar ── */}
       <div className={css({ marginBottom: "1.25rem" })}>
-        <div className={css({ fontSize: "0.8rem", color: "#374151", marginBottom: "0.35rem", fontWeight: "600" })}>
+        <div className={css({ fontSize: "0.8rem", color: "gray.700", marginBottom: "0.35rem", fontWeight: "600" })}>
           Refine your mix — drag the ● circles to adjust
         </div>
         {/* Percentage labels above the track */}
@@ -386,7 +387,7 @@ export default function PortfolioRiskAllocator() {
                 className={css({ width: "8px", height: "8px", borderRadius: "50%", flexShrink: 0 })}
                 style={{ backgroundColor: cluster.color }}
               />
-              <span className={css({ fontSize: "0.65rem", color: "#6b7280" })}>{cluster.name}</span>
+              <span className={css({ fontSize: "0.65rem", color: "gray.500" })}>{cluster.name}</span>
             </div>
           ))}
         </div>
@@ -395,21 +396,21 @@ export default function PortfolioRiskAllocator() {
       {/* ── Bumpiness gauge (between drag bar and results) ── */}
       <div className={css({ marginBottom: "1.25rem" })}>
         <div className={css({ display: "flex", alignItems: "baseline", gap: "0.5rem", marginBottom: "0.3rem" })}>
-          <span className={css({ fontSize: "0.8rem", color: "#374151" })}>How bumpy is this portfolio?</span>
+          <span className={css({ fontSize: "0.8rem", color: "gray.700" })}>How bumpy is this portfolio?</span>
           <span
             className={css({ fontSize: "1.1rem", fontWeight: "bold" })}
             style={{ color: bumpinessColor(risk.portVol) }}
           >
             {risk.portVol.toFixed(1)}%
           </span>
-          <span className={css({ fontSize: "0.65rem", color: "#9ca3af" })}>per year</span>
+          <span className={css({ fontSize: "0.65rem", color: "gray.400" })}>per year</span>
         </div>
         <div
           className={css({
             position: "relative",
             height: "10px",
             borderRadius: "5px",
-            backgroundColor: "#f3f4f6",
+            backgroundColor: "gray.100",
             overflow: "hidden",
           })}
         >
@@ -428,7 +429,7 @@ export default function PortfolioRiskAllocator() {
             display: "flex",
             justifyContent: "space-between",
             fontSize: "0.6rem",
-            color: "#9ca3af",
+            color: "gray.400",
             marginTop: "0.15rem",
           })}
         >
@@ -448,7 +449,7 @@ export default function PortfolioRiskAllocator() {
       >
         {/* Capital allocation bar */}
         <div className={css({ marginBottom: "0.75rem" })}>
-          <div className={css({ fontSize: "0.7rem", color: "#6b7280", marginBottom: "0.2rem" })}>
+          <div className={css({ fontSize: "0.7rem", color: "gray.500", marginBottom: "0.2rem" })}>
             Capital allocation (computed)
           </div>
           <div
@@ -499,11 +500,11 @@ export default function PortfolioRiskAllocator() {
                 className={css({
                   borderLeft: "4px solid",
                   borderRadius: "6px",
-                  backgroundColor: isOpen ? "#f9fafb" : "white",
+                  backgroundColor: isOpen ? "codeBg" : "white",
                   border: "1px solid #e5e7eb",
                   overflow: "hidden",
                   transition: "background-color 0.15s",
-                  _hover: { backgroundColor: "#f9fafb" },
+                  _hover: { backgroundColor: "codeBg" },
                 })}
                 style={{ borderLeftColor: cluster.color, borderLeftWidth: "4px", borderLeftStyle: "solid" }}
               >
@@ -525,11 +526,11 @@ export default function PortfolioRiskAllocator() {
                     <span className={css({ fontSize: "0.85rem", fontWeight: "bold" })} style={{ color: cluster.color }}>
                       {cluster.name}
                     </span>
-                    <span className={css({ fontSize: "0.8rem", color: "#374151", fontWeight: "600" })}>
+                    <span className={css({ fontSize: "0.8rem", color: "gray.700", fontWeight: "600" })}>
                       {risk.clusterWeight[ci].toFixed(0)}% capital
                     </span>
                   </div>
-                  <span className={css({ fontSize: "0.75rem", color: "#6b7280" })}>
+                  <span className={css({ fontSize: "0.75rem", color: "gray.500" })}>
                     {isOpen ? "▾ Hide ETFs" : "▸ Show ETFs"}
                   </span>
                 </button>
@@ -539,16 +540,16 @@ export default function PortfolioRiskAllocator() {
                     <table className={css({ width: "100%", fontSize: "0.7rem", borderCollapse: "collapse" })}>
                       <thead>
                         <tr className={css({ borderBottom: "1px solid #e5e7eb" })}>
-                          <th className={css({ textAlign: "left", padding: "0.2rem 0.3rem", color: "#6b7280" })}>
+                          <th className={css({ textAlign: "left", padding: "0.2rem 0.3rem", color: "gray.500" })}>
                             ETF
                           </th>
-                          <th className={css({ textAlign: "right", padding: "0.2rem 0.3rem", color: "#6b7280" })}>
+                          <th className={css({ textAlign: "right", padding: "0.2rem 0.3rem", color: "gray.500" })}>
                             Weight
                           </th>
-                          <th className={css({ textAlign: "right", padding: "0.2rem 0.3rem", color: "#6b7280" })}>
+                          <th className={css({ textAlign: "right", padding: "0.2rem 0.3rem", color: "gray.500" })}>
                             Vol (ann.)
                           </th>
-                          <th className={css({ textAlign: "right", padding: "0.2rem 0.3rem", color: "#6b7280" })}>
+                          <th className={css({ textAlign: "right", padding: "0.2rem 0.3rem", color: "gray.500" })}>
                             Risk contrib.
                           </th>
                         </tr>
@@ -559,16 +560,16 @@ export default function PortfolioRiskAllocator() {
                           const etfVol = Math.sqrt(DATA.cov_etf_ann[idx][idx]) * 100;
                           return (
                             <tr key={etf} className={css({ borderBottom: "1px solid #f3f4f6" })}>
-                              <td className={css({ padding: "0.2rem 0.3rem", color: "#374151" })}>
+                              <td className={css({ padding: "0.2rem 0.3rem", color: "gray.700" })}>
                                 {DATA.etf_labels[idx]}{" "}
                                 <a
                                   href={DATA.etf_urls[idx]}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className={css({
-                                    color: "#6b7280",
+                                    color: "gray.500",
                                     textDecoration: "underline",
-                                    _hover: { color: "#374151" },
+                                    _hover: { color: "gray.700" },
                                   })}
                                 >
                                   {etf}

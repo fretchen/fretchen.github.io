@@ -1152,7 +1152,7 @@ export const toast = {
     },
     '&[data-type="warning"]': {
       backgroundColor: "rgba(255, 193, 7, 0.95)",
-      color: "#000",
+      color: "black",
     },
   }),
   icon: css({

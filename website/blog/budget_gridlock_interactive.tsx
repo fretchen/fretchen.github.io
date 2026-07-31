@@ -182,7 +182,7 @@ const BudgetNegotiationWidget: React.FC = () => {
           fontWeight: "medium",
           textAlign: "center",
           marginBottom: "1rem",
-          color: "#374151",
+          color: "gray.700",
         })}
       >
         When is cooperation rational?
@@ -194,7 +194,7 @@ const BudgetNegotiationWidget: React.FC = () => {
           className={css({
             display: "block",
             fontSize: "0.85rem",
-            color: "#374151",
+            color: "gray.700",
             marginBottom: "0.5rem",
           })}
         >
@@ -205,7 +205,7 @@ const BudgetNegotiationWidget: React.FC = () => {
             display: "flex",
             justifyContent: "space-between",
             fontSize: "0.75rem",
-            color: "#6b7280",
+            color: "gray.500",
             marginBottom: "0.25rem",
           })}
         >
@@ -229,7 +229,7 @@ const BudgetNegotiationWidget: React.FC = () => {
           className={css({
             display: "block",
             fontSize: "0.85rem",
-            color: "#374151",
+            color: "gray.700",
             marginBottom: "0.5rem",
           })}
         >
@@ -240,7 +240,7 @@ const BudgetNegotiationWidget: React.FC = () => {
             display: "flex",
             justifyContent: "space-between",
             fontSize: "0.75rem",
-            color: "#6b7280",
+            color: "gray.500",
             marginBottom: "0.25rem",
           })}
         >
@@ -262,7 +262,7 @@ const BudgetNegotiationWidget: React.FC = () => {
       <p
         className={css({
           fontSize: "0.85rem",
-          color: "#374151",
+          color: "gray.700",
           textAlign: "center",
           marginBottom: "0.75rem",
         })}
@@ -281,7 +281,7 @@ const BudgetNegotiationWidget: React.FC = () => {
       >
         <div
           className={css({
-            backgroundColor: coopPayoffHigher ? "#f0fdf4" : "#f9fafb",
+            backgroundColor: coopPayoffHigher ? "green.50" : "codeBg",
             border: coopPayoffHigher ? "2px solid #22c55e" : "1px solid #e5e7eb",
             borderRadius: "6px",
             padding: "1rem",
@@ -290,7 +290,7 @@ const BudgetNegotiationWidget: React.FC = () => {
         >
           <div
             className={css({
-              color: coopPayoffHigher ? "#22c55e" : "#6b7280",
+              color: coopPayoffHigher ? "green.500" : "gray.500",
               fontWeight: "bold",
               fontSize: "0.9rem",
             })}
@@ -304,7 +304,7 @@ const BudgetNegotiationWidget: React.FC = () => {
 
         <div
           className={css({
-            backgroundColor: !coopPayoffHigher ? "#fef2f2" : "#f9fafb",
+            backgroundColor: !coopPayoffHigher ? "red.50" : "codeBg",
             border: !coopPayoffHigher ? "2px solid #ef4444" : "1px solid #e5e7eb",
             borderRadius: "6px",
             padding: "1rem",
@@ -313,7 +313,7 @@ const BudgetNegotiationWidget: React.FC = () => {
         >
           <div
             className={css({
-              color: !coopPayoffHigher ? "#ef4444" : "#6b7280",
+              color: !coopPayoffHigher ? "red.500" : "gray.500",
               fontWeight: "bold",
               fontSize: "0.9rem",
             })}
@@ -330,7 +330,7 @@ const BudgetNegotiationWidget: React.FC = () => {
       <p
         className={css({
           fontSize: "0.9rem",
-          color: "#374151",
+          color: "gray.700",
           textAlign: "center",
           fontStyle: "italic",
           marginBottom: "1rem",
@@ -342,11 +342,11 @@ const BudgetNegotiationWidget: React.FC = () => {
       {/* Technical details - collapsed */}
       <details
         className={css({
-          backgroundColor: "#f9fafb",
+          backgroundColor: "codeBg",
           padding: "0.75rem",
           borderRadius: "4px",
           fontSize: "0.75rem",
-          color: "#6b7280",
+          color: "gray.500",
         })}
       >
         <summary className={css({ cursor: "pointer", fontWeight: "medium" })}>🔬 Technical details</summary>
@@ -366,7 +366,7 @@ const BudgetNegotiationWidget: React.FC = () => {
             className={css({
               marginTop: "0.5rem",
               padding: "0.25rem 0.5rem",
-              backgroundColor: "#3b82f6",
+              backgroundColor: "blue.500",
               color: "white",
               border: "none",
               borderRadius: "4px",

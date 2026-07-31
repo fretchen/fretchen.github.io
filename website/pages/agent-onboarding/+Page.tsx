@@ -1,6 +1,7 @@
 import React, { useRef } from "react";
 import { css } from "../../styled-system/css";
 import * as styles from "../../layouts/shared";
+import { sectionRule } from "../../styled-system/recipes";
 import { post } from "../../components/Post.styles";
 import { AgentChecker } from "../../components/AgentChecker";
 import { TableOfContents } from "../../components/TableOfContents";
@@ -191,7 +192,14 @@ export default function Page() {
       <div className={post.articleLayout}>
         <div />
         <article ref={contentRef} className={css({ padding: "4" })}>
-          {/* Status banner: scope + honesty, not a warning label. */}
+          {/* Title first, like every other page; the status banner follows it. */}
+          <h1 className={css({ fontSize: "3xl", fontWeight: "bold", mb: "3", color: "gray.800" })}>
+            Build your own agent
+          </h1>
+          <span className={sectionRule({ territory: "explore" })} aria-hidden="true" />
+
+          {/* Status banner: scope + honesty, not a warning label — hence the lab's purple
+              rather than an alarm colour. */}
           <div
             className={css({
               bg: "alphaBanner.bg",
@@ -218,11 +226,8 @@ export default function Page() {
             </span>
           </div>
 
-          {/* Hero + audience + stack */}
-          <div className={css({ mb: "6", pt: "2" })}>
-            <h1 className={css({ fontSize: "3xl", fontWeight: "bold", mb: "4", color: "gray.800" })}>
-              Build your own agent
-            </h1>
+          {/* Standfirst — the h1 now sits above the banner. */}
+          <div className={css({ mb: "6" })}>
             <p
               className={css({
                 fontSize: "lg",

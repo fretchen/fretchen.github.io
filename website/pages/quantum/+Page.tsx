@@ -8,7 +8,7 @@ const QuantumPage: React.FC = () => {
   return (
     <div className={styles.container}>
       <h1 className={titleBar.title}>Quantum</h1>
-      <span className={sectionRule({ territory: "explore" })} aria-hidden="true" />
+      <span className={sectionRule({ territory: "voice" })} aria-hidden="true" />
       <p>
         Over the years, I worked on various projects in the field of quantum physics. Here, I collect some of the
         resulting notes.

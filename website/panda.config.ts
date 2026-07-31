@@ -177,7 +177,6 @@ const sectionRule = defineRecipe({
     territory: {
       voice: { backgroundColor: "brand" },
       explore: { backgroundColor: "explore" },
-      value: { backgroundColor: "supportStrong" },
     },
   },
   defaultVariants: { territory: "voice" },
@@ -233,11 +232,6 @@ export default defineConfig({
           // Ink on the orange fill. 5.52:1 — white was 2.84:1 and failed even the
           // large-text floor. Warm-dark on warm-light rather than pure black.
           onSupport: { value: "#431407" },
-          // Orange as text / rule / border, where the fill colour is too light. 5.18:1.
-          // Not darker than this: below ~H33 it starts colliding with danger red (H21).
-          // (Not named `value` — that key collides with Panda's own token shape and
-          // breaks codegen with "token.value.includes is not a function".)
-          supportStrong: { value: "#C2410C" },
 
           // Exploration. Also carries the "mix" series through the interactive essays,
           // tying prose to chart. Read from JS via token("colors.explore") — see
@@ -262,11 +256,15 @@ export default defineConfig({
       semanticTokens: {
         colors: {
           // Alpha/Experimental banner colors
+          // Scope/honesty banner on /agent-onboarding — not a warning, so no amber. Purple
+          // because that page is part of the lab; this makes the banner read as belonging
+          // to the section rather than raising an alarm. (Was indigo, a family in no part
+          // of the system.) Text 8.13:1 on the surface.
           alphaBanner: {
-            bg: { value: "{colors.indigo.50}" },
-            border: { value: "{colors.indigo.300}" },
-            text: { value: "{colors.indigo.800}" },
-            icon: { value: "{colors.indigo.600}" },
+            bg: { value: "{colors.purple.50}" },
+            border: { value: "{colors.purple.300}" },
+            text: { value: "{colors.purple.800}" },
+            icon: { value: "{colors.purple.700}" },
           },
         },
         spacing: {

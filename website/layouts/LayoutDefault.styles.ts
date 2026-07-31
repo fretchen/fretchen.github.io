@@ -231,5 +231,4 @@ export const layout = {
 export const navActive = {
   voice: css({ color: "brand", fontWeight: "semibold" }),
   explore: css({ color: "explore", fontWeight: "semibold" }),
-  value: css({ color: "supportStrong", fontWeight: "semibold" }),
 };

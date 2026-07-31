@@ -284,7 +284,7 @@ export default function Page() {
   return (
     <div className={styles.container}>
       <h1 className={titleBar.title}>x402 Facilitator</h1>
-      <span className={sectionRule({ territory: "value" })} aria-hidden="true" />
+      <span className={sectionRule({ territory: "explore" })} aria-hidden="true" />
 
       <div className={prose}>
         {/* ── 1. Hero ──────────────────────────────────────────────────── */}

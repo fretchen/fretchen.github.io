@@ -16,7 +16,7 @@ const App: React.FC = function () {
   return (
     <div className={css({ maxWidth: "900px", mx: "auto", px: "md" })}>
       <h1 className={titleBar.title}>Quantum Basics</h1>
-      <span className={sectionRule({ territory: "explore" })} aria-hidden="true" />
+      <span className={sectionRule({ territory: "voice" })} aria-hidden="true" />
       <p className={css({ marginBottom: "md", lineHeight: "1.5" })}>
         The hipster role is rather new to the quantum sector which has largely evolved under the radar to the greater
         public for the last one hundred years. To bring this into context, we will summarize some basic concepts of

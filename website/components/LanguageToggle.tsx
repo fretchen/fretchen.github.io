@@ -20,8 +20,8 @@ export default function LanguageToggle() {
   const containerStyles = css({
     display: "flex",
     alignItems: "center",
-    gap: "2px",
-    padding: "4px",
+    gap: "0.5",
+    padding: "1",
     backgroundColor: "gray.100",
     borderRadius: "6px",
     fontSize: "xs",

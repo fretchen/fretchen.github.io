@@ -64,7 +64,7 @@ interface ChainBadgeProps {
 const badgeBase = css({
   display: "inline-flex",
   alignItems: "center",
-  gap: "4px",
+  gap: "1",
   fontWeight: "600",
   borderRadius: "full",
   backdropFilter: "blur(4px)",
@@ -136,10 +136,10 @@ interface ChainInfoDisplayProps {
 const infoRow = css({
   display: "flex",
   alignItems: "center",
-  gap: "8px",
+  gap: "2",
   fontSize: "sm",
   color: "gray.600",
-  marginTop: "8px",
+  marginTop: "2",
 });
 
 const infoLabel = css({

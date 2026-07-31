@@ -61,7 +61,7 @@ export function getNetworkUSDCConfig(network: string): USDCConfig | null {
 const container = css({
   border: "1px solid token(colors.border, #e5e7eb)",
   borderRadius: "8px",
-  padding: "20px",
+  padding: "5",
   marginBottom: "6",
   backgroundColor: "codeBg",
 });
@@ -71,7 +71,7 @@ const statusRow = css({
   alignItems: "center",
   justifyContent: "space-between",
   flexWrap: "wrap",
-  gap: "8px",
+  gap: "2",
   marginBottom: "4",
 });
 
@@ -89,7 +89,7 @@ const valueText = css({
 const approveRow = css({
   display: "flex",
   alignItems: "center",
-  gap: "8px",
+  gap: "2",
   flexWrap: "wrap",
 });
 
@@ -104,13 +104,13 @@ const connectHint = css({
   fontSize: "sm",
   color: "gray.500",
   textAlign: "center",
-  padding: "12px",
+  padding: "3",
 });
 
 const networkRow = css({
   display: "flex",
   alignItems: "center",
-  gap: "8px",
+  gap: "2",
   flexWrap: "wrap",
   marginBottom: "4",
 });

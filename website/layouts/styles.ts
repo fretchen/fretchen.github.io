@@ -400,7 +400,7 @@ export const walletOptions = {
     zIndex: 2000, // Höherer z-index um über scrollbare Navigation zu sein
     right: "0",
     borderRadius: "sm",
-    marginTop: "2px", // Reduced gap to make it feel more connected
+    marginTop: "0.5", // Reduced gap to make it feel more connected
     border: "1px solid token(colors.border)",
     overflow: "hidden", // Ensures rounded corners work properly
   }),
@@ -441,7 +441,7 @@ export const post = {
     display: "grid",
     // Symmetric: empty left (250px) | content (720px) | ToC right (250px)
     gridTemplateColumns: "250px minmax(0, 720px) 250px",
-    gap: "2rem",
+    gap: "8",
     justifyContent: "center",
 
     // "Break out" of parent containers to use full viewport width
@@ -646,13 +646,13 @@ export const layout = {
     display: "flex",
     flexDirection: "column",
     width: "100%", // Full width instead of constrained
-    padding: "0 2rem", // Generous side margins for breathing room
+    padding: "0 32px", // Generous side margins for breathing room
     backgroundColor: "gray.50", // Subtle background for content area
     "@media (max-width: 768px)": {
-      padding: "0 1rem", // Smaller margins on tablet
+      padding: "0 16px", // Smaller margins on tablet
     },
     "@media (max-width: 480px)": {
-      padding: "0 0.5rem", // Minimal margins on mobile
+      padding: "0 8px", // Minimal margins on mobile
     },
   }),
   appbar: css({
@@ -774,7 +774,7 @@ export const layout = {
   footerContent: css({
     maxWidth: "1200px",
     margin: "0 auto",
-    padding: "0 1rem",
+    padding: "0 16px",
   }),
   hcard: css({
     display: "flex",
@@ -827,7 +827,7 @@ export const layout = {
   hcardLink: css({
     display: "flex",
     alignItems: "center",
-    gap: "2px",
+    gap: "0.5",
     color: "gray.600",
     textDecoration: "none",
     transition: "color 0.2s",

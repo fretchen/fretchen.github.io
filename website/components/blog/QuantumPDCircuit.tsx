@@ -131,7 +131,7 @@ const Segment: React.FC<{ move: Move; active: boolean; idx: number; player: stri
       className={css({
         fontSize: "xs",
         fontWeight: "600",
-        padding: "0.4rem 0.3rem",
+        padding: "6px 4px",
         whiteSpace: "nowrap",
         cursor: "pointer",
         border: "1px solid #d1d5db",
@@ -173,7 +173,7 @@ const MoveMatrix: React.FC<MoveMatrixProps> = ({ moveW, moveJ, onSelectW, onSele
         display: "grid",
         gridTemplateColumns: "auto repeat(3, minmax(0, 1fr))",
         alignItems: "center",
-        rowGap: "0.4rem",
+        rowGap: "1.5",
         columnGap: "0",
         maxWidth: "480px",
         margin: "0 auto 1.25rem",
@@ -195,7 +195,7 @@ const MoveMatrix: React.FC<MoveMatrixProps> = ({ moveW, moveJ, onSelectW, onSele
       {players.map((p) => (
         <React.Fragment key={p.name}>
           <span
-            className={css({ fontSize: "sm", fontWeight: "700", paddingRight: "0.6rem" })}
+            className={css({ fontSize: "sm", fontWeight: "700", paddingRight: "2.5" })}
             style={{ color: p.color }}
           >
             {p.name}
@@ -240,17 +240,17 @@ export default function QuantumPDCircuit() {
   return (
     <div
       className={css({
-        margin: "2rem 0",
-        padding: "1.5rem",
+        margin: "32px 0",
+        padding: "6",
         backgroundColor: "rgba(123, 63, 160, 0.04)",
         borderRadius: "8px",
         border: "1px solid rgba(123, 63, 160, 0.15)",
       })}
     >
-      <p className={css({ fontSize: "md", fontWeight: "bold", marginBottom: "0.35rem", color: "gray.700" })}>
+      <p className={css({ fontSize: "md", fontWeight: "bold", marginBottom: "1.5", color: "gray.700" })}>
         Try it yourself: can loyalty become the smart move?
       </p>
-      <p className={css({ fontSize: "sm", color: "gray.500", marginBottom: "1rem" })}>
+      <p className={css({ fontSize: "sm", color: "gray.500", marginBottom: "4" })}>
         Right now, Walter and Jesse both betray — the classic trap, five years each. Set each man&rsquo;s move in the
         grid below and watch Saul&rsquo;s file, and the sentences, update live. Try setting both to{" "}
         <strong>Flip both</strong>.
@@ -316,7 +316,7 @@ export default function QuantumPDCircuit() {
 
       <p
         aria-live="polite"
-        className={css({ fontSize: "sm", color: "gray.700", textAlign: "center", marginTop: "1rem" })}
+        className={css({ fontSize: "sm", color: "gray.700", textAlign: "center", marginTop: "4" })}
       >
         {verdict} <span className={css({ color: "gray.500" })}>(lower is better)</span>
       </p>

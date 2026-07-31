@@ -303,18 +303,18 @@ const FishingScenarioSelector: React.FC<{
   return (
     <div
       className={css({
-        marginBottom: "20px",
+        marginBottom: "5",
         textAlign: "center",
         border: "1px solid #e5e7eb",
         borderRadius: "8px",
-        padding: "16px",
+        padding: "4",
         background: "zinc.50",
       })}
     >
-      <div className={css({ fontSize: "md", fontWeight: "600", marginBottom: "8px" })}>
+      <div className={css({ fontSize: "md", fontWeight: "600", marginBottom: "2" })}>
         🌏 Neighboring Islands Culture
       </div>
-      <div className={css({ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" })}>
+      <div className={css({ display: "flex", gap: "3", justifyContent: "center", flexWrap: "wrap" })}>
         {Object.entries(scenarios).map(([key, info]) => {
           const isSelected = scenario === key;
           const isDisabled = gameStarted;
@@ -358,7 +358,7 @@ const FishingScenarioSelector: React.FC<{
               <div
                 className={css({
                   fontWeight: "600",
-                  marginBottom: "4px",
+                  marginBottom: "1",
                   color: isDisabled ? "gray.400" : "gray.900",
                 })}
               >
@@ -377,12 +377,12 @@ const FishingScenarioSelector: React.FC<{
           );
         })}
       </div>
-      <div className={css({ marginTop: "16px" })}>
+      <div className={css({ marginTop: "4" })}>
         <div
           className={css({
             fontSize: "sm",
             color: "slate.500",
-            marginBottom: "8px",
+            marginBottom: "2",
             fontWeight: "500",
           })}
         >
@@ -426,12 +426,12 @@ const FishingActionBar: React.FC<{
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: "12px",
-        marginBottom: "16px",
+        gap: "3",
+        marginBottom: "4",
       })}
     >
       {/* Progress Indicator */}
-      <div className={css({ display: "flex", gap: "8px", marginBottom: "8px" })}>
+      <div className={css({ display: "flex", gap: "2", marginBottom: "2" })}>
         {[1, 2, 3].map((roundNum) => (
           <div
             key={roundNum}
@@ -454,8 +454,8 @@ const FishingActionBar: React.FC<{
       </div>
 
       {/* Status */}
-      <div className={css({ fontSize: "md", textAlign: "center", marginBottom: "8px" })}>
-        <div className={css({ fontWeight: "600", marginBottom: "4px" })}>
+      <div className={css({ fontSize: "md", textAlign: "center", marginBottom: "2" })}>
+        <div className={css({ fontWeight: "600", marginBottom: "1" })}>
           Round {round} of 3 • Fish Stock: {round === 1 ? MODEL_PARAMS.s_init : history[round - 2].fishAfter} 🐟
         </div>
         <div className={css({ color: "slate.500", fontSize: "sm" })}>How many boats should Moana send out today?</div>
@@ -463,7 +463,7 @@ const FishingActionBar: React.FC<{
 
       {/* Boat Choice Buttons */}
       {!gameOver && !hasChosenBoats && (
-        <div className={css({ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center" })}>
+        <div className={css({ display: "flex", gap: "3", flexWrap: "wrap", justifyContent: "center" })}>
           <button
             onClick={() => onBoatChoice(OPTIMAL_BOATS.low_fishing)}
             className={css({
@@ -519,19 +519,19 @@ const FishingActionBar: React.FC<{
             fontSize: "sm",
             color: "slate.500",
             textAlign: "center",
-            marginTop: "4px",
+            marginTop: "1",
           })}
         >
-          <div className={css({ marginBottom: "4px" })}>
+          <div className={css({ marginBottom: "1" })}>
             <strong>Moana:</strong> {currentRoundHistory.moanaBoats} boats → {currentRoundHistory.moanaFish} fish
           </div>
-          <div className={css({ marginBottom: "4px" })}>
+          <div className={css({ marginBottom: "1" })}>
             <strong>Other Chiefs:</strong>{" "}
             {currentRoundHistory.otherBoats
               ?.map((boats, i) => `${otherChiefs[i]}: ${boats} boats (${currentRoundHistory.otherFish?.[i]} fish)`)
               .join(", ")}
           </div>
-          <div className={css({ marginBottom: "4px" })}>
+          <div className={css({ marginBottom: "1" })}>
             <strong>Total:</strong> {currentRoundHistory.totalBoats} boats caught {currentRoundHistory.totalCatch} fish
           </div>
           {currentRoundHistory.regeneration && currentRoundHistory.regeneration > 0 && (
@@ -746,18 +746,18 @@ const CommunityScenarioSelector: React.FC<{
   return (
     <div
       className={css({
-        marginBottom: "20px",
+        marginBottom: "5",
         textAlign: "center",
         border: "1px solid #e5e7eb",
         borderRadius: "8px",
-        padding: "16px",
+        padding: "4",
         background: "zinc.50",
       })}
     >
-      <div className={css({ fontSize: "md", fontWeight: "600", marginBottom: "8px" })}>
+      <div className={css({ fontSize: "md", fontWeight: "600", marginBottom: "2" })}>
         🏛️ Community Governance System
       </div>
-      <div className={css({ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" })}>
+      <div className={css({ display: "flex", gap: "3", justifyContent: "center", flexWrap: "wrap" })}>
         {Object.entries(scenarios).map(([key, info]) => {
           const isSelected = scenario === key;
 
@@ -815,18 +815,18 @@ const IslandEfficiencyScenarioSelector: React.FC<{
   return (
     <div
       className={css({
-        marginBottom: "20px",
+        marginBottom: "5",
         textAlign: "center",
         border: "1px solid #e5e7eb",
         borderRadius: "8px",
-        padding: "16px",
+        padding: "4",
         background: "zinc.50",
       })}
     >
-      <div className={css({ fontSize: "md", fontWeight: "600", marginBottom: "8px" })}>
+      <div className={css({ fontSize: "md", fontWeight: "600", marginBottom: "2" })}>
         🌏 Fishing Management System
       </div>
-      <div className={css({ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" })}>
+      <div className={css({ display: "flex", gap: "3", justifyContent: "center", flexWrap: "wrap" })}>
         {Object.entries(scenarios).map(([key, info]) => {
           const isSelected = scenario === key;
 
@@ -1469,7 +1469,7 @@ const FishingGameSimulator: React.FC = () => {
       className={css({
         border: "1px solid #bae6fd",
         borderRadius: "8px",
-        padding: "18px",
+        padding: "4.5",
         margin: "18px 0",
         background: "slate.50",
       })}
@@ -1585,7 +1585,7 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
       className={css({
         border: "1px solid #bae6fd",
         borderRadius: "8px",
-        padding: "18px",
+        padding: "4.5",
         margin: "18px 0",
         background: "slate.50",
       })}
@@ -1840,7 +1840,7 @@ const CommunityGovernanceSimulator: React.FC = () => {
       className={css({
         border: "1px solid #bae6fd",
         borderRadius: "8px",
-        padding: "18px",
+        padding: "4.5",
         margin: "18px 0",
         background: "slate.50",
       })}

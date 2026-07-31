@@ -169,8 +169,8 @@ const BudgetNegotiationWidget: React.FC = () => {
   return (
     <div
       className={css({
-        margin: "2rem 0",
-        padding: "1.5rem",
+        margin: "32px 0",
+        padding: "6",
         backgroundColor: "rgba(59, 130, 246, 0.05)",
         borderRadius: "4px",
         border: "1px solid rgba(59, 130, 246, 0.2)",
@@ -181,7 +181,7 @@ const BudgetNegotiationWidget: React.FC = () => {
           fontSize: "md",
           fontWeight: "medium",
           textAlign: "center",
-          marginBottom: "1rem",
+          marginBottom: "4",
           color: "gray.700",
         })}
       >
@@ -189,13 +189,13 @@ const BudgetNegotiationWidget: React.FC = () => {
       </h4>
 
       {/* Political Security slider */}
-      <div className={css({ marginBottom: "1.5rem" })}>
+      <div className={css({ marginBottom: "6" })}>
         <label
           className={css({
             display: "block",
             fontSize: "sm",
             color: "gray.700",
-            marginBottom: "0.5rem",
+            marginBottom: "2",
           })}
         >
           <strong>Political Security</strong>
@@ -206,7 +206,7 @@ const BudgetNegotiationWidget: React.FC = () => {
             justifyContent: "space-between",
             fontSize: "xs",
             color: "gray.500",
-            marginBottom: "0.25rem",
+            marginBottom: "1",
           })}
         >
           <span>🐦 Ferreira (fragile)</span>
@@ -224,13 +224,13 @@ const BudgetNegotiationWidget: React.FC = () => {
       </div>
 
       {/* Patience slider */}
-      <div className={css({ marginBottom: "1.5rem" })}>
+      <div className={css({ marginBottom: "6" })}>
         <label
           className={css({
             display: "block",
             fontSize: "sm",
             color: "gray.700",
-            marginBottom: "0.5rem",
+            marginBottom: "2",
           })}
         >
           <strong>Patience</strong>
@@ -241,7 +241,7 @@ const BudgetNegotiationWidget: React.FC = () => {
             justifyContent: "space-between",
             fontSize: "xs",
             color: "gray.500",
-            marginBottom: "0.25rem",
+            marginBottom: "1",
           })}
         >
           <span>Short-term</span>
@@ -264,7 +264,7 @@ const BudgetNegotiationWidget: React.FC = () => {
           fontSize: "sm",
           color: "gray.700",
           textAlign: "center",
-          marginBottom: "0.75rem",
+          marginBottom: "3",
         })}
       >
         Expected payoff over 10 years:
@@ -275,8 +275,8 @@ const BudgetNegotiationWidget: React.FC = () => {
         className={css({
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
-          gap: "1rem",
-          marginBottom: "1rem",
+          gap: "4",
+          marginBottom: "4",
         })}
       >
         <div
@@ -284,7 +284,7 @@ const BudgetNegotiationWidget: React.FC = () => {
             backgroundColor: coopPayoffHigher ? "green.50" : "codeBg",
             border: coopPayoffHigher ? "2px solid #22c55e" : "1px solid #e5e7eb",
             borderRadius: "6px",
-            padding: "1rem",
+            padding: "4",
             textAlign: "center",
           })}
         >
@@ -297,7 +297,7 @@ const BudgetNegotiationWidget: React.FC = () => {
           >
             🤝 Cooperate {coopPayoffHigher && "⬅"}
           </div>
-          <div className={css({ fontSize: "xl", fontWeight: "bold", marginTop: "0.5rem" })}>
+          <div className={css({ fontSize: "xl", fontWeight: "bold", marginTop: "2" })}>
             {results.cooperate.mean.toFixed(1)}
           </div>
         </div>
@@ -307,7 +307,7 @@ const BudgetNegotiationWidget: React.FC = () => {
             backgroundColor: !coopPayoffHigher ? "red.50" : "codeBg",
             border: !coopPayoffHigher ? "2px solid #ef4444" : "1px solid #e5e7eb",
             borderRadius: "6px",
-            padding: "1rem",
+            padding: "4",
             textAlign: "center",
           })}
         >
@@ -320,7 +320,7 @@ const BudgetNegotiationWidget: React.FC = () => {
           >
             👊 Winner-Takes-All {!coopPayoffHigher && "⬅"}
           </div>
-          <div className={css({ fontSize: "xl", fontWeight: "bold", marginTop: "0.5rem" })}>
+          <div className={css({ fontSize: "xl", fontWeight: "bold", marginTop: "2" })}>
             {results.wta.mean.toFixed(1)}
           </div>
         </div>
@@ -333,7 +333,7 @@ const BudgetNegotiationWidget: React.FC = () => {
           color: "gray.700",
           textAlign: "center",
           fontStyle: "italic",
-          marginBottom: "1rem",
+          marginBottom: "4",
         })}
       >
         {getExplanationText()}
@@ -343,14 +343,14 @@ const BudgetNegotiationWidget: React.FC = () => {
       <details
         className={css({
           backgroundColor: "codeBg",
-          padding: "0.75rem",
+          padding: "3",
           borderRadius: "4px",
           fontSize: "xs",
           color: "gray.500",
         })}
       >
         <summary className={css({ cursor: "pointer", fontWeight: "medium" })}>🔬 Technical details</summary>
-        <div className={css({ marginTop: "0.5rem" })}>
+        <div className={css({ marginTop: "2" })}>
           <strong>Model:</strong> Random walk X_{"{t+1}"} = X_t + ε, ε ~ N(0, σ²)
           <br />
           <strong>Parameters:</strong> X₀ = {X0.toFixed(2)}, σ = {sigma.toFixed(2)}, δ = {delta.toFixed(2)}
@@ -364,8 +364,8 @@ const BudgetNegotiationWidget: React.FC = () => {
           <button
             onClick={() => setSimKey((k) => k + 1)}
             className={css({
-              marginTop: "0.5rem",
-              padding: "0.25rem 0.5rem",
+              marginTop: "2",
+              padding: "4px 8px",
               backgroundColor: "blue.500",
               color: "white",
               border: "none",

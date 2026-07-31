@@ -28,7 +28,7 @@ const App: React.FC = function () {
         <code>qiskit</code>.
       </p>
 
-      <ul className={css({ paddingLeft: "2em", marginBottom: "md" })}>
+      <ul className={css({ paddingLeft: "8", marginBottom: "md" })}>
         <li>
           So if both things are known to you, you can directly start out. Otherwise, the introductory chapters of the
           qiskit textbook might be a great starting point.

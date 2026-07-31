@@ -119,7 +119,7 @@ const prose = css({
     lineHeight: "1.7",
   },
   "& ul, & ol": {
-    paddingLeft: "2em",
+    paddingLeft: "8",
     marginBottom: "4",
   },
   "& li": {
@@ -134,14 +134,14 @@ const prose = css({
   "& code": {
     fontSize: "sm",
     backgroundColor: "codeBg",
-    padding: "1px 4px",
+    padding: "2px 4px",
     borderRadius: "3px",
     fontFamily: "monospace",
   },
   "& pre": {
     backgroundColor: "#1e1e1e",
     color: "neutral.300",
-    padding: "16px",
+    padding: "4",
     borderRadius: "8px",
     overflowX: "auto",
     marginBottom: "4",
@@ -208,7 +208,7 @@ const endpointBox = css({
   backgroundColor: "codeBg",
   border: "1px solid token(colors.border, #e5e7eb)",
   borderRadius: "8px",
-  padding: "16px",
+  padding: "4",
   marginBottom: "4",
 });
 
@@ -219,7 +219,7 @@ const valuePropList = css({
   marginBottom: "6",
   "& li": {
     padding: "6px 0",
-    paddingLeft: "1.5em",
+    paddingLeft: "6",
     position: "relative",
     marginBottom: "1",
     "&::before": {
@@ -243,14 +243,14 @@ const stepNumber = css({
   color: "white",
   fontSize: "sm",
   fontWeight: "bold",
-  marginRight: "8px",
+  marginRight: "2",
   flexShrink: 0,
 });
 
 const stepContainer = css({
   border: "1px solid token(colors.border, #e5e7eb)",
   borderRadius: "8px",
-  padding: "20px",
+  padding: "5",
   marginBottom: "4",
   backgroundColor: "codeBg",
 });

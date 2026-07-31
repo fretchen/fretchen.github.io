@@ -55,8 +55,8 @@ export default function ShockCalculator() {
   return (
     <div
       className={css({
-        margin: "2rem 0",
-        padding: "1.5rem",
+        margin: "32px 0",
+        padding: "6",
         backgroundColor: "rgba(78, 121, 167, 0.04)",
         borderRadius: "8px",
         border: "1px solid rgba(78, 121, 167, 0.15)",
@@ -68,7 +68,7 @@ export default function ShockCalculator() {
           fontSize: "lg",
           fontWeight: "bold",
           color: "gray.800",
-          marginBottom: "0.25rem",
+          marginBottom: "1",
           marginTop: 0,
         })}
       >
@@ -78,7 +78,7 @@ export default function ShockCalculator() {
         className={css({
           fontSize: "sm",
           color: "gray.500",
-          marginBottom: "1.25rem",
+          marginBottom: "5",
           marginTop: 0,
         })}
       >
@@ -90,8 +90,8 @@ export default function ShockCalculator() {
         className={css({
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
-          gap: "1rem",
-          marginBottom: "1.25rem",
+          gap: "4",
+          marginBottom: "5",
           "@media (max-width: 480px)": {
             gridTemplateColumns: "1fr",
           },
@@ -104,12 +104,12 @@ export default function ShockCalculator() {
               fontSize: "sm",
               color: "gray.700",
               fontWeight: "600",
-              marginBottom: "0.3rem",
+              marginBottom: "1",
             })}
           >
             Monthly mortgage payment
           </label>
-          <div className={css({ display: "flex", alignItems: "center", gap: "0.3rem" })}>
+          <div className={css({ display: "flex", alignItems: "center", gap: "1" })}>
             <span className={css({ fontSize: "sm", color: "gray.500" })}>€</span>
             <input
               type="number"
@@ -120,7 +120,7 @@ export default function ShockCalculator() {
               onChange={(e) => setMonthlyPayment(Math.max(200, Math.min(5000, Number(e.target.value))))}
               className={css({
                 width: "100%",
-                padding: "0.5rem",
+                padding: "2",
                 borderRadius: "6px",
                 border: "1px solid #d1d5db",
                 fontSize: "md",
@@ -136,12 +136,12 @@ export default function ShockCalculator() {
               fontSize: "sm",
               color: "gray.700",
               fontWeight: "600",
-              marginBottom: "0.3rem",
+              marginBottom: "1",
             })}
           >
             Liquid savings
           </label>
-          <div className={css({ display: "flex", alignItems: "center", gap: "0.3rem" })}>
+          <div className={css({ display: "flex", alignItems: "center", gap: "1" })}>
             <span className={css({ fontSize: "sm", color: "gray.500" })}>€</span>
             <input
               type="number"
@@ -152,7 +152,7 @@ export default function ShockCalculator() {
               onChange={(e) => setSavings(Math.max(0, Math.min(200000, Number(e.target.value))))}
               className={css({
                 width: "100%",
-                padding: "0.5rem",
+                padding: "2",
                 borderRadius: "6px",
                 border: "1px solid #d1d5db",
                 fontSize: "md",
@@ -164,11 +164,11 @@ export default function ShockCalculator() {
       </div>
 
       {/* Shock toggles */}
-      <div className={css({ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.25rem" })}>
+      <div className={css({ display: "flex", flexDirection: "column", gap: "3", marginBottom: "5" })}>
         {/* Job loss */}
         <div
           className={css({
-            padding: "0.75rem",
+            padding: "3",
             borderRadius: "6px",
             border: "1px solid",
             transition: "all 0.15s",
@@ -178,7 +178,7 @@ export default function ShockCalculator() {
             backgroundColor: jobLossEnabled ? "rgba(239, 68, 68, 0.04)" : "white",
           }}
         >
-          <label className={css({ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" })}>
+          <label className={css({ display: "flex", alignItems: "center", gap: "2", cursor: "pointer" })}>
             <input
               type="checkbox"
               checked={jobLossEnabled}
@@ -193,14 +193,14 @@ export default function ShockCalculator() {
             )}
           </label>
           {jobLossEnabled && (
-            <div className={css({ marginTop: "0.5rem", paddingLeft: "1.75rem" })}>
-              <div className={css({ display: "flex", gap: "0.5rem", flexWrap: "wrap" })}>
+            <div className={css({ marginTop: "2", paddingLeft: "7" })}>
+              <div className={css({ display: "flex", gap: "2", flexWrap: "wrap" })}>
                 {JOB_LOSS_OPTIONS.map((m) => (
                   <button
                     key={m}
                     onClick={() => setJobLossMonths(m)}
                     className={css({
-                      padding: "0.3rem 0.6rem",
+                      padding: "4px 10px",
                       fontSize: "sm",
                       borderRadius: "4px",
                       cursor: "pointer",
@@ -225,7 +225,7 @@ export default function ShockCalculator() {
         {/* Emergency repair */}
         <div
           className={css({
-            padding: "0.75rem",
+            padding: "3",
             borderRadius: "6px",
             border: "1px solid",
             transition: "all 0.15s",
@@ -235,7 +235,7 @@ export default function ShockCalculator() {
             backgroundColor: repairEnabled ? "rgba(239, 68, 68, 0.04)" : "white",
           }}
         >
-          <label className={css({ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" })}>
+          <label className={css({ display: "flex", alignItems: "center", gap: "2", cursor: "pointer" })}>
             <input
               type="checkbox"
               checked={repairEnabled}
@@ -250,8 +250,8 @@ export default function ShockCalculator() {
             )}
           </label>
           {repairEnabled && (
-            <div className={css({ marginTop: "0.5rem", paddingLeft: "1.75rem" })}>
-              <div className={css({ display: "flex", alignItems: "center", gap: "0.5rem" })}>
+            <div className={css({ marginTop: "2", paddingLeft: "7" })}>
+              <div className={css({ display: "flex", alignItems: "center", gap: "2" })}>
                 <span className={css({ fontSize: "xs", color: "gray.500" })}>€{REPAIR_MIN.toLocaleString()}</span>
                 <input
                   type="range"
@@ -280,7 +280,7 @@ export default function ShockCalculator() {
       {/* Result bar */}
       <div
         className={css({
-          padding: "1rem",
+          padding: "4",
           borderRadius: "8px",
           backgroundColor: "white",
           border: "1px solid #e5e7eb",
@@ -291,7 +291,7 @@ export default function ShockCalculator() {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "baseline",
-            marginBottom: "0.5rem",
+            marginBottom: "2",
           })}
         >
           <span className={css({ fontSize: "sm", color: "gray.700", fontWeight: "600" })}>Savings after shocks</span>
@@ -348,7 +348,7 @@ export default function ShockCalculator() {
             justifyContent: "space-between",
             fontSize: "xs",
             color: "gray.400",
-            marginTop: "0.2rem",
+            marginTop: "1",
           })}
         >
           <span>€0</span>
@@ -359,7 +359,7 @@ export default function ShockCalculator() {
         <p
           className={css({
             fontSize: "sm",
-            marginTop: "0.5rem",
+            marginTop: "2",
             marginBottom: 0,
             fontWeight: "500",
           })}
@@ -371,7 +371,7 @@ export default function ShockCalculator() {
 
         {/* Breakdown */}
         {anyShock && (
-          <div className={css({ marginTop: "0.75rem", borderTop: "1px solid #f3f4f6", paddingTop: "0.5rem" })}>
+          <div className={css({ marginTop: "3", borderTop: "1px solid #f3f4f6", paddingTop: "2" })}>
             <div className={css({ fontSize: "xs", color: "gray.500" })}>
               <div className={css({ display: "flex", justifyContent: "space-between" })}>
                 <span>Starting savings</span>
@@ -397,8 +397,8 @@ export default function ShockCalculator() {
                   justifyContent: "space-between",
                   fontWeight: "bold",
                   borderTop: "1px solid #e5e7eb",
-                  paddingTop: "0.25rem",
-                  marginTop: "0.25rem",
+                  paddingTop: "1",
+                  marginTop: "1",
                 })}
                 style={{ color: isNegative ? "#991b1b" : "#374151" }}
               >

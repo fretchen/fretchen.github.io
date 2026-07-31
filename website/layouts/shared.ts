@@ -381,7 +381,7 @@ export const modal = {
   // Inline error message inside a modal
   error: css({
     fontSize: "sm",
-    color: "#c0392b",
+    color: "danger",
     lineHeight: "1.5",
     margin: "0 0 md 0",
   }),

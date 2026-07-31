@@ -914,43 +914,32 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
             {/* Error display - show x402 error or local error */}
             {(error || x402Error) && <div className={imageGen.compactError}>{error || x402Error}</div>}
 
-            {/* Payment receipt display */}
-            {paymentReceipt && (
-              <div
-                className={css({
-                  mt: "2",
-                  p: "2",
-                  fontSize: "xs",
-                  bg: "green.50",
-                  border: "1px solid",
-                  borderColor: "green.200",
-                  borderRadius: "md",
-                  color: "green.800",
-                })}
-              >
-                ✅ Payment confirmed •{" "}
-                <a
-                  href={`https://optimistic.etherscan.io/tx/${paymentReceipt.transaction}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={css({
-                    color: "green.600",
-                    textDecoration: "underline",
-                    _hover: { color: "green.700" },
-                  })}
-                >
-                  View transaction ↗
-                </a>
-              </div>
-            )}
-
-            {/* Erfolgreiche Erstellung */}
-            {tokenId && generatedImageUrl && (
+            {/* One success block, not two: the mint and the payment that bought it are a
+                single outcome, so a stacked "artwork created" panel plus a "payment
+                confirmed" panel said the same thing twice, in two different greens. */}
+            {(paymentReceipt || (tokenId && generatedImageUrl)) && (
               <div className={successMessage}>
-                <h4 className={css({ margin: 0, fontSize: "sm" })}>{artworkCreatedText}</h4>
-                <p className={css({ margin: "xs 0", fontSize: "sm" })}>
-                  ID: {tokenId.toString()} - {checkGalleryText}
-                </p>
+                {tokenId && generatedImageUrl && (
+                  <>
+                    <h4 className={css({ margin: 0, fontSize: "sm" })}>{artworkCreatedText}</h4>
+                    <p className={css({ margin: "xs 0", fontSize: "sm" })}>
+                      ID: {tokenId.toString()} - {checkGalleryText}
+                    </p>
+                  </>
+                )}
+                {paymentReceipt && (
+                  <p className={css({ margin: 0, fontSize: "xs" })}>
+                    ✅ Payment confirmed •{" "}
+                    <a
+                      href={`https://optimistic.etherscan.io/tx/${paymentReceipt.transaction}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={css({ color: "success", textDecoration: "underline" })}
+                    >
+                      View transaction ↗
+                    </a>
+                  </p>
+                )}
               </div>
             )}
           </div>

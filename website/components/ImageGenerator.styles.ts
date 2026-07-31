@@ -116,7 +116,7 @@ export const imageGen = {
   }),
   compactError: css({
     padding: "sm",
-    backgroundColor: "rgba(220, 53, 69, 0.1)",
+    backgroundColor: "dangerSurface",
     border: "1px solid token(colors.danger)",
     borderRadius: "sm",
     fontSize: "sm",
@@ -124,10 +124,13 @@ export const imageGen = {
   }),
 
 };
+/** The one success block: mint confirmation and payment receipt together. */
 export const successMessage = css({
   padding: "md",
-  backgroundColor: "rgba(40, 167, 69, 0.1)",
-  border: "1px solid #28a745",
+  backgroundColor: "successSurface",
+  border: "1px solid",
+  borderColor: "successBorder",
+  color: "green.800",
   borderRadius: "sm",
   marginTop: "sm",
 });

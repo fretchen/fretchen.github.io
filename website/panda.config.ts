@@ -126,10 +126,6 @@ const button = defineRecipe({
     active: {
       true: {},
     },
-    // Full width below 640px — for primary actions that anchor a mobile form.
-    fullWidthOnMobile: {
-      true: { "@media (max-width: 640px)": { width: "100%", justifyContent: "center" } },
-    },
     // Spans its container — stacked modal actions, mobile CTAs.
     fullWidth: {
       true: { width: "100%", justifyContent: "center" },
@@ -237,15 +233,22 @@ export default defineConfig({
           // tying prose to chart. Read from JS via token("colors.explore") — see
           // components/blog/palette.ts.
           explore: { value: "#7b3fa0" },
-          exploreHover: { value: "#68348a" },
 
           // ─── Status ───────────────────────────────────────────────────────────
           // Reserved. Never decorative, and never carried by colour alone.
           // `warning` is amber.700, not .600: .600 is only 3.19:1 on white and fails AA.
+          // Each status is a triple: the colour itself (readable on white), a tinted
+          // surface, and a border for that surface. One green, one red, one amber — the
+          // whole point is that there is no second spelling of any of them.
+          success: { value: "#15803d" }, // green.700 · 5.02 on white
+          successSurface: { value: "#f0fdf4" }, // green.50
+          successBorder: { value: "#bbf7d0" }, // green.200
+          // `warning` is amber.700, not .600: .600 is only 3.19:1 on white and fails AA.
           warning: { value: "#b45309" },
           warningSurface: { value: "#fffbeb" },
           warningBorder: { value: "#fde68a" },
-          warningInk: { value: "#92400e" },
+          dangerSurface: { value: "#fef2f2" }, // red.50
+          dangerBorder: { value: "#fecaca" }, // red.200
 
           // Dark code block. The `codeBg` above is the *inline* code background (light);
           // these two are the fenced-block pair. 11.25:1.

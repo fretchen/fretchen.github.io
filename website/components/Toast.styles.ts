@@ -16,7 +16,10 @@ export const toast = {
     alignItems: "center",
     gap: "sm",
     padding: "md",
-    backgroundColor: "rgba(34, 197, 94, 0.95)", // Default success color
+    // One rule for all three states: the status colour as fill, white text. Every
+    // combination clears AA (success 5.02, danger 4.53, warning 5.02), so there is no
+    // black-text special case. The previous green.500 fill was 2.28:1 and unreadable.
+    backgroundColor: "success",
     color: "white",
     borderRadius: "md",
     boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
@@ -25,11 +28,10 @@ export const toast = {
     backdropFilter: "blur(10px)",
     border: "1px solid rgba(255, 255, 255, 0.1)",
     '&[data-type="error"]': {
-      backgroundColor: "rgba(220, 53, 69, 0.95)",
+      backgroundColor: "danger",
     },
     '&[data-type="warning"]': {
-      backgroundColor: "rgba(255, 193, 7, 0.95)",
-      color: "black",
+      backgroundColor: "warning",
     },
   }),
   icon: css({

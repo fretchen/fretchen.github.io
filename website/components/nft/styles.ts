@@ -29,7 +29,7 @@ export const nftCard = {
     },
   }),
   highlighted: css({
-    border: "2px solid rgba(34, 197, 94, 1)",
+    border: "2px solid token(colors.success)",
     background: "rgba(240, 253, 244, 1)",
     animation: "pulse 2s ease-in-out infinite",
   }),
@@ -154,7 +154,7 @@ export const nftCard = {
     position: "absolute",
     top: "2.5rem", // Unter dem Owner Badge positioniert
     left: "sm",
-    background: "rgba(34, 197, 94, 0.9)",
+    background: "token(colors.success)",
     color: "white",
     fontSize: "xs",
     fontWeight: "500",

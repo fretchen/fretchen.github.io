@@ -99,7 +99,7 @@ const ReactPostRenderer: React.FC<{
       <div className={post.contentContainer}>
         <div
           style={{
-            border: "1px solid #dc3545",
+            border: "1px solid token(colors.danger)",
             borderRadius: "4px",
             padding: "20px",
             backgroundColor: "#f8d7da",

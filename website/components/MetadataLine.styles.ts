@@ -11,7 +11,7 @@ export const metadataLine = {
     alignItems: "center",
     gap: "xs",
     flexWrap: "wrap",
-    lineHeight: "1.4",
+    lineHeight: "normal",
     // Mobile responsive
     "@media (max-width: 768px)": {
       fontSize: "xs",

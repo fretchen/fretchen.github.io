@@ -17,7 +17,7 @@ const App: React.FC = function () {
     <div className={css({ maxWidth: "900px", mx: "auto", px: "md" })}>
       <h1 className={titleBar.title}>Quantum Hardware</h1>
       <span className={sectionRule({ territory: "voice" })} aria-hidden="true" />
-      <p className={css({ marginBottom: "md", lineHeight: "1.5" })}>
+      <p className={css({ marginBottom: "md", lineHeight: "normal" })}>
         Quantum technologies are rapidly evolving and different applications require very different hardware platforms.
         Especially for computational tasks there is a fierce competition with unknown outcome. In this series of
         tutorials on quantum hardware, we provide a basic introduction into some of the fundamental concepts behind

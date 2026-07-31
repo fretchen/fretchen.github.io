@@ -87,7 +87,7 @@ export function AgentChecker() {
                   {ICON[step.status]}
                 </span>
                 <span className={css({ fontSize: "sm" })}>
-                  <span className={css({ fontWeight: "medium", color: COLOR[step.status] })}>{step.label}</span>
+                  <span className={css({ fontWeight: "semibold", color: COLOR[step.status] })}>{step.label}</span>
                   <span
                     className={css({
                       color: "gray.600",
@@ -103,7 +103,7 @@ export function AgentChecker() {
               </li>
             ))}
           </ul>
-          <p className={css({ fontSize: "xs", color: "gray.500", mt: "3", lineHeight: "1.6" })}>
+          <p className={css({ fontSize: "xs", color: "gray.500", mt: "3", lineHeight: "relaxed" })}>
             The checks run from your browser, so a failure can also mean CORS: your endpoint must send{" "}
             <code className={css({ fontFamily: "mono" })}>Access-Control-Allow-Origin</code> and expose the{" "}
             <code className={css({ fontFamily: "mono" })}>Payment-Required</code> header.

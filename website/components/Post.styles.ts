@@ -55,7 +55,7 @@ export const post = {
   contentContainer: css({
     // Container to handle floating layout
     overflow: "hidden", // Clears the float
-    lineHeight: "1.6",
+    lineHeight: "relaxed",
   }),
   navigation: css({
     display: "flex",
@@ -79,7 +79,7 @@ export const post = {
     color: "gray.600",
   }),
   navTitle: css({
-    fontWeight: "medium",
+    fontWeight: "semibold",
     color: "brand",
   }),
 };

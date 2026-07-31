@@ -65,7 +65,7 @@ const badgeBase = css({
   display: "inline-flex",
   alignItems: "center",
   gap: "1",
-  fontWeight: "600",
+  fontWeight: "semibold",
   borderRadius: "full",
   backdropFilter: "blur(4px)",
   border: "1px solid rgba(255,255,255,0.2)",
@@ -143,7 +143,7 @@ const infoRow = css({
 });
 
 const infoLabel = css({
-  fontWeight: "500",
+  fontWeight: "semibold",
 });
 
 export function ChainInfoDisplay({ network, tokenId }: ChainInfoDisplayProps) {

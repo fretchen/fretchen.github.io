@@ -17,7 +17,7 @@ const App: React.FC = function () {
     <div className={css({ maxWidth: "900px", mx: "auto", px: "md" })}>
       <h1 className={titleBar.title}>Beginners guide to Quantum Machine Learning</h1>
       <span className={sectionRule({ territory: "voice" })} aria-hidden="true" />
-      <p className={css({ marginBottom: "md", lineHeight: "1.5" })}>
+      <p className={css({ marginBottom: "md", lineHeight: "normal" })}>
         Classical machine learning has changed the internet in a dramatic fashion. Because of this, researchers put a
         substantial effort into the develop of quantum machine learning. In this series of tutorials on quantum
         technologies, we provide a basic introduction into some of the fundamental concepts behind supervised quantum

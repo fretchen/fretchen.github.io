@@ -117,7 +117,7 @@ const prose = css({
   },
   "& p": {
     marginBottom: "4",
-    lineHeight: "1.7",
+    lineHeight: "relaxed",
   },
   "& ul, & ol": {
     paddingLeft: "8",
@@ -125,7 +125,7 @@ const prose = css({
   },
   "& li": {
     marginBottom: "2",
-    lineHeight: "1.6",
+    lineHeight: "relaxed",
   },
   "& a": {
     color: "brand",
@@ -136,18 +136,18 @@ const prose = css({
     fontSize: "sm",
     backgroundColor: "codeBg",
     padding: "2px 4px",
-    borderRadius: "3px",
+    borderRadius: "sm",
     fontFamily: "monospace",
   },
   "& pre": {
     backgroundColor: "codeSurface",
     color: "codeText",
     padding: "4",
-    borderRadius: "8px",
+    borderRadius: "lg",
     overflowX: "auto",
     marginBottom: "4",
     fontSize: "sm",
-    lineHeight: "1.5",
+    lineHeight: "normal",
     "& code": {
       backgroundColor: "transparent",
       padding: "0",
@@ -178,9 +178,9 @@ const table = css({
 const statusBadge = css({
   display: "inline-block",
   padding: "2px 10px",
-  borderRadius: "9999px",
+  borderRadius: "full",
   fontSize: "sm",
-  fontWeight: "medium",
+  fontWeight: "semibold",
   backgroundColor: "gray.100",
   color: "gray.500",
 });
@@ -188,9 +188,9 @@ const statusBadge = css({
 const statusBadgeOk = css({
   display: "inline-block",
   padding: "2px 10px",
-  borderRadius: "9999px",
+  borderRadius: "full",
   fontSize: "sm",
-  fontWeight: "medium",
+  fontWeight: "semibold",
   backgroundColor: "green.100",
   color: "green.800",
 });
@@ -198,9 +198,9 @@ const statusBadgeOk = css({
 const statusBadgeError = css({
   display: "inline-block",
   padding: "2px 10px",
-  borderRadius: "9999px",
+  borderRadius: "full",
   fontSize: "sm",
-  fontWeight: "medium",
+  fontWeight: "semibold",
   backgroundColor: "red.100",
   color: "red.800",
 });
@@ -208,7 +208,7 @@ const statusBadgeError = css({
 const endpointBox = css({
   backgroundColor: "codeBg",
   border: "1px solid token(colors.border, #e5e7eb)",
-  borderRadius: "8px",
+  borderRadius: "lg",
   padding: "4",
   marginBottom: "4",
 });
@@ -239,7 +239,7 @@ const stepNumber = css({
   justifyContent: "center",
   width: "28px",
   height: "28px",
-  borderRadius: "9999px",
+  borderRadius: "full",
   backgroundColor: "blue.600",
   color: "white",
   fontSize: "sm",
@@ -250,7 +250,7 @@ const stepNumber = css({
 
 const stepContainer = css({
   border: "1px solid token(colors.border, #e5e7eb)",
-  borderRadius: "8px",
+  borderRadius: "lg",
   padding: "5",
   marginBottom: "4",
   backgroundColor: "codeBg",

@@ -20,7 +20,7 @@ const summary = css({
   px: "3",
   py: "2",
   fontSize: "sm",
-  fontWeight: "medium",
+  fontWeight: "semibold",
   color: "brand",
   bg: "gray.50",
   cursor: "pointer",

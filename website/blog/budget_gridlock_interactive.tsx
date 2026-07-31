@@ -172,14 +172,14 @@ const BudgetNegotiationWidget: React.FC = () => {
         margin: "32px 0",
         padding: "6",
         backgroundColor: "rgba(59, 130, 246, 0.05)",
-        borderRadius: "4px",
+        borderRadius: "sm",
         border: "1px solid rgba(59, 130, 246, 0.2)",
       })}
     >
       <h4
         className={css({
           fontSize: "md",
-          fontWeight: "medium",
+          fontWeight: "semibold",
           textAlign: "center",
           marginBottom: "4",
           color: "gray.700",
@@ -283,7 +283,7 @@ const BudgetNegotiationWidget: React.FC = () => {
           className={css({
             backgroundColor: coopPayoffHigher ? "green.50" : "codeBg",
             border: coopPayoffHigher ? "2px solid #22c55e" : "1px solid #e5e7eb",
-            borderRadius: "6px",
+            borderRadius: "md",
             padding: "4",
             textAlign: "center",
           })}
@@ -306,7 +306,7 @@ const BudgetNegotiationWidget: React.FC = () => {
           className={css({
             backgroundColor: !coopPayoffHigher ? "red.50" : "codeBg",
             border: !coopPayoffHigher ? "2px solid #ef4444" : "1px solid #e5e7eb",
-            borderRadius: "6px",
+            borderRadius: "md",
             padding: "4",
             textAlign: "center",
           })}
@@ -344,12 +344,12 @@ const BudgetNegotiationWidget: React.FC = () => {
         className={css({
           backgroundColor: "codeBg",
           padding: "3",
-          borderRadius: "4px",
+          borderRadius: "sm",
           fontSize: "xs",
           color: "gray.500",
         })}
       >
-        <summary className={css({ cursor: "pointer", fontWeight: "medium" })}>🔬 Technical details</summary>
+        <summary className={css({ cursor: "pointer", fontWeight: "semibold" })}>🔬 Technical details</summary>
         <div className={css({ marginTop: "2" })}>
           <strong>Model:</strong> Random walk X_{"{t+1}"} = X_t + ε, ε ~ N(0, σ²)
           <br />
@@ -369,7 +369,7 @@ const BudgetNegotiationWidget: React.FC = () => {
               backgroundColor: "blue.500",
               color: "white",
               border: "none",
-              borderRadius: "4px",
+              borderRadius: "sm",
               cursor: "pointer",
               fontSize: "xs",
             })}

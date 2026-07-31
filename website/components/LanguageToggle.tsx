@@ -23,18 +23,18 @@ export default function LanguageToggle() {
     gap: "0.5",
     padding: "1",
     backgroundColor: "gray.100",
-    borderRadius: "6px",
+    borderRadius: "md",
     fontSize: "xs",
-    fontWeight: "medium",
+    fontWeight: "semibold",
   });
 
   const pillStyles = css({
     padding: "4px 8px",
-    borderRadius: "4px",
+    borderRadius: "sm",
     textDecoration: "none",
-    transition: "all 0.2s",
+    transition: "all {durations.normal} ease",
     fontSize: "xs",
-    fontWeight: "medium",
+    fontWeight: "semibold",
     "&:hover": {
       backgroundColor: "gray.200",
     },
@@ -49,7 +49,7 @@ export default function LanguageToggle() {
     backgroundColor: "white",
     color: "gray.900",
     fontWeight: "semibold",
-    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.1)",
+    boxShadow: "sm",
   });
 
   const inactivePillStyles = css({

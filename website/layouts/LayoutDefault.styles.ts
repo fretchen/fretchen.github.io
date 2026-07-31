@@ -89,7 +89,7 @@ export const layout = {
       pointerEvents: "none",
       zIndex: 2,
       opacity: 1,
-      transition: "opacity 0.3s ease",
+      transition: "opacity {durations.normal} ease",
       "&::before": {
         content: '"→"',
         position: "absolute",
@@ -192,7 +192,7 @@ export const layout = {
     gap: "0.5",
     color: "gray.600",
     textDecoration: "none",
-    transition: "color 0.2s",
+    transition: "color {durations.normal} ease",
     fontSize: "xs",
     _hover: {
       color: "text",

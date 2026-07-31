@@ -52,7 +52,7 @@ const badge = css({
   padding: "2px 8px",
   borderRadius: "sm",
   fontSize: "xs",
-  fontWeight: "medium",
+  fontWeight: "semibold",
 });
 
 const channelBadge = css({
@@ -73,7 +73,7 @@ const scheduledBadge = css({
 const contentPreview = css({
   whiteSpace: "pre-wrap",
   fontSize: "sm",
-  lineHeight: "1.6",
+  lineHeight: "relaxed",
   mb: "sm",
   color: "gray.800",
 });
@@ -219,7 +219,7 @@ const pageGroupLink = css({
   color: "blue.600",
   textDecoration: "underline",
   fontSize: "sm",
-  fontWeight: "medium",
+  fontWeight: "semibold",
   flex: 1,
   minWidth: 0,
   overflow: "hidden",

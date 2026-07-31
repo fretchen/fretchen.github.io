@@ -57,7 +57,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
     }
     return (
       <div className={css({ fontSize: "xs", color: "gray.700" })}>
-        <div className={css({ fontWeight: "medium" })}>{agentCard.operator ?? agentCard.origin}</div>
+        <div className={css({ fontWeight: "semibold" })}>{agentCard.operator ?? agentCard.origin}</div>
         <div className={css({ color: "gray.500", wordBreak: "break-all" })}>{agentCard.origin}</div>
         {agentCard.payTo && (
           <div className={css({ fontFamily: "mono", color: "gray.600", mt: "1" })} title="Payment recipient">
@@ -102,7 +102,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
           className={css({
             color: "brand",
             textDecoration: "none",
-            fontWeight: "medium",
+            fontWeight: "semibold",
             _hover: { textDecoration: "underline" },
           })}
         >
@@ -143,7 +143,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
           <span
             className={css({
               color: "gray.400",
-              transition: "transform 0.2s",
+              transition: "transform {durations.normal} ease",
               transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
             })}
           >
@@ -175,7 +175,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
                   })}
                 />
               )}
-              <span className={css({ fontWeight: "medium", color: "gray.800", fontSize: "xs" })}>{agent.name}</span>
+              <span className={css({ fontWeight: "semibold", color: "gray.800", fontSize: "xs" })}>{agent.name}</span>
             </div>
 
             {/* Details */}
@@ -248,7 +248,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
             color: "brand",
             textDecoration: "none",
             fontSize: "xs",
-            fontWeight: "medium",
+            fontWeight: "semibold",
             _hover: { textDecoration: "underline" },
           })}
         >
@@ -298,7 +298,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
           <span
             className={css({
               color: "gray.400",
-              transition: "transform 0.2s",
+              transition: "transform {durations.normal} ease",
               transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
             })}
           >
@@ -311,7 +311,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
           className={css({
             color: "brand",
             textDecoration: "none",
-            fontWeight: "medium",
+            fontWeight: "semibold",
             _hover: { textDecoration: "underline" },
           })}
         >
@@ -346,7 +346,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
                 })}
               />
             )}
-            <span className={css({ fontWeight: "medium", color: "gray.800" })}>{agent.name}</span>
+            <span className={css({ fontWeight: "semibold", color: "gray.800" })}>{agent.name}</span>
             <span
               className={css({
                 ml: "auto",
@@ -420,7 +420,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
               className={css({
                 color: "brand",
                 textDecoration: "none",
-                fontWeight: "medium",
+                fontWeight: "semibold",
                 _hover: { textDecoration: "underline" },
               })}
             >
@@ -434,7 +434,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
                 className={css({
                   color: "brand",
                   textDecoration: "none",
-                  fontWeight: "medium",
+                  fontWeight: "semibold",
                   _hover: { textDecoration: "underline" },
                 })}
               >
@@ -449,7 +449,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
                 className={css({
                   color: "brand",
                   textDecoration: "none",
-                  fontWeight: "medium",
+                  fontWeight: "semibold",
                   _hover: { textDecoration: "underline" },
                 })}
               >

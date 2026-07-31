@@ -41,10 +41,10 @@ const block = css({
   bg: "codeSurface",
   color: "codeText",
   p: "4",
-  borderRadius: "8px",
+  borderRadius: "lg",
   overflowX: "auto",
   fontSize: "sm",
-  lineHeight: "1.5",
+  lineHeight: "normal",
   whiteSpace: "pre",
   // The global `pre` rule in layouts/panda.css sets a light background; win over it here.
   "& code": { bg: "transparent", p: "0", fontSize: "inherit", color: "inherit" },

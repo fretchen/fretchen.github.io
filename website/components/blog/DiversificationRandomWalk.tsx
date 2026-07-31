@@ -352,7 +352,7 @@ export default function DiversificationRandomWalk() {
         margin: "32px 0",
         padding: "6",
         backgroundColor: "rgba(123, 63, 160, 0.04)",
-        borderRadius: "8px",
+        borderRadius: "lg",
         border: "1px solid rgba(123, 63, 160, 0.15)",
       })}
     >
@@ -426,7 +426,7 @@ export default function DiversificationRandomWalk() {
             backgroundColor: isAnimating ? "gray.400" : "explore",
             color: "white",
             border: "none",
-            borderRadius: "4px",
+            borderRadius: "sm",
             cursor: isAnimating ? "not-allowed" : "pointer",
             fontSize: "sm",
             fontWeight: "bold",
@@ -522,9 +522,9 @@ export default function DiversificationRandomWalk() {
                   alignItems: "center",
                   gap: "1",
                   padding: "4px 10px",
-                  borderRadius: "999px",
+                  borderRadius: "full",
                   fontSize: "xs",
-                  fontWeight: "600",
+                  fontWeight: "semibold",
                   border: "1px solid",
                   borderColor: item.color,
                   color: item.color,
@@ -534,7 +534,7 @@ export default function DiversificationRandomWalk() {
                   className={css({
                     width: "8px",
                     height: "8px",
-                    borderRadius: "50%",
+                    borderRadius: "full",
                     backgroundColor: item.color,
                   })}
                 />
@@ -547,7 +547,7 @@ export default function DiversificationRandomWalk() {
               className={css({
                 fontSize: "sm",
                 color: "explore",
-                fontWeight: "600",
+                fontWeight: "semibold",
                 marginTop: "2",
               })}
             >

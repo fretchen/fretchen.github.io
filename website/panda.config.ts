@@ -20,7 +20,7 @@ const button = defineRecipe({
     fontWeight: "bold",
     whiteSpace: "nowrap",
     cursor: "pointer",
-    transition: "all 0.2s ease",
+    transition: "all {durations.normal} ease",
     _disabled: {
       cursor: "not-allowed",
       opacity: 0.6,
@@ -36,15 +36,15 @@ const button = defineRecipe({
         backgroundColor: "brand",
         color: "light",
         border: "none",
-        boxShadow: "0 2px 4px rgba(59, 130, 246, 0.2)",
+        boxShadow: "sm",
         _hover: {
           backgroundColor: "brandHover",
           transform: "translateY(-1px)",
-          boxShadow: "0 4px 8px rgba(59, 130, 246, 0.3)",
+          boxShadow: "md",
         },
         _active: {
           transform: "translateY(0)",
-          boxShadow: "0 2px 4px rgba(59, 130, 246, 0.2)",
+          boxShadow: "sm",
         },
         _disabled: { backgroundColor: "gray.300", color: "gray.500" },
       },
@@ -86,11 +86,11 @@ const button = defineRecipe({
         // Dark ink, not white: white on this fill is 2.84:1 and fails AA.
         color: "onSupport",
         border: "none",
-        borderRadius: "999px",
+        borderRadius: "full",
         fontWeight: "semibold",
         lineHeight: 1,
-        boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-        _hover: { transform: "scale(1.05)", boxShadow: "0 2px 8px rgba(255, 107, 53, 0.4)" },
+        boxShadow: "sm",
+        _hover: { transform: "scale(1.05)", boxShadow: "md" },
         _disabled: {
           background: "linear-gradient(135deg, #e0e0e0 0%, #c0c0c0 100%)",
           color: "textMuted",
@@ -165,7 +165,7 @@ const sectionRule = defineRecipe({
     display: "block",
     width: "48px",
     height: "3px",
-    borderRadius: "2px",
+    borderRadius: "xs",
     // Sits under the h1, which already carries its own bottom margin.
     marginBottom: "6",
   },

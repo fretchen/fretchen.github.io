@@ -53,7 +53,7 @@ export const baseContentCard = {
     borderRadius: "md",
     overflow: "hidden",
     boxShadow: "sm",
-    transition: "all 0.3s ease",
+    transition: "all {durations.normal} ease",
     cursor: "pointer",
     textDecoration: "none",
     color: "inherit",
@@ -124,16 +124,16 @@ export const baseContentCard = {
     fontSize: "xl",
     fontWeight: "semibold",
     margin: 0, // Override browser default h3 margins
-    lineHeight: "1.3",
+    lineHeight: "tight",
     // Mobile: Größerer Titel
     "@media (max-width: 768px)": {
       fontSize: "lg",
-      lineHeight: "1.4",
+      lineHeight: "normal",
       fontWeight: "bold", // Etwas fetter für Betonung
     },
     "@media (max-width: 480px)": {
       fontSize: "base", // Größer als vorher auf mobile
-      lineHeight: "1.4",
+      lineHeight: "normal",
       fontWeight: "bold",
     },
   }),
@@ -141,11 +141,11 @@ export const baseContentCard = {
     marginTop: "xs", // Small top margin for spacing from title
     fontSize: "sm",
     color: "gray.600",
-    lineHeight: "1.5",
+    lineHeight: "normal",
     // Mobile: Beschreibung ausblenden oder verkürzen
     "@media (max-width: 768px)": {
       fontSize: "xs",
-      lineHeight: "1.5",
+      lineHeight: "normal",
       marginTop: "xs",
       // Beschreibung auf Tablet abschneiden
       overflow: "hidden",
@@ -234,9 +234,9 @@ export const tabs = {
     borderBottom: "2px solid transparent",
     cursor: "pointer",
     fontSize: "sm",
-    fontWeight: "medium",
+    fontWeight: "semibold",
     color: "gray.600",
-    transition: "all 0.2s ease",
+    transition: "all {durations.normal} ease",
     _hover: {
       color: "brand",
       backgroundColor: "rgba(59, 130, 246, 0.05)",
@@ -263,7 +263,7 @@ export const titleBar = {
     margin: 0,
     marginBottom: "token(spacing.sm)",
     color: "text",
-    lineHeight: "1.2",
+    lineHeight: "tight",
     // Responsive typography
     "@media (max-width: 768px)": {
       fontSize: "xl",
@@ -307,7 +307,7 @@ export const modal = {
     background: "white",
     borderRadius: "md",
     overflow: "auto",
-    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+    boxShadow: "2xl",
     display: "flex",
     flexDirection: "column",
   }),
@@ -319,7 +319,7 @@ export const modal = {
     background: "rgba(0, 0, 0, 0.5)",
     color: "white",
     border: "none",
-    borderRadius: "50%",
+    borderRadius: "full",
     width: "36px",
     height: "36px",
     cursor: "pointer",
@@ -352,7 +352,7 @@ export const modal = {
     fontSize: "md",
     lineHeight: 1,
     zIndex: 1,
-    transition: "color 0.15s ease",
+    transition: "color {durations.normal} ease",
     _hover: {
       color: "gray.700",
     },
@@ -375,28 +375,28 @@ export const modal = {
   text: css({
     fontSize: "sm",
     color: "gray.700",
-    lineHeight: "1.5",
+    lineHeight: "normal",
     margin: "0 0 md 0",
   }),
   // Inline error message inside a modal
   error: css({
     fontSize: "sm",
     color: "danger",
-    lineHeight: "1.5",
+    lineHeight: "normal",
     margin: "0 0 md 0",
   }),
   // Muted "why this?" motivation line
   why: css({
     fontSize: "sm",
     color: "gray.500",
-    lineHeight: "1.5",
+    lineHeight: "normal",
     margin: "0 0 md 0",
   }),
   // Inline brand-colored link (e.g. "Learn more: Optimism · Base")
   link: css({
     color: "brand",
     textDecoration: "none",
-    fontWeight: "medium",
+    fontWeight: "semibold",
     _hover: { textDecoration: "underline" },
   }),
   // Wrapper that makes a single primary action span the modal width — the conventional
@@ -437,6 +437,6 @@ export const modal = {
   imageDescription: css({
     fontSize: "sm",
     color: "gray.600",
-    lineHeight: "1.4",
+    lineHeight: "normal",
   }),
 };

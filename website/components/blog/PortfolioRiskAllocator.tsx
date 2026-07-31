@@ -205,7 +205,7 @@ export default function PortfolioRiskAllocator() {
         margin: "32px 0",
         padding: "6",
         backgroundColor: "rgba(78, 121, 167, 0.04)",
-        borderRadius: "8px",
+        borderRadius: "lg",
         border: "1px solid rgba(78, 121, 167, 0.15)",
       })}
     >
@@ -242,11 +242,11 @@ export default function PortfolioRiskAllocator() {
               className={css({
                 padding: "6px 12px",
                 fontSize: "sm",
-                borderRadius: "6px",
+                borderRadius: "md",
                 cursor: "pointer",
                 border: "2px solid",
-                fontWeight: "600",
-                transition: "all 0.15s",
+                fontWeight: "semibold",
+                transition: "all {durations.normal} ease",
               })}
               style={{
                 borderColor: activePreset === i ? ESSAY_ACCENT : "#d1d5db",
@@ -267,7 +267,7 @@ export default function PortfolioRiskAllocator() {
 
       {/* ── Draggable risk-budget bar ── */}
       <div className={css({ marginBottom: "5" })}>
-        <div className={css({ fontSize: "sm", color: "gray.700", marginBottom: "1.5", fontWeight: "600" })}>
+        <div className={css({ fontSize: "sm", color: "gray.700", marginBottom: "1.5", fontWeight: "semibold" })}>
           Refine your mix — drag the ● circles to adjust
         </div>
         {/* Percentage labels above the track */}
@@ -322,7 +322,7 @@ export default function PortfolioRiskAllocator() {
               right: "0",
               bottom: "0",
               display: "flex",
-              borderRadius: "5px",
+              borderRadius: "sm",
               overflow: "hidden",
               border: "1px solid rgba(0,0,0,0.12)",
             })}
@@ -384,7 +384,7 @@ export default function PortfolioRiskAllocator() {
           {DATA.clusters.map((cluster) => (
             <div key={cluster.name} className={css({ display: "flex", alignItems: "center", gap: "1" })}>
               <span
-                className={css({ width: "8px", height: "8px", borderRadius: "50%", flexShrink: 0 })}
+                className={css({ width: "8px", height: "8px", borderRadius: "full", flexShrink: 0 })}
                 style={{ backgroundColor: cluster.color }}
               />
               <span className={css({ fontSize: "xs", color: "gray.500" })}>{cluster.name}</span>
@@ -409,7 +409,7 @@ export default function PortfolioRiskAllocator() {
           className={css({
             position: "relative",
             height: "10px",
-            borderRadius: "5px",
+            borderRadius: "sm",
             backgroundColor: "gray.100",
             overflow: "hidden",
           })}
@@ -442,7 +442,7 @@ export default function PortfolioRiskAllocator() {
       <div
         className={css({
           padding: "4",
-          borderRadius: "8px",
+          borderRadius: "lg",
           backgroundColor: "white",
           border: "1px solid #e5e7eb",
         })}
@@ -456,7 +456,7 @@ export default function PortfolioRiskAllocator() {
             className={css({
               display: "flex",
               height: "26px",
-              borderRadius: "4px",
+              borderRadius: "sm",
               overflow: "hidden",
               border: "1px solid #e5e7eb",
             })}
@@ -499,11 +499,11 @@ export default function PortfolioRiskAllocator() {
                 key={cluster.name}
                 className={css({
                   borderLeft: "4px solid",
-                  borderRadius: "6px",
+                  borderRadius: "md",
                   backgroundColor: isOpen ? "codeBg" : "white",
                   border: "1px solid #e5e7eb",
                   overflow: "hidden",
-                  transition: "background-color 0.15s",
+                  transition: "background-color {durations.normal} ease",
                   _hover: { backgroundColor: "codeBg" },
                 })}
                 style={{ borderLeftColor: cluster.color, borderLeftWidth: "4px", borderLeftStyle: "solid" }}
@@ -526,7 +526,7 @@ export default function PortfolioRiskAllocator() {
                     <span className={css({ fontSize: "sm", fontWeight: "bold" })} style={{ color: cluster.color }}>
                       {cluster.name}
                     </span>
-                    <span className={css({ fontSize: "sm", color: "gray.700", fontWeight: "600" })}>
+                    <span className={css({ fontSize: "sm", color: "gray.700", fontWeight: "semibold" })}>
                       {risk.clusterWeight[ci].toFixed(0)}% capital
                     </span>
                   </div>
@@ -585,7 +585,7 @@ export default function PortfolioRiskAllocator() {
                                 className={css({
                                   textAlign: "right",
                                   padding: "4px 4px",
-                                  fontWeight: "600",
+                                  fontWeight: "semibold",
                                 })}
                               >
                                 {risk.rc[idx].toFixed(1)}%

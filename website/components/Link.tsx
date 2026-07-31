@@ -46,7 +46,7 @@ export function Link({
 
         // Active-Zustände mit PandaCSS-Bedingungen
         ...(isActive && {
-          fontWeight: "token(fontWeights.bold)",
+          fontWeight: "bold",
         }),
 
         // Hover-Zustände

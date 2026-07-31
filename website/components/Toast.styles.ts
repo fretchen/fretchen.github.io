@@ -9,7 +9,7 @@ export const toast = {
     top: "20px",
     right: "20px",
     zIndex: 9999,
-    transition: "all 0.3s ease-out",
+    transition: "all {durations.normal} ease",
   }),
   content: css({
     display: "flex",
@@ -22,9 +22,9 @@ export const toast = {
     backgroundColor: "success",
     color: "white",
     borderRadius: "md",
-    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+    boxShadow: "lg",
     fontSize: "sm",
-    fontWeight: "medium",
+    fontWeight: "semibold",
     backdropFilter: "blur(10px)",
     border: "1px solid rgba(255, 255, 255, 0.1)",
     '&[data-type="error"]': {

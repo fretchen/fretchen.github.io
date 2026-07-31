@@ -10,10 +10,10 @@ export const imageGen = {
     border: "1px solid token(colors.border)",
     padding: "lg",
     marginBottom: "xl",
-    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
-    transition: "all 0.2s ease",
+    boxShadow: "sm",
+    transition: "all {durations.normal} ease",
     _hover: {
-      boxShadow: "0 4px 16px rgba(0, 0, 0, 0.12)",
+      boxShadow: "md",
     },
   }),
   compactContainer: css({
@@ -31,10 +31,10 @@ export const imageGen = {
     margin: 0,
     marginBottom: "md",
     color: "brand",
-    lineHeight: "1.3",
+    lineHeight: "tight",
     "@media (max-width: 640px)": {
       fontSize: "md",
-      lineHeight: "1.2",
+      lineHeight: "tight",
     },
   }),
   compactForm: css({
@@ -71,11 +71,14 @@ export const imageGen = {
     backgroundColor: "white",
     minWidth: "110px",
     cursor: "pointer",
-    transition: "all 0.2s ease",
+    transition: "all {durations.normal} ease",
     _focus: {
       borderColor: "brand",
-      outline: "none",
-      boxShadow: "0 0 0 2px rgba(59, 130, 246, 0.1)",
+      // A real outline, not a box-shadow ring: box-shadow is dropped entirely in
+      // forced-colours mode, which would leave these fields with no focus indicator.
+      outline: "2px solid",
+      outlineColor: "brand",
+      outlineOffset: "1px",
     },
     _hover: {
       borderColor: "gray.400",
@@ -89,7 +92,7 @@ export const imageGen = {
     fontSize: "sm",
     minHeight: "60px",
     resize: "vertical",
-    transition: "all 0.2s ease",
+    transition: "all {durations.normal} ease",
     fontFamily: "inherit",
     _placeholder: {
       color: "gray.400",
@@ -97,8 +100,11 @@ export const imageGen = {
     },
     _focus: {
       borderColor: "brand",
-      outline: "none",
-      boxShadow: "0 0 0 2px rgba(59, 130, 246, 0.1)",
+      // A real outline, not a box-shadow ring: box-shadow is dropped entirely in
+      // forced-colours mode, which would leave these fields with no focus indicator.
+      outline: "2px solid",
+      outlineColor: "brand",
+      outlineOffset: "1px",
     },
     _hover: {
       borderColor: "gray.400",

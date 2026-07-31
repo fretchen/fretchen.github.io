@@ -130,7 +130,7 @@ const Segment: React.FC<{ move: Move; active: boolean; idx: number; player: stri
       onClick={onSelect}
       className={css({
         fontSize: "xs",
-        fontWeight: "600",
+        fontWeight: "semibold",
         padding: "6px 4px",
         whiteSpace: "nowrap",
         cursor: "pointer",
@@ -141,7 +141,7 @@ const Segment: React.FC<{ move: Move; active: boolean; idx: number; player: stri
         borderTopRightRadius: isLast ? "6px" : "0",
         borderBottomRightRadius: isLast ? "6px" : "0",
         color: active ? "white" : "gray.700",
-        transition: "opacity 0.15s",
+        transition: "opacity {durations.normal} ease",
         _hover: { opacity: 0.85 },
       })}
       // Panda's build-time static extraction can't resolve `info.color` (a runtime
@@ -184,7 +184,7 @@ const MoveMatrix: React.FC<MoveMatrixProps> = ({ moveW, moveJ, onSelectW, onSele
       {MOVES.map((m) => (
         <span
           key={m}
-          className={css({ fontSize: "xs", fontWeight: "700", textAlign: "center" })}
+          className={css({ fontSize: "xs", fontWeight: "bold", textAlign: "center" })}
           style={{ color: MOVE_INFO[m].color }}
         >
           {MOVE_INFO[m].label}
@@ -195,7 +195,7 @@ const MoveMatrix: React.FC<MoveMatrixProps> = ({ moveW, moveJ, onSelectW, onSele
       {players.map((p) => (
         <React.Fragment key={p.name}>
           <span
-            className={css({ fontSize: "sm", fontWeight: "700", paddingRight: "2.5" })}
+            className={css({ fontSize: "sm", fontWeight: "bold", paddingRight: "2.5" })}
             style={{ color: p.color }}
           >
             {p.name}
@@ -243,7 +243,7 @@ export default function QuantumPDCircuit() {
         margin: "32px 0",
         padding: "6",
         backgroundColor: "rgba(123, 63, 160, 0.04)",
-        borderRadius: "8px",
+        borderRadius: "lg",
         border: "1px solid rgba(123, 63, 160, 0.15)",
       })}
     >

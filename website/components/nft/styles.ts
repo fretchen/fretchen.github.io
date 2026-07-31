@@ -14,12 +14,12 @@ export const nftCard = {
     borderRadius: "lg",
     overflow: "hidden",
     cursor: "pointer",
-    boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
-    transition: "all 0.3s ease",
+    boxShadow: "md",
+    transition: "all {durations.normal} ease",
     background: "gray.100",
     _hover: {
       transform: "scale(1.02)",
-      boxShadow: "0 8px 25px rgba(0,0,0,0.15)",
+      boxShadow: "md",
     },
     // Mobile: Slightly smaller scale effect
     "@media (max-width: 768px)": {
@@ -74,7 +74,7 @@ export const nftCard = {
     width: "100%",
     height: "100%",
     objectFit: "cover",
-    transition: "transform 0.3s ease",
+    transition: "transform {durations.normal} ease",
     _groupHover: {
       transform: "scale(1.05)",
     },
@@ -91,7 +91,7 @@ export const nftCard = {
     justifyContent: "center",
     color: "gray.500",
     fontSize: "lg",
-    fontWeight: "medium",
+    fontWeight: "semibold",
   }),
 
   // Actions Overlay (nur bei Hover sichtbar)
@@ -108,7 +108,7 @@ export const nftCard = {
     justifyContent: "center",
     gap: "md",
     opacity: 0,
-    transition: "opacity 0.3s ease",
+    transition: "opacity {durations.normal} ease",
     _groupHover: {
       opacity: 1,
     },
@@ -127,7 +127,7 @@ export const nftCard = {
     background: "rgba(0,0,0,0.8)",
     color: "white",
     fontSize: "xs",
-    fontWeight: "500",
+    fontWeight: "semibold",
     padding: "xs sm",
     borderRadius: "full",
     backdropFilter: "blur(4px)",
@@ -142,7 +142,7 @@ export const nftCard = {
     background: "rgba(0,0,0,0.8)",
     color: "white",
     fontSize: "xs",
-    fontWeight: "500",
+    fontWeight: "semibold",
     padding: "xs sm",
     borderRadius: "full",
     backdropFilter: "blur(4px)",
@@ -157,7 +157,7 @@ export const nftCard = {
     background: "token(colors.success)",
     color: "white",
     fontSize: "xs",
-    fontWeight: "500",
+    fontWeight: "semibold",
     padding: "xs sm",
     borderRadius: "full",
     backdropFilter: "blur(4px)",

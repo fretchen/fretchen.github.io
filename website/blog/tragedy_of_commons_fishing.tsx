@@ -306,12 +306,12 @@ const FishingScenarioSelector: React.FC<{
         marginBottom: "5",
         textAlign: "center",
         border: "1px solid #e5e7eb",
-        borderRadius: "8px",
+        borderRadius: "lg",
         padding: "4",
         background: "zinc.50",
       })}
     >
-      <div className={css({ fontSize: "md", fontWeight: "600", marginBottom: "2" })}>
+      <div className={css({ fontSize: "md", fontWeight: "semibold", marginBottom: "2" })}>
         🌏 Neighboring Islands Culture
       </div>
       <div className={css({ display: "flex", gap: "3", justifyContent: "center", flexWrap: "wrap" })}>
@@ -331,7 +331,7 @@ const FishingScenarioSelector: React.FC<{
               className={css({
                 padding: "12px 16px",
                 border: isSelected ? "2px solid #3b82f6" : "1px solid #d1d5db",
-                borderRadius: "8px",
+                borderRadius: "lg",
                 background: isDisabled ? "gray.100" : isSelected ? "blue.50" : "white",
                 cursor: isDisabled ? "not-allowed" : "pointer",
                 textAlign: "left",
@@ -357,7 +357,7 @@ const FishingScenarioSelector: React.FC<{
               )}
               <div
                 className={css({
-                  fontWeight: "600",
+                  fontWeight: "semibold",
                   marginBottom: "1",
                   color: isDisabled ? "gray.400" : "gray.900",
                 })}
@@ -368,7 +368,7 @@ const FishingScenarioSelector: React.FC<{
                 className={css({
                   color: isDisabled ? "gray.400" : "slate.500",
                   fontSize: "xs",
-                  lineHeight: "1.3",
+                  lineHeight: "tight",
                 })}
               >
                 {info.description}
@@ -383,7 +383,7 @@ const FishingScenarioSelector: React.FC<{
             fontSize: "sm",
             color: "slate.500",
             marginBottom: "2",
-            fontWeight: "500",
+            fontWeight: "semibold",
           })}
         >
           Active Scenario: {scenarios[scenario].name}
@@ -438,12 +438,12 @@ const FishingActionBar: React.FC<{
             className={css({
               width: "32px",
               height: "32px",
-              borderRadius: "50%",
+              borderRadius: "full",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               fontSize: "sm",
-              fontWeight: "600",
+              fontWeight: "semibold",
               background: roundNum < round ? "emerald.500" : roundNum === round ? "blue.500" : "gray.200",
               color: roundNum < round || roundNum === round ? "white" : "gray.400",
             })}
@@ -455,7 +455,7 @@ const FishingActionBar: React.FC<{
 
       {/* Status */}
       <div className={css({ fontSize: "md", textAlign: "center", marginBottom: "2" })}>
-        <div className={css({ fontWeight: "600", marginBottom: "1" })}>
+        <div className={css({ fontWeight: "semibold", marginBottom: "1" })}>
           Round {round} of 3 • Fish Stock: {round === 1 ? MODEL_PARAMS.s_init : history[round - 2].fishAfter} 🐟
         </div>
         <div className={css({ color: "slate.500", fontSize: "sm" })}>How many boats should Moana send out today?</div>
@@ -469,11 +469,11 @@ const FishingActionBar: React.FC<{
             className={css({
               padding: "10px 16px",
               border: "1px solid #10b981",
-              borderRadius: "6px",
+              borderRadius: "md",
               background: "white",
               color: "#222",
               cursor: "pointer",
-              fontWeight: "500",
+              fontWeight: "semibold",
               fontSize: "sm",
             })}
           >
@@ -484,11 +484,11 @@ const FishingActionBar: React.FC<{
             className={css({
               padding: "10px 16px",
               border: "1px solid #f59e0b",
-              borderRadius: "6px",
+              borderRadius: "md",
               background: "white",
               color: "#222",
               cursor: "pointer",
-              fontWeight: "500",
+              fontWeight: "semibold",
               fontSize: "sm",
             })}
           >
@@ -499,11 +499,11 @@ const FishingActionBar: React.FC<{
             className={css({
               padding: "10px 16px",
               border: "1px solid #ef4444",
-              borderRadius: "6px",
+              borderRadius: "md",
               background: "white",
               color: "#222",
               cursor: "pointer",
-              fontWeight: "500",
+              fontWeight: "semibold",
               fontSize: "sm",
             })}
           >
@@ -749,12 +749,12 @@ const CommunityScenarioSelector: React.FC<{
         marginBottom: "5",
         textAlign: "center",
         border: "1px solid #e5e7eb",
-        borderRadius: "8px",
+        borderRadius: "lg",
         padding: "4",
         background: "zinc.50",
       })}
     >
-      <div className={css({ fontSize: "md", fontWeight: "600", marginBottom: "2" })}>
+      <div className={css({ fontSize: "md", fontWeight: "semibold", marginBottom: "2" })}>
         🏛️ Community Governance System
       </div>
       <div className={css({ display: "flex", gap: "3", justifyContent: "center", flexWrap: "wrap" })}>
@@ -818,12 +818,12 @@ const IslandEfficiencyScenarioSelector: React.FC<{
         marginBottom: "5",
         textAlign: "center",
         border: "1px solid #e5e7eb",
-        borderRadius: "8px",
+        borderRadius: "lg",
         padding: "4",
         background: "zinc.50",
       })}
     >
-      <div className={css({ fontSize: "md", fontWeight: "600", marginBottom: "2" })}>
+      <div className={css({ fontSize: "md", fontWeight: "semibold", marginBottom: "2" })}>
         🌏 Fishing Management System
       </div>
       <div className={css({ display: "flex", gap: "3", justifyContent: "center", flexWrap: "wrap" })}>
@@ -1468,7 +1468,7 @@ const FishingGameSimulator: React.FC = () => {
     <div
       className={css({
         border: "1px solid #bae6fd",
-        borderRadius: "8px",
+        borderRadius: "lg",
         padding: "4.5",
         margin: "18px 0",
         background: "slate.50",
@@ -1584,7 +1584,7 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
     <div
       className={css({
         border: "1px solid #bae6fd",
-        borderRadius: "8px",
+        borderRadius: "lg",
         padding: "4.5",
         margin: "18px 0",
         background: "slate.50",
@@ -1839,7 +1839,7 @@ const CommunityGovernanceSimulator: React.FC = () => {
     <div
       className={css({
         border: "1px solid #bae6fd",
-        borderRadius: "8px",
+        borderRadius: "lg",
         padding: "4.5",
         margin: "18px 0",
         background: "slate.50",

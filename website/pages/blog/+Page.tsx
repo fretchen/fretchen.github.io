@@ -14,7 +14,7 @@ import { sectionRule } from "../../styled-system/recipes";
 // Page-local style — nothing else uses it.
 const paragraph = css({
   marginBottom: "sm",
-  lineHeight: "1.5",
+  lineHeight: "normal",
 });
 
 const App: React.FC = function () {

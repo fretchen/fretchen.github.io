@@ -311,7 +311,7 @@ const ProofDemo: React.FC = () => {
     <div
       className={css({
         border: "1px solid #e5e7eb",
-        borderRadius: "8px",
+        borderRadius: "lg",
         padding: "5",
         margin: "20px 0",
         backgroundColor: "codeBg",
@@ -327,11 +327,11 @@ const ProofDemo: React.FC = () => {
           marginBottom: "5",
           padding: "4",
           backgroundColor: "codeBg",
-          borderRadius: "8px",
+          borderRadius: "lg",
           border: "1px solid #d1d5db",
         })}
       >
-        <h4 className={css({ fontSize: "md", fontWeight: "medium", marginBottom: "3" })}>
+        <h4 className={css({ fontSize: "md", fontWeight: "semibold", marginBottom: "3" })}>
           Sample Batch (Merkle Root: {sampleBatch.merkleRoot.substring(0, 20)}...)
         </h4>
         <div className={css({ display: "grid", gap: "2" })}>
@@ -341,7 +341,7 @@ const ProofDemo: React.FC = () => {
               className={css({
                 padding: "8px 12px",
                 backgroundColor: "white",
-                borderRadius: "4px",
+                borderRadius: "sm",
                 border: "1px solid #d1d5db",
                 fontSize: "sm",
               })}
@@ -398,11 +398,11 @@ const ProofDemo: React.FC = () => {
               marginBottom: "4",
               padding: "4",
               backgroundColor: "white",
-              borderRadius: "4px",
+              borderRadius: "sm",
               border: "1px solid #e5e7eb",
             })}
           >
-            <h4 className={css({ fontSize: "md", fontWeight: "medium", marginBottom: "3" })}>
+            <h4 className={css({ fontSize: "md", fontWeight: "semibold", marginBottom: "3" })}>
               Step 1: Select User to Generate Proof
             </h4>
             <select
@@ -412,7 +412,7 @@ const ProofDemo: React.FC = () => {
                 width: "100%",
                 padding: "2",
                 border: "1px solid #d1d5db",
-                borderRadius: "4px",
+                borderRadius: "sm",
                 marginBottom: "3",
               })}
             >
@@ -429,7 +429,7 @@ const ProofDemo: React.FC = () => {
                 backgroundColor: "gray.700",
                 color: "white",
                 border: "1px solid #374151",
-                borderRadius: "4px",
+                borderRadius: "sm",
                 cursor: "pointer",
                 fontSize: "sm",
                 "&:hover": {
@@ -447,11 +447,11 @@ const ProofDemo: React.FC = () => {
               className={css({
                 padding: "4",
                 backgroundColor: "codeBg",
-                borderRadius: "4px",
+                borderRadius: "sm",
                 border: "1px solid #e5e7eb",
               })}
             >
-              <h4 className={css({ fontSize: "md", fontWeight: "medium", marginBottom: "3", color: "gray.700" })}>
+              <h4 className={css({ fontSize: "md", fontWeight: "semibold", marginBottom: "3", color: "gray.700" })}>
                 Generated Proof for {sampleBatch.requests[selectedUser].owner}
               </h4>
               <div className={css({ marginBottom: "3" })}>
@@ -473,7 +473,7 @@ const ProofDemo: React.FC = () => {
                       fontFamily: "monospace",
                       backgroundColor: "white",
                       padding: "2",
-                      borderRadius: "4px",
+                      borderRadius: "sm",
                       border: "1px solid #d1d5db",
                       overflow: "auto",
                       maxHeight: "200px",
@@ -492,7 +492,7 @@ const ProofDemo: React.FC = () => {
                       backgroundColor: "gray.500",
                       color: "white",
                       border: "none",
-                      borderRadius: "4px",
+                      borderRadius: "sm",
                       fontSize: "xs",
                       cursor: "pointer",
                     })}
@@ -514,11 +514,11 @@ const ProofDemo: React.FC = () => {
               marginBottom: "4",
               padding: "4",
               backgroundColor: "white",
-              borderRadius: "4px",
+              borderRadius: "sm",
               border: "1px solid #e5e7eb",
             })}
           >
-            <h4 className={css({ fontSize: "md", fontWeight: "medium", marginBottom: "3" })}>
+            <h4 className={css({ fontSize: "md", fontWeight: "semibold", marginBottom: "3" })}>
               Step 2: Validate a Proof
             </h4>
             <label className={css({ display: "block", fontSize: "sm", marginBottom: "2" })}>
@@ -533,7 +533,7 @@ const ProofDemo: React.FC = () => {
                 height: "120px",
                 padding: "2",
                 border: "1px solid #d1d5db",
-                borderRadius: "4px",
+                borderRadius: "sm",
                 fontSize: "xs",
                 fontFamily: "monospace",
                 marginBottom: "3",
@@ -548,7 +548,7 @@ const ProofDemo: React.FC = () => {
                 backgroundColor: validationInput.trim() ? "gray.700" : "gray.400",
                 color: "white",
                 border: "none",
-                borderRadius: "4px",
+                borderRadius: "sm",
                 cursor: validationInput.trim() ? "pointer" : "not-allowed",
                 fontSize: "sm",
                 "&:hover": validationInput.trim()
@@ -567,17 +567,17 @@ const ProofDemo: React.FC = () => {
               className={css({
                 padding: "4",
                 backgroundColor: validationResult.isValid ? "codeBg" : "red.50",
-                borderRadius: "4px",
+                borderRadius: "sm",
                 border: `1px solid ${validationResult.isValid ? "gray.300" : "red.200"}`,
               })}
             >
-              <h4 className={css({ fontSize: "md", fontWeight: "medium", marginBottom: "3" })}>
+              <h4 className={css({ fontSize: "md", fontWeight: "semibold", marginBottom: "3" })}>
                 Validation Result
               </h4>
               <div
                 className={css({
                   fontSize: "sm",
-                  fontWeight: "medium",
+                  fontWeight: "semibold",
                   marginBottom: "3",
                   color: validationResult.isValid ? "green.800" : "red.600",
                 })}
@@ -596,7 +596,7 @@ const ProofDemo: React.FC = () => {
                           fontFamily: "monospace",
                           backgroundColor: "white",
                           padding: "4px 8px",
-                          borderRadius: "4px",
+                          borderRadius: "sm",
                           border: "1px solid #e5e7eb",
                           marginBottom: "1",
                         })}
@@ -765,7 +765,7 @@ const BatchCreator: React.FC = () => {
     <div
       className={css({
         border: "1px solid #e5e7eb",
-        borderRadius: "8px",
+        borderRadius: "lg",
         padding: "5",
         margin: "20px 0",
         backgroundColor: "codeBg",
@@ -780,7 +780,7 @@ const BatchCreator: React.FC = () => {
           marginBottom: "5",
           padding: "4",
           backgroundColor: "blue.50",
-          borderRadius: "8px",
+          borderRadius: "lg",
           border: "1px solid #bfdbfe",
         })}
       >
@@ -796,11 +796,11 @@ const BatchCreator: React.FC = () => {
           marginBottom: "6",
           padding: "4",
           backgroundColor: "white",
-          borderRadius: "4px",
+          borderRadius: "sm",
           border: "1px solid #e5e7eb",
         })}
       >
-        <h4 className={css({ fontSize: "md", fontWeight: "medium", marginBottom: "4" })}>Send LLM Request</h4>
+        <h4 className={css({ fontSize: "md", fontWeight: "semibold", marginBottom: "4" })}>Send LLM Request</h4>
 
         <div className={css({ marginBottom: "3" })}>
           <label className={css({ display: "block", fontSize: "sm", marginBottom: "1" })}>
@@ -813,7 +813,7 @@ const BatchCreator: React.FC = () => {
               width: "100%",
               padding: "2",
               border: "1px solid #d1d5db",
-              borderRadius: "4px",
+              borderRadius: "sm",
               fontFamily: "monospace",
               fontSize: "sm",
             })}
@@ -837,7 +837,7 @@ const BatchCreator: React.FC = () => {
               width: "100%",
               padding: "2",
               border: "1px solid #d1d5db",
-              borderRadius: "4px",
+              borderRadius: "sm",
               fontSize: "sm",
             })}
             onKeyPress={(e) => e.key === "Enter" && handleSendRequest()}
@@ -853,9 +853,9 @@ const BatchCreator: React.FC = () => {
               backgroundColor: currentPrompt.trim() ? "gray.700" : "gray.400",
               color: "white",
               border: "none",
-              borderRadius: "4px",
+              borderRadius: "sm",
               cursor: currentPrompt.trim() ? "pointer" : "not-allowed",
-              transition: "background-color 0.2s",
+              transition: "background-color {durations.normal} ease",
               "&:hover": { backgroundColor: currentPrompt.trim() ? "gray.600" : "gray.400" },
             })}
           >
@@ -869,9 +869,9 @@ const BatchCreator: React.FC = () => {
               backgroundColor: "gray.700",
               color: "white",
               border: "none",
-              borderRadius: "4px",
+              borderRadius: "sm",
               cursor: "pointer",
-              transition: "background-color 0.2s",
+              transition: "background-color {durations.normal} ease",
               "&:hover": { backgroundColor: "gray.600" },
             })}
           >
@@ -885,9 +885,9 @@ const BatchCreator: React.FC = () => {
               backgroundColor: "red.500",
               color: "white",
               border: "none",
-              borderRadius: "4px",
+              borderRadius: "sm",
               cursor: "pointer",
-              transition: "background-color 0.2s",
+              transition: "background-color {durations.normal} ease",
               "&:hover": { backgroundColor: "red.600" },
             })}
           >
@@ -903,7 +903,7 @@ const BatchCreator: React.FC = () => {
             padding: "3",
             backgroundColor: "green.50",
             border: "1px solid #bbf7d0",
-            borderRadius: "4px",
+            borderRadius: "sm",
             marginBottom: "4",
           })}
         >
@@ -921,10 +921,10 @@ const BatchCreator: React.FC = () => {
                   fontFamily: "monospace",
                   backgroundColor: "white",
                   padding: "2",
-                  borderRadius: "4px",
+                  borderRadius: "sm",
                   border: "1px solid #bbf7d0",
                   marginTop: "1",
-                  lineHeight: "1.4",
+                  lineHeight: "normal",
                   overflow: "auto",
                 })}
               >
@@ -944,7 +944,7 @@ const BatchCreator: React.FC = () => {
               textAlign: "center",
               color: "gray.500",
               backgroundColor: "white",
-              borderRadius: "4px",
+              borderRadius: "sm",
               border: "1px solid #e5e7eb",
             })}
           >
@@ -958,7 +958,7 @@ const BatchCreator: React.FC = () => {
                 padding: "4",
                 backgroundColor: "white",
                 border: "1px solid #e5e7eb",
-                borderRadius: "4px",
+                borderRadius: "sm",
                 marginBottom: "3",
               })}
             >
@@ -973,7 +973,7 @@ const BatchCreator: React.FC = () => {
                     fontFamily: "monospace",
                     backgroundColor: "#fafbfc",
                     padding: "6px 10px",
-                    borderRadius: "3px",
+                    borderRadius: "sm",
                     border: "1px solid #e5e7eb",
                     marginBottom: "1",
                     whiteSpace: "pre-wrap",
@@ -991,7 +991,7 @@ const BatchCreator: React.FC = () => {
                     fontFamily: "monospace",
                     backgroundColor: "#fafbfc",
                     padding: "6px 10px",
-                    borderRadius: "3px",
+                    borderRadius: "sm",
                     border: "1px solid #e5e7eb",
                     whiteSpace: "pre-wrap",
                     wordBreak: "break-word",
@@ -1020,10 +1020,10 @@ const BatchCreator: React.FC = () => {
                       fontFamily: "monospace",
                       backgroundColor: "#fafbfc",
                       padding: "8px 10px",
-                      borderRadius: "3px",
+                      borderRadius: "sm",
                       border: "1px solid #e5e7eb",
                       overflow: "auto",
-                      lineHeight: "1.3",
+                      lineHeight: "tight",
                     })}
                   >
                     {JSON.stringify(request.leafData, null, 2)}
@@ -1050,7 +1050,7 @@ const BatchCreator: React.FC = () => {
                       fontFamily: "monospace",
                       backgroundColor: "gray.100",
                       padding: "4px 8px",
-                      borderRadius: "3px",
+                      borderRadius: "sm",
                       border: "1px solid #e5e7eb",
                       wordBreak: "break-all",
                       display: "block",

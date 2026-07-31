@@ -36,7 +36,7 @@ export const commentSection = {
     marginBottom: "xs",
   }),
   commentDate: css({ fontSize: "sm", color: "gray.500" }),
-  commentText: css({ margin: 0, lineHeight: "1.6", color: "text" }),
+  commentText: css({ margin: 0, lineHeight: "relaxed", color: "text" }),
   form: css({
     display: "flex",
     flexDirection: "column",

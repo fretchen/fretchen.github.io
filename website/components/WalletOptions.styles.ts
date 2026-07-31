@@ -15,11 +15,11 @@ export const walletOptions = {
     border: "1px solid token(colors.brand)",
     borderRadius: "sm",
     cursor: "pointer",
-    fontWeight: "medium",
+    fontWeight: "semibold",
     display: "flex",
     alignItems: "center",
     gap: "xs",
-    transition: "all 0.2s ease",
+    transition: "all {durations.normal} ease",
     minWidth: "120px", // Ensure minimum width for readability on desktop
     justifyContent: "center",
     _hover: {
@@ -46,7 +46,7 @@ export const walletOptions = {
     position: "absolute",
     backgroundColor: "background",
     minWidth: "160px",
-    boxShadow: "0px 8px 20px 0px rgba(0,0,0,0.15)",
+    boxShadow: "lg",
     zIndex: 2000, // Höherer z-index um über scrollbare Navigation zu sein
     right: "0",
     borderRadius: "sm",
@@ -64,7 +64,7 @@ export const walletOptions = {
     textAlign: "left",
     cursor: "pointer",
     borderBottom: "1px solid token(colors.border)",
-    transition: "all 0.2s ease",
+    transition: "all {durations.normal} ease",
     fontSize: "sm",
     _last: { borderBottom: "none" },
     _hover: {

@@ -47,7 +47,7 @@ export const sidebar = css({
   gap: "md",
   borderLeft: "1px solid",
   borderColor: "border",
-  boxShadow: "0 1px 0 rgba(0,0,0,0.02)",
+  boxShadow: "sm",
   // On desktop, fix the sidebar to the left edge of the viewport
   position: "fixed",
   left: 0,
@@ -74,7 +74,7 @@ export const sidebarSection = css({
 export const sidebarHeading = css({
   margin: 0,
   fontSize: "sm",
-  fontWeight: "600",
+  fontWeight: "semibold",
   color: "text",
 });
 
@@ -166,7 +166,7 @@ export const messageBubbleAssistant = css({
 });
 
 export const messageRole = css({
-  fontWeight: "500",
+  fontWeight: "semibold",
   marginBottom: "xs",
   fontSize: "xs",
   textTransform: "uppercase",
@@ -175,7 +175,7 @@ export const messageRole = css({
 });
 
 export const messageContent = css({
-  lineHeight: "1.5",
+  lineHeight: "normal",
 });
 
 // Plain-text messages (user input) preserve literal newlines/spacing.
@@ -221,7 +221,7 @@ export const messageInput = css({
   minHeight: "60px",
   maxHeight: "120px",
   fontSize: "sm",
-  lineHeight: "1.5",
+  lineHeight: "normal",
   outline: "none",
   backgroundColor: "background",
   _focus: {

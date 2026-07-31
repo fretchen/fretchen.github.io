@@ -469,7 +469,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   return (
     <div
       className={css({
-        transition: "all 0.5s ease-in-out",
+        transition: "all {durations.normal} ease",
         overflow: "hidden",
       })}
     >
@@ -497,7 +497,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
             className={css({
               fontSize: "md",
               color: "gray.600",
-              lineHeight: "1.5",
+              lineHeight: "normal",
             })}
           >
             AI Image Generation is currently under maintenance. Please check back later.
@@ -528,7 +528,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
           <div
             className={css({
               fontSize: "md",
-              fontWeight: "medium",
+              fontWeight: "semibold",
               color: "gray.800",
               mb: "3",
               textAlign: "center",
@@ -543,7 +543,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
               fontSize: "sm",
               color: "gray.600",
               mb: "lg",
-              lineHeight: "1.5",
+              lineHeight: "normal",
             })}
           >
             {collapsedDescriptionText}
@@ -643,7 +643,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
                       <h4
                         className={css({
                           fontSize: "sm",
-                          fontWeight: "medium",
+                          fontWeight: "semibold",
                           color: "gray.700",
                           mb: "1",
                         })}
@@ -676,7 +676,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
                       <h4
                         className={css({
                           fontSize: "sm",
-                          fontWeight: "medium",
+                          fontWeight: "semibold",
                           color: "gray.700",
                           m: 0,
                         })}
@@ -754,7 +754,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
                       <h4
                         className={css({
                           fontSize: "sm",
-                          fontWeight: "medium",
+                          fontWeight: "semibold",
                           color: "gray.700",
                           m: 0,
                         })}

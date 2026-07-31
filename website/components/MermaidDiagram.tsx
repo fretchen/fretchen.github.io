@@ -85,7 +85,7 @@ const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ definition, title, clas
         margin: "20px 0",
         padding: "5",
         backgroundColor: "codeBg",
-        borderRadius: "8px",
+        borderRadius: "lg",
         border: "1px solid #e5e7eb",
         textAlign: "center",
       })} ${className || ""}`}
@@ -93,7 +93,7 @@ const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ definition, title, clas
       <h4
         className={css({
           fontSize: "md",
-          fontWeight: "medium",
+          fontWeight: "semibold",
           marginBottom: "4",
           color: "gray.700",
         })}

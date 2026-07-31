@@ -24,7 +24,7 @@ export const nftFloat = {
     height: "auto",
     borderRadius: "sm",
     border: "1px solid token(colors.border)",
-    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+    boxShadow: "sm",
     display: "block",
   }),
   caption: css({
@@ -32,7 +32,7 @@ export const nftFloat = {
     color: "gray.600",
     marginTop: "xs",
     textAlign: "center",
-    lineHeight: "1.3",
+    lineHeight: "tight",
   }),
   loading: css({
     display: "flex",
@@ -71,7 +71,7 @@ export const nftFloat = {
   placeholderText: css({
     fontSize: "sm",
     color: "gray.700",
-    fontWeight: "medium",
+    fontWeight: "semibold",
   }),
   errorText: css({
     fontSize: "xs",

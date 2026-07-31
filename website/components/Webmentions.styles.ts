@@ -34,7 +34,7 @@ export const webmentions = {
   compactCount: css({
     fontSize: "sm",
     color: "gray.600",
-    fontWeight: "medium",
+    fontWeight: "semibold",
   }),
   shareActions: css({
     display: "flex",
@@ -51,7 +51,7 @@ export const webmentions = {
   }),
   avatarLink: css({
     display: "block",
-    transition: "all 0.2s ease",
+    transition: "all {durations.normal} ease",
     _hover: {
       transform: "scale(1.1)",
       opacity: 0.8,
@@ -60,7 +60,7 @@ export const webmentions = {
   avatar: css({
     width: "40px",
     height: "40px",
-    borderRadius: "50%",
+    borderRadius: "full",
     border: "2px solid token(colors.border)",
     display: "flex",
     alignItems: "center",
@@ -90,7 +90,7 @@ export const webmentions = {
     borderRadius: "sm",
     border: "1px solid token(colors.border)",
     boxShadow: "sm",
-    transition: "all 0.2s ease",
+    transition: "all {durations.normal} ease",
     _hover: {
       boxShadow: "md",
     },
@@ -108,7 +108,7 @@ export const webmentions = {
   replyAvatar: css({
     width: "40px",
     height: "40px",
-    borderRadius: "50%",
+    borderRadius: "full",
     border: "2px solid token(colors.border)",
     flexShrink: 0,
     display: "flex",
@@ -126,10 +126,10 @@ export const webmentions = {
     flex: 1,
   }),
   authorName: css({
-    fontWeight: "medium",
+    fontWeight: "semibold",
     color: "brand",
     textDecoration: "none",
-    transition: "all 0.2s ease",
+    transition: "all {durations.normal} ease",
     _hover: {
       textDecoration: "underline",
     },
@@ -141,7 +141,7 @@ export const webmentions = {
   }),
   replyContent: css({
     marginTop: "sm",
-    lineHeight: "1.6",
+    lineHeight: "relaxed",
     color: "text",
   }),
   replyLink: css({
@@ -150,7 +150,7 @@ export const webmentions = {
     fontSize: "sm",
     color: "brand",
     textDecoration: "none",
-    transition: "all 0.2s ease",
+    transition: "all {durations.normal} ease",
     _hover: {
       textDecoration: "underline",
     },

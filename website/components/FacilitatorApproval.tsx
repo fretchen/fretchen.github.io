@@ -60,7 +60,7 @@ export function getNetworkUSDCConfig(network: string): USDCConfig | null {
 
 const container = css({
   border: "1px solid token(colors.border, #e5e7eb)",
-  borderRadius: "8px",
+  borderRadius: "lg",
   padding: "5",
   marginBottom: "6",
   backgroundColor: "codeBg",
@@ -78,7 +78,7 @@ const statusRow = css({
 const label = css({
   fontSize: "sm",
   color: "gray.500",
-  fontWeight: "medium",
+  fontWeight: "semibold",
 });
 
 const valueText = css({
@@ -97,7 +97,7 @@ const txStatus = css({
   fontSize: "sm",
   marginTop: "3",
   padding: "8px 12px",
-  borderRadius: "6px",
+  borderRadius: "md",
 });
 
 const connectHint = css({

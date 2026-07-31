@@ -122,14 +122,14 @@ const ExpectedUtilityPlot: React.FC = () => {
         margin: "32px 0",
         padding: "6",
         backgroundColor: "rgba(59, 130, 246, 0.05)",
-        borderRadius: "4px",
+        borderRadius: "sm",
         border: "1px solid rgba(59, 130, 246, 0.2)",
       })}
     >
       <h4
         className={css({
           fontSize: "md",
-          fontWeight: "medium",
+          fontWeight: "semibold",
           textAlign: "center",
           marginBottom: "4",
           color: "gray.700",
@@ -219,7 +219,7 @@ const ExpectedUtilityPlot: React.FC = () => {
             width: "100%",
             height: "4px",
             backgroundColor: "gray.200",
-            borderRadius: "2px",
+            borderRadius: "xs",
             outline: "none",
             cursor: "pointer",
           })}
@@ -239,7 +239,7 @@ const ExpectedUtilityPlot: React.FC = () => {
         className={css({
           backgroundColor: expectedDefect < expectedCooperate ? "red.50" : "sky.50",
           border: expectedDefect < expectedCooperate ? "2px solid #dc2626" : "2px solid #0066cc",
-          borderRadius: "6px",
+          borderRadius: "md",
           padding: "4",
           marginBottom: "4",
         })}
@@ -382,14 +382,14 @@ const PayoffMatrix: React.FC = () => {
         margin: "32px 0",
         padding: "6",
         backgroundColor: "rgba(59, 130, 246, 0.05)", // Very subtle blue background
-        borderRadius: "4px",
+        borderRadius: "sm",
         border: "1px solid rgba(59, 130, 246, 0.2)", // Subtle border
       })}
     >
       <h4
         className={css({
           fontSize: "md",
-          fontWeight: "medium",
+          fontWeight: "semibold",
           textAlign: "center",
           marginBottom: "4",
           color: "gray.700",
@@ -423,11 +423,11 @@ const PayoffMatrix: React.FC = () => {
               padding: "8px 16px",
               backgroundColor: "gray.700",
               color: "white",
-              borderRadius: "4px",
+              borderRadius: "sm",
               border: "none",
               fontSize: "md",
               cursor: "pointer",
-              transition: "background-color 0.2s",
+              transition: "background-color {durations.normal} ease",
               _hover: {
                 backgroundColor: "gray.800",
               },
@@ -441,11 +441,11 @@ const PayoffMatrix: React.FC = () => {
               padding: "8px 16px",
               backgroundColor: "brand",
               color: "white",
-              borderRadius: "4px",
+              borderRadius: "sm",
               border: "none",
               fontSize: "md",
               cursor: "pointer",
-              transition: "background-color 0.2s",
+              transition: "background-color {durations.normal} ease",
               _hover: {
                 backgroundColor: "brandHover",
               },
@@ -486,7 +486,7 @@ const PayoffMatrix: React.FC = () => {
             <div
               className={css({
                 padding: "3",
-                borderRadius: "4px",
+                borderRadius: "sm",
                 border: "1px solid #d1d5db",
                 backgroundColor: "codeBg",
                 marginTop: "4",
@@ -535,11 +535,11 @@ const PayoffMatrix: React.FC = () => {
                 padding: "6px 12px",
                 backgroundColor: "gray.100",
                 color: "gray.700",
-                borderRadius: "4px",
+                borderRadius: "sm",
                 border: "1px solid #d1d5db",
                 fontSize: "sm",
                 cursor: "pointer",
-                transition: "background-color 0.2s",
+                transition: "background-color {durations.normal} ease",
                 _hover: {
                   backgroundColor: "gray.200",
                 },
@@ -671,14 +671,14 @@ const GameSimulation: React.FC = () => {
         margin: "32px 0",
         padding: "6",
         backgroundColor: "rgba(59, 130, 246, 0.05)",
-        borderRadius: "4px",
+        borderRadius: "sm",
         border: "1px solid rgba(59, 130, 246, 0.2)",
       })}
     >
       <h4
         className={css({
           fontSize: "md",
-          fontWeight: "medium",
+          fontWeight: "semibold",
           marginBottom: "4",
           textAlign: "center",
           color: "gray.700",
@@ -698,7 +698,7 @@ const GameSimulation: React.FC = () => {
             className={css({
               display: "block",
               fontSize: "sm",
-              fontWeight: "medium",
+              fontWeight: "semibold",
               marginBottom: "2",
               color: "gray.700",
               textAlign: "center",
@@ -714,7 +714,7 @@ const GameSimulation: React.FC = () => {
                 width: "60%",
                 padding: "2",
                 border: "1px solid #d1d5db",
-                borderRadius: "4px",
+                borderRadius: "sm",
                 fontSize: "sm",
               })}
             >
@@ -729,7 +729,7 @@ const GameSimulation: React.FC = () => {
               fontSize: "xs",
               color: "gray.500",
               marginTop: "2",
-              lineHeight: "1.3",
+              lineHeight: "tight",
               textAlign: "center",
             })}
           >
@@ -746,12 +746,12 @@ const GameSimulation: React.FC = () => {
             padding: "12px 24px",
             backgroundColor: isRunning ? "gray.400" : "brand",
             color: "white",
-            borderRadius: "4px",
+            borderRadius: "sm",
             border: "none",
             fontSize: "md",
-            fontWeight: "medium",
+            fontWeight: "semibold",
             cursor: isRunning ? "not-allowed" : "pointer",
-            transition: "background-color 0.2s",
+            transition: "background-color {durations.normal} ease",
             _hover: {
               backgroundColor: isRunning ? "gray.400" : "brandHover",
             },
@@ -768,7 +768,7 @@ const GameSimulation: React.FC = () => {
             className={css({
               backgroundColor: "slate.50",
               border: "2px solid #e2e8f0",
-              borderRadius: "8px",
+              borderRadius: "lg",
               padding: "4",
               marginBottom: "4",
             })}
@@ -791,7 +791,7 @@ const GameSimulation: React.FC = () => {
                     textAlign: "center",
                     padding: "3",
                     backgroundColor: "blue.100",
-                    borderRadius: "6px",
+                    borderRadius: "md",
                   })}
                 >
                   <div className={css({ fontSize: "sm", fontWeight: "bold", color: "blue.700" })}>Walter (You)</div>
@@ -805,7 +805,7 @@ const GameSimulation: React.FC = () => {
                     textAlign: "center",
                     padding: "3",
                     backgroundColor: "purple.50",
-                    borderRadius: "6px",
+                    borderRadius: "md",
                     border: "2px solid #a855f7",
                   })}
                 >
@@ -850,7 +850,7 @@ const GameSimulation: React.FC = () => {
               className={css({
                 textAlign: "center",
                 padding: "3",
-                borderRadius: "6px",
+                borderRadius: "md",
                 backgroundColor: "white",
                 border: `2px solid ${analysis.color}`,
                 marginBottom: "4",
@@ -867,7 +867,7 @@ const GameSimulation: React.FC = () => {
             className={css({
               backgroundColor: "white",
               border: "1px solid #e5e7eb",
-              borderRadius: "6px",
+              borderRadius: "md",
               padding: "4",
               marginBottom: "4",
             })}
@@ -875,7 +875,7 @@ const GameSimulation: React.FC = () => {
             <h6
               className={css({
                 fontSize: "sm",
-                fontWeight: "medium",
+                fontWeight: "semibold",
                 marginBottom: "3",
                 textAlign: "center",
                 color: "gray.700",
@@ -1052,14 +1052,14 @@ const StrategyAnalysis: React.FC = () => {
         margin: "32px 0",
         padding: "6",
         backgroundColor: "rgba(59, 130, 246, 0.05)",
-        borderRadius: "4px",
+        borderRadius: "sm",
         border: "1px solid rgba(59, 130, 246, 0.2)",
       })}
     >
       <h4
         className={css({
           fontSize: "md",
-          fontWeight: "medium",
+          fontWeight: "semibold",
           marginBottom: "4",
           textAlign: "center",
           color: "gray.700",
@@ -1088,12 +1088,12 @@ const StrategyAnalysis: React.FC = () => {
             padding: "12px 24px",
             backgroundColor: isAnalyzing ? "gray.400" : "brand",
             color: "white",
-            borderRadius: "4px",
+            borderRadius: "sm",
             border: "none",
             fontSize: "md",
-            fontWeight: "medium",
+            fontWeight: "semibold",
             cursor: isAnalyzing ? "not-allowed" : "pointer",
-            transition: "background-color 0.2s",
+            transition: "background-color {durations.normal} ease",
             _hover: {
               backgroundColor: isAnalyzing ? "gray.400" : "brandHover",
             },
@@ -1125,7 +1125,7 @@ const StrategyAnalysis: React.FC = () => {
                   className={css({
                     backgroundColor: "slate.50",
                     border: "2px solid #e2e8f0",
-                    borderRadius: "8px",
+                    borderRadius: "lg",
                     padding: "4",
                   })}
                 >
@@ -1140,7 +1140,7 @@ const StrategyAnalysis: React.FC = () => {
                     >
                       If Jesse is: {strategyNames[jesseStrat]}
                     </h6>
-                    <p className={css({ fontSize: "xs", color: "gray.500", lineHeight: "1.3" })}>
+                    <p className={css({ fontSize: "xs", color: "gray.500", lineHeight: "tight" })}>
                       {jesseStrategyDescriptions[jesseStrat]}
                     </p>
                   </div>
@@ -1150,7 +1150,7 @@ const StrategyAnalysis: React.FC = () => {
                       className={css({
                         textAlign: "center",
                         padding: "3",
-                        borderRadius: "6px",
+                        borderRadius: "md",
                         backgroundColor: "white",
                         border: `2px solid ${color}`,
                       })}
@@ -1168,7 +1168,7 @@ const StrategyAnalysis: React.FC = () => {
                       <div className={css({ fontSize: "xs", color: "gray.500", marginBottom: "1" })}>
                         Average: {best.score} years prison
                       </div>
-                      <div className={css({ fontSize: "xs", color: color, fontWeight: "medium" })}>
+                      <div className={css({ fontSize: "xs", color: color, fontWeight: "semibold" })}>
                         {recommendationText}
                       </div>
                     </div>
@@ -1183,7 +1183,7 @@ const StrategyAnalysis: React.FC = () => {
             className={css({
               backgroundColor: "white",
               border: "1px solid #e5e7eb",
-              borderRadius: "6px",
+              borderRadius: "md",
               padding: "4",
               marginBottom: "4",
             })}
@@ -1191,7 +1191,7 @@ const StrategyAnalysis: React.FC = () => {
             <h6
               className={css({
                 fontSize: "sm",
-                fontWeight: "medium",
+                fontWeight: "semibold",
                 marginBottom: "3",
                 textAlign: "center",
                 color: "gray.700",
@@ -1236,7 +1236,7 @@ const StrategyAnalysis: React.FC = () => {
                           border: "1px solid #d1d5db",
                           padding: "2",
                           backgroundColor: "codeBg",
-                          fontWeight: "medium",
+                          fontWeight: "semibold",
                         })}
                       >
                         {strategyNames[strat1]}

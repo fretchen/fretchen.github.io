@@ -153,7 +153,7 @@ function getMessage(paidOff: boolean, staying: boolean, hasMortgage: boolean): s
 const inputCss = css({
   width: "100%",
   padding: "2",
-  borderRadius: "6px",
+  borderRadius: "md",
   border: "1px solid #d1d5db",
   fontSize: "md",
   _focus: { outline: "none", borderColor: "explore" },
@@ -163,7 +163,7 @@ const labelCss = css({
   display: "block",
   fontSize: "sm",
   color: "gray.700",
-  fontWeight: "600",
+  fontWeight: "semibold",
   marginBottom: "1",
 });
 
@@ -287,7 +287,7 @@ export default function RiskReality() {
         margin: "32px 0",
         padding: "6",
         backgroundColor: "rgba(78, 121, 167, 0.04)",
-        borderRadius: "8px",
+        borderRadius: "lg",
         border: "1px solid rgba(78, 121, 167, 0.15)",
       })}
     >
@@ -392,9 +392,9 @@ export default function RiskReality() {
         <div
           className={css({
             padding: "3",
-            borderRadius: "6px",
+            borderRadius: "md",
             border: "1px solid",
-            transition: "all 0.15s",
+            transition: "all {durations.normal} ease",
           })}
           style={{
             borderColor: !hasMortgage ? "#e5e7eb" : mortgagePaidOff ? "#f97316" : "#d1d5db",
@@ -415,7 +415,7 @@ export default function RiskReality() {
               onChange={(e) => setMortgagePaidOff(e.target.checked)}
               className={css({ width: "16px", height: "16px", accentColor: "orange.500" })}
             />
-            <span className={css({ fontSize: "md", fontWeight: "600", color: "gray.700" })}>
+            <span className={css({ fontSize: "md", fontWeight: "semibold", color: "gray.700" })}>
               What if I pay off the mortgage?
             </span>
           </label>
@@ -452,9 +452,9 @@ export default function RiskReality() {
         <div
           className={css({
             padding: "3",
-            borderRadius: "6px",
+            borderRadius: "md",
             border: "1px solid",
-            transition: "all 0.15s",
+            transition: "all {durations.normal} ease",
             cursor: "pointer",
           })}
           style={{
@@ -470,7 +470,7 @@ export default function RiskReality() {
               onChange={(e) => setStaying(e.target.checked)}
               className={css({ width: "16px", height: "16px", accentColor: "green.500" })}
             />
-            <span className={css({ fontSize: "md", fontWeight: "600", color: "gray.700" })}>
+            <span className={css({ fontSize: "md", fontWeight: "semibold", color: "gray.700" })}>
               I&apos;m staying &mdash; price swings don&apos;t affect my costs
             </span>
           </label>
@@ -496,7 +496,7 @@ export default function RiskReality() {
       <div
         className={css({
           padding: "4",
-          borderRadius: "8px",
+          borderRadius: "lg",
           backgroundColor: "white",
           border: "1px solid #e5e7eb",
           marginBottom: "4",
@@ -506,7 +506,7 @@ export default function RiskReality() {
         <p
           className={css({
             fontSize: "sm",
-            fontWeight: "700",
+            fontWeight: "bold",
             color: "gray.500",
             textTransform: "uppercase",
             letterSpacing: "0.05em",
@@ -523,7 +523,7 @@ export default function RiskReality() {
         <p
           className={css({
             fontSize: "sm",
-            fontWeight: "700",
+            fontWeight: "bold",
             color: "gray.500",
             textTransform: "uppercase",
             letterSpacing: "0.05em",
@@ -534,7 +534,7 @@ export default function RiskReality() {
           How the risk is split
           {staying && pctChange !== 0 && (
             <span
-              className={css({ fontWeight: "600", textTransform: "none", letterSpacing: "0" })}
+              className={css({ fontWeight: "semibold", textTransform: "none", letterSpacing: "0" })}
               style={{ color: pctChange > 0 ? "#16a34a" : "#dc2626" }}
             >
               {" "}
@@ -563,7 +563,7 @@ export default function RiskReality() {
               className={css({
                 fontSize: "xs",
                 color: "gray.700",
-                fontWeight: "600",
+                fontWeight: "semibold",
                 marginTop: "1.5",
                 marginBottom: "1",
               })}
@@ -595,7 +595,7 @@ export default function RiskReality() {
                 className={css({
                   textAlign: "left",
                   color: "gray.500",
-                  fontWeight: "600",
+                  fontWeight: "semibold",
                   paddingBottom: "1",
                   borderBottom: "1px solid #e5e7eb",
                 })}
@@ -606,7 +606,7 @@ export default function RiskReality() {
                 className={css({
                   textAlign: "right",
                   color: "gray.500",
-                  fontWeight: "600",
+                  fontWeight: "semibold",
                   paddingBottom: "1",
                   borderBottom: "1px solid #e5e7eb",
                 })}
@@ -617,7 +617,7 @@ export default function RiskReality() {
                 className={css({
                   textAlign: "right",
                   color: "gray.500",
-                  fontWeight: "600",
+                  fontWeight: "semibold",
                   paddingBottom: "1",
                   borderBottom: "1px solid #e5e7eb",
                 })}
@@ -628,7 +628,7 @@ export default function RiskReality() {
                 className={css({
                   textAlign: "right",
                   color: "gray.500",
-                  fontWeight: "600",
+                  fontWeight: "semibold",
                   paddingBottom: "1",
                   borderBottom: "1px solid #e5e7eb",
                 })}
@@ -693,7 +693,7 @@ export default function RiskReality() {
                 colSpan={2}
                 className={css({
                   padding: "6px 0 4px",
-                  fontWeight: "700",
+                  fontWeight: "bold",
                   color: "gray.700",
                   borderTop: "1px solid #e5e7eb",
                 })}
@@ -704,7 +704,7 @@ export default function RiskReality() {
                 className={css({
                   textAlign: "right",
                   padding: "6px 0 4px",
-                  fontWeight: "700",
+                  fontWeight: "bold",
                   borderTop: "1px solid #e5e7eb",
                 })}
                 style={{ color: "#dc2626" }}
@@ -715,7 +715,7 @@ export default function RiskReality() {
                 className={css({
                   textAlign: "right",
                   padding: "6px 0 4px",
-                  fontWeight: "700",
+                  fontWeight: "bold",
                   color: "gray.700",
                   borderTop: "1px solid #e5e7eb",
                 })}
@@ -745,7 +745,7 @@ export default function RiskReality() {
             marginBottom: 0,
             color: "gray.700",
             fontStyle: "italic",
-            lineHeight: "1.5",
+            lineHeight: "normal",
           })}
         >
           {message}
@@ -762,9 +762,9 @@ export default function RiskReality() {
             marginBottom: 0,
             padding: "3",
             backgroundColor: "rgba(34, 197, 94, 0.06)",
-            borderRadius: "6px",
+            borderRadius: "md",
             border: "1px solid rgba(34, 197, 94, 0.2)",
-            lineHeight: "1.5",
+            lineHeight: "normal",
           })}
         >
           <strong>So what does this mean?</strong> Your home will always dominate the risk &mdash; it&apos;s your

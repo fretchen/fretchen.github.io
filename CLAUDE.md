@@ -126,6 +126,10 @@ Image generation flow: `genimg_bfl.js` → Black Forest Labs API → S3 upload �
 
 **Panda CSS** — run `npm run prepare` after config changes to regenerate `styled-system/` (never edit generated files directly).
 
+**The design system — colours and their jobs, the button recipe, the scales, where styles live —
+is documented in [`website/README.md`](website/README.md). Read it before adding any style.** The
+rules below are only the ways Panda fails *silently*; they are not a summary of the system.
+
 #### Styling rules (enforced by `test/styleConventions.test.ts`)
 
 Panda compiles `css({})` **statically at build time**. Three mistakes therefore break styling

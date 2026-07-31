@@ -9,8 +9,8 @@ import {
 import { formatEther } from "viem";
 import { getCollectorNFTAddress, CollectorNFTv1ABI, COLLECTOR_NFT_NETWORKS, fromCAIP2 } from "@fretchen/chain-utils";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
-import * as styles from "../layouts/styles";
 import { useLocale } from "../hooks/useLocale";
+import { button } from "../styled-system/recipes";
 
 interface SimpleCollectButtonProps {
   genImTokenId: bigint;
@@ -144,7 +144,7 @@ export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) 
     <button
       onClick={handleCollect}
       disabled={!isConnected || !simulateMintData || isPending || isConfirming || isLoading}
-      className={`${styles.actionButton} ${styles.primaryButton}`}
+      className={button()}
       title={`Collect this NFT (${getMintCount()} collected) | ${getPriceInfo()}`}
     >
       {isPending || isLoading

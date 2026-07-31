@@ -12,6 +12,7 @@ import {
 } from "chart.js";
 import { css } from "../../styled-system/css";
 import { DATA } from "./etfData";
+import { ESSAY_ACCENT } from "./palette";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
@@ -109,7 +110,7 @@ function ReturnHistogram({ bondReturns, stockReturns, mixReturns, visibleSteps }
   const series = [
     { bins: stockBins, color: DATA.clusters[1].color, opacity: 0.35, label: "Stocks" },
     { bins: bondBins, color: DATA.clusters[0].color, opacity: 0.45, label: "Bonds" },
-    { bins: mixBins, color: "#7b3fa0", opacity: 0.6, label: "Mix" },
+    { bins: mixBins, color: ESSAY_ACCENT, opacity: 0.6, label: "Mix" },
   ];
 
   // Y-axis ticks (return percentages — bottom=negative, top=positive to match price chart)
@@ -297,7 +298,7 @@ export default function DiversificationRandomWalk() {
       {
         label: `Mix (${100 - stockPct}/${stockPct})`,
         data: mixPath,
-        borderColor: "#7b3fa0",
+        borderColor: ESSAY_ACCENT,
         backgroundColor: "transparent",
         borderWidth: 3,
         pointRadius: 0,
@@ -348,28 +349,28 @@ export default function DiversificationRandomWalk() {
   return (
     <div
       className={css({
-        margin: "2rem 0",
-        padding: "1.5rem",
+        margin: "32px 0",
+        padding: "6",
         backgroundColor: "rgba(123, 63, 160, 0.04)",
-        borderRadius: "8px",
+        borderRadius: "lg",
         border: "1px solid rgba(123, 63, 160, 0.15)",
       })}
     >
       <p
         className={css({
-          fontSize: "0.95rem",
+          fontSize: "md",
           fontWeight: "bold",
-          marginBottom: "0.75rem",
-          color: "#374151",
+          marginBottom: "3",
+          color: "gray.700",
         })}
       >
         How does mixing bonds and stocks look in practice?
       </p>
       <p
         className={css({
-          fontSize: "0.8rem",
-          color: "#6b7280",
-          marginBottom: "1rem",
+          fontSize: "sm",
+          color: "gray.500",
+          marginBottom: "4",
         })}
       >
         Each line shows a possible two-year journey of €100. Parameters are exaggerated for clarity (bonds and stocks
@@ -377,25 +378,25 @@ export default function DiversificationRandomWalk() {
       </p>
 
       {/* Slider */}
-      <div className={css({ marginBottom: "1rem" })}>
+      <div className={css({ marginBottom: "4" })}>
         <label
           className={css({
             display: "block",
-            fontSize: "0.85rem",
-            color: "#374151",
-            marginBottom: "0.4rem",
+            fontSize: "sm",
+            color: "gray.700",
+            marginBottom: "1.5",
           })}
         >
           <strong>Stock allocation: {stockPct}%</strong>{" "}
-          <span className={css({ color: "#9ca3af", fontWeight: "normal" })}>(Bonds: {100 - stockPct}%)</span>
+          <span className={css({ color: "gray.400", fontWeight: "normal" })}>(Bonds: {100 - stockPct}%)</span>
         </label>
         <div
           className={css({
             display: "flex",
             justifyContent: "space-between",
-            fontSize: "0.7rem",
-            color: "#6b7280",
-            marginBottom: "0.2rem",
+            fontSize: "xs",
+            color: "gray.500",
+            marginBottom: "1",
           })}
         >
           <span>100% Bonds</span>
@@ -416,32 +417,32 @@ export default function DiversificationRandomWalk() {
       </div>
 
       {/* Button */}
-      <div className={css({ marginBottom: "1rem", display: "flex", alignItems: "center", gap: "1rem" })}>
+      <div className={css({ marginBottom: "4", display: "flex", alignItems: "center", gap: "4" })}>
         <button
           onClick={handleNewPaths}
           disabled={isAnimating}
           className={css({
-            padding: "0.4rem 1rem",
-            backgroundColor: isAnimating ? "#9ca3af" : "#7b3fa0",
+            padding: "6px 16px",
+            backgroundColor: isAnimating ? "gray.400" : "explore",
             color: "white",
             border: "none",
-            borderRadius: "4px",
+            borderRadius: "sm",
             cursor: isAnimating ? "not-allowed" : "pointer",
-            fontSize: "0.8rem",
+            fontSize: "sm",
             fontWeight: "bold",
           })}
         >
           {isAnimating ? "Running…" : "🔄 New random scenario"}
         </button>
         {showVol && !hasMovedSlider && (
-          <span className={css({ fontSize: "0.8rem", color: "#7b3fa0", fontStyle: "italic" })}>
+          <span className={css({ fontSize: "sm", color: "explore", fontStyle: "italic" })}>
             👆 Move the slider to see how the mix changes
           </span>
         )}
       </div>
 
       {/* Chart + side histogram */}
-      <div className={css({ display: "flex", gap: "0.25rem", marginBottom: "1rem" })}>
+      <div className={css({ display: "flex", gap: "1", marginBottom: "4" })}>
         {/* Line chart */}
         <div className={css({ flex: "1 1 0%", height: "300px", minWidth: 0 })}>
           <Line data={chartData} options={chartOptions} />
@@ -458,7 +459,7 @@ export default function DiversificationRandomWalk() {
               flexDirection: "column",
             })}
           >
-            <span className={css({ fontSize: "0.6rem", color: "#9ca3af", textAlign: "center", marginBottom: "2px" })}>
+            <span className={css({ fontSize: "xs", color: "gray.400", textAlign: "center", marginBottom: "0.5" })}>
               Daily return spread
             </span>
             <div className={css({ flex: 1 })}>
@@ -477,9 +478,9 @@ export default function DiversificationRandomWalk() {
       {paths && stepsToShow > 0 && (
         <p
           className={css({
-            fontSize: "0.75rem",
-            color: "#6b7280",
-            marginBottom: "1rem",
+            fontSize: "xs",
+            color: "gray.500",
+            marginBottom: "4",
             fontStyle: "italic",
           })}
         >
@@ -493,14 +494,14 @@ export default function DiversificationRandomWalk() {
         <div>
           <p
             className={css({
-              fontSize: "0.75rem",
-              color: "#6b7280",
-              marginBottom: "0.5rem",
+              fontSize: "xs",
+              color: "gray.500",
+              marginBottom: "2",
             })}
           >
             How bumpy was this ride? (lower = smoother)
           </p>
-          <div className={css({ display: "flex", gap: "0.75rem", flexWrap: "wrap" })}>
+          <div className={css({ display: "flex", gap: "3", flexWrap: "wrap" })}>
             {[
               {
                 label: "Bonds",
@@ -512,18 +513,18 @@ export default function DiversificationRandomWalk() {
                 vol: stockVol!,
                 color: DATA.clusters[1].color,
               },
-              { label: "Mix", vol: mixVol!, color: "#7b3fa0" },
+              { label: "Mix", vol: mixVol!, color: ESSAY_ACCENT },
             ].map((item) => (
               <span
                 key={item.label}
                 className={css({
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: "0.3rem",
-                  padding: "0.25rem 0.6rem",
-                  borderRadius: "999px",
-                  fontSize: "0.75rem",
-                  fontWeight: "600",
+                  gap: "1",
+                  padding: "4px 10px",
+                  borderRadius: "full",
+                  fontSize: "xs",
+                  fontWeight: "semibold",
                   border: "1px solid",
                   borderColor: item.color,
                   color: item.color,
@@ -533,7 +534,7 @@ export default function DiversificationRandomWalk() {
                   className={css({
                     width: "8px",
                     height: "8px",
-                    borderRadius: "50%",
+                    borderRadius: "full",
                     backgroundColor: item.color,
                   })}
                 />
@@ -544,10 +545,10 @@ export default function DiversificationRandomWalk() {
           {mixVol! < bondVol! && (
             <p
               className={css({
-                fontSize: "0.8rem",
-                color: "#7b3fa0",
-                fontWeight: "600",
-                marginTop: "0.5rem",
+                fontSize: "sm",
+                color: "explore",
+                fontWeight: "semibold",
+                marginTop: "2",
               })}
             >
               👉 The mix fluctuates {((1 - mixVol! / bondVol!) * 100).toFixed(0)}% less than bonds alone — adding stocks

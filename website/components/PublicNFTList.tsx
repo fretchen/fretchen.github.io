@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { useMultiChainPublicNFTs } from "../hooks/useMultiChainNFTs";
 import { ModalImageData } from "../types/components";
-import * as styles from "../layouts/styles";
+import * as styles from "../layouts/shared";
+import { nftList } from "./nft/styles";
 import { NFTCard } from "./NFTCard";
 import { ImageModal } from "./ImageModal";
 
@@ -14,7 +15,7 @@ export function PublicNFTList() {
 
   if (isLoading && tokens.length === 0) {
     return (
-      <div className={styles.nftList.loadingContainer}>
+      <div className={nftList.loadingContainer}>
         <div className={styles.spinner}></div>
         <p>Loading public artworks from all networks...</p>
       </div>
@@ -23,15 +24,15 @@ export function PublicNFTList() {
 
   if (tokens.length === 0) {
     return (
-      <div className={styles.nftList.emptyStateContainer}>
-        <p className={styles.nftList.emptyStateText}>No public artworks available yet.</p>
+      <div className={nftList.emptyStateContainer}>
+        <p className={nftList.emptyStateText}>No public artworks available yet.</p>
       </div>
     );
   }
 
   return (
     <>
-      <div className={styles.nftList.grid}>
+      <div className={nftList.grid}>
         {tokens.map((token, index) => (
           <NFTCard
             key={`public-${token.network}-${token.tokenId}-${index}`}

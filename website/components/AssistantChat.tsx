@@ -10,7 +10,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { AgentInfoPanel } from "./AgentInfoPanel";
 import { AgentSelector } from "./AgentSelector";
-import * as styles from "../layouts/styles";
+import * as chat from "./AssistantChat.styles";
 import { useLocale } from "../hooks/useLocale";
 import { useUmami } from "../hooks/useUmami";
 import { css } from "../styled-system/css";
@@ -19,6 +19,7 @@ import { useAutoNetwork } from "../hooks/useAutoNetwork";
 import { useX402Chat, DEFAULT_LLM_AGENT_URL } from "../hooks/useX402Chat";
 import { fetchAgentCard, precheckLlmV1Agent, type AgentCard } from "../hooks/x402Discovery";
 import { getViemChain } from "@fretchen/chain-utils";
+import { button } from "../styled-system/recipes";
 
 // The custom-URL escape hatch (AgentSelector) lets the chat pay any llm/v1 agent. It is also
 // the only ready-made batch-settlement client there is, so it doubles as the end-to-end test
@@ -229,24 +230,24 @@ export function AssistantChat() {
   const receiptUrl = paymentReceipt ? explorerTxUrl(paymentReceipt.network, paymentReceipt.transaction) : null;
 
   return (
-    <div className={styles.assistantPageContainer}>
-      <div className={`${styles.assistantGrid} ${isMobile ? styles.assistantGridMobile : styles.assistantGridDesktop}`}>
+    <div className={chat.pageContainer}>
+      <div className={`${chat.grid} ${isMobile ? chat.gridMobile : chat.gridDesktop}`}>
         {/* Sidebar - desktop only */}
         {!isMobile && (
-          <div className={styles.sidebar}>
+          <div className={chat.sidebar}>
             {/* Actions Section */}
-            <div className={styles.sidebarSection}>
-              <h4 className={styles.sidebarHeading}>{actionsLabel}</h4>
-              <div className={styles.actionsContainer}>
-                <button onClick={clearChat} className={`${styles.actionButton} ${styles.actionButtonSecondary}`}>
+            <div className={chat.sidebarSection}>
+              <h4 className={chat.sidebarHeading}>{actionsLabel}</h4>
+              <div className={chat.actionsContainer}>
+                <button onClick={clearChat} className={button({ visual: "ghost", size: "sm" })}>
                   {clearChatLabel}
                 </button>
               </div>
             </div>
 
             {/* Agent Info Section */}
-            <div className={styles.sidebarSection}>
-              <h4 className={styles.sidebarHeading}>Agent</h4>
+            <div className={chat.sidebarSection}>
+              <h4 className={chat.sidebarHeading}>Agent</h4>
               <AgentInfoPanel service="llm" variant="sidebar" agentCard={activeCard} />
               <AgentSelector
                 customUrlInput={customUrlInput}
@@ -262,13 +263,13 @@ export function AssistantChat() {
         )}
 
         {/* Chat Area */}
-        <div className={styles.chatArea}>
+        <div className={chat.chatArea}>
           {/* Mobile Header */}
           {isMobile && (
-            <div className={styles.mobileHeader}>
-              <h2 className={styles.mobileTitle}>{mobileTitleLabel}</h2>
-              <div className={styles.mobileActions}>
-                <button onClick={clearChat} className={styles.mobileActionButton} title="Clear Chat">
+            <div className={chat.mobileHeader}>
+              <h2 className={chat.mobileTitle}>{mobileTitleLabel}</h2>
+              <div className={chat.mobileActions}>
+                <button onClick={clearChat} className={button({ visual: "secondary", size: "sm" })} title="Clear Chat">
                   🗑️
                 </button>
               </div>
@@ -276,28 +277,28 @@ export function AssistantChat() {
           )}
 
           {/* Messages Container */}
-          <div className={styles.messagesContainer}>
+          <div className={chat.messagesContainer}>
             {messages.length === 0 ? (
-              <div className={styles.emptyState}>{emptyStateLabel}</div>
+              <div className={chat.emptyState}>{emptyStateLabel}</div>
             ) : (
               messages.map((message, index) => (
                 <div
                   key={index}
-                  className={`${styles.messageContainer} ${
-                    message.role === "user" ? styles.messageContainerUser : styles.messageContainerAssistant
+                  className={`${chat.messageContainer} ${
+                    message.role === "user" ? chat.messageContainerUser : chat.messageContainerAssistant
                   }`}
                 >
                   <div
-                    className={`${styles.messageBubble} ${
-                      message.role === "user" ? styles.messageBubbleUser : styles.messageBubbleAssistant
+                    className={`${chat.messageBubble} ${
+                      message.role === "user" ? chat.messageBubbleUser : chat.messageBubbleAssistant
                     }`}
                   >
-                    <div className={styles.messageRole}>{message.role === "user" ? youLabel : assistantLabel}</div>
-                    <div className={styles.messageContent}>
+                    <div className={chat.messageRole}>{message.role === "user" ? youLabel : assistantLabel}</div>
+                    <div className={chat.messageContent}>
                       {message.role === "assistant" ? (
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
                       ) : (
-                        <div className={styles.messageContentPlain}>{message.content}</div>
+                        <div className={chat.messageContentPlain}>{message.content}</div>
                       )}
                     </div>
                   </div>
@@ -306,8 +307,8 @@ export function AssistantChat() {
             )}
 
             {isLoading && (
-              <div className={styles.loadingMessage}>
-                <div className={styles.loadingBubble}>{typingLabel}</div>
+              <div className={chat.loadingMessage}>
+                <div className={chat.loadingBubble}>{typingLabel}</div>
               </div>
             )}
           </div>
@@ -322,14 +323,14 @@ export function AssistantChat() {
           )}
 
           {/* Input Area */}
-          <div className={styles.inputArea}>
+          <div className={chat.inputArea}>
             <textarea
               value={currentInput}
               onChange={(e) => setCurrentInput(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder={placeholderLabel}
               disabled={isLoading}
-              className={styles.messageInput}
+              className={chat.messageInput}
             />
             <button
               onClick={handleSendClick}
@@ -339,7 +340,7 @@ export function AssistantChat() {
                 }
               }}
               disabled={isLoading || (!isConnected ? false : !currentInput.trim())}
-              className={styles.primaryButton}
+              className={button()}
             >
               {getButtonText(buttonState)}
             </button>

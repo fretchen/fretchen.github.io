@@ -9,6 +9,7 @@
 import React, { useState } from "react";
 import { css } from "../styled-system/css";
 import { checkLlmV1Agent, type CheckReport, type CheckStatus } from "../hooks/x402Discovery";
+import { button } from "../styled-system/recipes";
 
 const ICON: Record<CheckStatus, string> = { pass: "✅", fail: "❌", warn: "⚠️" };
 const COLOR: Record<CheckStatus, string> = { pass: "green.700", fail: "red.600", warn: "amber.700" };
@@ -23,19 +24,6 @@ const inputStyle = css({
   borderColor: "gray.300",
   borderRadius: "md",
   _focus: { outline: "none", borderColor: "brand" },
-});
-
-const buttonStyle = css({
-  px: "4",
-  py: "2",
-  fontSize: "sm",
-  fontWeight: "medium",
-  bg: "brand",
-  color: "white",
-  borderRadius: "md",
-  cursor: "pointer",
-  _hover: { bg: "blue.700" },
-  _disabled: { opacity: 0.5, cursor: "not-allowed" },
 });
 
 export function AgentChecker() {
@@ -73,7 +61,7 @@ export function AgentChecker() {
           disabled={checking}
           className={inputStyle}
         />
-        <button onClick={() => void run()} disabled={checking || !url.trim()} className={buttonStyle}>
+        <button onClick={() => void run()} disabled={checking || !url.trim()} className={button()}>
           {checking ? "Checking…" : "Check my endpoint"}
         </button>
       </div>
@@ -99,7 +87,7 @@ export function AgentChecker() {
                   {ICON[step.status]}
                 </span>
                 <span className={css({ fontSize: "sm" })}>
-                  <span className={css({ fontWeight: "medium", color: COLOR[step.status] })}>{step.label}</span>
+                  <span className={css({ fontWeight: "semibold", color: COLOR[step.status] })}>{step.label}</span>
                   <span
                     className={css({
                       color: "gray.600",
@@ -115,7 +103,7 @@ export function AgentChecker() {
               </li>
             ))}
           </ul>
-          <p className={css({ fontSize: "xs", color: "gray.500", mt: "3", lineHeight: "1.6" })}>
+          <p className={css({ fontSize: "xs", color: "gray.500", mt: "3", lineHeight: "relaxed" })}>
             The checks run from your browser, so a failure can also mean CORS: your endpoint must send{" "}
             <code className={css({ fontFamily: "mono" })}>Access-Control-Allow-Origin</code> and expose the{" "}
             <code className={css({ fontFamily: "mono" })}>Payment-Required</code> header.

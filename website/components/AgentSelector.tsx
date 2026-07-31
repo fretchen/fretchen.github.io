@@ -8,8 +8,8 @@
  */
 import React from "react";
 import { css } from "../styled-system/css";
-import * as styles from "../layouts/styles";
 import type { AgentCard } from "../hooks/x402Discovery";
+import { button } from "../styled-system/recipes";
 
 export interface AgentSelectorProps {
   /** The pasted URL (controlled input). */
@@ -71,7 +71,7 @@ export function AgentSelector({
             </div>
           )}
           <div className={rowStyle}>
-            <button onClick={onUseDefaultAgent} className={`${styles.actionButton} ${styles.actionButtonSecondary}`}>
+            <button onClick={onUseDefaultAgent} className={button({ visual: "ghost", size: "sm" })}>
               Back to default agent
             </button>
           </div>
@@ -97,7 +97,7 @@ export function AgentSelector({
             <button
               onClick={onTryCustomAgent}
               disabled={checking || !customUrlInput.trim()}
-              className={styles.actionButton}
+              className={button({ visual: "secondary", size: "sm" })}
             >
               {checking ? "Checking…" : "Use this agent"}
             </button>

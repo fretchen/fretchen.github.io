@@ -3,7 +3,9 @@ import { css } from "../styled-system/css";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
 import { GENAI_NFT_NETWORKS, fromCAIP2, getViemChain } from "@fretchen/chain-utils";
 import { ImageGeneratorProps } from "../types/components";
-import * as styles from "../layouts/styles";
+import * as styles from "../layouts/shared";
+import { nftCard } from "./nft/styles";
+import { imageGen, successMessage } from "./ImageGenerator.styles";
 import InfoIcon from "./InfoIcon";
 import { LocaleText } from "./LocaleText";
 import { useLocale } from "../hooks/useLocale";
@@ -11,6 +13,7 @@ import { useUmami } from "../hooks/useUmami";
 import { useX402ImageGeneration } from "../hooks/useX402ImageGeneration";
 import { AgentInfoPanel } from "./AgentInfoPanel";
 import { useWalletConnection } from "../hooks/useWalletConnection";
+import { button } from "../styled-system/recipes";
 
 // Image compression helpers
 const calculateOptimalDimensions = (originalWidth: number, originalHeight: number, maxDimension: number = 1920) => {
@@ -95,7 +98,7 @@ function CreateArtworkButton({ buttonState, onClick, buttonText, mintingInfoLabe
     <button
       onClick={onClick}
       disabled={isDisabled}
-      className={`${styles.primaryButton} ${isDisabled ? styles.primaryButtonDisabled : ""}`}
+      className={button()}
       title={mintingInfoLabel}
       aria-describedby="create-artwork-info"
     >
@@ -466,7 +469,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   return (
     <div
       className={css({
-        transition: "all 0.5s ease-in-out",
+        transition: "all {durations.normal} ease",
         overflow: "hidden",
       })}
     >
@@ -494,7 +497,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
             className={css({
               fontSize: "md",
               color: "gray.600",
-              lineHeight: "1.5",
+              lineHeight: "normal",
             })}
           >
             AI Image Generation is currently under maintenance. Please check back later.
@@ -525,7 +528,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
           <div
             className={css({
               fontSize: "md",
-              fontWeight: "medium",
+              fontWeight: "semibold",
               color: "gray.800",
               mb: "3",
               textAlign: "center",
@@ -540,7 +543,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
               fontSize: "sm",
               color: "gray.600",
               mb: "lg",
-              lineHeight: "1.5",
+              lineHeight: "normal",
             })}
           >
             {collapsedDescriptionText}
@@ -551,7 +554,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
             <button
               onClick={handleExpand}
               onMouseEnter={() => trackEvent("imagegen-connect-hover")}
-              className={styles.primaryButton}
+              className={button()}
             >
               {connectWalletButtonText}
             </button>
@@ -559,16 +562,16 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
         </div>
       ) : (
         // Expanded State - Current Full Design
-        <div className={styles.imageGen.compactLayout}>
-          <div className={styles.imageGen.compactContainer}>
-            <div className={styles.imageGen.compactHeader}>
-              <h3 className={styles.imageGen.compactTitle}>
+        <div className={imageGen.compactLayout}>
+          <div className={imageGen.compactContainer}>
+            <div className={imageGen.compactHeader}>
+              <h3 className={imageGen.compactTitle}>
                 🎨
                 <LocaleText label="imagegen.title" />
               </h3>
             </div>
 
-            <div className={styles.imageGen.compactForm}>
+            <div className={imageGen.compactForm}>
               {/* Unified Preview/Upload Area */}
               <div
                 data-testid="drop-zone"
@@ -640,7 +643,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
                       <h4
                         className={css({
                           fontSize: "sm",
-                          fontWeight: "medium",
+                          fontWeight: "semibold",
                           color: "gray.700",
                           mb: "1",
                         })}
@@ -673,7 +676,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
                       <h4
                         className={css({
                           fontSize: "sm",
-                          fontWeight: "medium",
+                          fontWeight: "semibold",
                           color: "gray.700",
                           m: 0,
                         })}
@@ -751,7 +754,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
                       <h4
                         className={css({
                           fontSize: "sm",
-                          fontWeight: "medium",
+                          fontWeight: "semibold",
                           color: "gray.700",
                           m: 0,
                         })}
@@ -823,17 +826,17 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder={previewState === "reference" ? editPromptPlaceholderText : promptPlaceholderText}
                 disabled={isLoading || x402Status !== "idle"}
-                className={styles.imageGen.compactTextarea}
+                className={imageGen.compactTextarea}
               />
 
-              <div className={styles.imageGen.controlBar}>
-                <div className={styles.imageGen.optionsGroup}>
+              <div className={imageGen.controlBar}>
+                <div className={imageGen.optionsGroup}>
                   <select
                     id="imageSizeSelect"
                     value={size}
                     onChange={(e) => setSize(e.target.value as "1024x1024" | "1792x1024")}
                     disabled={isLoading || x402Status !== "idle"}
-                    className={styles.imageGen.compactSelect}
+                    className={imageGen.compactSelect}
                     aria-label="Select image format for your artwork"
                   >
                     <option value="1024x1024">{squareText}</option>
@@ -841,7 +844,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
                   </select>
 
                   <label
-                    className={styles.nftCard.checkboxLabel}
+                    className={nftCard.checkboxLabel}
                     title={
                       isListed
                         ? "NFT will be publicly visible in the 'All Public Artworks' gallery"
@@ -853,7 +856,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
                       checked={isListed}
                       onChange={(e) => setIsListed(e.target.checked)}
                       disabled={isLoading || x402Status !== "idle"}
-                      className={styles.nftCard.checkbox}
+                      className={nftCard.checkbox}
                     />
                     <LocaleText label="imagegen.listed" />
                   </label>
@@ -902,52 +905,41 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
 
             {/* Status-Anzeige for x402 */}
             {(x402Status === "awaiting-signature" || x402Status === "processing") && (
-              <div className={styles.imageGen.compactStatus}>
+              <div className={imageGen.compactStatus}>
                 <div className={styles.spinner}></div>
                 <span>{x402Status === "awaiting-signature" ? awaitingSignatureText : generatingImageText}</span>
               </div>
             )}
 
             {/* Error display - show x402 error or local error */}
-            {(error || x402Error) && <div className={styles.imageGen.compactError}>{error || x402Error}</div>}
+            {(error || x402Error) && <div className={imageGen.compactError}>{error || x402Error}</div>}
 
-            {/* Payment receipt display */}
-            {paymentReceipt && (
-              <div
-                className={css({
-                  mt: "2",
-                  p: "2",
-                  fontSize: "xs",
-                  bg: "green.50",
-                  border: "1px solid",
-                  borderColor: "green.200",
-                  borderRadius: "md",
-                  color: "green.800",
-                })}
-              >
-                ✅ Payment confirmed •{" "}
-                <a
-                  href={`https://optimistic.etherscan.io/tx/${paymentReceipt.transaction}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={css({
-                    color: "green.600",
-                    textDecoration: "underline",
-                    _hover: { color: "green.700" },
-                  })}
-                >
-                  View transaction ↗
-                </a>
-              </div>
-            )}
-
-            {/* Erfolgreiche Erstellung */}
-            {tokenId && generatedImageUrl && (
-              <div className={styles.successMessage}>
-                <h4 className={css({ margin: 0, fontSize: "sm" })}>{artworkCreatedText}</h4>
-                <p className={css({ margin: "xs 0", fontSize: "sm" })}>
-                  ID: {tokenId.toString()} - {checkGalleryText}
-                </p>
+            {/* One success block, not two: the mint and the payment that bought it are a
+                single outcome, so a stacked "artwork created" panel plus a "payment
+                confirmed" panel said the same thing twice, in two different greens. */}
+            {(paymentReceipt || (tokenId && generatedImageUrl)) && (
+              <div className={successMessage}>
+                {tokenId && generatedImageUrl && (
+                  <>
+                    <h4 className={css({ margin: 0, fontSize: "sm" })}>{artworkCreatedText}</h4>
+                    <p className={css({ margin: "xs 0", fontSize: "sm" })}>
+                      ID: {tokenId.toString()} - {checkGalleryText}
+                    </p>
+                  </>
+                )}
+                {paymentReceipt && (
+                  <p className={css({ margin: 0, fontSize: "xs" })}>
+                    ✅ Payment confirmed •{" "}
+                    <a
+                      href={`https://optimistic.etherscan.io/tx/${paymentReceipt.transaction}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={css({ color: "success", textDecoration: "underline" })}
+                    >
+                      View transaction ↗
+                    </a>
+                  </p>
+                )}
               </div>
             )}
           </div>

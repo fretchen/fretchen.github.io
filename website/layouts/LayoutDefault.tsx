@@ -1,6 +1,7 @@
 import "./style.css";
 import "./panda.css";
 import React, { useEffect, useRef } from "react";
+import { usePageContext } from "vike-react/usePageContext";
 import { Link } from "../components/Link";
 import WalletOptions from "../components/WalletOptions";
 import LanguageToggle from "../components/LanguageToggle";
@@ -8,8 +9,9 @@ import Footer from "../components/Footer";
 
 import { WagmiProvider } from "wagmi";
 import { config } from "../wagmi.config";
-import { layout } from "./styles";
+import { layout, navActive } from "./LayoutDefault.styles";
 import { useWalletConnection } from "../hooks/useWalletConnection";
+import { territoryFor } from "../utils/territory";
 import { OWNER_ADDRESS } from "../utils/getChain";
 import { installPreloadErrorHandler } from "../utils/preloadErrorHandler";
 
@@ -54,18 +56,10 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
         <Appbar>
           <div className={layout.navigationContainer}>
             <div className={layout.navigationLinks} ref={navigationRef}>
-              <div className={layout.navigationLink}>
-                <Link href="/">Welcome</Link>
-              </div>
-              <div className={layout.navigationLink}>
-                <Link href="/blog">Blog</Link>
-              </div>
-              <div className={layout.navigationLink}>
-                <Link href="/quantum">Quantum</Link>
-              </div>
-              <div className={layout.navigationLink}>
-                <Link href="/lab">Lab</Link>
-              </div>
+              <NavItem href="/">Welcome</NavItem>
+              <NavItem href="/blog">Blog</NavItem>
+              <NavItem href="/quantum">Quantum</NavItem>
+              <NavItem href="/lab">Lab</NavItem>
               <GrowthNavLink />
             </div>
             <div className={layout.scrollIndicator} ref={scrollIndicatorRef}></div>
@@ -80,6 +74,22 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
         </div>
         <Footer />
       </WagmiProvider>
+    </div>
+  );
+}
+
+/**
+ * A top-level nav entry. When it is the section you're in, it takes that section's hue —
+ * blue for writing, purple for quantum/lab, orange for the transactional pages.
+ */
+function NavItem({ href, children }: { href: string; children: React.ReactNode }) {
+  const { urlPathname } = usePageContext();
+  const path = urlPathname.replace(/^\/[a-z]{2}(?=\/|$)/, "") || "/";
+  const isActive = href === "/" ? path === "/" : path === href || path.startsWith(href + "/");
+
+  return (
+    <div className={`${layout.navigationLink} ${isActive ? navActive[territoryFor(href)] : ""}`}>
+      <Link href={href}>{children}</Link>
     </div>
   );
 }

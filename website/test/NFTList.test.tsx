@@ -17,7 +17,7 @@ vi.mock("../components/PublicNFTList", () => ({
   PublicNFTList: vi.fn(() => <div data-testid="public-nft-list">Public NFTs</div>),
 }));
 
-vi.mock("../layouts/styles", () => ({
+vi.mock("../layouts/shared", () => ({
   imageGen: {
     columnHeading: "column-heading",
   },

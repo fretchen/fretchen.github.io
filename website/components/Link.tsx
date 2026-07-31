@@ -40,12 +40,13 @@ export function Link({
     <a
       href={href}
       className={`${css({
-        // Grundlegende Link-Styles
-        color: "token(colors.primary)",
+        // No colour here on purpose: this primitive wraps both nav items and whole
+        // cards (see Card.tsx / EntryList.tsx), so a colour would tint card content.
+        // Callers that want a link colour set it themselves.
 
         // Active-Zustände mit PandaCSS-Bedingungen
         ...(isActive && {
-          fontWeight: "token(fontWeights.bold)",
+          fontWeight: "bold",
         }),
 
         // Hover-Zustände

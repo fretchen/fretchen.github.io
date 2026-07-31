@@ -311,39 +311,39 @@ const ProofDemo: React.FC = () => {
     <div
       className={css({
         border: "1px solid #e5e7eb",
-        borderRadius: "8px",
-        padding: "20px",
+        borderRadius: "lg",
+        padding: "5",
         margin: "20px 0",
-        backgroundColor: "#f9fafb",
+        backgroundColor: "codeBg",
       })}
     >
-      <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "16px" })}>
+      <h3 className={css({ fontSize: "lg", fontWeight: "bold", marginBottom: "4" })}>
         🔍 Interactive Proof Demo: Alice&apos;s Story
       </h3>
 
       {/* Sample Batch Display */}
       <div
         className={css({
-          marginBottom: "20px",
-          padding: "16px",
-          backgroundColor: "#f9fafb",
-          borderRadius: "8px",
+          marginBottom: "5",
+          padding: "4",
+          backgroundColor: "codeBg",
+          borderRadius: "lg",
           border: "1px solid #d1d5db",
         })}
       >
-        <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "12px" })}>
+        <h4 className={css({ fontSize: "md", fontWeight: "semibold", marginBottom: "3" })}>
           Sample Batch (Merkle Root: {sampleBatch.merkleRoot.substring(0, 20)}...)
         </h4>
-        <div className={css({ display: "grid", gap: "8px" })}>
+        <div className={css({ display: "grid", gap: "2" })}>
           {sampleBatch.requests.map((req, index) => (
             <div
               key={req.id}
               className={css({
                 padding: "8px 12px",
-                backgroundColor: "#fff",
-                borderRadius: "4px",
+                backgroundColor: "white",
+                borderRadius: "sm",
                 border: "1px solid #d1d5db",
-                fontSize: "13px",
+                fontSize: "sm",
               })}
             >
               <strong>{req.owner}</strong> (R<sub>{index + 1}</sub>): {req.prompt} - {req.leafData.tokenCount} tokens
@@ -353,19 +353,19 @@ const ProofDemo: React.FC = () => {
       </div>
 
       {/* Tab Navigation */}
-      <div className={css({ marginBottom: "16px", borderBottom: "1px solid #e5e7eb" })}>
+      <div className={css({ marginBottom: "4", borderBottom: "1px solid #e5e7eb" })}>
         <div className={css({ display: "flex", gap: "0" })}>
           <button
             onClick={() => setActiveTab("generate")}
             className={css({
               padding: "8px 16px",
-              backgroundColor: activeTab === "generate" ? "#f9fafb" : "transparent",
-              color: activeTab === "generate" ? "#374151" : "#6b7280",
+              backgroundColor: activeTab === "generate" ? "codeBg" : "transparent",
+              color: activeTab === "generate" ? "gray.700" : "gray.500",
               border: activeTab === "generate" ? "1px solid #d1d5db" : "1px solid transparent",
               borderBottom: activeTab === "generate" ? "1px solid #f9fafb" : "1px solid #e5e7eb",
               borderRadius: "4px 4px 0 0",
               cursor: "pointer",
-              fontSize: "14px",
+              fontSize: "sm",
               fontWeight: activeTab === "generate" ? "medium" : "normal",
             })}
           >
@@ -375,13 +375,13 @@ const ProofDemo: React.FC = () => {
             onClick={() => setActiveTab("validate")}
             className={css({
               padding: "8px 16px",
-              backgroundColor: activeTab === "validate" ? "#f9fafb" : "transparent",
-              color: activeTab === "validate" ? "#374151" : "#6b7280",
+              backgroundColor: activeTab === "validate" ? "codeBg" : "transparent",
+              color: activeTab === "validate" ? "gray.700" : "gray.500",
               border: activeTab === "validate" ? "1px solid #d1d5db" : "1px solid transparent",
               borderBottom: activeTab === "validate" ? "1px solid #f9fafb" : "1px solid #e5e7eb",
               borderRadius: "4px 4px 0 0",
               cursor: "pointer",
-              fontSize: "14px",
+              fontSize: "sm",
               fontWeight: activeTab === "validate" ? "medium" : "normal",
             })}
           >
@@ -395,14 +395,14 @@ const ProofDemo: React.FC = () => {
         <div>
           <div
             className={css({
-              marginBottom: "16px",
-              padding: "16px",
-              backgroundColor: "#fff",
-              borderRadius: "4px",
+              marginBottom: "4",
+              padding: "4",
+              backgroundColor: "white",
+              borderRadius: "sm",
               border: "1px solid #e5e7eb",
             })}
           >
-            <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "12px" })}>
+            <h4 className={css({ fontSize: "md", fontWeight: "semibold", marginBottom: "3" })}>
               Step 1: Select User to Generate Proof
             </h4>
             <select
@@ -410,10 +410,10 @@ const ProofDemo: React.FC = () => {
               onChange={(e) => setSelectedUser(Number(e.target.value))}
               className={css({
                 width: "100%",
-                padding: "8px",
+                padding: "2",
                 border: "1px solid #d1d5db",
-                borderRadius: "4px",
-                marginBottom: "12px",
+                borderRadius: "sm",
+                marginBottom: "3",
               })}
             >
               {sampleBatch.requests.map((req, index) => (
@@ -426,15 +426,15 @@ const ProofDemo: React.FC = () => {
               onClick={handleGenerateProof}
               className={css({
                 padding: "8px 16px",
-                backgroundColor: "#374151",
+                backgroundColor: "gray.700",
                 color: "white",
                 border: "1px solid #374151",
-                borderRadius: "4px",
+                borderRadius: "sm",
                 cursor: "pointer",
-                fontSize: "14px",
+                fontSize: "sm",
                 "&:hover": {
-                  backgroundColor: "#4b5563",
-                  borderColor: "#4b5563",
+                  backgroundColor: "gray.600",
+                  borderColor: "gray.600",
                 },
               })}
             >
@@ -445,18 +445,18 @@ const ProofDemo: React.FC = () => {
           {generatedProof && (
             <div
               className={css({
-                padding: "16px",
-                backgroundColor: "#f9fafb",
-                borderRadius: "4px",
+                padding: "4",
+                backgroundColor: "codeBg",
+                borderRadius: "sm",
                 border: "1px solid #e5e7eb",
               })}
             >
-              <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "12px", color: "#374151" })}>
+              <h4 className={css({ fontSize: "md", fontWeight: "semibold", marginBottom: "3", color: "gray.700" })}>
                 Generated Proof for {sampleBatch.requests[selectedUser].owner}
               </h4>
-              <div className={css({ marginBottom: "12px" })}>
+              <div className={css({ marginBottom: "3" })}>
                 <strong>Proof Path:</strong>
-                <div className={css({ fontSize: "12px", fontFamily: "monospace", marginTop: "4px" })}>
+                <div className={css({ fontSize: "xs", fontFamily: "monospace", marginTop: "1" })}>
                   {generatedProof.proof.map((proofItem, index) => (
                     <div key={index}>
                       Level {index + 1}: {proofItem.data.substring(0, 20)}... ({proofItem.position})
@@ -464,20 +464,20 @@ const ProofDemo: React.FC = () => {
                   ))}
                 </div>
               </div>
-              <div className={css({ marginBottom: "12px" })}>
+              <div className={css({ marginBottom: "3" })}>
                 <strong>Complete Proof JSON:</strong>
                 <div className={css({ position: "relative" })}>
                   <pre
                     className={css({
-                      fontSize: "11px",
+                      fontSize: "xs",
                       fontFamily: "monospace",
-                      backgroundColor: "#fff",
-                      padding: "8px",
-                      borderRadius: "4px",
+                      backgroundColor: "white",
+                      padding: "2",
+                      borderRadius: "sm",
                       border: "1px solid #d1d5db",
                       overflow: "auto",
                       maxHeight: "200px",
-                      marginTop: "4px",
+                      marginTop: "1",
                     })}
                   >
                     {JSON.stringify(generatedProof, null, 2)}
@@ -489,11 +489,11 @@ const ProofDemo: React.FC = () => {
                       top: "8px",
                       right: "8px",
                       padding: "4px 8px",
-                      backgroundColor: "#6b7280",
+                      backgroundColor: "gray.500",
                       color: "white",
                       border: "none",
-                      borderRadius: "4px",
-                      fontSize: "12px",
+                      borderRadius: "sm",
+                      fontSize: "xs",
                       cursor: "pointer",
                     })}
                   >
@@ -511,19 +511,17 @@ const ProofDemo: React.FC = () => {
         <div>
           <div
             className={css({
-              marginBottom: "16px",
-              padding: "16px",
-              backgroundColor: "#fff",
-              borderRadius: "4px",
+              marginBottom: "4",
+              padding: "4",
+              backgroundColor: "white",
+              borderRadius: "sm",
               border: "1px solid #e5e7eb",
             })}
           >
-            <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "12px" })}>
+            <h4 className={css({ fontSize: "md", fontWeight: "semibold", marginBottom: "3" })}>
               Step 2: Validate a Proof
             </h4>
-            <label className={css({ display: "block", fontSize: "14px", marginBottom: "8px" })}>
-              Paste Proof JSON:
-            </label>
+            <label className={css({ display: "block", fontSize: "sm", marginBottom: "2" })}>Paste Proof JSON:</label>
             <textarea
               value={validationInput}
               onChange={(e) => setValidationInput(e.target.value)}
@@ -531,12 +529,12 @@ const ProofDemo: React.FC = () => {
               className={css({
                 width: "100%",
                 height: "120px",
-                padding: "8px",
+                padding: "2",
                 border: "1px solid #d1d5db",
-                borderRadius: "4px",
-                fontSize: "12px",
+                borderRadius: "sm",
+                fontSize: "xs",
                 fontFamily: "monospace",
-                marginBottom: "12px",
+                marginBottom: "3",
                 resize: "vertical",
               })}
             />
@@ -545,15 +543,15 @@ const ProofDemo: React.FC = () => {
               disabled={!validationInput.trim()}
               className={css({
                 padding: "8px 16px",
-                backgroundColor: validationInput.trim() ? "#374151" : "#9ca3af",
+                backgroundColor: validationInput.trim() ? "gray.700" : "gray.400",
                 color: "white",
                 border: "none",
-                borderRadius: "4px",
+                borderRadius: "sm",
                 cursor: validationInput.trim() ? "pointer" : "not-allowed",
-                fontSize: "14px",
+                fontSize: "sm",
                 "&:hover": validationInput.trim()
                   ? {
-                      backgroundColor: "#4b5563",
+                      backgroundColor: "gray.600",
                     }
                   : {},
               })}
@@ -565,21 +563,19 @@ const ProofDemo: React.FC = () => {
           {validationResult && (
             <div
               className={css({
-                padding: "16px",
-                backgroundColor: validationResult.isValid ? "#f9fafb" : "#fef2f2",
-                borderRadius: "4px",
-                border: `1px solid ${validationResult.isValid ? "#d1d5db" : "#fecaca"}`,
+                padding: "4",
+                backgroundColor: validationResult.isValid ? "codeBg" : "red.50",
+                borderRadius: "sm",
+                border: `1px solid ${validationResult.isValid ? "gray.300" : "red.200"}`,
               })}
             >
-              <h4 className={css({ fontSize: "16px", fontWeight: "medium", marginBottom: "12px" })}>
-                Validation Result
-              </h4>
+              <h4 className={css({ fontSize: "md", fontWeight: "semibold", marginBottom: "3" })}>Validation Result</h4>
               <div
                 className={css({
-                  fontSize: "14px",
-                  fontWeight: "medium",
-                  marginBottom: "12px",
-                  color: validationResult.isValid ? "#166534" : "#dc2626",
+                  fontSize: "sm",
+                  fontWeight: "semibold",
+                  marginBottom: "3",
+                  color: validationResult.isValid ? "green.800" : "red.600",
                 })}
               >
                 {validationResult.message}
@@ -587,18 +583,18 @@ const ProofDemo: React.FC = () => {
               {validationResult.steps.length > 0 && (
                 <div>
                   <strong>Verification Steps:</strong>
-                  <div className={css({ marginTop: "8px" })}>
+                  <div className={css({ marginTop: "2" })}>
                     {validationResult.steps.map((step, index) => (
                       <div
                         key={index}
                         className={css({
-                          fontSize: "12px",
+                          fontSize: "xs",
                           fontFamily: "monospace",
-                          backgroundColor: "#fff",
+                          backgroundColor: "white",
                           padding: "4px 8px",
-                          borderRadius: "4px",
+                          borderRadius: "sm",
                           border: "1px solid #e5e7eb",
-                          marginBottom: "4px",
+                          marginBottom: "1",
                         })}
                       >
                         {step}
@@ -765,26 +761,26 @@ const BatchCreator: React.FC = () => {
     <div
       className={css({
         border: "1px solid #e5e7eb",
-        borderRadius: "8px",
-        padding: "20px",
+        borderRadius: "lg",
+        padding: "5",
         margin: "20px 0",
-        backgroundColor: "#f9fafb",
+        backgroundColor: "codeBg",
       })}
     >
-      <h3 className={css({ fontSize: "18px", fontWeight: "bold", marginBottom: "16px" })}>
+      <h3 className={css({ fontSize: "lg", fontWeight: "bold", marginBottom: "4" })}>
         🧪 Interactive LLM Batch Processing Demo
       </h3>
 
       <div
         className={css({
-          marginBottom: "20px",
-          padding: "16px",
-          backgroundColor: "#eff6ff",
-          borderRadius: "8px",
+          marginBottom: "5",
+          padding: "4",
+          backgroundColor: "blue.50",
+          borderRadius: "lg",
           border: "1px solid #bfdbfe",
         })}
       >
-        <p className={css({ fontSize: "14px", color: "#1e40af", marginBottom: "8px" })}>
+        <p className={css({ fontSize: "sm", color: "blue.800", marginBottom: "2" })}>
           <strong>How it works:</strong> Send LLM requests and get immediate responses. After {BATCH_SIZE_THRESHOLD}{" "}
           requests, a Merkle tree is automatically created for cost-efficient blockchain settlement.
         </p>
@@ -793,29 +789,27 @@ const BatchCreator: React.FC = () => {
       {/* Request Input */}
       <div
         className={css({
-          marginBottom: "1.5rem",
-          padding: "1rem",
-          backgroundColor: "#fff",
-          borderRadius: "4px",
+          marginBottom: "6",
+          padding: "4",
+          backgroundColor: "white",
+          borderRadius: "sm",
           border: "1px solid #e5e7eb",
         })}
       >
-        <h4 className={css({ fontSize: "1rem", fontWeight: "medium", marginBottom: "1rem" })}>Send LLM Request</h4>
+        <h4 className={css({ fontSize: "md", fontWeight: "semibold", marginBottom: "4" })}>Send LLM Request</h4>
 
-        <div className={css({ marginBottom: "0.75rem" })}>
-          <label className={css({ display: "block", fontSize: "0.85rem", marginBottom: "0.25rem" })}>
-            Wallet Address:
-          </label>
+        <div className={css({ marginBottom: "3" })}>
+          <label className={css({ display: "block", fontSize: "sm", marginBottom: "1" })}>Wallet Address:</label>
           <select
             value={currentWallet}
             onChange={(e) => setCurrentWallet(e.target.value)}
             className={css({
               width: "100%",
-              padding: "0.5rem",
+              padding: "2",
               border: "1px solid #d1d5db",
-              borderRadius: "4px",
+              borderRadius: "sm",
               fontFamily: "monospace",
-              fontSize: "0.85rem",
+              fontSize: "sm",
             })}
           >
             {mockWallets.map((wallet) => (
@@ -826,8 +820,8 @@ const BatchCreator: React.FC = () => {
           </select>
         </div>
 
-        <div className={css({ marginBottom: "0.75rem" })}>
-          <label className={css({ display: "block", fontSize: "0.85rem", marginBottom: "0.25rem" })}>Prompt:</label>
+        <div className={css({ marginBottom: "3" })}>
+          <label className={css({ display: "block", fontSize: "sm", marginBottom: "1" })}>Prompt:</label>
           <input
             type="text"
             value={currentPrompt}
@@ -835,28 +829,28 @@ const BatchCreator: React.FC = () => {
             placeholder="Enter your LLM prompt..."
             className={css({
               width: "100%",
-              padding: "0.5rem",
+              padding: "2",
               border: "1px solid #d1d5db",
-              borderRadius: "4px",
-              fontSize: "0.85rem",
+              borderRadius: "sm",
+              fontSize: "sm",
             })}
             onKeyPress={(e) => e.key === "Enter" && handleSendRequest()}
           />
         </div>
 
-        <div className={css({ display: "flex", gap: "0.5rem", fontSize: "0.85rem" })}>
+        <div className={css({ display: "flex", gap: "2", fontSize: "sm" })}>
           <button
             onClick={handleSendRequest}
             disabled={!currentPrompt.trim()}
             className={css({
-              padding: "0.5rem 1rem",
-              backgroundColor: currentPrompt.trim() ? "#374151" : "#9ca3af",
+              padding: "8px 16px",
+              backgroundColor: currentPrompt.trim() ? "gray.700" : "gray.400",
               color: "white",
               border: "none",
-              borderRadius: "4px",
+              borderRadius: "sm",
               cursor: currentPrompt.trim() ? "pointer" : "not-allowed",
-              transition: "background-color 0.2s",
-              "&:hover": { backgroundColor: currentPrompt.trim() ? "#4b5563" : "#9ca3af" },
+              transition: "background-color {durations.normal} ease",
+              "&:hover": { backgroundColor: currentPrompt.trim() ? "gray.600" : "gray.400" },
             })}
           >
             Send Request
@@ -865,14 +859,14 @@ const BatchCreator: React.FC = () => {
           <button
             onClick={handleRandomRequest}
             className={css({
-              padding: "0.5rem 1rem",
-              backgroundColor: "#374151",
+              padding: "8px 16px",
+              backgroundColor: "gray.700",
               color: "white",
               border: "none",
-              borderRadius: "4px",
+              borderRadius: "sm",
               cursor: "pointer",
-              transition: "background-color 0.2s",
-              "&:hover": { backgroundColor: "#4b5563" },
+              transition: "background-color {durations.normal} ease",
+              "&:hover": { backgroundColor: "gray.600" },
             })}
           >
             Send Random Request
@@ -881,14 +875,14 @@ const BatchCreator: React.FC = () => {
           <button
             onClick={resetDemo}
             className={css({
-              padding: "0.5rem 1rem",
-              backgroundColor: "#ef4444",
+              padding: "8px 16px",
+              backgroundColor: "red.500",
               color: "white",
               border: "none",
-              borderRadius: "4px",
+              borderRadius: "sm",
               cursor: "pointer",
-              transition: "background-color 0.2s",
-              "&:hover": { backgroundColor: "#dc2626" },
+              transition: "background-color {durations.normal} ease",
+              "&:hover": { backgroundColor: "red.600" },
             })}
           >
             Reset Demo
@@ -900,31 +894,31 @@ const BatchCreator: React.FC = () => {
       {batchRegistered && (
         <div
           className={css({
-            padding: "0.75rem",
-            backgroundColor: "#f0fdf4",
+            padding: "3",
+            backgroundColor: "green.50",
             border: "1px solid #bbf7d0",
-            borderRadius: "4px",
-            marginBottom: "1rem",
+            borderRadius: "sm",
+            marginBottom: "4",
           })}
         >
-          <strong>🌳 Merkle Root:</strong> <code className={css({ fontSize: "0.8rem" })}>{merkleRoot}</code>
-          <div className={css({ fontSize: "0.8rem", color: "#166534", marginTop: "0.25rem" })}>
+          <strong>🌳 Merkle Root:</strong> <code className={css({ fontSize: "sm" })}>{merkleRoot}</code>
+          <div className={css({ fontSize: "sm", color: "green.800", marginTop: "1" })}>
             All requests can now be processed with a single blockchain transaction!
           </div>
           {/* Tree Visualization */}
           {merkleTreeVisualization && (
-            <div className={css({ marginTop: "0.75rem" })}>
+            <div className={css({ marginTop: "3" })}>
               <strong>Tree Structure:</strong>
               <pre
                 className={css({
-                  fontSize: "0.7rem",
+                  fontSize: "xs",
                   fontFamily: "monospace",
-                  backgroundColor: "#fff",
-                  padding: "0.5rem",
-                  borderRadius: "4px",
+                  backgroundColor: "white",
+                  padding: "2",
+                  borderRadius: "sm",
                   border: "1px solid #bbf7d0",
-                  marginTop: "0.25rem",
-                  lineHeight: "1.4",
+                  marginTop: "1",
+                  lineHeight: "normal",
                   overflow: "auto",
                 })}
               >
@@ -940,11 +934,11 @@ const BatchCreator: React.FC = () => {
         {requests.length === 0 ? (
           <div
             className={css({
-              padding: "1.5rem",
+              padding: "6",
               textAlign: "center",
-              color: "#6b7280",
-              backgroundColor: "#fff",
-              borderRadius: "4px",
+              color: "gray.500",
+              backgroundColor: "white",
+              borderRadius: "sm",
               border: "1px solid #e5e7eb",
             })}
           >
@@ -955,43 +949,43 @@ const BatchCreator: React.FC = () => {
             <div
               key={request.id}
               className={css({
-                padding: "1rem",
-                backgroundColor: "#fff",
+                padding: "4",
+                backgroundColor: "white",
                 border: "1px solid #e5e7eb",
-                borderRadius: "4px",
-                marginBottom: "0.75rem",
+                borderRadius: "sm",
+                marginBottom: "3",
               })}
             >
               {/* Prompt & Response (not part of leaf/hash) */}
-              <div className={css({ marginBottom: "0.5rem" })}>
-                <div className={css({ fontWeight: 500, fontSize: "0.92rem", marginBottom: "0.15rem", color: "#444" })}>
+              <div className={css({ marginBottom: "2" })}>
+                <div className={css({ fontWeight: 500, fontSize: "md", marginBottom: "0.5", color: "#444" })}>
                   Prompt (not part of Merkle-Leafs):
                 </div>
                 <div
                   className={css({
-                    fontSize: "0.92rem",
+                    fontSize: "md",
                     fontFamily: "monospace",
                     backgroundColor: "#fafbfc",
-                    padding: "0.35rem 0.6rem",
-                    borderRadius: "3px",
+                    padding: "6px 10px",
+                    borderRadius: "sm",
                     border: "1px solid #e5e7eb",
-                    marginBottom: "0.3rem",
+                    marginBottom: "1",
                     whiteSpace: "pre-wrap",
                     wordBreak: "break-word",
                   })}
                 >
                   {request.prompt}
                 </div>
-                <div className={css({ fontWeight: 500, fontSize: "0.92rem", marginBottom: "0.15rem", color: "#444" })}>
+                <div className={css({ fontWeight: 500, fontSize: "md", marginBottom: "0.5", color: "#444" })}>
                   Response (not part of Merkle-Leafs):
                 </div>
                 <div
                   className={css({
-                    fontSize: "0.92rem",
+                    fontSize: "md",
                     fontFamily: "monospace",
                     backgroundColor: "#fafbfc",
-                    padding: "0.35rem 0.6rem",
-                    borderRadius: "3px",
+                    padding: "6px 10px",
+                    borderRadius: "sm",
                     border: "1px solid #e5e7eb",
                     whiteSpace: "pre-wrap",
                     wordBreak: "break-word",
@@ -1003,12 +997,12 @@ const BatchCreator: React.FC = () => {
 
               {/* Leaf Data */}
               {request.leafData && (
-                <div className={css({ marginBottom: "0.5rem" })}>
+                <div className={css({ marginBottom: "2" })}>
                   <div
                     className={css({
                       fontWeight: 500,
-                      fontSize: "0.92rem",
-                      marginBottom: "0.18rem",
+                      fontSize: "md",
+                      marginBottom: "0.5",
                       color: "#222",
                     })}
                   >
@@ -1016,14 +1010,14 @@ const BatchCreator: React.FC = () => {
                   </div>
                   <pre
                     className={css({
-                      fontSize: "0.78rem",
+                      fontSize: "sm",
                       fontFamily: "monospace",
                       backgroundColor: "#fafbfc",
-                      padding: "0.45rem 0.6rem",
-                      borderRadius: "3px",
+                      padding: "8px 10px",
+                      borderRadius: "sm",
                       border: "1px solid #e5e7eb",
                       overflow: "auto",
-                      lineHeight: "1.3",
+                      lineHeight: "tight",
                     })}
                   >
                     {JSON.stringify(request.leafData, null, 2)}
@@ -1037,8 +1031,8 @@ const BatchCreator: React.FC = () => {
                   <div
                     className={css({
                       fontWeight: 500,
-                      fontSize: "0.92rem",
-                      marginBottom: "0.18rem",
+                      fontSize: "md",
+                      marginBottom: "0.5",
                       color: "#222",
                     })}
                   >
@@ -1046,11 +1040,11 @@ const BatchCreator: React.FC = () => {
                   </div>
                   <code
                     className={css({
-                      fontSize: "0.78rem",
+                      fontSize: "sm",
                       fontFamily: "monospace",
-                      backgroundColor: "#f3f4f6",
-                      padding: "0.22rem 0.5rem",
-                      borderRadius: "3px",
+                      backgroundColor: "gray.100",
+                      padding: "4px 8px",
+                      borderRadius: "sm",
                       border: "1px solid #e5e7eb",
                       wordBreak: "break-all",
                       display: "block",

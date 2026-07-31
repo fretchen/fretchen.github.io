@@ -23,6 +23,7 @@ import python from "highlight.js/lib/languages/python";
 import yaml from "highlight.js/lib/languages/yaml";
 import "highlight.js/styles/vs2015.css";
 import { css } from "../styled-system/css";
+import { button } from "../styled-system/recipes";
 
 hljs.registerLanguage("typescript", typescript);
 hljs.registerLanguage("json", json);
@@ -37,13 +38,13 @@ export type CodeLang = "typescript" | "json" | "bash" | "javascript" | "python" 
 const wrapper = css({ position: "relative", mt: "1", mb: "2" });
 
 const block = css({
-  bg: "#1e1e1e",
-  color: "#d4d4d4",
+  bg: "codeSurface",
+  color: "codeText",
   p: "4",
-  borderRadius: "8px",
+  borderRadius: "lg",
   overflowX: "auto",
   fontSize: "sm",
-  lineHeight: "1.5",
+  lineHeight: "normal",
   whiteSpace: "pre",
   // The global `pre` rule in layouts/panda.css sets a light background; win over it here.
   "& code": { bg: "transparent", p: "0", fontSize: "inherit", color: "inherit" },
@@ -53,18 +54,8 @@ const copyButton = css({
   position: "absolute",
   top: "2",
   right: "2",
-  px: "2",
-  py: "1",
-  fontSize: "xs",
-  fontFamily: "sans",
-  color: "#d4d4d4",
-  bg: "rgba(255,255,255,0.1)",
-  border: "1px solid rgba(255,255,255,0.2)",
-  borderRadius: "sm",
-  cursor: "pointer",
   opacity: 0.7,
-  transition: "opacity 0.15s ease, background 0.15s ease",
-  _hover: { opacity: 1, bg: "rgba(255,255,255,0.18)" },
+  _hover: { opacity: 1 },
   _focusVisible: { opacity: 1, outline: "2px solid", outlineColor: "brand", outlineOffset: "1px" },
 });
 
@@ -117,7 +108,12 @@ export function CodeBlock({ children, lang = "typescript" }: CodeBlockProps) {
         )}
       </pre>
       {canCopy && (
-        <button type="button" onClick={copy} className={copyButton} aria-label="Copy code to clipboard">
+        <button
+          type="button"
+          onClick={copy}
+          className={`${button({ visual: "overlay", size: "sm" })} ${copyButton}`}
+          aria-label="Copy code to clipboard"
+        >
           {copied ? "Copied!" : "Copy"}
         </button>
       )}

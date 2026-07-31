@@ -3,6 +3,7 @@ import { useAccount, useReadContract, useWriteContract, useWaitForTransactionRec
 import { formatUnits, parseUnits, type Address } from "viem";
 import { css } from "../styled-system/css";
 import { getUSDCConfig, fromCAIP2, type USDCConfig } from "@fretchen/chain-utils";
+import { button } from "../styled-system/recipes";
 
 // Minimal ERC-20 ABI for allowance + approve
 export const ERC20_ABI = [
@@ -59,10 +60,10 @@ export function getNetworkUSDCConfig(network: string): USDCConfig | null {
 
 const container = css({
   border: "1px solid token(colors.border, #e5e7eb)",
-  borderRadius: "8px",
-  padding: "20px",
+  borderRadius: "lg",
+  padding: "5",
   marginBottom: "6",
-  backgroundColor: "token(colors.codeBg, #f9fafb)",
+  backgroundColor: "codeBg",
 });
 
 const statusRow = css({
@@ -70,14 +71,14 @@ const statusRow = css({
   alignItems: "center",
   justifyContent: "space-between",
   flexWrap: "wrap",
-  gap: "8px",
+  gap: "2",
   marginBottom: "4",
 });
 
 const label = css({
   fontSize: "sm",
-  color: "#6b7280",
-  fontWeight: "medium",
+  color: "gray.500",
+  fontWeight: "semibold",
 });
 
 const valueText = css({
@@ -88,65 +89,28 @@ const valueText = css({
 const approveRow = css({
   display: "flex",
   alignItems: "center",
-  gap: "8px",
+  gap: "2",
   flexWrap: "wrap",
-});
-
-const presetButton = css({
-  padding: "6px 12px",
-  fontSize: "sm",
-  borderRadius: "6px",
-  border: "1px solid token(colors.border, #d1d5db)",
-  backgroundColor: "white",
-  cursor: "pointer",
-  fontWeight: "medium",
-  transition: "all 0.15s",
-  _hover: {
-    backgroundColor: "#f3f4f6",
-    borderColor: "#9ca3af",
-  },
-  _disabled: {
-    opacity: 0.5,
-    cursor: "not-allowed",
-  },
-});
-
-const activeButton = css({
-  backgroundColor: "#2563eb",
-  color: "white",
-  borderColor: "#2563eb",
-  _hover: {
-    backgroundColor: "#1d4ed8",
-  },
-});
-
-const selectedNetworkButton = css({
-  backgroundColor: "#1e293b",
-  color: "white",
-  borderColor: "#1e293b",
-  _hover: {
-    backgroundColor: "#334155",
-  },
 });
 
 const txStatus = css({
   fontSize: "sm",
   marginTop: "3",
   padding: "8px 12px",
-  borderRadius: "6px",
+  borderRadius: "md",
 });
 
 const connectHint = css({
   fontSize: "sm",
-  color: "#6b7280",
+  color: "gray.500",
   textAlign: "center",
-  padding: "12px",
+  padding: "3",
 });
 
 const networkRow = css({
   display: "flex",
   alignItems: "center",
-  gap: "8px",
+  gap: "2",
   flexWrap: "wrap",
   marginBottom: "4",
 });
@@ -306,7 +270,7 @@ export function FacilitatorApproval({
         {networks.map((net) => (
           <button
             key={net.network}
-            className={`${presetButton} ${selectedNetwork === net.network ? selectedNetworkButton : ""}`}
+            className={button({ visual: "secondary", size: "sm", active: selectedNetwork === net.network })}
             onClick={() => setSelectedNetwork(net.network)}
           >
             {net.label}
@@ -318,20 +282,20 @@ export function FacilitatorApproval({
       <div className={statusRow}>
         <div>
           <p className={label}>Your current USDC approval on {usdcConfig.name}</p>
-          <p className={`${valueText} ${hasAllowance ? css({ color: "#166534" }) : css({ color: "#6b7280" })}`}>
+          <p className={`${valueText} ${hasAllowance ? css({ color: "green.800" }) : css({ color: "gray.500" })}`}>
             {isReadingAllowance ? "Loading…" : `${formattedAllowance} USDC`}
           </p>
         </div>
         {facilitatorAddress && (
           <div>
             <p className={label}>Facilitator address</p>
-            <p className={css({ fontSize: "xs", fontFamily: "monospace", color: "#374151" })}>{facilitatorAddress}</p>
+            <p className={css({ fontSize: "xs", fontFamily: "monospace", color: "gray.700" })}>{facilitatorAddress}</p>
           </div>
         )}
       </div>
 
       {/* USDC contract info */}
-      <p className={css({ fontSize: "xs", color: "#9ca3af", marginBottom: "3" })}>
+      <p className={css({ fontSize: "xs", color: "gray.400", marginBottom: "3" })}>
         USDC on {usdcConfig.name}: <code>{usdcConfig.address}</code>
       </p>
 
@@ -343,7 +307,7 @@ export function FacilitatorApproval({
         {PRESETS.map((preset) => (
           <button
             key={preset.value}
-            className={presetButton}
+            className={button({ visual: "secondary", size: "sm" })}
             disabled={isApproving || isConfirming || !facilitatorAddress}
             onClick={() => handleApprove(preset.value)}
           >
@@ -351,7 +315,7 @@ export function FacilitatorApproval({
           </button>
         ))}
         <button
-          className={`${presetButton} ${activeButton}`}
+          className={button({ visual: "secondary", size: "sm", active: true })}
           disabled={isApproving || isConfirming || !facilitatorAddress}
           onClick={() => handleApprove("0")}
         >
@@ -360,13 +324,13 @@ export function FacilitatorApproval({
       </div>
 
       {(isApproving || isConfirming) && (
-        <div className={`${txStatus} ${css({ backgroundColor: "#eff6ff", color: "#1e40af" })}`}>
+        <div className={`${txStatus} ${css({ backgroundColor: "blue.50", color: "blue.800" })}`}>
           {isApproving ? "⏳ Confirm in your wallet…" : "⏳ Waiting for confirmation…"}
         </div>
       )}
 
       {isSuccess && (
-        <div className={`${txStatus} ${css({ backgroundColor: "#dcfce7", color: "#166534" })}`}>
+        <div className={`${txStatus} ${css({ backgroundColor: "green.100", color: "green.800" })}`}>
           ✓ Approval updated successfully
         </div>
       )}

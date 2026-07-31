@@ -1,6 +1,8 @@
 import React, { useRef } from "react";
 import { css } from "../../styled-system/css";
-import * as styles from "../../layouts/styles";
+import * as styles from "../../layouts/shared";
+import { sectionRule } from "../../styled-system/recipes";
+import { post } from "../../components/Post.styles";
 import { AgentChecker } from "../../components/AgentChecker";
 import { TableOfContents } from "../../components/TableOfContents";
 import { CommentsSection } from "../../components/CommentsSection";
@@ -61,20 +63,20 @@ const section = css({ scrollMarginTop: "90px" });
 // on top of those read as clutter rather than structure.
 const h2 = css({ fontSize: "xl", fontWeight: "semibold", mt: "10", mb: "4", color: "gray.800" });
 const h3 = css({ fontSize: "md", fontWeight: "semibold", mt: "6", mb: "2", color: "gray.800" });
-const para = css({ color: "gray.700", mb: "4", lineHeight: "1.7" });
+const para = css({ color: "gray.700", mb: "4", lineHeight: "relaxed" });
 const inlineCode = css({ fontFamily: "mono", fontSize: "0.9em", bg: "gray.100", px: "1", borderRadius: "sm" });
 const extLink = css({ color: "brand", textDecoration: "underline", _hover: { color: "blue.800" } });
 const caption = css({ fontSize: "sm", color: "gray.500", mb: "1" });
 const note = css({
   fontSize: "sm",
   color: "gray.700",
-  bg: "amber.50",
+  bg: "warningSurface",
   border: "1px solid",
-  borderColor: "amber.200",
+  borderColor: "warningBorder",
   borderRadius: "md",
   p: "2",
   mb: "3",
-  lineHeight: "1.6",
+  lineHeight: "relaxed",
 });
 
 /**
@@ -134,7 +136,7 @@ function Challenge({ title, children }: { title: string; children: React.ReactNo
       })}
     >
       <div className={css({ fontSize: "sm", fontWeight: "semibold", color: "gray.800", mb: "1" })}>{title}</div>
-      <div className={css({ fontSize: "sm", color: "gray.600", lineHeight: "1.6" })}>{children}</div>
+      <div className={css({ fontSize: "sm", color: "gray.600", lineHeight: "relaxed" })}>{children}</div>
     </div>
   );
 }
@@ -187,10 +189,17 @@ export default function Page() {
   return (
     <div className={styles.container}>
       {/* Same breakout grid blog posts use: empty | content | sticky ToC, collapsing < 1200px. */}
-      <div className={styles.post.articleLayout}>
+      <div className={post.articleLayout}>
         <div />
         <article ref={contentRef} className={css({ padding: "4" })}>
-          {/* Status banner: scope + honesty, not a warning label. */}
+          {/* Title first, like every other page; the status banner follows it. */}
+          <h1 className={css({ fontSize: "3xl", fontWeight: "bold", mb: "3", color: "gray.800" })}>
+            Build your own agent
+          </h1>
+          <span className={sectionRule({ territory: "explore" })} aria-hidden="true" />
+
+          {/* Status banner: scope + honesty, not a warning label — hence the lab's purple
+              rather than an alarm colour. */}
           <div
             className={css({
               bg: "alphaBanner.bg",
@@ -201,7 +210,7 @@ export default function Page() {
               mb: "6",
             })}
           >
-            <span className={css({ fontSize: "sm", color: "alphaBanner.text", lineHeight: "1.6" })}>
+            <span className={css({ fontSize: "sm", color: "alphaBanner.text", lineHeight: "relaxed" })}>
               <span className={css({ color: "alphaBanner.icon" })}>🧪</span> <strong>Alpha, and still moving.</strong>{" "}
               This guide does exactly one thing, end to end: it puts an OpenAI-shaped API behind x402 and gets it paid
               in stablecoin. Not a platform, not a standard — a working proof you can run today, check with the{" "}
@@ -217,17 +226,14 @@ export default function Page() {
             </span>
           </div>
 
-          {/* Hero + audience + stack */}
-          <div className={css({ mb: "6", pt: "2" })}>
-            <h1 className={css({ fontSize: "3xl", fontWeight: "bold", mb: "4", color: "gray.800" })}>
-              Build your own agent
-            </h1>
+          {/* Standfirst — the h1 now sits above the banner. */}
+          <div className={css({ mb: "6" })}>
             <p
               className={css({
                 fontSize: "lg",
                 color: "gray.600",
                 maxWidth: "660px",
-                lineHeight: "1.6",
+                lineHeight: "relaxed",
               })}
             >
               By the end of this page you&apos;ll have an HTTP endpoint that answers OpenAI-style chat requests and
@@ -244,7 +250,7 @@ export default function Page() {
             </p>
 
             <h3 className={h3}>What you&apos;ll need</h3>
-            <ul className={css({ color: "gray.700", pl: "4", lineHeight: "1.8", mb: "0" })}>
+            <ul className={css({ color: "gray.700", pl: "4", lineHeight: "relaxed", mb: "0" })}>
               <li>
                 <strong>An OpenAI-compatible LLM</strong> to proxy — Mistral, an OpenAI key, a local model, anything
                 that speaks <code className={inlineCode}>/chat/completions</code>.
@@ -299,7 +305,7 @@ export default function Page() {
               You don&apos;t implement the protocol yourself — the <code className={inlineCode}>@x402/evm</code> SDK
               does that. New to x402? These are the canonical docs:
             </p>
-            <ul className={css({ color: "gray.700", pl: "4", lineHeight: "1.8", mb: "0" })}>
+            <ul className={css({ color: "gray.700", pl: "4", lineHeight: "relaxed", mb: "0" })}>
               <li>
                 <a
                   href={`${X402_DOCS}/core-concepts/http-402`}
@@ -891,7 +897,7 @@ export default function Page() {
               see deposit → voucher → verify → settle actually working, and it stays on testnet unless you set{" "}
               <code className={inlineCode}>USE_MAINNET = true</code>.
             </p>
-            <p className={css({ color: "gray.700", lineHeight: "1.7", mb: "0" })}>
+            <p className={css({ color: "gray.700", lineHeight: "relaxed", mb: "0" })}>
               <strong>Then: pay yourself from a browser.</strong> Once the checker passes on mainnet, open the{" "}
               <a href="/assistent" className={extLink}>
                 assistant
@@ -971,7 +977,7 @@ export default function Page() {
               more facilitators, more agents. The assistant already lets you point it at any compatible agent by URL; a
               curated picker only makes sense once there are enough of them to list.
             </p>
-            <p className={css({ color: "gray.700", lineHeight: "1.7", mb: "0" })}>
+            <p className={css({ color: "gray.700", lineHeight: "relaxed", mb: "0" })}>
               Built one, or want to be listed when a picker ships? Reach out at{" "}
               <a href="mailto:fretchen.dev@proton.me" className={extLink}>
                 fretchen.dev@proton.me
@@ -1002,7 +1008,7 @@ export default function Page() {
             <CommentsSection />
           </section>
         </article>
-        <aside className={styles.post.articleSidebar}>
+        <aside className={post.articleSidebar}>
           <TableOfContents contentRef={contentRef} />
         </aside>
       </div>

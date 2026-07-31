@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useConnect, useDisconnect, useEnsName } from "wagmi";
-import { walletOptions } from "../layouts/styles";
+import { walletOptions } from "./WalletOptions.styles";
 import { useLocale } from "../hooks/useLocale";
 import { useUmami } from "../hooks/useUmami";
 import { WalletEvents } from "../utils/analytics";

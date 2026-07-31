@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Link } from "./Link";
 import { CardProps } from "../types/components";
-import { baseContentCard } from "../layouts/styles";
+import { baseContentCard } from "../layouts/shared";
 
 // Einheitliche Card-Komponente mit verbesserter mobiler Erfahrung
 export const Card: React.FC<CardProps> = ({ title, description, link }) => {

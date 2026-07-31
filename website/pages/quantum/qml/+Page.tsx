@@ -3,9 +3,10 @@ import * as React from "react";
 // Direkte Imports der benötigten Komponenten und Daten
 import EntryList from "../../../components/EntryList";
 import { usePageContext } from "vike-react/usePageContext";
-import { titleBar } from "../../../layouts/styles";
+import { titleBar } from "../../../layouts/shared";
 import { css } from "../../../styled-system/css";
 import type { BlogPost } from "../../../types/BlogPost";
+import { sectionRule } from "../../../styled-system/recipes";
 
 const App: React.FC = function () {
   // Get pre-loaded data from +data.ts
@@ -15,7 +16,8 @@ const App: React.FC = function () {
   return (
     <div className={css({ maxWidth: "900px", mx: "auto", px: "md" })}>
       <h1 className={titleBar.title}>Beginners guide to Quantum Machine Learning</h1>
-      <p className={css({ marginBottom: "md", lineHeight: "1.5" })}>
+      <span className={sectionRule({ territory: "voice" })} aria-hidden="true" />
+      <p className={css({ marginBottom: "md", lineHeight: "normal" })}>
         Classical machine learning has changed the internet in a dramatic fashion. Because of this, researchers put a
         substantial effort into the develop of quantum machine learning. In this series of tutorials on quantum
         technologies, we provide a basic introduction into some of the fundamental concepts behind supervised quantum
@@ -28,7 +30,7 @@ const App: React.FC = function () {
         <code>qiskit</code>.
       </p>
 
-      <ul className={css({ paddingLeft: "2em", marginBottom: "md" })}>
+      <ul className={css({ paddingLeft: "8", marginBottom: "md" })}>
         <li>
           So if both things are known to you, you can directly start out. Otherwise, the introductory chapters of the
           qiskit textbook might be a great starting point.

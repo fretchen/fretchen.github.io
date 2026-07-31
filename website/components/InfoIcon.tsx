@@ -8,9 +8,9 @@ interface InfoIconProps {
 
 export default function InfoIcon({ size = "sm", className }: InfoIconProps) {
   const sizeStyles = {
-    xs: css({ fontSize: "xs", lineHeight: "1" }),
-    sm: css({ fontSize: "sm", lineHeight: "1" }),
-    md: css({ fontSize: "md", lineHeight: "1" }),
+    xs: css({ fontSize: "xs", lineHeight: "none" }),
+    sm: css({ fontSize: "sm", lineHeight: "none" }),
+    md: css({ fontSize: "md", lineHeight: "none" }),
   } as const;
 
   const baseStyles = css({
@@ -19,7 +19,7 @@ export default function InfoIcon({ size = "sm", className }: InfoIconProps) {
     justifyContent: "center",
     width: "1em",
     height: "1em",
-    borderRadius: "50%",
+    borderRadius: "full",
     backgroundColor: "blue.100",
     color: "blue.600",
     fontWeight: "bold",

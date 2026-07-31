@@ -119,20 +119,20 @@ const ExpectedUtilityPlot: React.FC = () => {
   return (
     <div
       className={css({
-        margin: "2rem 0",
-        padding: "1.5rem",
+        margin: "32px 0",
+        padding: "6",
         backgroundColor: "rgba(59, 130, 246, 0.05)",
-        borderRadius: "4px",
+        borderRadius: "sm",
         border: "1px solid rgba(59, 130, 246, 0.2)",
       })}
     >
       <h4
         className={css({
-          fontSize: "1rem",
-          fontWeight: "medium",
+          fontSize: "md",
+          fontWeight: "semibold",
           textAlign: "center",
-          marginBottom: "1rem",
-          color: "#374151",
+          marginBottom: "4",
+          color: "gray.700",
         })}
       >
         When should Walter cooperate vs. defect against Jesse?
@@ -141,9 +141,9 @@ const ExpectedUtilityPlot: React.FC = () => {
       <p
         className={css({
           textAlign: "center",
-          color: "#6b7280",
-          fontSize: "0.9rem",
-          marginBottom: "1rem",
+          color: "gray.500",
+          fontSize: "md",
+          marginBottom: "4",
         })}
       >
         We know that if <strong>both cooperate, each gets 3 years</strong>, and if{" "}
@@ -156,9 +156,9 @@ const ExpectedUtilityPlot: React.FC = () => {
         className={css({
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
-          gap: "1rem",
-          marginBottom: "1rem",
-          fontSize: "0.8rem",
+          gap: "4",
+          marginBottom: "4",
+          fontSize: "sm",
         })}
       >
         <div>
@@ -194,15 +194,15 @@ const ExpectedUtilityPlot: React.FC = () => {
       {/* Probability Control */}
       <div
         className={css({
-          marginBottom: "1rem",
+          marginBottom: "4",
         })}
       >
         <label
           className={css({
             display: "block",
-            fontSize: "0.85rem",
-            color: "#374151",
-            marginBottom: "0.5rem",
+            fontSize: "sm",
+            color: "gray.700",
+            marginBottom: "2",
             textAlign: "center",
           })}
         >
@@ -218,8 +218,8 @@ const ExpectedUtilityPlot: React.FC = () => {
           className={css({
             width: "100%",
             height: "4px",
-            backgroundColor: "#e5e7eb",
-            borderRadius: "2px",
+            backgroundColor: "gray.200",
+            borderRadius: "xs",
             outline: "none",
             cursor: "pointer",
           })}
@@ -228,7 +228,7 @@ const ExpectedUtilityPlot: React.FC = () => {
       <div
         className={css({
           height: "250px",
-          marginBottom: "1rem",
+          marginBottom: "4",
         })}
       >
         <Line data={data} options={options} />
@@ -237,20 +237,20 @@ const ExpectedUtilityPlot: React.FC = () => {
       {/* Decision Recommendation Section */}
       <div
         className={css({
-          backgroundColor: expectedDefect < expectedCooperate ? "#fef2f2" : "#f0f9ff",
+          backgroundColor: expectedDefect < expectedCooperate ? "red.50" : "sky.50",
           border: expectedDefect < expectedCooperate ? "2px solid #dc2626" : "2px solid #0066cc",
-          borderRadius: "6px",
-          padding: "1rem",
-          marginBottom: "1rem",
+          borderRadius: "md",
+          padding: "4",
+          marginBottom: "4",
         })}
       >
         <div
           className={css({
             textAlign: "center",
-            fontSize: "1rem",
+            fontSize: "md",
             fontWeight: "bold",
-            color: expectedDefect < expectedCooperate ? "#dc2626" : "#0066cc",
-            marginBottom: "0.5rem",
+            color: expectedDefect < expectedCooperate ? "red.600" : "brand",
+            marginBottom: "2",
           })}
         >
           🎯 Walter&apos;s Rational Choice: {expectedDefect < expectedCooperate ? "Defect" : "Cooperate"}
@@ -258,8 +258,8 @@ const ExpectedUtilityPlot: React.FC = () => {
 
         <div
           className={css({
-            fontSize: "0.85rem",
-            color: "#374151",
+            fontSize: "sm",
+            color: "gray.700",
             textAlign: "center",
           })}
         >
@@ -379,20 +379,20 @@ const PayoffMatrix: React.FC = () => {
   return (
     <div
       className={css({
-        margin: "2rem 0",
-        padding: "1.5rem",
+        margin: "32px 0",
+        padding: "6",
         backgroundColor: "rgba(59, 130, 246, 0.05)", // Very subtle blue background
-        borderRadius: "4px",
+        borderRadius: "sm",
         border: "1px solid rgba(59, 130, 246, 0.2)", // Subtle border
       })}
     >
       <h4
         className={css({
-          fontSize: "1rem",
-          fontWeight: "medium",
+          fontSize: "md",
+          fontWeight: "semibold",
           textAlign: "center",
-          marginBottom: "1rem",
-          color: "#374151",
+          marginBottom: "4",
+          color: "gray.700",
         })}
       >
         Interactive Scenario: What do you do?
@@ -401,9 +401,9 @@ const PayoffMatrix: React.FC = () => {
       <p
         className={css({
           textAlign: "center",
-          color: "#6b7280",
-          fontSize: "0.9rem",
-          marginBottom: "1.5rem",
+          color: "gray.500",
+          fontSize: "md",
+          marginBottom: "6",
         })}
       >
         Jesse&apos;s decision will be simulated randomly after you choose.
@@ -414,22 +414,22 @@ const PayoffMatrix: React.FC = () => {
           className={css({
             display: "flex",
             justifyContent: "center",
-            gap: "1rem",
+            gap: "4",
           })}
         >
           <button
             onClick={() => makeDecision("D")}
             className={css({
-              padding: "0.5rem 1rem",
-              backgroundColor: "#374151",
+              padding: "8px 16px",
+              backgroundColor: "gray.700",
               color: "white",
-              borderRadius: "4px",
+              borderRadius: "sm",
               border: "none",
-              fontSize: "0.9rem",
+              fontSize: "md",
               cursor: "pointer",
-              transition: "background-color 0.2s",
+              transition: "background-color {durations.normal} ease",
               _hover: {
-                backgroundColor: "#1f2937",
+                backgroundColor: "gray.800",
               },
             })}
           >
@@ -438,16 +438,16 @@ const PayoffMatrix: React.FC = () => {
           <button
             onClick={() => makeDecision("C")}
             className={css({
-              padding: "0.5rem 1rem",
-              backgroundColor: "#0066cc",
+              padding: "8px 16px",
+              backgroundColor: "brand",
               color: "white",
-              borderRadius: "4px",
+              borderRadius: "sm",
               border: "none",
-              fontSize: "0.9rem",
+              fontSize: "md",
               cursor: "pointer",
-              transition: "background-color 0.2s",
+              transition: "background-color {durations.normal} ease",
               _hover: {
-                backgroundColor: "#0052a3",
+                backgroundColor: "brandHover",
               },
             })}
           >
@@ -459,23 +459,23 @@ const PayoffMatrix: React.FC = () => {
           <div
             className={css({
               textAlign: "center",
-              marginBottom: "1rem",
+              marginBottom: "4",
             })}
           >
             <p
               className={css({
-                fontSize: "0.9rem",
-                color: "#374151",
-                marginBottom: "0.5rem",
+                fontSize: "md",
+                color: "gray.700",
+                marginBottom: "2",
               })}
             >
               <strong>My choice:</strong> {playerChoice === "D" ? "Blame Jesse" : "Cooperate"}
             </p>
             <p
               className={css({
-                fontSize: "0.9rem",
-                color: "#6b7280",
-                marginBottom: "0.5rem",
+                fontSize: "md",
+                color: "gray.500",
+                marginBottom: "2",
               })}
             >
               <strong>Jesse&apos;s choice (simulated):</strong> {opponentChoice === "D" ? "Blame me" : "Cooperate"}
@@ -485,19 +485,19 @@ const PayoffMatrix: React.FC = () => {
           {gameResult && (
             <div
               className={css({
-                padding: "0.75rem",
-                borderRadius: "4px",
+                padding: "3",
+                borderRadius: "sm",
                 border: "1px solid #d1d5db",
-                backgroundColor: "#f9fafb",
-                marginTop: "1rem",
+                backgroundColor: "codeBg",
+                marginTop: "4",
               })}
             >
               <p
                 className={css({
                   textAlign: "center",
-                  fontSize: "0.85rem",
-                  color: "#374151",
-                  marginBottom: "0.5rem",
+                  fontSize: "sm",
+                  color: "gray.700",
+                  marginBottom: "2",
                 })}
               >
                 {getOutcomeText(playerChoice, opponentChoice!)}
@@ -506,9 +506,9 @@ const PayoffMatrix: React.FC = () => {
                 className={css({
                   display: "flex",
                   justifyContent: "center",
-                  gap: "2rem",
-                  fontSize: "0.8rem",
-                  color: "#6b7280",
+                  gap: "8",
+                  fontSize: "sm",
+                  color: "gray.500",
                 })}
               >
                 <div>
@@ -526,22 +526,22 @@ const PayoffMatrix: React.FC = () => {
           <div
             className={css({
               textAlign: "center",
-              marginTop: "1rem",
+              marginTop: "4",
             })}
           >
             <button
               onClick={resetGame}
               className={css({
-                padding: "0.375rem 0.75rem",
-                backgroundColor: "#f3f4f6",
-                color: "#374151",
-                borderRadius: "4px",
+                padding: "6px 12px",
+                backgroundColor: "gray.100",
+                color: "gray.700",
+                borderRadius: "sm",
                 border: "1px solid #d1d5db",
-                fontSize: "0.8rem",
+                fontSize: "sm",
                 cursor: "pointer",
-                transition: "background-color 0.2s",
+                transition: "background-color {durations.normal} ease",
                 _hover: {
-                  backgroundColor: "#e5e7eb",
+                  backgroundColor: "gray.200",
                 },
               })}
             >
@@ -553,9 +553,9 @@ const PayoffMatrix: React.FC = () => {
 
       <div
         className={css({
-          marginTop: "1rem",
-          fontSize: "0.7rem",
-          color: "#9ca3af",
+          marginTop: "4",
+          fontSize: "xs",
+          color: "gray.400",
           textAlign: "center",
         })}
       >
@@ -668,39 +668,39 @@ const GameSimulation: React.FC = () => {
   return (
     <div
       className={css({
-        margin: "2rem 0",
-        padding: "1.5rem",
+        margin: "32px 0",
+        padding: "6",
         backgroundColor: "rgba(59, 130, 246, 0.05)",
-        borderRadius: "4px",
+        borderRadius: "sm",
         border: "1px solid rgba(59, 130, 246, 0.2)",
       })}
     >
       <h4
         className={css({
-          fontSize: "1rem",
-          fontWeight: "medium",
-          marginBottom: "1rem",
+          fontSize: "md",
+          fontWeight: "semibold",
+          marginBottom: "4",
           textAlign: "center",
-          color: "#374151",
+          color: "gray.700",
         })}
       >
         🎭 Walter&apos;s Strategy Simulator: How Will Your Partnership Play Out?
       </h4>
 
-      <p className={css({ textAlign: "center", color: "#6b7280", fontSize: "0.9rem", marginBottom: "1.5rem" })}>
+      <p className={css({ textAlign: "center", color: "gray.500", fontSize: "md", marginBottom: "6" })}>
         Choose your approach as Walter. Jesse&apos;s strategy will be randomly selected to simulate the uncertainty of
         working with a partner. Each simulation runs for 50 episodes (two seasons).
       </p>
 
-      <div className={css({ marginBottom: "1rem" })}>
+      <div className={css({ marginBottom: "4" })}>
         <div>
           <label
             className={css({
               display: "block",
-              fontSize: "0.85rem",
-              fontWeight: "medium",
-              marginBottom: "0.5rem",
-              color: "#374151",
+              fontSize: "sm",
+              fontWeight: "semibold",
+              marginBottom: "2",
+              color: "gray.700",
               textAlign: "center",
             })}
           >
@@ -712,10 +712,10 @@ const GameSimulation: React.FC = () => {
               onChange={(e) => setWalterStrategy(e.target.value as Strategy)}
               className={css({
                 width: "60%",
-                padding: "0.5rem",
+                padding: "2",
                 border: "1px solid #d1d5db",
-                borderRadius: "4px",
-                fontSize: "0.85rem",
+                borderRadius: "sm",
+                fontSize: "sm",
               })}
             >
               <option value="tit-for-tat">Tit-for-Tat</option>
@@ -726,10 +726,10 @@ const GameSimulation: React.FC = () => {
           </div>
           <p
             className={css({
-              fontSize: "0.75rem",
-              color: "#6b7280",
-              marginTop: "0.5rem",
-              lineHeight: "1.3",
+              fontSize: "xs",
+              color: "gray.500",
+              marginTop: "2",
+              lineHeight: "tight",
               textAlign: "center",
             })}
           >
@@ -738,22 +738,22 @@ const GameSimulation: React.FC = () => {
         </div>
       </div>
 
-      <div className={css({ textAlign: "center", marginBottom: "1rem" })}>
+      <div className={css({ textAlign: "center", marginBottom: "4" })}>
         <button
           onClick={runSimulation}
           disabled={isRunning}
           className={css({
-            padding: "0.75rem 1.5rem",
-            backgroundColor: isRunning ? "#9ca3af" : "#0066cc",
+            padding: "12px 24px",
+            backgroundColor: isRunning ? "gray.400" : "brand",
             color: "white",
-            borderRadius: "4px",
+            borderRadius: "sm",
             border: "none",
-            fontSize: "0.9rem",
-            fontWeight: "medium",
+            fontSize: "md",
+            fontWeight: "semibold",
             cursor: isRunning ? "not-allowed" : "pointer",
-            transition: "background-color 0.2s",
+            transition: "background-color {durations.normal} ease",
             _hover: {
-              backgroundColor: isRunning ? "#9ca3af" : "#0052a3",
+              backgroundColor: isRunning ? "gray.400" : "brandHover",
             },
           })}
         >
@@ -762,55 +762,55 @@ const GameSimulation: React.FC = () => {
       </div>
 
       {gameData && analysis && (
-        <div className={css({ marginTop: "1rem" })}>
+        <div className={css({ marginTop: "4" })}>
           {/* Strategy matchup prominently displayed */}
           <div
             className={css({
-              backgroundColor: "#f8fafc",
+              backgroundColor: "slate.50",
               border: "2px solid #e2e8f0",
-              borderRadius: "8px",
-              padding: "1rem",
-              marginBottom: "1rem",
+              borderRadius: "lg",
+              padding: "4",
+              marginBottom: "4",
             })}
           >
-            <div className={css({ textAlign: "center", marginBottom: "1rem" })}>
-              <h5 className={css({ fontSize: "1rem", fontWeight: "bold", color: "#374151", marginBottom: "0.5rem" })}>
+            <div className={css({ textAlign: "center", marginBottom: "4" })}>
+              <h5 className={css({ fontSize: "md", fontWeight: "bold", color: "gray.700", marginBottom: "2" })}>
                 🎪 Season Finale: Walter vs Jesse
               </h5>
               <div
                 className={css({
                   display: "grid",
                   gridTemplateColumns: "1fr auto 1fr",
-                  gap: "0.5rem",
+                  gap: "2",
                   alignItems: "center",
-                  margin: "1rem 0",
+                  margin: "16px 0",
                 })}
               >
                 <div
                   className={css({
                     textAlign: "center",
-                    padding: "0.75rem",
-                    backgroundColor: "#dbeafe",
-                    borderRadius: "6px",
+                    padding: "3",
+                    backgroundColor: "blue.100",
+                    borderRadius: "md",
                   })}
                 >
-                  <div className={css({ fontSize: "0.85rem", fontWeight: "bold", color: "#1d4ed8" })}>Walter (You)</div>
-                  <div className={css({ fontSize: "0.75rem", color: "#3730a3", marginTop: "0.25rem" })}>
+                  <div className={css({ fontSize: "sm", fontWeight: "bold", color: "blue.700" })}>Walter (You)</div>
+                  <div className={css({ fontSize: "xs", color: "indigo.800", marginTop: "1" })}>
                     {strategyDescriptions[walterStrategy].split(" - ")[0]}
                   </div>
                 </div>
-                <div className={css({ fontSize: "1.5rem", textAlign: "center" })}>⚡</div>
+                <div className={css({ fontSize: "2xl", textAlign: "center" })}>⚡</div>
                 <div
                   className={css({
                     textAlign: "center",
-                    padding: "0.75rem",
-                    backgroundColor: "#faf5ff",
-                    borderRadius: "6px",
+                    padding: "3",
+                    backgroundColor: "purple.50",
+                    borderRadius: "md",
                     border: "2px solid #a855f7",
                   })}
                 >
-                  <div className={css({ fontSize: "0.85rem", fontWeight: "bold", color: "#7c3aed" })}>Jesse</div>
-                  <div className={css({ fontSize: "0.75rem", color: "#6b21a8", marginTop: "0.25rem" })}>
+                  <div className={css({ fontSize: "sm", fontWeight: "bold", color: "violet.600" })}>Jesse</div>
+                  <div className={css({ fontSize: "xs", color: "purple.800", marginTop: "1" })}>
                     {jesseStrategyDescriptions[gameData.jesseStrategy].split(" - ")[0]}
                   </div>
                 </div>
@@ -821,26 +821,26 @@ const GameSimulation: React.FC = () => {
               className={css({
                 display: "grid",
                 gridTemplateColumns: "1fr 1fr",
-                gap: "1rem",
-                marginBottom: "1rem",
-                fontSize: "0.85rem",
+                gap: "4",
+                marginBottom: "4",
+                fontSize: "sm",
               })}
             >
               <div className={css({ textAlign: "center" })}>
-                <div className={css({ color: "#2563eb", fontWeight: "bold", fontSize: "1.2rem" })}>
+                <div className={css({ color: "blue.600", fontWeight: "bold", fontSize: "xl" })}>
                   {analysis.walterAvg.toFixed(1)} years
                 </div>
-                <div className={css({ color: "#6b7280", fontSize: "0.75rem" })}>Walter&apos;s Average Sentence</div>
-                <div className={css({ color: "#2563eb", fontSize: "0.7rem", marginTop: "0.25rem" })}>
+                <div className={css({ color: "gray.500", fontSize: "xs" })}>Walter&apos;s Average Sentence</div>
+                <div className={css({ color: "blue.600", fontSize: "xs", marginTop: "1" })}>
                   Total: {gameData.totalPayoffs1[gameData.totalPayoffs1.length - 1]} years
                 </div>
               </div>
               <div className={css({ textAlign: "center" })}>
-                <div className={css({ color: "#7c3aed", fontWeight: "bold", fontSize: "1.2rem" })}>
+                <div className={css({ color: "violet.600", fontWeight: "bold", fontSize: "xl" })}>
                   {analysis.jesseAvg.toFixed(1)} years
                 </div>
-                <div className={css({ color: "#6b7280", fontSize: "0.75rem" })}>Jesse&apos;s Average Sentence</div>
-                <div className={css({ color: "#7c3aed", fontSize: "0.7rem", marginTop: "0.25rem" })}>
+                <div className={css({ color: "gray.500", fontSize: "xs" })}>Jesse&apos;s Average Sentence</div>
+                <div className={css({ color: "violet.600", fontSize: "xs", marginTop: "1" })}>
                   Total: {gameData.totalPayoffs2[gameData.totalPayoffs2.length - 1]} years
                 </div>
               </div>
@@ -849,14 +849,14 @@ const GameSimulation: React.FC = () => {
             <div
               className={css({
                 textAlign: "center",
-                padding: "0.75rem",
-                borderRadius: "6px",
+                padding: "3",
+                borderRadius: "md",
                 backgroundColor: "white",
                 border: `2px solid ${analysis.color}`,
-                marginBottom: "1rem",
+                marginBottom: "4",
               })}
             >
-              <div className={css({ color: analysis.color, fontWeight: "bold", fontSize: "0.9rem" })}>
+              <div className={css({ color: analysis.color, fontWeight: "bold", fontSize: "md" })}>
                 {analysis.verdict}
               </div>
             </div>
@@ -867,18 +867,18 @@ const GameSimulation: React.FC = () => {
             className={css({
               backgroundColor: "white",
               border: "1px solid #e5e7eb",
-              borderRadius: "6px",
-              padding: "1rem",
-              marginBottom: "1rem",
+              borderRadius: "md",
+              padding: "4",
+              marginBottom: "4",
             })}
           >
             <h6
               className={css({
-                fontSize: "0.85rem",
-                fontWeight: "medium",
-                marginBottom: "0.75rem",
+                fontSize: "sm",
+                fontWeight: "semibold",
+                marginBottom: "3",
                 textAlign: "center",
-                color: "#374151",
+                color: "gray.700",
               })}
             >
               📈 Cumulative Prison Sentences Over Time
@@ -943,12 +943,12 @@ const GameSimulation: React.FC = () => {
                 }}
               />
             </div>
-            <p className={css({ fontSize: "0.7rem", color: "#6b7280", textAlign: "center", marginTop: "0.5rem" })}>
+            <p className={css({ fontSize: "xs", color: "gray.500", textAlign: "center", marginTop: "2" })}>
               Lower is better - shows how prison sentences accumulate as the partnership progresses
             </p>
           </div>
 
-          <div className={css({ fontSize: "0.75rem", color: "#9ca3af", textAlign: "center" })}>
+          <div className={css({ fontSize: "xs", color: "gray.400", textAlign: "center" })}>
             💡 Try different strategies to see how they affect your partnership with Jesse
           </div>
         </div>
@@ -1049,20 +1049,20 @@ const StrategyAnalysis: React.FC = () => {
   return (
     <div
       className={css({
-        margin: "2rem 0",
-        padding: "1.5rem",
+        margin: "32px 0",
+        padding: "6",
         backgroundColor: "rgba(59, 130, 246, 0.05)",
-        borderRadius: "4px",
+        borderRadius: "sm",
         border: "1px solid rgba(59, 130, 246, 0.2)",
       })}
     >
       <h4
         className={css({
-          fontSize: "1rem",
-          fontWeight: "medium",
-          marginBottom: "1rem",
+          fontSize: "md",
+          fontWeight: "semibold",
+          marginBottom: "4",
           textAlign: "center",
-          color: "#374151",
+          color: "gray.700",
         })}
       >
         🧪 Walter&apos;s Strategy Guide: How to Handle Different Types of Jesse
@@ -1071,31 +1071,31 @@ const StrategyAnalysis: React.FC = () => {
       <p
         className={css({
           textAlign: "center",
-          color: "#6b7280",
-          fontSize: "0.9rem",
-          marginBottom: "1.5rem",
+          color: "gray.500",
+          fontSize: "md",
+          marginBottom: "6",
         })}
       >
         Analyzes how different Walter strategies perform against each type of Jesse over a full season (100 episodes, 50
         simulations per matchup). Find the optimal approach for each Jesse personality.
       </p>
 
-      <div className={css({ textAlign: "center", marginBottom: "1.5rem" })}>
+      <div className={css({ textAlign: "center", marginBottom: "6" })}>
         <button
           onClick={runAnalysis}
           disabled={isAnalyzing}
           className={css({
-            padding: "0.75rem 1.5rem",
-            backgroundColor: isAnalyzing ? "#9ca3af" : "#0066cc",
+            padding: "12px 24px",
+            backgroundColor: isAnalyzing ? "gray.400" : "brand",
             color: "white",
-            borderRadius: "4px",
+            borderRadius: "sm",
             border: "none",
-            fontSize: "0.9rem",
-            fontWeight: "medium",
+            fontSize: "md",
+            fontWeight: "semibold",
             cursor: isAnalyzing ? "not-allowed" : "pointer",
-            transition: "background-color 0.2s",
+            transition: "background-color {durations.normal} ease",
             _hover: {
-              backgroundColor: isAnalyzing ? "#9ca3af" : "#0052a3",
+              backgroundColor: isAnalyzing ? "gray.400" : "brandHover",
             },
           })}
         >
@@ -1110,8 +1110,8 @@ const StrategyAnalysis: React.FC = () => {
             className={css({
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: "1rem",
-              marginBottom: "2rem",
+              gap: "4",
+              marginBottom: "8",
             })}
           >
             {strategies.map((jesseStrat) => {
@@ -1123,24 +1123,24 @@ const StrategyAnalysis: React.FC = () => {
                 <div
                   key={jesseStrat}
                   className={css({
-                    backgroundColor: "#f8fafc",
+                    backgroundColor: "slate.50",
                     border: "2px solid #e2e8f0",
-                    borderRadius: "8px",
-                    padding: "1rem",
+                    borderRadius: "lg",
+                    padding: "4",
                   })}
                 >
-                  <div className={css({ textAlign: "center", marginBottom: "0.75rem" })}>
+                  <div className={css({ textAlign: "center", marginBottom: "3" })}>
                     <h6
                       className={css({
-                        fontSize: "0.9rem",
+                        fontSize: "md",
                         fontWeight: "bold",
-                        color: "#374151",
-                        marginBottom: "0.25rem",
+                        color: "gray.700",
+                        marginBottom: "1",
                       })}
                     >
                       If Jesse is: {strategyNames[jesseStrat]}
                     </h6>
-                    <p className={css({ fontSize: "0.7rem", color: "#6b7280", lineHeight: "1.3" })}>
+                    <p className={css({ fontSize: "xs", color: "gray.500", lineHeight: "tight" })}>
                       {jesseStrategyDescriptions[jesseStrat]}
                     </p>
                   </div>
@@ -1149,8 +1149,8 @@ const StrategyAnalysis: React.FC = () => {
                     <div
                       className={css({
                         textAlign: "center",
-                        padding: "0.75rem",
-                        borderRadius: "6px",
+                        padding: "3",
+                        borderRadius: "md",
                         backgroundColor: "white",
                         border: `2px solid ${color}`,
                       })}
@@ -1159,16 +1159,16 @@ const StrategyAnalysis: React.FC = () => {
                         className={css({
                           color: color,
                           fontWeight: "bold",
-                          fontSize: "0.85rem",
-                          marginBottom: "0.25rem",
+                          fontSize: "sm",
+                          marginBottom: "1",
                         })}
                       >
                         🎯 Walter should be: {strategyNames[best.strategy as keyof typeof strategyNames]}
                       </div>
-                      <div className={css({ fontSize: "0.7rem", color: "#6b7280", marginBottom: "0.25rem" })}>
+                      <div className={css({ fontSize: "xs", color: "gray.500", marginBottom: "1" })}>
                         Average: {best.score} years prison
                       </div>
-                      <div className={css({ fontSize: "0.7rem", color: color, fontWeight: "medium" })}>
+                      <div className={css({ fontSize: "xs", color: color, fontWeight: "semibold" })}>
                         {recommendationText}
                       </div>
                     </div>
@@ -1183,31 +1183,31 @@ const StrategyAnalysis: React.FC = () => {
             className={css({
               backgroundColor: "white",
               border: "1px solid #e5e7eb",
-              borderRadius: "6px",
-              padding: "1rem",
-              marginBottom: "1rem",
+              borderRadius: "md",
+              padding: "4",
+              marginBottom: "4",
             })}
           >
             <h6
               className={css({
-                fontSize: "0.85rem",
-                fontWeight: "medium",
-                marginBottom: "0.75rem",
+                fontSize: "sm",
+                fontWeight: "semibold",
+                marginBottom: "3",
                 textAlign: "center",
-                color: "#374151",
+                color: "gray.700",
               })}
             >
               📊 Detailed Results: Walter&apos;s Average Prison Sentence
             </h6>
             <div className={css({ overflowX: "auto" })}>
-              <table className={css({ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" })}>
+              <table className={css({ width: "100%", borderCollapse: "collapse", fontSize: "sm" })}>
                 <thead>
                   <tr>
                     <th
                       className={css({
                         border: "1px solid #d1d5db",
-                        padding: "0.5rem",
-                        backgroundColor: "#f9fafb",
+                        padding: "2",
+                        backgroundColor: "codeBg",
                         textAlign: "left",
                       })}
                     >
@@ -1218,8 +1218,8 @@ const StrategyAnalysis: React.FC = () => {
                         key={strat}
                         className={css({
                           border: "1px solid #d1d5db",
-                          padding: "0.5rem",
-                          backgroundColor: "#f9fafb",
+                          padding: "2",
+                          backgroundColor: "codeBg",
                           textAlign: "center",
                         })}
                       >
@@ -1234,9 +1234,9 @@ const StrategyAnalysis: React.FC = () => {
                       <td
                         className={css({
                           border: "1px solid #d1d5db",
-                          padding: "0.5rem",
-                          backgroundColor: "#f9fafb",
-                          fontWeight: "medium",
+                          padding: "2",
+                          backgroundColor: "codeBg",
+                          fontWeight: "semibold",
                         })}
                       >
                         {strategyNames[strat1]}
@@ -1249,15 +1249,15 @@ const StrategyAnalysis: React.FC = () => {
                             key={strat2}
                             className={css({
                               border: "1px solid #d1d5db",
-                              padding: "0.5rem",
+                              padding: "2",
                               textAlign: "center",
-                              backgroundColor: isBest ? "#f0f9ff" : "white",
+                              backgroundColor: isBest ? "sky.50" : "white",
                               fontWeight: isBest ? "bold" : "normal",
-                              color: isBest ? "#0066cc" : "#374151",
+                              color: isBest ? "brand" : "gray.700",
                             })}
                           >
                             {score.toFixed(1)} years
-                            {isBest && <div className={css({ fontSize: "0.6rem", color: "#0066cc" })}>✓ Best</div>}
+                            {isBest && <div className={css({ fontSize: "xs", color: "brand" })}>✓ Best</div>}
                           </td>
                         );
                       })}
@@ -1266,13 +1266,13 @@ const StrategyAnalysis: React.FC = () => {
                 </tbody>
               </table>
             </div>
-            <p className={css({ fontSize: "0.7rem", color: "#6b7280", textAlign: "center", marginTop: "0.75rem" })}>
+            <p className={css({ fontSize: "xs", color: "gray.500", textAlign: "center", marginTop: "3" })}>
               Lower numbers = better outcomes for Walter. Blue cells show the optimal Walter strategy for each Jesse
               type.
             </p>
           </div>
 
-          <div className={css({ fontSize: "0.75rem", color: "#9ca3af", textAlign: "center" })}>
+          <div className={css({ fontSize: "xs", color: "gray.400", textAlign: "center" })}>
             💡 Understanding your partner&apos;s behavior is key to choosing the right strategy in repeated games
           </div>
         </div>

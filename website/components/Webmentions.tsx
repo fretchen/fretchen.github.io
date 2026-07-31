@@ -1,8 +1,9 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { webmentions } from "../layouts/styles";
+import { webmentions } from "./Webmentions.styles";
 import { useWebmentionUrls } from "../hooks/useWebmentionUrls";
 import { fetchWebmentions } from "../utils/webmentionUtils";
+import { button } from "../styled-system/recipes";
 
 function ShareActions({ urlWithoutSlash }: { urlWithoutSlash: string }) {
   const shareText =
@@ -16,7 +17,7 @@ function ShareActions({ urlWithoutSlash }: { urlWithoutSlash: string }) {
         href={`https://bsky.app/intent/compose?text=${shareText}`}
         target="_blank"
         rel="noopener noreferrer"
-        className={webmentions.shareButton}
+        className={button({ visual: "ghost", size: "sm" })}
       >
         Discuss on 🦋 Bluesky
       </a>
@@ -25,7 +26,7 @@ function ShareActions({ urlWithoutSlash }: { urlWithoutSlash: string }) {
         href={`https://mastodon.social/share?text=${shareText}`}
         target="_blank"
         rel="noopener noreferrer"
-        className={webmentions.shareButton}
+        className={button({ visual: "ghost", size: "sm" })}
       >
         Discuss on 🐘 Mastodon
       </a>

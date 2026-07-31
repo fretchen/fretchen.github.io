@@ -2,7 +2,8 @@ import * as React from "react";
 import { Link } from "./Link";
 import { EntryNftImage } from "./EntryNftImage";
 import { EntryListProps } from "../types/components";
-import { entryList } from "../layouts/styles";
+import { baseContentCard } from "../layouts/shared";
+import { entryList } from "./EntryList.styles";
 import { SITE } from "../utils/siteData";
 
 /**
@@ -48,8 +49,8 @@ const EntryList: React.FC<EntryListProps> = ({
 
         return (
           <article key={linkIndex} className="h-entry">
-            <Link href={entryUrl} className={entryList.entry}>
-              <div className={entryList.entryContent}>
+            <Link href={entryUrl} className={baseContentCard.container}>
+              <div className={baseContentCard.content}>
                 {/* Large NFT image on the left side of the entire entry (u-featured for h-entry) */}
                 {(blog.tokenID || blog.nftMetadata?.imageUrl) && (
                   <div className="u-featured">
@@ -62,11 +63,11 @@ const EntryList: React.FC<EntryListProps> = ({
                 )}
 
                 {/* Text content */}
-                <div className={blog.description ? entryList.entryTextCompact : entryList.entryText}>
-                  <div className={entryList.entryTextContent}>
+                <div className={blog.description ? baseContentCard.textCompact : baseContentCard.text}>
+                  <div className={entryList.textContent}>
                     {/* Date - use substantially tighter spacing when description is present */}
                     {showDate && blog.publishing_date && (
-                      <div className={blog.description ? entryList.entryDateWithDescription : entryList.entryDate}>
+                      <div className={blog.description ? baseContentCard.dateWithDescription : baseContentCard.date}>
                         {/* dt-published for h-entry microformat */}
                         <time className="dt-published" dateTime={isoDatetime || undefined}>
                           {blog.publishing_date}
@@ -75,11 +76,11 @@ const EntryList: React.FC<EntryListProps> = ({
                     )}
 
                     {/* Title (p-name for h-entry) */}
-                    <h3 className={`p-name ${entryList.entryTitle} ${titleClassName || ""}`}>{blog.title}</h3>
+                    <h3 className={`p-name ${baseContentCard.title} ${titleClassName || ""}`}>{blog.title}</h3>
 
                     {/* Description (p-summary for h-entry) */}
                     {blog.description && (
-                      <div className={`p-summary ${entryList.entryDescription}`}>{blog.description}</div>
+                      <div className={`p-summary ${baseContentCard.description}`}>{blog.description}</div>
                     )}
 
                     {/* Categories (p-category for h-entry) */}

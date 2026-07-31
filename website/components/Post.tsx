@@ -4,7 +4,9 @@ import MetadataLine from "./MetadataLine";
 import { Link } from "./Link";
 import { NFTFloatImage } from "./NFTFloatImage";
 import { MdxPre } from "./MdxCodeBlock";
-import { post, titleBar } from "../layouts/styles";
+import { titleBar } from "../layouts/shared";
+import { post } from "./Post.styles";
+import { button } from "../styled-system/recipes";
 import { loadLazyModuleFromDirectory } from "../utils/lazyGlobRegistry";
 import { isSupportedDirectory, getSupportedDirectories } from "../utils/supportedDirectories";
 import { useKaTeXRenderer } from "../hooks/useKaTeXRenderer";
@@ -83,9 +85,9 @@ const ReactPostRenderer: React.FC<{
   if (loading) {
     return (
       <div className={post.contentContainer}>
-        <div style={{ padding: "20px", textAlign: "center" }}>
+        <div className={post.loadingBox}>
           <p>🔄 Lade interaktive Komponente...</p>
-          <p style={{ fontSize: "0.9em", color: "#666" }}>
+          <p className={post.loadingPath}>
             Pfad: <code>{componentPath}</code>
           </p>
         </div>
@@ -96,16 +98,7 @@ const ReactPostRenderer: React.FC<{
   if (error || !Component) {
     return (
       <div className={post.contentContainer}>
-        <div
-          style={{
-            border: "1px solid #dc3545",
-            borderRadius: "4px",
-            padding: "20px",
-            backgroundColor: "#f8d7da",
-            color: "#721c24",
-            margin: "20px 0",
-          }}
-        >
+        <div className={post.errorBox}>
           <h3>❌ Fehler beim Laden der React-Komponente</h3>
           <p>
             <strong>Fehler:</strong> {error || "Komponente konnte nicht geladen werden"}
@@ -114,22 +107,15 @@ const ReactPostRenderer: React.FC<{
             <strong>Pfad:</strong> <code>{componentPath}</code>
           </p>
           <button
+            type="button"
             onClick={() => window.location.reload()}
-            style={{
-              marginTop: "10px",
-              padding: "8px 16px",
-              border: "1px solid #721c24",
-              borderRadius: "4px",
-              backgroundColor: "transparent",
-              color: "#721c24",
-              cursor: "pointer",
-            }}
+            className={`${button({ visual: "secondary", size: "sm" })} ${post.errorSpacing}`}
           >
             🔄 Seite neu laden
           </button>
-          <details style={{ marginTop: "10px" }}>
+          <details className={post.errorSpacing}>
             <summary>Mögliche Lösungen</summary>
-            <ul style={{ marginTop: "10px" }}>
+            <ul className={post.errorSpacing}>
               <li>Laden Sie die Seite neu (hilft nach einem Update der Website)</li>
               <li>Überprüfen Sie, ob die TSX-Datei existiert</li>
               <li>Stellen Sie sicher, dass die Komponente als default export verfügbar ist</li>

@@ -54,7 +54,7 @@ vi.mock("../components/SimpleCollectButton", () => ({
   SimpleCollectButton: vi.fn(() => <button data-testid="collect-button">Collect</button>),
 }));
 
-vi.mock("../layouts/styles", () => ({
+vi.mock("../layouts/shared", () => ({
   nftCard: {
     container: "nft-card-container",
     highlighted: "nft-card-highlighted",
@@ -74,20 +74,10 @@ vi.mock("../layouts/styles", () => ({
     checkboxLabel: "checkbox-label",
     checkbox: "nft-checkbox",
     actions: "nft-actions",
-    actionButton: "action-button",
-    compactSecondaryButton: "compact-secondary-button",
     actionsOverlay: "actions-overlay",
     ownerBadge: "owner-badge",
-    modalOverlay: "modal-overlay",
-    modalContent: "modal-content",
-    modalClose: "modal-close",
-    modalImage: "modal-image",
-    modalInfo: "modal-info",
-    modalTitle: "modal-title",
-    modalDescription: "modal-description",
   },
   spinner: "spinner",
-  primaryButton: "primary-button",
   secondaryButton: "secondary-button",
   errorStatus: "error-status",
 }));

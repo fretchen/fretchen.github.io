@@ -14,7 +14,7 @@ vi.mock("wagmi", () => ({
 }));
 
 // Mock the styles import
-vi.mock("../layouts/styles", () => ({
+vi.mock("../layouts/shared", () => ({
   walletOptions: {
     dropdown: "dropdown-class",
     button: "button-class",

@@ -3,9 +3,10 @@ import { css } from "../../styled-system/css";
 import MermaidDiagram from "../../components/MermaidDiagram";
 import { FacilitatorApproval } from "../../components/FacilitatorApproval";
 import { CodeBlock } from "../../components/CodeBlock";
-import { titleBar } from "../../layouts/styles";
-import * as styles from "../../layouts/styles";
+import { titleBar } from "../../layouts/shared";
+import * as styles from "../../layouts/shared";
 import { Link } from "../../components/Link";
+import { sectionRule } from "../../styled-system/recipes";
 
 // ─── Mermaid diagram definitions ─────────────────────────────────────────────
 
@@ -116,37 +117,37 @@ const prose = css({
   },
   "& p": {
     marginBottom: "4",
-    lineHeight: "1.7",
+    lineHeight: "relaxed",
   },
   "& ul, & ol": {
-    paddingLeft: "2em",
+    paddingLeft: "8",
     marginBottom: "4",
   },
   "& li": {
     marginBottom: "2",
-    lineHeight: "1.6",
+    lineHeight: "relaxed",
   },
   "& a": {
-    color: "token(colors.link)",
+    color: "brand",
     textDecoration: "underline",
-    _hover: { color: "token(colors.linkHover)" },
+    _hover: { color: "brandHover" },
   },
   "& code": {
     fontSize: "sm",
-    backgroundColor: "token(colors.codeBg, #f3f4f6)",
-    padding: "1px 4px",
-    borderRadius: "3px",
+    backgroundColor: "codeBg",
+    padding: "2px 4px",
+    borderRadius: "sm",
     fontFamily: "monospace",
   },
   "& pre": {
-    backgroundColor: "#1e1e1e",
-    color: "#d4d4d4",
-    padding: "16px",
-    borderRadius: "8px",
+    backgroundColor: "codeSurface",
+    color: "codeText",
+    padding: "4",
+    borderRadius: "lg",
     overflowX: "auto",
     marginBottom: "4",
     fontSize: "sm",
-    lineHeight: "1.5",
+    lineHeight: "normal",
     "& code": {
       backgroundColor: "transparent",
       padding: "0",
@@ -167,7 +168,7 @@ const table = css({
   },
   "& th": {
     fontWeight: "semibold",
-    backgroundColor: "token(colors.codeBg, #f9fafb)",
+    backgroundColor: "codeBg",
   },
   "& tr:last-child td": {
     borderBottom: "none",
@@ -177,38 +178,38 @@ const table = css({
 const statusBadge = css({
   display: "inline-block",
   padding: "2px 10px",
-  borderRadius: "9999px",
+  borderRadius: "full",
   fontSize: "sm",
-  fontWeight: "medium",
-  backgroundColor: "#f3f4f6",
-  color: "#6b7280",
+  fontWeight: "semibold",
+  backgroundColor: "gray.100",
+  color: "gray.500",
 });
 
 const statusBadgeOk = css({
   display: "inline-block",
   padding: "2px 10px",
-  borderRadius: "9999px",
+  borderRadius: "full",
   fontSize: "sm",
-  fontWeight: "medium",
-  backgroundColor: "#dcfce7",
-  color: "#166534",
+  fontWeight: "semibold",
+  backgroundColor: "green.100",
+  color: "green.800",
 });
 
 const statusBadgeError = css({
   display: "inline-block",
   padding: "2px 10px",
-  borderRadius: "9999px",
+  borderRadius: "full",
   fontSize: "sm",
-  fontWeight: "medium",
-  backgroundColor: "#fee2e2",
-  color: "#991b1b",
+  fontWeight: "semibold",
+  backgroundColor: "red.100",
+  color: "red.800",
 });
 
 const endpointBox = css({
-  backgroundColor: "token(colors.codeBg, #f9fafb)",
+  backgroundColor: "codeBg",
   border: "1px solid token(colors.border, #e5e7eb)",
-  borderRadius: "8px",
-  padding: "16px",
+  borderRadius: "lg",
+  padding: "4",
   marginBottom: "4",
 });
 
@@ -219,14 +220,14 @@ const valuePropList = css({
   marginBottom: "6",
   "& li": {
     padding: "6px 0",
-    paddingLeft: "1.5em",
+    paddingLeft: "6",
     position: "relative",
     marginBottom: "1",
     "&::before": {
       content: '"✓"',
       position: "absolute",
       left: "0",
-      color: "#16a34a",
+      color: "green.600",
       fontWeight: "bold",
     },
   },
@@ -238,21 +239,21 @@ const stepNumber = css({
   justifyContent: "center",
   width: "28px",
   height: "28px",
-  borderRadius: "9999px",
-  backgroundColor: "#2563eb",
+  borderRadius: "full",
+  backgroundColor: "blue.600",
   color: "white",
   fontSize: "sm",
   fontWeight: "bold",
-  marginRight: "8px",
+  marginRight: "2",
   flexShrink: 0,
 });
 
 const stepContainer = css({
   border: "1px solid token(colors.border, #e5e7eb)",
-  borderRadius: "8px",
-  padding: "20px",
+  borderRadius: "lg",
+  padding: "5",
   marginBottom: "4",
-  backgroundColor: "token(colors.codeBg, #f9fafb)",
+  backgroundColor: "codeBg",
 });
 
 const feeComparisonTable = css({
@@ -270,7 +271,7 @@ const feeComparisonTable = css({
   },
   "& th": {
     fontWeight: "semibold",
-    backgroundColor: "token(colors.codeBg, #f9fafb)",
+    backgroundColor: "codeBg",
   },
   "& tr:last-child td": {
     borderBottom: "none",
@@ -283,6 +284,7 @@ export default function Page() {
   return (
     <div className={styles.container}>
       <h1 className={titleBar.title}>x402 Facilitator</h1>
+      <span className={sectionRule({ territory: "explore" })} aria-hidden="true" />
 
       <div className={prose}>
         {/* ── 1. Hero ──────────────────────────────────────────────────── */}

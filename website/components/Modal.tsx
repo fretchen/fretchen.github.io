@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { modal } from "../layouts/styles";
+import { modal } from "../layouts/shared";
 
 interface ModalProps {
   onClose: () => void;

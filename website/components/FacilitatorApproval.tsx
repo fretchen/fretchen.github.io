@@ -289,7 +289,7 @@ export function FacilitatorApproval({
         {facilitatorAddress && (
           <div>
             <p className={label}>Facilitator address</p>
-            <p className={css({ fontSize: "xs", fontFamily: "monospace", color: "gray.700" })}>{facilitatorAddress}</p>
+            <p className={css({ fontSize: "xs", fontFamily: "code", color: "gray.700" })}>{facilitatorAddress}</p>
           </div>
         )}
       </div>

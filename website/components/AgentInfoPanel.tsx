@@ -60,7 +60,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
         <div className={css({ fontWeight: "semibold" })}>{agentCard.operator ?? agentCard.origin}</div>
         <div className={css({ color: "gray.500", wordBreak: "break-all" })}>{agentCard.origin}</div>
         {agentCard.payTo && (
-          <div className={css({ fontFamily: "mono", color: "gray.600", mt: "1" })} title="Payment recipient">
+          <div className={css({ fontFamily: "code", color: "gray.600", mt: "1" })} title="Payment recipient">
             pays → {agentCard.payTo.slice(0, 6)}…{agentCard.payTo.slice(-4)}
           </div>
         )}
@@ -136,7 +136,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
         >
           <span className={css({ display: "flex", alignItems: "center", gap: "1" })}>
             <span>🤖</span>
-            <span className={css({ fontFamily: "mono", color: "blue.600" })}>{agent.walletShort}</span>
+            <span className={css({ fontFamily: "code", color: "blue.600" })}>{agent.walletShort}</span>
           </span>
           <span
             className={css({
@@ -181,7 +181,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
               {serviceHostname && (
                 <div>
                   <span className={css({ color: "gray.500" })}>Endpoint: </span>
-                  <code className={css({ fontFamily: "mono", color: "gray.700" })}>{serviceHostname}</code>
+                  <code className={css({ fontFamily: "code", color: "gray.700" })}>{serviceHostname}</code>
                 </div>
               )}
               <div>
@@ -283,7 +283,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
           <span>•</span>
           <span
             className={css({
-              fontFamily: "mono",
+              fontFamily: "code",
               color: "blue.600",
               display: "inline-flex",
               alignItems: "center",
@@ -367,7 +367,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
               <span className={css({ color: "gray.500", minWidth: "60px" })}>Wallet:</span>
               <code
                 className={css({
-                  fontFamily: "mono",
+                  fontFamily: "code",
                   fontSize: "xs",
                   color: "gray.700",
                   wordBreak: "break-all",
@@ -383,7 +383,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
                 <span className={css({ color: "gray.500", minWidth: "60px" })}>Endpoint:</span>
                 <code
                   className={css({
-                    fontFamily: "mono",
+                    fontFamily: "code",
                     fontSize: "xs",
                     color: "gray.700",
                   })}

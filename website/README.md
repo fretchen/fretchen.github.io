@@ -80,6 +80,46 @@ prefix there, not touching pages.
 - Every text/background pair in the system clears WCAG AA (4.5:1). Check before adding a pair;
   three separate contrast bugs have shipped here, each invisible to tests.
 
+## Typography
+
+Reasons in [`IDENTITY.md`](./IDENTITY.md). Values here. Don't invent new ones.
+
+| Token | Face | Job |
+| --- | --- | --- |
+| `reading` | Source Serif 4 Variable | the article body and its title — blog posts, quantum notes |
+| `ui` | Source Sans 3 Variable | nav, metadata, comments, buttons, labels, `/lab` tools |
+| `code` | Source Code Pro Variable | code, hashes, addresses |
+
+All three OFL 1.1, self-hosted, Latin + Latin-Extended only. No CDN, no third-party requests.
+The `@font-face` rules live in `layouts/fonts.css`; the stacks are named there and in
+`panda.config.ts` and **nowhere else**.
+
+**The rule: serif reads, sans operates.** Sans is the site-wide default (`globalCss`), because
+most routes are surfaces you operate. Serif is *opted into* by one rule —
+`post.contentContainer` in `components/Post.styles.ts` — which is the only place the boundary
+is drawn. `Post` has its own title style for the same reason: `titleBar.title` is shared with
+`/lab` and the index pages, which must stay sans.
+
+**Maths is not a face.** KaTeX ships Computer Modern and renders in its own fonts. It is never
+restyled, and the body serif is chosen to sit *beside* it, not to match it. `katex.min.css` is
+imported once, in `components/Post.tsx` — every prose route renders through that shell.
+
+**Watch out:** Panda's preset still ships `sans` / `serif` / `mono`, pointing at the old system
+stacks. They remain valid tokens, so `fontFamily: "mono"` fails *silently*. Rule 5 in
+`test/styleConventions.test.ts` rejects them.
+
+**Prose values** — provisional, pending a reading test on the longest quantum note:
+
+| | Value |
+| --- | --- |
+| size | `lg` (18px) — UI stays at `md` (16px) or below |
+| leading | `relaxed` |
+| measure | `max-width: 65ch`, an inner bound *inside* the 900px `container` |
+| hyphens | `auto` — correct only because `<html lang>` is set per locale in `pages/+lang.ts` |
+
+Prefer variable builds: one file per family, not one per weight. Headings take their hierarchy
+from weight and whitespace, not from a size ratio.
+
 ## One button
 
 `panda.config.ts` defines a single `button` recipe. **No component defines its own button.**
@@ -100,9 +140,12 @@ spread across five files.
 ## Scales
 
 All from Panda's preset — **do not invent values, and do not add tokens in anticipation.**
+The one deliberate exception is `fonts`: the three faces are custom tokens, because the
+preset's stacks are system fonts. See [Typography](#typography).
 
 | Axis | Values |
 | --- | --- |
+| Family | `reading` · `ui` · `code` |
 | Font size | `xs` 12 · `sm` 14 · `md` 16 · `lg` 18 · `xl` 20 · `2xl` 24 · `3xl` 30 |
 | Font weight | `normal` body · `semibold` UI emphasis · `bold` headings |
 | Line height | `none` · `tight` · `normal` · `relaxed` |
@@ -128,7 +171,7 @@ Shadows are neutral — no coloured glows. Focus is a real `outline`, never a bo
 ## Gotchas
 
 Panda compiles `css({})` **statically**, so several ways of writing a style silently emit no CSS
-at all — typecheck passes, tests pass, the styling is simply gone. The four that have bitten
+at all — typecheck passes, tests pass, the styling is simply gone. The five that have bitten
 this codebase are documented in [`../CLAUDE.md`](../CLAUDE.md) and enforced by
 `test/styleConventions.test.ts`. The one worth repeating here: `"token(colors.x)"` is a
 *build-time* string, so it belongs inside `css({})` only. In a JSX `style={{}}` it never

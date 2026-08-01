@@ -4,12 +4,16 @@ import MetadataLine from "./MetadataLine";
 import { Link } from "./Link";
 import { NFTFloatImage } from "./NFTFloatImage";
 import { MdxPre } from "./MdxCodeBlock";
-import { titleBar } from "../layouts/shared";
 import { post } from "./Post.styles";
 import { button } from "../styled-system/recipes";
 import { loadLazyModuleFromDirectory } from "../utils/lazyGlobRegistry";
 import { isSupportedDirectory, getSupportedDirectories } from "../utils/supportedDirectories";
 import { useKaTeXRenderer } from "../hooks/useKaTeXRenderer";
+// KaTeX's own stylesheet — it carries the Computer Modern @font-face rules and the math
+// layout. It lives here, not on the routes, because every prose route (blog and all four
+// quantum sections) renders through this shell. Previously only /blog/@id imported it, so
+// lecture math shipped KaTeX markup with no KaTeX CSS.
+import "katex/dist/katex.min.css";
 import { useWebmentionUrls } from "../hooks/useWebmentionUrls";
 import { fetchWebmentions } from "../utils/webmentionUtils";
 import { SITE } from "../utils/siteData";
@@ -208,7 +212,7 @@ export function Post({
 
         {/* Main content column */}
         <div className={post.articleContent}>
-          <h1 className={`p-name ${titleBar.title}`}>{title}</h1>
+          <h1 className={`p-name ${post.title}`}>{title}</h1>
 
           <MetadataLine publishingDate={publishing_date} showSupport={true} reactionCount={reactionCount} />
 

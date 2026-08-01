@@ -1,13 +1,7 @@
 /* Basic Reset */
+/* font-family lives in panda.config.ts globalCss — see README.md "Typography". */
 body {
   margin: 0;
-  font-family:
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    sans-serif;
   line-height: 1.5;
   color: #333;
 }

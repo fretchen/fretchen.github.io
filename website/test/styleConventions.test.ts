@@ -4,9 +4,9 @@ import { join } from "node:path";
 import { token } from "../styled-system/tokens";
 
 /**
- * Guards against four ways Panda styling breaks *silently*.
+ * Guards against five ways Panda styling breaks *silently*.
  *
- * All three of these shipped at some point, and none of them is visible to
+ * All of these shipped at some point, and none of them is visible to
  * `tsc` or to a rendering test: the component still mounts, the class name is
  * still emitted, the tests still pass — only the CSS is wrong or missing. They
  * were each found by diffing the generated stylesheet by hand. These tests make
@@ -29,6 +29,12 @@ import { token } from "../styled-system/tokens";
  *      sees an inline style, so the literal reaches the browser and the declaration is
  *      dropped. Rule 1 does not catch it: the path is perfectly valid, just unresolved.
  *      Use the imported `token("colors.x")` call there instead.
+ *
+ *   5. A `fontFamily` that is not one of the three site faces. Two variants, both silent:
+ *      a literal stack or CSS generic (`"monospace"`) bypasses the token system entirely,
+ *      and — the nastier one — Panda's *preset* names `sans` / `serif` / `mono` are still
+ *      valid tokens resolving to the old system stacks. A call site left on `"mono"` after
+ *      the Source rollout keeps the system font and reports no error anywhere.
  */
 
 const ROOT = join(import.meta.dirname, "..");
@@ -181,6 +187,32 @@ describe("style conventions", () => {
       'The CSS-function form "token(colors.x)" is resolved by Panda only inside css({}). ' +
         "In a JSX style={{}} or a plain string it ships verbatim and the browser drops the " +
         'declaration — use the imported token("colors.x") call there instead.',
+    ).toEqual([]);
+  });
+
+  it("every fontFamily is one of the three site faces", () => {
+    // The site has three faces, named by job: reading (serif prose), ui (sans chrome),
+    // code (mono). `inherit` is a deliberate opt-out used by form controls.
+    const ALLOWED = new Set(["reading", "ui", "code", "inherit"]);
+    const offenders: string[] = [];
+    for (const { path, source } of FILES) {
+      // panda.config.ts holds the real stacks — it is where the token values are defined.
+      if (path === "panda.config.ts") continue;
+      for (const [start, end] of styleBlocks(source)) {
+        const block = source.slice(start, end);
+        for (const match of block.matchAll(/\bfontFamily:\s*"([^"]*)"/g)) {
+          if (ALLOWED.has(match[1])) continue;
+          const line = source.slice(0, start + match.index).split("\n").length;
+          offenders.push(`${path}:${line}: fontFamily: "${match[1]}"`);
+        }
+      }
+    }
+    expect(
+      offenders,
+      "fontFamily must name a site face: reading | ui | code. A literal stack or a CSS " +
+        'generic ("monospace") bypasses the tokens, and Panda\'s preset names sans/serif/mono ' +
+        "are still valid tokens pointing at the OLD system stacks — so they fail silently " +
+        "rather than erroring. See README.md → Typography.",
     ).toEqual([]);
   });
 });

@@ -14,6 +14,8 @@ export default {
   // https://vike.dev/head-tags
   title: "Notes and Thoughts | fretchen.eu",
   description: SITE_CONFIG.description,
+  // <html lang> is set per-locale in +lang.ts — Vike requires a separate file for
+  // function-valued configs, since +config.ts values are serialised to JSON.
   prerender: true,
   extends: [vikeReact, vikeReactQuery],
 

@@ -24,7 +24,7 @@ export interface AgentSelectorProps {
 }
 
 const rowStyle = css({ display: "flex", gap: "2", flexWrap: "wrap", alignItems: "center", mt: "2" });
-const monoStyle = css({ fontFamily: "mono", fontSize: "xs", color: "gray.600", wordBreak: "break-all" });
+const monoStyle = css({ fontFamily: "code", fontSize: "xs", color: "gray.600", wordBreak: "break-all" });
 const errorStyle = css({ fontSize: "xs", color: "red.600", mt: "1" });
 const hintStyle = css({ mt: "2" });
 const hintLinkStyle = css({

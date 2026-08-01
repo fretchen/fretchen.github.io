@@ -132,9 +132,9 @@ rules below are only the ways Panda fails *silently*; they are not a summary of 
 
 #### Styling rules (enforced by `test/styleConventions.test.ts`)
 
-Panda compiles `css({})` **statically at build time**. Three mistakes therefore break styling
+Panda compiles `css({})` **statically at build time**. Five mistakes therefore break styling
 *silently* — the component still renders, the class name is still emitted, `tsc` and the
-component tests all pass, and only the CSS is wrong or missing. All three have shipped here
+component tests all pass, and only the CSS is wrong or missing. They have all shipped here
 before. The test file catches them; these are the rules it enforces.
 
 1. **Never pass a JS variable as a `css({})` value.** Panda cannot read it, so it emits no CSS.
@@ -169,6 +169,18 @@ before. The test file catches them; these are the rules it enforces.
    className={css({ border: "1px solid token(colors.danger)" })} // ✓ build-time
    ```
    Rule 3 does not catch this — the path is valid, just unresolved.
+
+5. **`fontFamily` must name one of the three site faces** — `reading` (serif prose), `ui`
+   (sans chrome), `code` (mono), or `inherit`. Two ways to get this wrong, both silent:
+   ```ts
+   fontFamily: "monospace"   // ✗ CSS generic — bypasses the token system
+   fontFamily: "mono"        // ✗ Panda's PRESET token — still valid, still the old
+                             //   system stack. No error anywhere.
+   fontFamily: "code"        // ✓
+   ```
+   The preset's `sans`/`serif`/`mono` survive alongside the custom tokens, so a stale call
+   site resolves to a real value and simply renders the wrong font. See
+   `website/README.md` → Typography.
 
 **Verifying a bulk style change:** `npm run typecheck` and `npm test` cannot see a wrong colour
 or a dropped declaration. Diff the *emitted declarations* instead — build before and after,

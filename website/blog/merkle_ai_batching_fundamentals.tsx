@@ -456,7 +456,7 @@ const ProofDemo: React.FC = () => {
               </h4>
               <div className={css({ marginBottom: "3" })}>
                 <strong>Proof Path:</strong>
-                <div className={css({ fontSize: "xs", fontFamily: "monospace", marginTop: "1" })}>
+                <div className={css({ fontSize: "xs", fontFamily: "code", marginTop: "1" })}>
                   {generatedProof.proof.map((proofItem, index) => (
                     <div key={index}>
                       Level {index + 1}: {proofItem.data.substring(0, 20)}... ({proofItem.position})
@@ -470,7 +470,7 @@ const ProofDemo: React.FC = () => {
                   <pre
                     className={css({
                       fontSize: "xs",
-                      fontFamily: "monospace",
+                      fontFamily: "code",
                       backgroundColor: "white",
                       padding: "2",
                       borderRadius: "sm",
@@ -533,7 +533,7 @@ const ProofDemo: React.FC = () => {
                 border: "1px solid #d1d5db",
                 borderRadius: "sm",
                 fontSize: "xs",
-                fontFamily: "monospace",
+                fontFamily: "code",
                 marginBottom: "3",
                 resize: "vertical",
               })}
@@ -589,7 +589,7 @@ const ProofDemo: React.FC = () => {
                         key={index}
                         className={css({
                           fontSize: "xs",
-                          fontFamily: "monospace",
+                          fontFamily: "code",
                           backgroundColor: "white",
                           padding: "4px 8px",
                           borderRadius: "sm",
@@ -808,7 +808,7 @@ const BatchCreator: React.FC = () => {
               padding: "2",
               border: "1px solid #d1d5db",
               borderRadius: "sm",
-              fontFamily: "monospace",
+              fontFamily: "code",
               fontSize: "sm",
             })}
           >
@@ -912,7 +912,7 @@ const BatchCreator: React.FC = () => {
               <pre
                 className={css({
                   fontSize: "xs",
-                  fontFamily: "monospace",
+                  fontFamily: "code",
                   backgroundColor: "white",
                   padding: "2",
                   borderRadius: "sm",
@@ -964,7 +964,7 @@ const BatchCreator: React.FC = () => {
                 <div
                   className={css({
                     fontSize: "md",
-                    fontFamily: "monospace",
+                    fontFamily: "code",
                     backgroundColor: "#fafbfc",
                     padding: "6px 10px",
                     borderRadius: "sm",
@@ -982,7 +982,7 @@ const BatchCreator: React.FC = () => {
                 <div
                   className={css({
                     fontSize: "md",
-                    fontFamily: "monospace",
+                    fontFamily: "code",
                     backgroundColor: "#fafbfc",
                     padding: "6px 10px",
                     borderRadius: "sm",
@@ -1011,7 +1011,7 @@ const BatchCreator: React.FC = () => {
                   <pre
                     className={css({
                       fontSize: "sm",
-                      fontFamily: "monospace",
+                      fontFamily: "code",
                       backgroundColor: "#fafbfc",
                       padding: "8px 10px",
                       borderRadius: "sm",
@@ -1041,7 +1041,7 @@ const BatchCreator: React.FC = () => {
                   <code
                     className={css({
                       fontSize: "sm",
-                      fontFamily: "monospace",
+                      fontFamily: "code",
                       backgroundColor: "gray.100",
                       padding: "4px 8px",
                       borderRadius: "sm",

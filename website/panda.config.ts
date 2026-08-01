@@ -259,6 +259,18 @@ export default defineConfig({
           codeSurface: { value: "#1e1e1e" },
           codeText: { value: "#d4d4d4" },
         },
+
+        // Three faces, one job each — see README.md "Typography".
+        // The @font-face rules live in layouts/fonts.css; these are the only names.
+        //
+        // NOTE: Panda's preset still ships `sans` / `serif` / `mono`, pointing at the old
+        // system stacks. They remain valid but wrong — a call site left on `"mono"` silently
+        // keeps the system font. Rule 5 in test/styleConventions.test.ts rejects them.
+        fonts: {
+          reading: { value: '"Source Serif 4 Variable", Georgia, Cambria, serif' },
+          ui: { value: '"Source Sans 3 Variable", system-ui, -apple-system, sans-serif' },
+          code: { value: '"Source Code Pro Variable", ui-monospace, SFMono-Regular, Menlo, monospace' },
+        },
       },
       semanticTokens: {
         colors: {
@@ -298,6 +310,18 @@ export default defineConfig({
         sectionRule,
       },
     },
+  },
+
+  // Site-wide defaults. Sans is the default because most routes (/lab, /imagegen, /x402,
+  // /growth) are surfaces you operate, not read. Serif is opted into by the article body
+  // in components/Post.styles.ts — the single place the reading/operating line is drawn.
+  globalCss: {
+    // Panda's preflight sets `html { font-family: var(--global-font-body, <system stack>) }`.
+    // Filling the hook keeps <html> and <body> agreeing instead of leaving a stale
+    // system-ui declaration one level up.
+    ":root": { "--global-font-body": "token(fonts.ui)" },
+    body: { fontFamily: "ui" },
+    "code, pre": { fontFamily: "code" },
   },
 
   // The output directory for your css system

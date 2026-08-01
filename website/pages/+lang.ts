@@ -13,5 +13,5 @@ import { defaultLocale } from "../locales/locales";
  * function-valued configs there.
  */
 export default function lang(pageContext: PageContext): string {
-  return (pageContext.locale as string | undefined) ?? defaultLocale;
+  return pageContext.locale ?? defaultLocale;
 }

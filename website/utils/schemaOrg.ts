@@ -106,7 +106,8 @@ export function generateBlogCollectionSchema(url: string, blogs: BlogPost[]) {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     name: "Blog Posts",
-    description: "A collection of blog posts about various topics, ideas, and notes.",
+    description:
+      "Game theory and economics, quantum physics, and what I learned building on the web — often with something you can play with.",
     url: url,
     author: person,
     hasPart: blogs

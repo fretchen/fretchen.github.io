@@ -6,20 +6,12 @@ import type { BlogPost } from "../../types/BlogPost";
 import * as styles from "../../layouts/shared";
 import { css } from "../../styled-system/css";
 import { stack } from "../../styled-system/patterns";
+import { sectionRule } from "../../styled-system/recipes";
 
 // Page-local styles — nothing else uses these.
-const heroContainer = css({
-  textAlign: "center",
-  marginY: "8",
-});
-const heroText = css({
-  fontSize: "lg",
-  maxWidth: "700px",
-  margin: "0 auto",
-});
 // Section header styles
 const sectionHeading = css({
-  fontSize: "2xl",
+  fontSize: "lg",
   fontWeight: "semibold",
   marginBottom: "4",
   paddingBottom: "2",
@@ -36,19 +28,18 @@ export default function Page() {
   return (
     <div className={styles.container}>
       {/* Hero section */}
-      <div className={heroContainer}>
-        <h1 className={styles.titleBar.title}>Welcome</h1>
-        <p className={heroText}>
-          Welcome to my website with all kinds of notes etc. Nothing fancy, just me thinking out loudly.
-        </p>
-      </div>
+      <h1 className={styles.titleBar.title}>fretchen</h1>
+      <span className={sectionRule({ territory: "voice" })} aria-hidden="true" />
+      <p>Notes, essays and things I built while working topics out.</p>
 
       {/* Main areas */}
       <section>
-        <h2 className={sectionHeading}>Explore the main areas</h2>
-
         <div className={cardStack}>
-          <Card title="Blog" description="My thoughts on various topics." link="/blog" />
+          <Card
+            title="Blog"
+            description="Game theory and economics, quantum physics, and what I learned building on the web."
+            link="/blog"
+          />
           <Card title="Quantum" description="Tutorials and notes on quantum, AMO and more." link="/quantum" />
           <Card
             title="Lab"
@@ -60,7 +51,7 @@ export default function Page() {
 
       {/* Latest blog posts */}
       <section className={blogSection}>
-        <h2 className={sectionHeading}>Latest Blog Posts</h2>
+        <h2 className={sectionHeading}>Latest posts</h2>
 
         <EntryList
           blogs={blogs}

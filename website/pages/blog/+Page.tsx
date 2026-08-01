@@ -37,9 +37,12 @@ const App: React.FC = function () {
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.titleBar.title}>Welcome to my blog!</h1>
+      <h1 className={styles.titleBar.title}>Blog</h1>
       <span className={sectionRule({ territory: "voice" })} aria-hidden="true" />
-      <p className={paragraph}>It contains notes about all kind of topic, ideas etc.</p>
+      <p className={paragraph}>
+        Game theory and economics, quantum physics, and what I learned building on the web — often with something you
+        can play with.
+      </p>
 
       {/* Category Filter Buttons */}
       <div

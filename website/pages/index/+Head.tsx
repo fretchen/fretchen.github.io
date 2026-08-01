@@ -4,11 +4,7 @@ import { SITE } from "../../utils/siteData";
 
 export default function Head() {
   // Generate WebSite schema
-  const webSiteSchema = generateWebSiteSchema(
-    SITE.url,
-    SITE.name,
-    "Welcome to my website with all kinds of notes etc. Nothing fancy, just me thinking out loudly.",
-  );
+  const webSiteSchema = generateWebSiteSchema(SITE.url, SITE.name, SITE.description);
 
   // Generate Person schema for personal branding
   const personSchema = generatePersonSchema(SITE.url, SITE.name, SITE.description);

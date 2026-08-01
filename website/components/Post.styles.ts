@@ -52,10 +52,37 @@ export const post = {
     },
   }),
 
+  // The article title. Deliberately NOT titleBar.title: that style is shared with /lab,
+  // /imagegen and the index pages, which must stay sans — a serif <h1>Lab</h1> would
+  // contradict "sans = things you operate". Same size and responsive steps as
+  // titleBar.title so the two read as one system; only the family differs.
+  title: css({
+    fontFamily: "reading",
+    fontSize: "2xl",
+    fontWeight: "bold",
+    margin: 0,
+    marginBottom: "token(spacing.sm)",
+    color: "text",
+    lineHeight: "tight",
+    "@media (max-width: 768px)": { fontSize: "xl" },
+    "@media (max-width: 480px)": { fontSize: "lg" },
+    wordBreak: "break-word",
+    hyphens: "auto",
+  }),
+
+  // The reading surface, and the ONLY place the site opts into the serif. Everything
+  // outside it — nav, metadata, comments, the ToC, all of /lab — stays on the sans set
+  // by globalCss. Blog posts and all four quantum sections render through here.
+  // Values are provisional pending a reading test on the longest quantum note; see
+  // IDENTITY.md → Not decided.
   contentContainer: css({
     // Container to handle floating layout
     overflow: "hidden", // Clears the float
     lineHeight: "relaxed",
+    fontFamily: "reading",
+    fontSize: "lg", // 18px — prose reads larger than interface text
+    maxWidth: "65ch", // inner measure, narrower than the 900px container
+    hyphens: "auto", // correct only because <html lang> is now set — see pages/+config.ts
   }),
   // Lazy-loaded interactive component is still resolving.
   loadingBox: css({

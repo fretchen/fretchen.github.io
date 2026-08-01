@@ -137,7 +137,7 @@ const prose = css({
     backgroundColor: "codeBg",
     padding: "2px 4px",
     borderRadius: "sm",
-    fontFamily: "monospace",
+    fontFamily: "code",
   },
   "& pre": {
     backgroundColor: "codeSurface",

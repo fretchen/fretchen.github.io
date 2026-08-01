@@ -1,7 +1,6 @@
 import * as React from "react";
 import { usePageContext } from "vike-react/usePageContext";
 import { Post } from "../../../components/Post";
-import "katex/dist/katex.min.css";
 import { pageContainer } from "../../../layouts/shared";
 import type { BlogPost } from "../../../types/BlogPost";
 

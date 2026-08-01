@@ -102,6 +102,14 @@ web_modules/
 # firebase-admin service-account
 firebase
 
+# Vike build output for website/.
+#
+# Anchored on purpose. A bare `build/` would also match the repo-root build/ that
+# .github/workflows/pages.yml creates via `mv build ../build` — and
+# JamesIves/github-pages-deploy-action skips anything .gitignore matches, so that
+# would silently break the deploy to gh-pages instead of failing in CI.
+/website/build/
+
 # Next.js build output
 .next
 out

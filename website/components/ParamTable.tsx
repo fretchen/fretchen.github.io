@@ -31,14 +31,14 @@ const table = css({
   "& tr:last-child td": { borderBottom: "none" },
 });
 
-const fieldName = css({ fontFamily: "mono", fontSize: "xs", fontWeight: "semibold", color: "gray.800" });
-const typeCell = css({ fontFamily: "mono", fontSize: "xs", color: "brand", whiteSpace: "nowrap" });
+const fieldName = css({ fontFamily: "code", fontSize: "xs", fontWeight: "semibold", color: "gray.800" });
+const typeCell = css({ fontFamily: "code", fontSize: "xs", color: "brand", whiteSpace: "nowrap" });
 const requiredYes = css({ fontSize: "xs", fontWeight: "semibold", color: "red.600" });
 const requiredNo = css({ fontSize: "xs", color: "gray.400" });
 const descCell = css({ fontSize: "xs", color: "gray.600", lineHeight: "normal" });
 const nestedList = css({ mt: "1", pl: "3", borderLeft: "2px solid token(colors.border, #e5e7eb)" });
 const nestedRow = css({ fontSize: "xs", color: "gray.600", lineHeight: "relaxed" });
-const enumValue = css({ fontFamily: "mono", fontSize: "xs", color: "gray.700" });
+const enumValue = css({ fontFamily: "code", fontSize: "xs", color: "gray.700" });
 
 /** Human-readable type for a schema node, e.g. `string`, `object[]`, `integer`. */
 function typeLabel(schema: OpenApiSchema): string {

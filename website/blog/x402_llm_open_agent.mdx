@@ -1,0 +1,175 @@
+---
+title: "Upgrading my AI agent to x402 - more trust, more reach, no custody"
+publishing_date: "2026-08-02"
+category: "blockchain"
+secondaryCategory: "ai"
+description: "I replaced my AI assistant's custodial smart contract with x402 payment channels. The payment migration was the easy part — giving up custody and becoming machine-discoverable were the parts that paid off."
+---
+
+import MermaidDiagram from "../components/MermaidDiagram";
+
+export const channelFlowDiagram = `
+sequenceDiagram
+    participant Alice as Alice's wallet
+    participant Agent as llm-agent.fretchen.eu
+    participant Facilitator as Facilitator
+    participant Chain as Base<br/>(USDC escrow)
+
+    Alice->>Agent: POST / (no payment)
+    Agent-->>Alice: 402 + how to pay
+
+    Note over Alice,Chain: First message only — open the channel
+    Alice->>Chain: Deposit USDC into escrow
+    Alice->>Agent: POST / + deposit payload
+    Agent->>Facilitator: verify
+    Agent-->>Alice: 200 + reply
+
+    Note over Alice,Agent: Every later message — no transaction at all
+    Alice->>Agent: POST / + signed voucher
+    Agent->>Facilitator: verify → settle (bookkeeping only)
+    Agent-->>Alice: 200 + reply
+
+    Note over Agent,Chain: My cron job, every 12 hours
+    Agent->>Facilitator: claimAndSettle()
+    Facilitator->>Chain: Redeem accumulated vouchers
+    Chain-->>Agent: Paid
+
+`;
+
+## Where I left off
+
+AUTHOR: I do not like that it starts with the tech. It should start with the goal. What should the assistent do. Make AI more accessible. Only then I explain the previous tech. Actually think that the goal and the previous limititations can be mostly explained without the tech details.
+AUTHOR: Can you do this ? Goal. How far we got before. What we wanted to change and actually changed. Only then any tech talks...
+
+A year ago I built an [AI assistant that takes crypto instead of subscriptions](/blog/16/). The design was straightforward: users deposited ETH into a smart contract I wrote. The contract kept a balance for each address. My backend answered chat messages immediately, queued up what each one cost, and periodically settled a whole batch of them against the contract using [Merkle proofs](/blog/15/) thus nicely reducing the number of necessary transactions.
+
+It worked. People could chat with an LLM without an account, an email address, or a monthly subscription, and pay fractions of a cent per message.
+
+But two things about it bothered me more and more. The first: that contract held other people's money. `mapping(address => uint256) public llmBalance` — a pot of ETH, and me as the owner of an upgradeable contract sitting on top of it. Users had to trust that I wouldn't upgrade the thing out from under them.
+
+The second: it was a closed system. My frontend, my contract, my backend, all shaped to fit each other. Nothing else could talk to it, and I hadn't built anything that would let it.
+
+I've now replaced the whole thing with [x402](https://docs.x402.org) payment channels. `LLMv1.sol` is archived, not deployed. What surprised me is that the payment mechanics — the part I thought I was working on — turned out to be the least interesting thing I got out of it.
+
+## What was actually wrong with the old design
+
+Let me be fair to my past self first: the Merkle-batching design was a reasonable v1. The batching genuinely worked, and the economics were sound. The problems were structural, not bugs.
+
+**I was a custodian.** Deposits sat in my contract. `LLMv1` was UUPS-upgradeable and I owned the upgrade key. That's a lot of trust to ask for a chat assistant, and — more to the point — it's a liability I had no reason to want. Every security review I did afterwards had to account for "what if the owner key leaks", and the answer was always "everyone's deposits are gone." I wrote about how [that key sits at the top of my threat model](/blog/30/); it was the single worst asset in the inventory, and the LLM balances were most of what made it worth attacking.
+
+**Everything was published, forever.** This one I only fully appreciated when I went back and re-read my own settlement function. Here is the struct that `processBatch` took as calldata, once per message:
+
+```solidity
+struct LLMLeaf {
+    int256 id;
+    address user;            // who asked
+    address serviceProvider;
+    uint256 tokenCount;      // how much they used
+    uint256 cost;
+    string timestamp;        // when
+}
+```
+
+The Merkle root was the compact part. The leaves were not — they were submitted in full, as calldata, to prove each deduction. So every single chat message a user ever sent left a permanent public record of _which address_, _how many tokens_, and _at what time_. Plus their running balance, readable by anyone, because `llmBalance` was a public mapping.
+
+I had built an anonymous-payments AI assistant that published a per-message usage log of every user. Nobody was reading it. That is not the same as it being fine.
+
+**It assumed there was only one client.** The API shape was whatever my frontend happened to need. There was no document describing it, no way for another program to find it, and no reason to think anyone but me would ever call it.
+
+## Payment channels, briefly
+
+The replacement is x402's **batch-settlement** scheme. I introduced x402 itself in an [earlier post about my image generator](/blog/22/) — the short version is that it's a standard for paying for an HTTP request: you call an endpoint, get back `402 Payment Required` with machine-readable instructions on how to pay, sign a payment, and retry. No accounts, no API keys.
+
+That earlier post used x402's `exact` scheme: one signed payment, one on-chain settlement, per request. Fine for a 7-cent image. Hopeless for chat messages that cost a fraction of a cent — the gas would dwarf the payment.
+
+Batch-settlement solves this with a **payment channel**, which works roughly like a bar tab:
+
+1. **Open the tab.** On your first message, you deposit USDC into an escrow contract. This is the one on-chain transaction you make.
+2. **Run up the tab.** Every later message, you sign a _voucher_ — an off-chain IOU saying "of my escrowed balance, the agent may claim up to this much in total." It's just a signature. No transaction, no gas, no waiting.
+3. **The bartender cashes out.** A cron job on my side runs `claimAndSettle()` every 12 hours, redeeming the accumulated vouchers into actual USDC.
+
+<MermaidDiagram definition={channelFlowDiagram} title="x402 batch-settlement: one deposit, then off-chain vouchers" />
+
+Each voucher supersedes the last, so only the final one ever needs redeeming. A hundred messages produce a hundred signatures and one settlement transaction.
+
+The escrow contract is the canonical `x402BatchSettlement` deployment — the same address for everyone using the scheme. **I didn't write it, I can't upgrade it, and I never hold the funds.** Money moves from a user's escrow to me only against a voucher they signed, for an amount they capped.
+
+And the exit is theirs, not mine. A user can unilaterally request their escrow back; after a withdrawal delay (I set 24 hours, comfortably longer than the 12-hour claim cron) they can pull it out whether I cooperate or not. In the old design, getting your money out meant calling `withdrawBalance` on a contract I controlled and could have upgraded.
+
+The pricing got more honest as a side effect. Each message advertises a _ceiling_ — at most 0.003 USDC — and the voucher signs against that ceiling. But the actual claim is computed from real token usage after the model responds, and it's almost always well under. You authorize an upper bound; I charge what it cost.
+
+|                        | Old (LLMv1 + Merkle)                  | New (x402 batch-settlement)                           |
+| ---------------------- | ------------------------------------- | ----------------------------------------------------- |
+| Who holds deposits     | My upgradeable contract               | Canonical escrow, nobody's to upgrade                 |
+| Unit                   | ETH                                   | USDC                                                  |
+| Per message, on-chain  | Address, token count, cost, timestamp | Nothing                                               |
+| Getting your money out | Via my contract                       | Unilateral exit after a delay                         |
+| Settlement trust       | My batch, my Merkle root              | Facilitator — swappable, and cryptographically capped |
+
+That last row deserves a note, because I don't want to overstate it. There's still a facilitator in the picture, and I [complained at length about facilitator trust](/blog/22/) when I built one. What changed isn't that the trust vanished — it's that it stopped being _structural_. A facilitator is a component that speaks a standard interface, and pointing my agent at a different one is a configuration change. My hand-written settlement contract was not a component; it was the foundation.
+
+## The part I didn't plan for
+
+Here's where it stopped being a payments project.
+
+Once payment was handled by a standard rather than by my own contract, there was no reason left for the _request body_ to be bespoke either. So I reshaped it into the OpenAI chat-completions format. You send:
+
+```json
+{
+  "model": "mistral-large-latest",
+  "messages": [{ "role": "user", "content": "Explain payment channels" }]
+}
+```
+
+and you get back a standard `chat.completion` object, `choices` and `usage` and all.
+
+This is not a large amount of code. It is a surprisingly large amount of leverage. Every piece of tooling that has ever parsed an OpenAI response — every logging wrapper, every eval harness, every retry helper — already knows how to read my agent's output. I didn't have to write any of it, and neither does anyone integrating.
+
+I want to be precise about the limit, because it's easy to oversell: **you cannot point a stock OpenAI SDK at this endpoint.** The SDK authenticates with `Authorization: Bearer <key>`, and my endpoint wants an x402 payment channel. The bodies are compatible; the auth is not. You still need batch-settlement client wiring around the call. What the OpenAI shape buys is legibility, not a drop-in swap — everything _downstream_ of the response works unchanged.
+
+## Being findable
+
+The other half of reusability is that a machine has to be able to _discover_ the thing at all.
+
+My agent now serves its own [OpenAPI document](https://llm-agent.fretchen.eu/openapi.json) at `/openapi.json`. It's not documentation-for-humans; it's the contract. It declares the request and response schemas, the model IDs actually served, the price ceiling, and — the part that makes it a _category_ rather than a one-off — a service type and an interop floor:
+
+```json
+"x-service-type": "llm/v1",
+"x-interop-floor": "A compatible llm/v1 agent MUST advertise at least one
+  accepts[] entry with asset USDC on network Base (eip155:8453),
+  scheme batch-settlement."
+```
+
+That's a deliberately low bar: speak this body shape, accept USDC on Base via batch-settlement, and you're an `llm/v1` agent. Anything that can pay one can pay all of them.
+
+And this is where the interesting part happens: I don't have to be the one doing the integrating. [x402scan](https://www.x402scan.com) is a crawler that indexes x402-payable endpoints. It found my agents, read their specs, and listed them — the [AI assistant](https://www.x402scan.com/server/f2788b7c-7933-42c2-9e69-ed57cf91e58a) and, since it speaks the same discovery language, the [image generator](https://www.x402scan.com/server/1246cf89-3c1d-4a2d-9cb7-d96a4b40e9a6) as well.
+
+All I had to do was prove the origins were mine: sign the origin URL with the receiving wallet, paste the signature into the spec's `x-discovery.ownershipProofs`. A one-line script and a static field. A directory I have no relationship with can now hand my agent to a paying client that has never heard of me — which is the entire point, and something the old design could not have done at any amount of effort, because there was nothing to read.
+
+Not everything in the discovery stack earned its keep. I also publish an [EIP-8004](https://eips.ethereum.org/EIPS/eip-8004) agent-registration document, on the theory that a standardized agent identity would matter. So far it hasn't done anything for me — I'm not aware of anything consuming it. I'm leaving it in place because it costs nothing to serve, but if you're prioritizing, the live OpenAPI document is where the value was. A plain machine-readable spec at a stable URL beat the purpose-built identity standard, comfortably.
+
+The other lesson was that discovery is more plumbing than protocol. The single most annoying bug in this entire project: x402scan finds an agent's icon by fetching the origin root, parsing `<link rel="icon">` out of the HTML, and only then probing `/favicon.ico`. My serverless gateway intercepts `/favicon.ico` with its own 404 before my function ever runs. So my agent sat in the directory without an icon, for reasons that had nothing to do with payments, agents, or blockchains. The fix was to serve four lines of HTML at the root pointing at `/favicon.png`. Interoperability is like that a lot more often than the specs suggest.
+
+## Built for an ecosystem of one
+
+The frontend can already point at any `llm/v1` agent. The `useX402Chat` hook takes an agent URL; my own endpoint is just the default. Channel state is keyed per origin, so switching agents is properly isolated. I built it, tested it, and shipped it.
+
+Then I took the agent picker out of the UI.
+
+Because there is no second `llm/v1` agent. A dropdown offering a choice between my agent and nothing is worse than no dropdown — it advertises an ecosystem that doesn't exist yet and makes the interface harder to read for the zero people who benefit. What's in the sidebar instead is honest provenance: who operates the agent actually answering you, which address gets paid, read live from that agent's own spec and its 402 response.
+
+The capability stays in the code, tested, waiting. It costs nothing to keep and I'd rather have it ready than have to rebuild it. But shipping a multi-agent selector for a single-agent world would have been building for a story rather than for users.
+
+## Try it
+
+The assistant is at [/assistent](/assistent). Connect a wallet, deposit a little USDC on Base, chat. First message opens a channel; the rest are signatures.
+
+If you want to see the machine side, [/agent-onboarding](/agent-onboarding) walks through the full flow — the 402, the channel lifecycle, the discovery document — and checks a live endpoint against the `llm/v1` contract as you go. That's the place I'd point you rather than repeat deployment details here.
+
+## What I'd tell myself a year ago
+
+The migration I set out to do was a payment migration, and that part went about how I expected. What I didn't expect was that most of the value was in things adjacent to it.
+
+Giving up custody made my entire threat model smaller. The worst-case scenario for my owner key used to include "drains everyone's deposits"; now it doesn't, because there are no deposits to drain. Removing per-message calldata gave users back a privacy property I'd claimed in a blog post title a year earlier and hadn't actually delivered. And adopting a body shape someone else designed did more for reusability than any API I would have designed myself.
+
+None of those were the goal. All three came from the same move: stopping writing the bespoke version of something that already had a standard. That's the part I'd underline for anyone building agent infrastructure right now — the custom thing you're about to write is probably load-bearing in ways you'll only notice once it isn't there.

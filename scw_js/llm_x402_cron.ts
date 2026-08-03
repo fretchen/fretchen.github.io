@@ -1,4 +1,5 @@
 import pino from "pino";
+import { getUSDCConfig } from "@fretchen/chain-utils";
 import {
   createLLMResourceServer,
   createFacilitatorClient,
@@ -61,9 +62,16 @@ export async function handle(
 
   for (const network of getBatchSettlementNetworks()) {
     try {
+      // Pass the token explicitly on EVERY network, not just Optimism. Omitting it makes
+      // the SDK fall back to its `DEFAULT_STABLECOINS` registry, which still has no
+      // "eip155:10" entry (see BATCH_SETTLEMENT_NETWORKS in x402_server.ts) and throws
+      // "No default asset configured for network eip155:10". On Base the explicit value is
+      // identical to the registry's, so a uniform call site costs nothing and can't
+      // silently regress the way a network-conditional one could.
       const manager = scheme.createChannelManager(
         facilitatorClient,
         network as `${string}:${string}`,
+        getUSDCConfig(network).address,
       );
       const { claims, settle } = await manager.claimAndSettle();
       logger.info({ network, claims, settle }, "claimAndSettle completed");

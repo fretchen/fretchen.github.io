@@ -64,7 +64,8 @@ export const imageGen = {
     },
   }),
   compactSelect: css({
-    padding: "sm md",
+    paddingY: "sm",
+    paddingX: "md",
     border: "1px solid token(colors.border)",
     borderRadius: "md",
     fontSize: "sm",
@@ -86,7 +87,8 @@ export const imageGen = {
   }),
   compactTextarea: css({
     flex: 1,
-    padding: "sm md",
+    paddingY: "sm",
+    paddingX: "md",
     border: "1px solid token(colors.border)",
     borderRadius: "md",
     fontSize: "sm",

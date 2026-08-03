@@ -17,7 +17,7 @@
     ]
   },
   "x-service-type": "llm/v1",
-  "x-interop-floor": "A compatible llm/v1 agent MUST advertise at least one accepts[] entry with asset USDC on network Base (eip155:8453), scheme batch-settlement. Request/response schema is defined by this document's LLMChatRequest/LLMChatResponse. See README.md.",
+  "x-interop-floor": "A compatible llm/v1 agent MUST advertise at least one accepts[] entry with asset USDC on network Optimism (eip155:10) or Base (eip155:8453), scheme batch-settlement. Request/response schema is defined by this document's LLMChatRequest/LLMChatResponse. See README.md.",
   "servers": [{ "url": "https://llm-agent.fretchen.eu" }],
   "tags": [
     { "name": "LLM", "description": "AI chat assistant / text completion" },

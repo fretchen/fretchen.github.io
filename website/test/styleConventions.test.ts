@@ -113,7 +113,7 @@ describe("style conventions", () => {
     ).toEqual([]);
   });
 
-  it("no multi-value spacing shorthand uses bare grid numbers", () => {
+  it("no multi-value spacing shorthand uses bare grid numbers or named tokens", () => {
     const SPACING = new Set([
       "padding",
       "paddingX",
@@ -147,25 +147,42 @@ describe("style conventions", () => {
       "ml",
       "mr",
     ]);
-    const offenders: string[] = [];
+    // The named steps of the spacing scale (panda.config.ts). In a shorthand these are far
+    // worse than a bare number: `padding: "sm md"` emits the literal `padding:sm md`, which
+    // is not valid CSS, so the browser discards the whole declaration and the element ends
+    // up with NO padding. A bare number at least still produces a (wrong) length.
+    const NAMED_STEPS = new Set(["xs", "sm", "md", "lg", "xl", "2xl"]);
+
+    const numberOffenders: string[] = [];
+    const tokenOffenders: string[] = [];
     for (const { path, source } of FILES) {
       for (const [start, end] of styleBlocks(source)) {
         const block = source.slice(start, end);
         for (const match of block.matchAll(/\b([a-zA-Z]+):\s*"([^"]{1,40})"/g)) {
           if (!SPACING.has(match[1])) continue;
           const parts = match[2].trim().split(/\s+/);
+          if (parts.length < 2) continue; // A single value is a real token lookup.
+          const where = `${path}: ${match[1]}: "${match[2]}"`;
           const bareNumbers = parts.filter((p) => /^-?\d+(\.\d+)?$/.test(p));
-          // A single bare number is a real token lookup; two or more are raw px.
-          if (parts.length > 1 && bareNumbers.length > 0 && bareNumbers.some((n) => n !== "0")) {
-            offenders.push(`${path}: ${match[1]}: "${match[2]}"`);
+          if (bareNumbers.some((n) => n !== "0")) {
+            numberOffenders.push(where);
+          }
+          if (parts.some((p) => NAMED_STEPS.has(p))) {
+            tokenOffenders.push(where);
           }
         }
       }
     }
     expect(
-      offenders,
+      numberOffenders,
       'Panda reads shorthand numbers as px, not grid steps: padding "2 3" is 2px 3px, not 8px 12px. ' +
         "Use explicit px, or split into paddingX/paddingY.",
+    ).toEqual([]);
+    expect(
+      tokenOffenders,
+      'Named spacing tokens do not resolve inside a shorthand: padding "sm md" emits the literal ' +
+        '"padding:sm md", which is invalid CSS — the browser drops the declaration and you get no ' +
+        "spacing at all. Split into paddingX/paddingY (or marginTop/marginY, …), which do tokenise.",
     ).toEqual([]);
   });
 

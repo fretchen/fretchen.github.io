@@ -229,7 +229,8 @@ export const tabs = {
     gap: "xs",
   }),
   tab: css({
-    padding: "sm lg",
+    paddingY: "sm",
+    paddingX: "lg",
     backgroundColor: "transparent",
     border: "none",
     borderBottom: "2px solid transparent",
@@ -368,7 +369,8 @@ export const modal = {
   title: css({
     fontSize: "lg",
     fontWeight: "bold",
-    margin: "0 0 md 0",
+    margin: 0,
+    marginBottom: "md",
     // leave room so the title never sits under the ✕
     paddingRight: "lg",
   }),
@@ -377,21 +379,24 @@ export const modal = {
     fontSize: "sm",
     color: "gray.700",
     lineHeight: "normal",
-    margin: "0 0 md 0",
+    margin: 0,
+    marginBottom: "md",
   }),
   // Inline error message inside a modal
   error: css({
     fontSize: "sm",
     color: "danger",
     lineHeight: "normal",
-    margin: "0 0 md 0",
+    margin: 0,
+    marginBottom: "md",
   }),
   // Muted "why this?" motivation line
   why: css({
     fontSize: "sm",
     color: "gray.500",
     lineHeight: "normal",
-    margin: "0 0 md 0",
+    margin: 0,
+    marginBottom: "md",
   }),
   // Inline brand-colored link (e.g. "Learn more: Optimism · Base")
   link: css({
@@ -414,7 +419,7 @@ export const modal = {
   note: css({
     fontSize: "xs",
     color: "gray.500",
-    margin: "sm 0 0 0",
+    marginTop: "sm",
     textAlign: "center",
   }),
   // ─── Image-modal content parts ───────────────────────────────────────

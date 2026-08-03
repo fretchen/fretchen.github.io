@@ -171,6 +171,48 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     return openAiError(400, "Invalid JSON body", "invalid_request_error");
   }
 
+  // ─── Payment challenge comes BEFORE request validation ───
+  // An unpaid request is answered with the 402 whatever its body says. This is the llm/v1
+  // contract this repo publishes and asks other builders to implement ("an unpaid POST is
+  // asked to pay" — see checkLlmV1Agent in website/hooks/x402Discovery.ts and the
+  // /agent-onboarding guide), and validating first violated it: a client probing for the
+  // payment terms it is supposed to discover got a 400/404 with no Payment-Required header,
+  // so this agent failed its own compatibility checker. It also broke real clients — the
+  // website negotiates which network to pay on by reading this 402 first
+  // (useX402Chat.ts), which is impossible if the challenge is gated behind knowing a valid
+  // model id.
+  //
+  // Nothing is charged here: this branch only advertises terms. A *paid* request still runs
+  // the full validation below before any voucher is verified or settled, so a malformed
+  // paid request is rejected without being charged.
+  const receiverAddressForChallenge = process.env.NFT_WALLET_PUBLIC_KEY;
+  if (!receiverAddressForChallenge || !isHexAddress(receiverAddressForChallenge)) {
+    return errorResponse(
+      500,
+      "Service provider address not configured or invalid. Set NFT_WALLET_PUBLIC_KEY to a 0x-prefixed 40-hex-char address.",
+    );
+  }
+  const paymentPayloadEarly = extractPaymentPayload(event.headers) ?? body["payment"];
+  if (!paymentPayloadEarly) {
+    logger.info("No payment provided, returning 402");
+    let challengeScheme: ReturnType<typeof createLLMResourceServer>["scheme"];
+    try {
+      ({ scheme: challengeScheme } = createLLMResourceServer(receiverAddressForChallenge));
+    } catch (err) {
+      logger.error({ err }, "Failed to configure batch-settlement resource server");
+      return errorResponse(500, "Server configuration error");
+    }
+    const paymentRequirements = await createBatchSettlementPaymentRequirements({
+      resourceUrl: event.path ?? process.env.LLM_SERVICE_URL ?? "https://api.example.com/llm",
+      description: "AI Assistant chat message",
+      mimeType: "application/json",
+      amount: USDC_MAX_PRICE_PER_MESSAGE,
+      payTo: receiverAddressForChallenge,
+      scheme: challengeScheme,
+    });
+    return create402Response(paymentRequirements);
+  }
+
   // OpenAI chat-completions request body: { model, messages: [{ role, content }, ...] }.
   // Streaming settles per message on the final usage, which requires the whole completion —
   // so stream:true is rejected rather than silently buffered.
@@ -242,20 +284,8 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     return errorResponse(500, "Server configuration error");
   }
 
-  const paymentPayload = extractPaymentPayload(event.headers) ?? body["payment"];
-
-  if (!paymentPayload) {
-    logger.info("No payment provided, returning 402");
-    const paymentRequirements = await createBatchSettlementPaymentRequirements({
-      resourceUrl: event.path ?? process.env.LLM_SERVICE_URL ?? "https://api.example.com/llm",
-      description: "AI Assistant chat message",
-      mimeType: "application/json",
-      amount: USDC_MAX_PRICE_PER_MESSAGE,
-      payTo: receiverAddress,
-      scheme,
-    });
-    return create402Response(paymentRequirements);
-  }
+  // Non-null: the unpaid case already returned the 402 challenge above, before validation.
+  const paymentPayload = paymentPayloadEarly;
 
   const clientNetwork = (paymentPayload as Record<string, unknown>)["accepted"]
     ? (((paymentPayload as Record<string, unknown>)["accepted"] as Record<string, unknown>)[

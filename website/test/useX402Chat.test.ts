@@ -347,18 +347,31 @@ describe("useX402Chat", () => {
     const OPTIMISM = "eip155:10";
     const BASE = "eip155:8453";
 
+    /**
+     * Identify the discovery probe by its placeholder model rather than by an exact body
+     * string — the probe body is an implementation detail of x402Discovery and matching it
+     * literally makes these tests break whenever it changes.
+     */
+    function isProbeRequest(init?: RequestInit): boolean {
+      if (typeof init?.body !== "string") return false;
+      try {
+        return (JSON.parse(init.body) as { model?: string }).model === "probe";
+      } catch {
+        return false;
+      }
+    }
+
     /** A fetch that answers the unpaid probe with a 402 offering `networks`, then succeeds. */
     function stubAgentOffering(networks: string[]) {
       const accepts = networks.map((network) => ({ scheme: "batch-settlement", network, payTo: "0xabc" }));
       const header = btoa(JSON.stringify({ accepts }));
-      const fetchSpy = vi.fn((_input: string, init?: RequestInit) => {
-        const isProbe = init?.body === JSON.stringify({ model: "probe", messages: [] });
-        return Promise.resolve(
-          isProbe
+      const fetchSpy = vi.fn((_input: string, init?: RequestInit) =>
+        Promise.resolve(
+          isProbeRequest(init)
             ? new Response("{}", { status: 402, headers: { "Payment-Required": header } })
             : new Response(JSON.stringify({ content: "hi" }), { status: 200 }),
-        );
-      });
+        ),
+      );
       vi.stubGlobal("fetch", fetchSpy);
       return fetchSpy;
     }
@@ -416,8 +429,7 @@ describe("useX402Chat", () => {
       vi.stubGlobal(
         "fetch",
         vi.fn((_input: string, init?: RequestInit) => {
-          const isProbe = init?.body === JSON.stringify({ model: "probe", messages: [] });
-          return isProbe
+          return isProbeRequest(init)
             ? Promise.reject(new TypeError("Failed to fetch"))
             : Promise.resolve(new Response(JSON.stringify({ content: "hi" }), { status: 200 }));
         }),

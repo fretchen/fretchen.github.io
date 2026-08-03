@@ -86,11 +86,18 @@ export function agentOrigin(agentUrl: string): string {
 
 /**
  * The unpaid probe body every discovery path sends: the OpenAI chat-completions shape of the
- * llm/v1 wire contract (see `scw_js/sc_llm_x402.ts`). `model` is a placeholder — any
- * 402-returning agent should challenge for payment before validating it, but a well-formed
- * body avoids relying on that ordering.
+ * llm/v1 wire contract (see `scw_js/sc_llm_x402.ts`). `model` is necessarily a placeholder —
+ * discovering what an agent serves is the point of the probe — so a compliant agent must
+ * answer with its 402 before validating it.
+ *
+ * `messages` carries one real message rather than an empty array: an empty array is
+ * malformed under the contract's own LLMChatRequest schema, so an agent that validates
+ * before challenging rejects it outright. This repo's own agent used to do exactly that,
+ * which meant no probe here ever saw a 402 from it (fixed — the challenge now precedes
+ * validation), and other implementations may still. Sending a well-formed body costs
+ * nothing and removes the dependency on that ordering.
  */
-const PROBE_BODY = JSON.stringify({ model: "probe", messages: [] });
+const PROBE_BODY = JSON.stringify({ model: "probe", messages: [{ role: "user", content: "probe" }] });
 
 /**
  * Send one unpaid request and return the agent's decoded `accepts[]`, or `null` if it did not

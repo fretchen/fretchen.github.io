@@ -11,6 +11,7 @@ import remarkGfm from "remark-gfm";
 import { AgentInfoPanel } from "./AgentInfoPanel";
 import { AgentSelector } from "./AgentSelector";
 import * as chat from "./AssistantChat.styles";
+import { titleBar } from "../layouts/shared";
 import { useLocale } from "../hooks/useLocale";
 import { useUmami } from "../hooks/useUmami";
 import { css } from "../styled-system/css";
@@ -20,8 +21,8 @@ import { useX402Chat, DEFAULT_LLM_AGENT_URL } from "../hooks/useX402Chat";
 import { fetchAgentCard, precheckLlmV1Agent, type AgentCard } from "../hooks/x402Discovery";
 import { getViemChain, toCAIP2 } from "@fretchen/chain-utils";
 import { useChainId } from "wagmi";
-import { getChainName } from "./ChainBadge";
-import { button } from "../styled-system/recipes";
+import { ChainBadge, getChainName } from "./ChainBadge";
+import { button, sectionRule } from "../styled-system/recipes";
 
 // The custom-URL escape hatch (AgentSelector) lets the chat pay any llm/v1 agent. It is also
 // the only ready-made batch-settlement client there is, so it doubles as the end-to-end test
@@ -105,7 +106,7 @@ export function AssistantChat() {
   const typingLabel = useLocale({ label: "assistent.typing" });
   const actionsLabel = useLocale({ label: "assistent.actions" });
   const clearChatLabel = useLocale({ label: "assistent.clearChat" });
-  const mobileTitleLabel = useLocale({ label: "assistent.mobileTitle" });
+  const titleLabel = useLocale({ label: "assistent.title" });
   const emptyStateLabel = useLocale({ label: "assistent.emptyState" });
   const youLabel = useLocale({ label: "assistent.you" });
   const assistantLabel = useLocale({ label: "assistent.assistant" });
@@ -303,25 +304,28 @@ export function AssistantChat() {
             <div className={chat.sidebarSection}>
               <h4 className={chat.sidebarHeading}>{networkLabel}</h4>
               <div className={chat.networkOptions}>
-                {CHAT_NETWORKS.map((option) => (
-                  <button
-                    key={option}
-                    onClick={() => storeNetwork(option)}
-                    aria-pressed={paymentNetwork === option}
-                    className={button({
-                      visual: paymentNetwork === option ? "primary" : "secondary",
-                      size: "sm",
-                    })}
-                  >
-                    {getChainName(option)}
-                  </button>
-                ))}
+                {CHAT_NETWORKS.map((option) => {
+                  const selected = paymentNetwork === option;
+                  return (
+                    <button
+                      key={option}
+                      onClick={() => storeNetwork(option)}
+                      aria-pressed={selected}
+                      aria-label={getChainName(option)}
+                      className={button({ visual: "secondary", size: "sm", active: selected })}
+                    >
+                      <span className={selected ? undefined : chat.networkOptionMuted}>
+                        <ChainBadge network={option} size="sm" position="inline" />
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
               {/* Only surfaced when the agent forced our hand — otherwise the buttons speak
                   for themselves and a permanent caption would just be noise. */}
               {paymentNetwork !== desiredNetwork && (
                 <p className={chat.networkNote}>
-                  {networkFallbackLabel} {getChainName(paymentNetwork)}.
+                  {networkFallbackLabel} <ChainBadge network={paymentNetwork} size="sm" position="inline" />.
                 </p>
               )}
             </div>
@@ -345,17 +349,24 @@ export function AssistantChat() {
 
         {/* Chat Area */}
         <div className={chat.chatArea}>
-          {/* Mobile Header */}
-          {isMobile && (
-            <div className={chat.mobileHeader}>
-              <h2 className={chat.mobileTitle}>{mobileTitleLabel}</h2>
+          {/* Page heading. /assistent is `explore` territory (utils/territory.ts) but never
+              showed it — the rule under the title is how every other section announces where
+              you are (see pages/x402/+Page.tsx). Rendered once for both viewports so the page
+              never carries two competing headings; on mobile it keeps the clear-chat button
+              beside it, which is what the old mobile-only header existed for. */}
+          <div className={chat.titleRow}>
+            <div>
+              <h1 className={titleBar.title}>{titleLabel}</h1>
+              <span className={sectionRule({ territory: "explore" })} aria-hidden="true" />
+            </div>
+            {isMobile && (
               <div className={chat.mobileActions}>
                 <button onClick={clearChat} className={button({ visual: "secondary", size: "sm" })} title="Clear Chat">
                   🗑️
                 </button>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Messages Container */}
           <div className={chat.messagesContainer}>
@@ -375,7 +386,13 @@ export function AssistantChat() {
                     }`}
                   >
                     <div className={chat.messageRole}>{message.role === "user" ? youLabel : assistantLabel}</div>
-                    <div className={chat.messageContent}>
+                    {/* The assistant's reply is prose, so it takes the serif; your own message
+                        is input to a tool and stays in the sans. See IDENTITY.md. */}
+                    <div
+                      className={`${chat.messageContent} ${
+                        message.role === "assistant" ? chat.messageContentReading : ""
+                      }`}
+                    >
                       {message.role === "assistant" ? (
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
                       ) : (

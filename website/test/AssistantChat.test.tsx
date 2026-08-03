@@ -9,7 +9,7 @@
 
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 
 const mockSendMessage = vi.fn();
 const mockConnectWallet = vi.fn();
@@ -244,7 +244,11 @@ describe("AssistantChat", () => {
 
       render(<AssistantChat />);
 
-      expect(screen.getByText(/assistent\.networkFallback Base/)).toBeInTheDocument();
+      // The note names the chain with a ChainBadge rather than bare text, so the string is
+      // split across elements — assert the label and the badge separately.
+      const note = screen.getByText(/assistent\.networkFallback/);
+      expect(note).toBeInTheDocument();
+      expect(within(note).getByTitle("Base")).toBeInTheDocument();
     });
   });
 

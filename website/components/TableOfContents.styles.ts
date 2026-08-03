@@ -56,7 +56,8 @@ export const toc = {
   /** Link styling - base state */
   link: css({
     display: "block",
-    padding: "xs sm",
+    paddingY: "xs",
+    paddingX: "sm",
     fontSize: "sm",
     lineHeight: "normal",
     color: "gray.600",
@@ -73,7 +74,8 @@ export const toc = {
   /** Link styling - active state */
   linkActive: css({
     display: "block",
-    padding: "xs sm",
+    paddingY: "xs",
+    paddingX: "sm",
     fontSize: "sm",
     lineHeight: "normal",
     color: "gray.900",

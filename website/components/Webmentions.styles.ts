@@ -13,7 +13,8 @@ export const webmentions = {
     fontSize: "md",
     fontWeight: "semibold",
     color: "text",
-    margin: "0 0 sm 0",
+    margin: 0,
+    marginBottom: "sm",
   }),
   shareSeparator: css({
     color: "gray.400",

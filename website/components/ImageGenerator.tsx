@@ -922,7 +922,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
                 {tokenId && generatedImageUrl && (
                   <>
                     <h4 className={css({ margin: 0, fontSize: "sm" })}>{artworkCreatedText}</h4>
-                    <p className={css({ margin: "xs 0", fontSize: "sm" })}>
+                    <p className={css({ marginY: "xs", fontSize: "sm" })}>
                       ID: {tokenId.toString()} - {checkGalleryText}
                     </p>
                   </>

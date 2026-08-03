@@ -39,7 +39,7 @@ export const gridMobile = css({
 
 // Sidebar styles
 export const sidebar = css({
-  backgroundColor: "#fbfcfe",
+  backgroundColor: "surface",
   borderRadius: "sm",
   padding: "md",
   display: "flex",
@@ -91,6 +91,16 @@ export const networkOptions = css({
   gap: "xs",
 });
 
+/**
+ * Wrapper for the ChainBadge inside an unselected picker button. The badge carries the
+ * chain's own brand colour (the same pill NFT cards wear in /imagegen), so selection is
+ * expressed by the button's neutral `active` state rather than by a coloured fill that
+ * would fight it. Unselected simply recedes.
+ */
+export const networkOptionMuted = css({
+  opacity: 0.55,
+});
+
 export const networkNote = css({
   margin: 0,
   fontSize: "xs",
@@ -107,20 +117,13 @@ export const chatArea = css({
   // Ensure chat area stretches properly inside the grid column
 });
 
-// Mobile header
-export const mobileHeader = css({
+// Page heading row: the title + territory rule, with the mobile clear-chat button beside it.
+export const titleRow = css({
   display: "flex",
   justifyContent: "space-between",
-  alignItems: "center",
-  padding: "xs 0",
-  borderBottom: "1px solid",
-  borderColor: "border",
-  marginBottom: "xs",
-});
-
-export const mobileTitle = css({
-  margin: 0,
-  fontSize: "lg",
+  alignItems: "flex-start",
+  gap: "sm",
+  flexShrink: 0,
 });
 
 export const mobileActions = css({
@@ -142,14 +145,14 @@ export const messagesContainer = css({
 
 export const emptyState = css({
   textAlign: "center",
-  color: "#888",
+  color: "textMuted",
   padding: "2xl",
   fontSize: "sm",
 });
 
 // Message bubbles
 export const messageContainer = css({
-  margin: "md 0",
+  marginY: "md",
   display: "flex",
 });
 
@@ -162,33 +165,51 @@ export const messageContainerAssistant = css({
 });
 
 export const messageBubble = css({
-  padding: "sm md",
+  paddingY: "sm",
+  paddingX: "md",
   borderRadius: "sm",
   maxWidth: "80%",
 });
 
 export const messageBubbleUser = css({
-  backgroundColor: "#2d3748",
-  color: "white",
+  backgroundColor: "text",
+  color: "light",
 });
 
 export const messageBubbleAssistant = css({
-  backgroundColor: "token(colors.surface)",
+  backgroundColor: "surface",
   color: "text",
-  border: "1px solid #e2e8f0",
+  border: "1px solid",
+  borderColor: "border",
 });
 
+// Speaker label. Deliberately plain: alignment and fill already say who is talking, so the
+// label is a quiet fallback for when they don't (screen readers, a narrow column). The
+// uppercasing and letter-spacing this used to carry were decoration — see IDENTITY.md,
+// "clean, not decorated". The locale strings are already sentence case.
 export const messageRole = css({
   fontWeight: "semibold",
   marginBottom: "xs",
   fontSize: "xs",
-  textTransform: "uppercase",
-  letterSpacing: "0.5px",
   opacity: 0.8,
 });
 
 export const messageContent = css({
   lineHeight: "normal",
+});
+
+/**
+ * The assistant's replies are prose you read, so they take the serif — IDENTITY.md's
+ * "serif reads, sans operates". Everything else here is a tool you operate (your own
+ * messages, the sidebar, labels, the composer) and stays in the sans default.
+ *
+ * Size is deliberately left at the inherited UI value rather than the README's prose `lg`:
+ * that figure is set for a full-width article measure, and a bubble is capped at 80% of an
+ * already narrow column.
+ */
+export const messageContentReading = css({
+  fontFamily: "reading",
+  lineHeight: "relaxed",
 });
 
 // Plain-text messages (user input) preserve literal newlines/spacing.
@@ -200,18 +221,20 @@ export const messageContentPlain = css({
 
 // Loading message
 export const loadingMessage = css({
-  margin: "md 0",
+  marginY: "md",
   display: "flex",
   justifyContent: "flex-start",
 });
 
 export const loadingBubble = css({
   maxWidth: "80%",
-  padding: "sm md",
+  paddingY: "sm",
+  paddingX: "md",
   borderRadius: "sm",
-  backgroundColor: "token(colors.surface)",
+  backgroundColor: "surface",
   color: "text",
-  border: "1px solid #e2e8f0",
+  border: "1px solid",
+  borderColor: "border",
   fontStyle: "italic",
 });
 
@@ -219,7 +242,7 @@ export const loadingBubble = css({
 export const inputArea = css({
   display: "flex",
   gap: "xs",
-  padding: "md 0",
+  paddingY: "md",
   flexShrink: 0, // Don't shrink the input area
   alignItems: "flex-end", // keep button visually aligned to input
 });

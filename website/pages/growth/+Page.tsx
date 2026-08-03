@@ -101,7 +101,8 @@ const cardActions = css({
 
 const editTextarea = css({
   width: "100%",
-  padding: "sm md",
+  paddingY: "sm",
+  paddingX: "md",
   border: "1px solid",
   borderColor: "gray.300",
   borderRadius: "md",
@@ -115,7 +116,8 @@ const editTextarea = css({
 
 const reviewTextarea = css({
   width: "100%",
-  padding: "sm md",
+  paddingY: "sm",
+  paddingX: "md",
   border: "1px solid",
   borderColor: "gray.300",
   borderRadius: "md",
@@ -129,7 +131,8 @@ const reviewTextarea = css({
 
 const editInput = css({
   width: "100%",
-  padding: "sm md",
+  paddingY: "sm",
+  paddingX: "md",
   border: "1px solid",
   borderColor: "gray.300",
   borderRadius: "md",
@@ -140,7 +143,8 @@ const editInput = css({
 });
 
 const scheduleInput = css({
-  padding: "xs md",
+  paddingY: "xs",
+  paddingX: "md",
   border: "1px solid",
   borderColor: "gray.300",
   borderRadius: "sm",
@@ -176,7 +180,8 @@ const overLimitWarning = css({
 });
 
 const errorBanner = css({
-  padding: "sm md",
+  paddingY: "sm",
+  paddingX: "md",
   backgroundColor: "red.50",
   color: "red.700",
   borderRadius: "sm",
@@ -208,7 +213,8 @@ const pageGroupRow = css({
 
 const pageGroupSummaryRow = css({
   cursor: "pointer",
-  padding: "sm md",
+  paddingY: "sm",
+  paddingX: "md",
   display: "flex",
   alignItems: "center",
   gap: "xs",
@@ -242,7 +248,8 @@ const pageGroupDim = css({
 const pageGroupBody = css({
   borderTop: "1px solid",
   borderColor: "gray.200",
-  padding: "sm md",
+  paddingY: "sm",
+  paddingX: "md",
 });
 
 // ===== Sub-components =====

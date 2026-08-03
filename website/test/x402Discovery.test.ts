@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   decodePaymentRequired,
   meetsLlmV1Floor,
+  negotiateNetwork,
   precheckLlmV1Agent,
   checkLlmV1Agent,
   type AcceptsEntry,
@@ -17,6 +18,11 @@ const floorEntry: AcceptsEntry = {
   network: "eip155:8453",
   asset: "0xusdc",
   payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+};
+
+const optimismFloorEntry: AcceptsEntry = {
+  ...floorEntry,
+  network: "eip155:10",
 };
 
 function paymentRequiredHeader(accepts: AcceptsEntry[]): string {
@@ -36,13 +42,45 @@ describe("decodePaymentRequired", () => {
 });
 
 describe("meetsLlmV1Floor", () => {
-  it("accepts Base + batch-settlement", () => {
+  it("accepts batch-settlement on Base", () => {
     expect(meetsLlmV1Floor([floorEntry])).toBe(true);
   });
-  it("rejects a non-Base or non-batch-settlement offer", () => {
+  it("accepts batch-settlement on Optimism", () => {
+    expect(meetsLlmV1Floor([optimismFloorEntry])).toBe(true);
+  });
+  it("rejects the right scheme on an unsupported network", () => {
+    expect(meetsLlmV1Floor([{ scheme: "batch-settlement", network: "eip155:84532" }])).toBe(false);
+    expect(meetsLlmV1Floor([{ scheme: "batch-settlement", network: "eip155:42161" }])).toBe(false);
+  });
+  it("rejects a supported network offered under the wrong scheme", () => {
     expect(meetsLlmV1Floor([{ scheme: "exact", network: "eip155:8453" }])).toBe(false);
-    expect(meetsLlmV1Floor([{ scheme: "batch-settlement", network: "eip155:10" }])).toBe(false);
+    expect(meetsLlmV1Floor([{ scheme: "exact", network: "eip155:10" }])).toBe(false);
+  });
+  it("rejects unknown requirements", () => {
     expect(meetsLlmV1Floor(null)).toBe(false);
+  });
+});
+
+/**
+ * The negotiation that lets a wallet on one chain pay an agent that only offers the other,
+ * instead of dead-ending on a mismatch.
+ */
+describe("negotiateNetwork", () => {
+  it("keeps the preferred network when the agent offers it", () => {
+    expect(negotiateNetwork([optimismFloorEntry, floorEntry], "eip155:8453")).toBe("eip155:8453");
+    expect(negotiateNetwork([optimismFloorEntry, floorEntry], "eip155:10")).toBe("eip155:10");
+  });
+  it("falls back to the only network the agent does offer", () => {
+    expect(negotiateNetwork([floorEntry], "eip155:10")).toBe("eip155:8453");
+    expect(negotiateNetwork([optimismFloorEntry], "eip155:8453")).toBe("eip155:10");
+  });
+  it("ignores offers that don't meet the floor", () => {
+    // Right network, wrong scheme — not payable by this client.
+    expect(negotiateNetwork([{ scheme: "exact", network: "eip155:10" }], "eip155:8453")).toBeNull();
+  });
+  it("returns null when the agent offers nothing we can pay", () => {
+    expect(negotiateNetwork([{ scheme: "batch-settlement", network: "eip155:42161" }], "eip155:10")).toBeNull();
+    expect(negotiateNetwork(null, "eip155:10")).toBeNull();
   });
 });
 

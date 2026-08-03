@@ -12,6 +12,10 @@ export default tseslint.config(
   {
     ignores: [
       "dist/*",
+      // Vike's production output (gitignored). CI lints before it builds, so it never sees
+      // this directory — but locally, `npm run build` then `npm run lint` makes eslint walk
+      // ~300 minified chunks and appear to hang.
+      "build/",
       "scaleway/*",
       // Temporary compiled files
       "**/*.ts.build-*.mjs",

@@ -17,7 +17,7 @@ export const commentSection = {
   }),
   loading: css({ color: "gray.500", fontStyle: "italic" }),
   empty: css({ color: "gray.500", fontStyle: "italic", marginBottom: "md" }),
-  list: css({ listStyle: "none", padding: 0, margin: "md 0 0 0" }),
+  list: css({ listStyle: "none", padding: 0, marginTop: "md" }),
   comment: css({
     padding: "md",
     marginBottom: "sm",

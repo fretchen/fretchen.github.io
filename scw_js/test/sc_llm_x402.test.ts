@@ -330,53 +330,85 @@ describe("sc_llm_x402", () => {
       expect(res.statusCode).toBe(400);
     });
 
+    /**
+     * Request validation runs on the PAID path only — an unpaid request gets the 402
+     * challenge whatever its body says (see the "payment challenge precedes validation"
+     * block below for why). These therefore attach a payment first; the property that
+     * matters is that a malformed *paid* request is rejected before it is ever charged,
+     * which each case asserts via `mockVerifyPayment` never being called.
+     */
+    function paidEvent(bodyFields: Record<string, unknown>) {
+      mockExtractPaymentPayload.mockReturnValue(samplePaymentPayload);
+      return makeEvent({ body: JSON.stringify(bodyFields) });
+    }
+
     it("returns 400 (OpenAI-shaped) when messages is missing or empty", async () => {
-      const res = await handle(
-        makeEvent({ body: JSON.stringify({ model: TEST_MODEL, messages: [] }) }) as never,
-        {},
-      );
+      const res = await handle(paidEvent({ model: TEST_MODEL, messages: [] }) as never, {});
       expect(res.statusCode).toBe(400);
       expect(JSON.parse(res.body).error.type).toBe("invalid_request_error");
+      expect(mockVerifyPayment).not.toHaveBeenCalled();
     });
 
     it("returns 404 model_not_found for an unadvertised model", async () => {
       const res = await handle(
-        makeEvent({
-          body: JSON.stringify({ model: "gpt-4o", messages: [{ role: "user", content: "hi" }] }),
-        }) as never,
+        paidEvent({ model: "gpt-4o", messages: [{ role: "user", content: "hi" }] }) as never,
         {},
       );
       expect(res.statusCode).toBe(404);
       expect(JSON.parse(res.body).error.code).toBe("model_not_found");
+      expect(mockVerifyPayment).not.toHaveBeenCalled();
     });
 
     it("rejects stream: true with an OpenAI-shaped error", async () => {
       const res = await handle(
-        makeEvent({
-          body: JSON.stringify({
-            model: TEST_MODEL,
-            messages: [{ role: "user", content: "hi" }],
-            stream: true,
-          }),
+        paidEvent({
+          model: TEST_MODEL,
+          messages: [{ role: "user", content: "hi" }],
+          stream: true,
         }) as never,
         {},
       );
       expect(res.statusCode).toBe(400);
       expect(JSON.parse(res.body).error.code).toBe("stream_unsupported");
+      expect(mockVerifyPayment).not.toHaveBeenCalled();
     });
 
     it("returns 400 for an invalid useDummyData flag", async () => {
       const res = await handle(
-        makeEvent({
-          body: JSON.stringify({
-            model: TEST_MODEL,
-            messages: [{ role: "user", content: "hi" }],
-            useDummyData: "yes",
-          }),
+        paidEvent({
+          model: TEST_MODEL,
+          messages: [{ role: "user", content: "hi" }],
+          useDummyData: "yes",
         }) as never,
         {},
       );
       expect(res.statusCode).toBe(400);
+      expect(mockVerifyPayment).not.toHaveBeenCalled();
+    });
+
+    /**
+     * The llm/v1 contract this repo publishes — and asks other agent builders to implement
+     * via checkLlmV1Agent / the /agent-onboarding guide — requires that an unpaid POST be
+     * answered with the payment challenge. Validating the body first broke that: a client
+     * discovering the payment terms (which network, which asset) had to already know a
+     * valid model id to be told, and this agent failed its own compatibility checker.
+     * The website's network negotiation reads exactly this 402, so these are load-bearing.
+     */
+    describe("payment challenge precedes request validation", () => {
+      it.each([
+        ["an empty messages array", { model: "probe", messages: [] }],
+        ["an unknown model", { model: "probe", messages: [{ role: "user", content: "hi" }] }],
+        ["no fields at all", {}],
+        [
+          "stream: true",
+          { model: TEST_MODEL, messages: [{ role: "user", content: "hi" }], stream: true },
+        ],
+      ])("challenges an unpaid request with %s", async (_label, body) => {
+        const res = await handle(makeEvent({ body: JSON.stringify(body) }) as never, {});
+        expect(res.statusCode).toBe(402);
+        expect(mockCreate402Response).toHaveBeenCalled();
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
+      });
     });
 
     it("returns 500 when NFT_WALLET_PUBLIC_KEY is missing", async () => {

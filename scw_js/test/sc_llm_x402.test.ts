@@ -399,7 +399,10 @@ describe("sc_llm_x402", () => {
         ["an empty messages array", { model: "probe", messages: [] }],
         ["an unknown model", { model: "probe", messages: [{ role: "user", content: "hi" }] }],
         ["no fields at all", {}],
-        ["stream: true", { model: TEST_MODEL, messages: [{ role: "user", content: "hi" }], stream: true }],
+        [
+          "stream: true",
+          { model: TEST_MODEL, messages: [{ role: "user", content: "hi" }], stream: true },
+        ],
       ])("challenges an unpaid request with %s", async (_label, body) => {
         const res = await handle(makeEvent({ body: JSON.stringify(body) }) as never, {});
         expect(res.statusCode).toBe(402);

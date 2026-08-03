@@ -112,6 +112,8 @@ export default {
     unknownError: "Unbekannter Fehler",
     loading: "Lädt...",
     viewPayment: "Zahlung ansehen",
+    network: "Netzwerk",
+    networkFallback: "Dieser Agent akzeptiert dieses Netzwerk nicht, die Zahlung läuft daher über",
   },
   walletoptions: {
     connect: "Verbinden",

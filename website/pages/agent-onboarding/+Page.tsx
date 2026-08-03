@@ -469,7 +469,7 @@ export default function Page() {
   import { createClient } from "redis";
 
   const MODELS = ["mistral-large-latest"];        // must match the enum you publish (step 6)
-  const NETWORKS = ["eip155:8453"];               // Base mainnet; add "eip155:84532" to test
+  const NETWORKS = ["eip155:10", "eip155:8453"];  // Optimism + Base; add "eip155:84532" to test
   const RESOURCE = { url: "https://your-agent.example/", description: "chat", mimeType: "application/json" };
 
   // Your price ceiling per message, in USDC atomic units (6 decimals). Pick it as
@@ -607,6 +607,7 @@ export default function Page() {
               </p>
               <p className={caption}>The USDC constants you&apos;ll need:</p>
               <CodeBlock>{`const USDC = {
+    "eip155:10":    { address: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85", name: "USD Coin", version: "2" }, // Optimism
     "eip155:8453":  { address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", name: "USD Coin", version: "2" }, // Base
     "eip155:84532": { address: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", name: "USDC",     version: "2" }, // Base Sepolia
   };`}</CodeBlock>
@@ -799,7 +800,9 @@ export default function Page() {
   const { scheme, facilitator } = setupX402();
 
   for (const network of NETWORKS) {
-    const manager = scheme.createChannelManager(facilitator, network);
+    // Pass the token explicitly: without it the SDK falls back to its own stablecoin
+    // registry, which has no Optimism entry and throws. See the challenges section.
+    const manager = scheme.createChannelManager(facilitator, network, USDC[network].address);
     const { claims, settle } = await manager.claimAndSettle();
     console.log({ network, claims: claims.length, settled: settle !== undefined });
   }`}</CodeBlock>
@@ -885,10 +888,10 @@ export default function Page() {
               locally too.
             </p>
             <div className={note}>
-              <strong>Expect one red step on testnet.</strong> The compatibility floor requires a payment option on Base{" "}
-              <em>mainnet</em>, so the &quot;meets the floor&quot; check stays red until you add{" "}
-              <code className={inlineCode}>eip155:8453</code>. Everything above it — discovery, service type, the 402
-              challenge — should already be green.
+              <strong>Expect one red step on testnet.</strong> The compatibility floor requires a payment option on
+              Optimism or Base <em>mainnet</em>, so the &quot;meets the floor&quot; check stays red until you add{" "}
+              <code className={inlineCode}>eip155:10</code> or <code className={inlineCode}>eip155:8453</code>. Either
+              one is enough. Everything above it — discovery, service type, the 402 challenge — should already be green.
             </div>
             <p className={para}>
               <strong>The first real payment.</strong> Point the{" "}
@@ -956,10 +959,16 @@ export default function Page() {
               retrying.
             </Challenge>
 
-            <Challenge title="Base mainnet only">
-              Your payment option must be on Base (<code className={inlineCode}>eip155:8453</code>). Optimism is blocked
-              by a gap in the <code className={inlineCode}>@x402/evm</code> stablecoin registry, even though the
-              contract is deployed there.
+            <Challenge title="Chains outside the SDK's stablecoin registry need an explicit token">
+              Your payment option must be on Optimism (<code className={inlineCode}>eip155:10</code>) or Base (
+              <code className={inlineCode}>eip155:8453</code>). Optimism used to be impossible: it isn&apos;t in{" "}
+              <code className={inlineCode}>@x402/evm</code>&apos;s stablecoin registry, and{" "}
+              <code className={inlineCode}>enhancePaymentRequirements()</code> resolved the asset from that registry
+              rather than from your requirements, so one Optimism entry threw and took the whole 402 down with it. Fixed
+              in 2.20, which honours the asset you pass. The registry gap itself is still there, so anything that falls
+              back to it needs the token spelled out — notably{" "}
+              <code className={inlineCode}>createChannelManager(facilitator, network, token)</code>, whose third
+              argument is optional but throws on Optimism when omitted.
             </Challenge>
 
             <Challenge title="Claim timing matters">

@@ -17,11 +17,44 @@ export interface AcceptsEntry {
   extra?: { name?: string; version?: string };
 }
 
-/** The `llm/v1` interop floor: the scheme/network a client here must be able to fulfil. */
+/**
+ * The `llm/v1` interop floor: the scheme, and the set of networks of which an agent must
+ * offer at least ONE, for a client here to be able to pay it. Mirrors `x-interop-floor` in
+ * `scw_js/openapi.llm.json` — keep the two in sync.
+ *
+ * Optimism is listed first because it is this site's default chat network (see
+ * CHAT_NETWORKS in AssistantChat.tsx); the floor itself is order-independent, but callers
+ * that pick a single network from it (`negotiateNetwork`) use this order as their tiebreak.
+ */
 export const LLM_V1_FLOOR = {
-  network: "eip155:8453", // Base mainnet
+  networks: ["eip155:10", "eip155:8453"] as readonly string[], // Optimism, Base
   scheme: "batch-settlement",
 } as const;
+
+/** True if `entry` is a batch-settlement offer on one of the floor's networks. */
+function isFloorEntry(entry: AcceptsEntry): boolean {
+  return (
+    entry.scheme === LLM_V1_FLOOR.scheme && entry.network !== undefined && LLM_V1_FLOOR.networks.includes(entry.network)
+  );
+}
+
+/**
+ * Pick the network to pay an agent on: the caller's `preferred` network when the agent
+ * offers it, else the first floor network the agent does offer. Returns `null` when the
+ * agent offers none of them (the caller reports the mismatch).
+ *
+ * This is what lets a wallet sitting on Optimism still pay a Base-only third-party agent
+ * (and vice versa) instead of dead-ending on a network mismatch.
+ *
+ * @param accepts - The agent's decoded `accepts[]`, or null if it couldn't be read.
+ * @param preferred - The network the caller would rather use, if the agent allows it.
+ */
+export function negotiateNetwork(accepts: AcceptsEntry[] | null, preferred: string): string | null {
+  if (!accepts) return null;
+  const offered = accepts.filter(isFloorEntry).map((a) => a.network!);
+  if (offered.includes(preferred)) return preferred;
+  return LLM_V1_FLOOR.networks.find((n) => offered.includes(n)) ?? null;
+}
 
 /**
  * Decode the base64 `Payment-Required` header of a 402 response into its `accepts[]` array.
@@ -37,15 +70,45 @@ export function decodePaymentRequired(headerValue: string | null): AcceptsEntry[
   }
 }
 
-/** True if any `accepts[]` entry satisfies the llm/v1 interop floor (Base + batch-settlement). */
+/**
+ * True if any `accepts[]` entry satisfies the llm/v1 interop floor: batch-settlement on
+ * Optimism *or* Base. One of the two is enough — an agent need not offer both.
+ */
 export function meetsLlmV1Floor(accepts: AcceptsEntry[] | null): boolean {
   if (!accepts) return false;
-  return accepts.some((a) => a.network === LLM_V1_FLOOR.network && a.scheme === LLM_V1_FLOOR.scheme);
+  return accepts.some(isFloorEntry);
 }
 
 /** Normalise an agent URL to its origin (scheme + host, no path/trailing slash). */
 export function agentOrigin(agentUrl: string): string {
   return new URL(agentUrl).origin;
+}
+
+/**
+ * The unpaid probe body every discovery path sends: the OpenAI chat-completions shape of the
+ * llm/v1 wire contract (see `scw_js/sc_llm_x402.ts`). `model` is a placeholder — any
+ * 402-returning agent should challenge for payment before validating it, but a well-formed
+ * body avoids relying on that ordering.
+ */
+const PROBE_BODY = JSON.stringify({ model: "probe", messages: [] });
+
+/**
+ * Send one unpaid request and return the agent's decoded `accepts[]`, or `null` if it did not
+ * answer with a readable 402 (unreachable, CORS-blocked, wrong status, or undecodable header).
+ * Never throws — every caller treats `null` as "unknown".
+ */
+export async function probeAccepts(agentUrl: string): Promise<AcceptsEntry[] | null> {
+  try {
+    const res = await fetch(agentUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: PROBE_BODY,
+    });
+    if (res.status !== 402) return null;
+    return decodePaymentRequired(res.headers.get("Payment-Required"));
+  } catch {
+    return null;
+  }
 }
 
 /** Provenance derived from an agent's OpenAPI doc + live 402, for pre-payment disclosure. */
@@ -94,24 +157,8 @@ export async function fetchAgentCard(agentUrl: string): Promise<AgentCard | null
     // Leave doc empty — still return a card with the origin so the UI shows something.
   }
 
-  let match: AcceptsEntry | undefined;
-  try {
-    const res = await fetch(agentUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      // OpenAI chat-completions probe body — matches the llm/v1 wire contract (see
-      // scw_js/sc_llm_x402.ts). `model` is a placeholder; any 402-returning agent should
-      // challenge for payment before validating this, but a well-formed body avoids relying
-      // on that ordering.
-      body: JSON.stringify({ model: "probe", messages: [] }),
-    });
-    if (res.status === 402) {
-      const accepts = decodePaymentRequired(res.headers.get("Payment-Required"));
-      match = accepts?.find((a) => a.network === LLM_V1_FLOOR.network && a.scheme === LLM_V1_FLOOR.scheme);
-    }
-  } catch {
-    // No live 402 — payTo/network stay null.
-  }
+  // No live 402 — payTo/network stay null.
+  const match = (await probeAccepts(agentUrl))?.find(isFloorEntry);
 
   return {
     origin,
@@ -157,11 +204,7 @@ export async function precheckLlmV1Agent(agentUrl: string): Promise<PreCheckResu
     const res = await fetch(agentUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      // OpenAI chat-completions probe body — matches the llm/v1 wire contract (see
-      // scw_js/sc_llm_x402.ts). `model` is a placeholder; any 402-returning agent should
-      // challenge for payment before validating this, but a well-formed body avoids relying
-      // on that ordering.
-      body: JSON.stringify({ model: "probe", messages: [] }),
+      body: PROBE_BODY,
     });
     if (res.status !== 402) {
       return { ok: false, reason: `Expected a 402 payment challenge, got ${res.status}.` };
@@ -173,11 +216,11 @@ export async function precheckLlmV1Agent(agentUrl: string): Promise<PreCheckResu
   if (!meetsLlmV1Floor(accepts)) {
     return {
       ok: false,
-      reason: `This agent does not offer the required payment option (USDC on Base, batch-settlement).`,
+      reason: `This agent does not offer the required payment option (USDC on Optimism or Base, batch-settlement).`,
     };
   }
 
-  const match = accepts!.find((a) => a.network === LLM_V1_FLOOR.network && a.scheme === LLM_V1_FLOOR.scheme);
+  const match = accepts!.find(isFloorEntry);
   return {
     ok: true,
     card: {
@@ -283,7 +326,7 @@ export async function checkLlmV1Agent(agentUrl: string): Promise<CheckReport> {
     const res = await fetch(agentUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "probe", messages: [] }),
+      body: PROBE_BODY,
     });
     if (res.status === 402) {
       got402 = true;
@@ -324,21 +367,21 @@ export async function checkLlmV1Agent(agentUrl: string): Promise<CheckReport> {
     );
   }
 
-  // 6. accepts[] meets the payment requirement (USDC on Base via batch-settlement).
+  // 6. accepts[] meets the payment requirement (USDC on Optimism or Base via batch-settlement).
+  const FLOOR_LABEL = "Offers USDC on Optimism or Base via batch-settlement";
   if (got402) {
     if (meetsLlmV1Floor(accepts)) {
-      push(
-        "floor",
-        "Offers USDC on Base via batch-settlement",
-        "pass",
-        `accepts[] includes ${LLM_V1_FLOOR.scheme} on ${LLM_V1_FLOOR.network}.`,
-      );
+      // Name the network(s) actually offered — a builder checking their own agent wants to
+      // see which one passed, not just that something did.
+      const matched = accepts!.filter(isFloorEntry).map((a) => a.network!);
+      push("floor", FLOOR_LABEL, "pass", `accepts[] includes ${LLM_V1_FLOOR.scheme} on ${matched.join(", ")}.`);
     } else {
       push(
         "floor",
-        "Offers USDC on Base via batch-settlement",
+        FLOOR_LABEL,
         "fail",
-        `accepts[] must include an entry with network ${LLM_V1_FLOOR.network} (Base) and scheme ${LLM_V1_FLOOR.scheme}.`,
+        `accepts[] must include an entry with scheme ${LLM_V1_FLOOR.scheme} on one of: ` +
+          `eip155:10 (Optimism), eip155:8453 (Base).`,
       );
     }
   }

@@ -84,6 +84,19 @@ export const actionsContainer = css({
   gap: "xs",
 });
 
+// Network picker (Optimism / Base) — a row of two small toggle buttons plus a caption.
+export const networkOptions = css({
+  display: "flex",
+  flexDirection: "row",
+  gap: "xs",
+});
+
+export const networkNote = css({
+  margin: 0,
+  fontSize: "xs",
+  opacity: 0.8,
+});
+
 // Chat area
 export const chatArea = css({
   display: "flex",

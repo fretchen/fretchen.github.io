@@ -22,6 +22,8 @@ const mockToClientEvmSigner = vi.fn((...args: unknown[]) => args[0]);
 
 vi.mock("../hooks/useConfiguredPublicClient", () => ({
   useConfiguredPublicClient: vi.fn(() => ({ readContract: vi.fn() })),
+  // The hook resolves the client after negotiating, so it uses the plain function form.
+  getConfiguredPublicClient: vi.fn(() => ({ readContract: vi.fn() })),
 }));
 
 vi.mock("@x402/fetch", () => ({
@@ -333,6 +335,100 @@ describe("useX402Chat", () => {
         "https://llm-agent.fretchen.eu",
         expect.objectContaining({ method: "POST" }),
       );
+    });
+  });
+
+  /**
+   * Network negotiation. With two payable chains, "the agent doesn't offer my chain" is a
+   * routine case (a Base-only third-party agent, an Optimism wallet) rather than a
+   * misconfiguration — so the hook resolves it instead of dead-ending.
+   */
+  describe("Network negotiation", () => {
+    const OPTIMISM = "eip155:10";
+    const BASE = "eip155:8453";
+
+    /** A fetch that answers the unpaid probe with a 402 offering `networks`, then succeeds. */
+    function stubAgentOffering(networks: string[]) {
+      const accepts = networks.map((network) => ({ scheme: "batch-settlement", network, payTo: "0xabc" }));
+      const header = btoa(JSON.stringify({ accepts }));
+      const fetchSpy = vi.fn((_input: string, init?: RequestInit) => {
+        const isProbe = init?.body === JSON.stringify({ model: "probe", messages: [] });
+        return Promise.resolve(
+          isProbe
+            ? new Response("{}", { status: 402, headers: { "Payment-Required": header } })
+            : new Response(JSON.stringify({ content: "hi" }), { status: 200 }),
+        );
+      });
+      vi.stubGlobal("fetch", fetchSpy);
+      return fetchSpy;
+    }
+
+    beforeEach(() => {
+      vi.mocked(useWalletClient).mockReturnValue(buildWalletClientData({ data: mockWalletClient }));
+      vi.mocked(useAccount).mockReturnValue(buildAccountData({ isConnected: true }));
+    });
+
+    it("pays on the preferred network when the agent offers it", async () => {
+      stubAgentOffering([OPTIMISM, BASE]);
+
+      const { result } = renderHook(() => useX402Chat(OPTIMISM));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+      });
+
+      expect(mockRegister).toHaveBeenCalledWith(OPTIMISM, expect.anything());
+      expect(result.current.paymentNetwork).toBe(OPTIMISM);
+    });
+
+    it("negotiates down to the network the agent does offer instead of failing", async () => {
+      stubAgentOffering([BASE]);
+
+      const { result } = renderHook(() => useX402Chat(OPTIMISM));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+      });
+
+      expect(mockRegister).toHaveBeenCalledWith(BASE, expect.anything());
+      expect(result.current.paymentNetwork).toBe(BASE);
+    });
+
+    it("throws with both sides listed when the agent offers nothing payable", async () => {
+      stubAgentOffering(["eip155:42161"]);
+
+      const { result } = renderHook(() => useX402Chat(OPTIMISM));
+
+      let thrown: Error | undefined;
+      await act(async () => {
+        try {
+          await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+        } catch (err) {
+          thrown = err as Error;
+        }
+      });
+
+      expect(thrown?.message).toContain("eip155:42161");
+      expect(thrown?.message).toContain(OPTIMISM);
+      expect(mockRegister).not.toHaveBeenCalled();
+    });
+
+    it("proceeds on the preferred network when the agent can't be read (CORS/offline)", async () => {
+      // A probe that throws must not block payment — the real 402 is the judge.
+      vi.stubGlobal(
+        "fetch",
+        vi.fn((_input: string, init?: RequestInit) => {
+          const isProbe = init?.body === JSON.stringify({ model: "probe", messages: [] });
+          return isProbe
+            ? Promise.reject(new TypeError("Failed to fetch"))
+            : Promise.resolve(new Response(JSON.stringify({ content: "hi" }), { status: 200 }));
+        }),
+      );
+
+      const { result } = renderHook(() => useX402Chat(OPTIMISM));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+      });
+
+      expect(mockRegister).toHaveBeenCalledWith(OPTIMISM, expect.anything());
     });
   });
 

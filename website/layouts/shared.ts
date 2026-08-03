@@ -277,7 +277,9 @@ export const titleBar = {
     overflow: "hidden",
     textOverflow: "ellipsis",
     wordBreak: "break-word",
-    hyphens: "auto",
+    // manual, matching the article title — see components/Post.styles.ts. wordBreak above
+    // already handles the overflow case this was guarding.
+    hyphens: "manual",
   }),
 };
 

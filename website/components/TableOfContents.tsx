@@ -31,7 +31,12 @@ function TocItem({ heading, isActive, onItemClick }: TocItemProps) {
 
     const element = document.getElementById(heading.id);
     if (element) {
-      const headerOffset = 90;
+      // Breathing room above the landed heading. The app bar is `position: relative`
+      // (layouts/LayoutDefault.styles.ts) and scrolls away, so this is not clearing a fixed
+      // header — it was 90px, which left a large gap. Must stay larger than the magnitude of
+      // the top rootMargin in hooks/useActiveHeading.ts, or the heading lands above the
+      // scroll-spy's observation line and the *previous* entry lights up on every click.
+      const headerOffset = 24;
       const elementPosition = element.getBoundingClientRect().top;
       const offsetPosition = elementPosition + window.scrollY - headerOffset;
 

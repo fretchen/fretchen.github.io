@@ -1,57 +1,14 @@
 import { css } from "../styled-system/css";
 
-/** Blog-post article styles. Used by Post.tsx and the agent-onboarding page. */
+/**
+ * Blog-post article styles. Used by Post.tsx.
+ *
+ * The page grid (article + ToC) is NOT here — it lives in ArticleShell.styles.ts, since
+ * agent-onboarding renders it too.
+ */
 
 // Post component styles
 export const post = {
-  // 3-column symmetric grid layout for posts with ToC sidebar
-  // Empty left column balances the ToC on the right for visual symmetry
-  articleLayout: css({
-    display: "grid",
-    // Symmetric: empty left (250px) | content (720px) | ToC right (250px)
-    gridTemplateColumns: "250px minmax(0, 720px) 250px",
-    gap: "8",
-    justifyContent: "center",
-
-    // "Break out" of parent containers to use full viewport width
-    width: "100vw",
-    position: "relative",
-    left: "50%",
-    marginLeft: "-50vw",
-
-    // Tablet: Center content, hide ToC, return to normal layout
-    "@media (max-width: 1200px)": {
-      // Reset break-out
-      width: "100%",
-      position: "static",
-      left: "auto",
-      marginLeft: "0",
-      // Single centered column
-      gridTemplateColumns: "1fr",
-      maxWidth: "720px",
-      margin: "0 auto",
-    },
-
-    // Mobile: Single column, tighter spacing
-    "@media (max-width: 768px)": {
-      gridTemplateColumns: "1fr",
-      gap: "0",
-    },
-  }),
-
-  // Main content area (center column)
-  articleContent: css({
-    minWidth: 0, // Prevents grid blowout with long content
-  }),
-
-  // ToC sidebar (right column)
-  articleSidebar: css({
-    // Hidden on smaller screens (ToC component handles its own hiding too)
-    "@media (max-width: 1200px)": {
-      display: "none",
-    },
-  }),
-
   // The article title. Deliberately NOT titleBar.title: that style is shared with /lab,
   // /imagegen and the index pages, which must stay sans — a serif <h1>Lab</h1> would
   // contradict "sans = things you operate". Same size and responsive steps as
@@ -67,7 +24,8 @@ export const post = {
     "@media (max-width: 768px)": { fontSize: "xl" },
     "@media (max-width: 480px)": { fontSize: "lg" },
     wordBreak: "break-word",
-    hyphens: "auto",
+    // manual, not auto — see contentContainer below.
+    hyphens: "manual",
   }),
 
   // The reading surface, and the ONLY place the site opts into the serif. Everything
@@ -81,8 +39,17 @@ export const post = {
     lineHeight: "relaxed",
     fontFamily: "reading",
     fontSize: "lg", // 18px — prose reads larger than interface text
-    maxWidth: "65ch", // inner measure, narrower than the 900px container
-    hyphens: "auto", // correct only because <html lang> is now set — see pages/+config.ts
+    // The measure, sized to fill ArticleShell's 720px column so the body shares its edges
+    // with the title and metadata. Was 65ch (~640px), which left 80px of the column
+    // unreachable — `overflow: hidden` above means nothing, not even a float, could use it.
+    // Kept in `ch` rather than px so it survives a font-size change (IDENTITY.md); the
+    // min() guards against the ch value computing wider than the column on a fallback face.
+    maxWidth: "min(72ch, 100%)",
+    // `auto` hyphenated English prose — three of six lines in a typical first paragraph,
+    // which is what made the body read as compressed rather than unhurried. <html lang>
+    // does not help: it follows the URL prefix (pages/+lang.ts), not the post's language,
+    // so it only picks which language's rules apply, never whether to hyphenate at all.
+    hyphens: "manual",
   }),
   // Lazy-loaded interactive component is still resolving.
   loadingBox: css({

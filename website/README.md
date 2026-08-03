@@ -114,8 +114,8 @@ stacks. They remain valid tokens, so `fontFamily: "mono"` fails *silently*. Rule
 | --- | --- |
 | size | `lg` (18px) — UI stays at `md` (16px) or below |
 | leading | `relaxed` |
-| measure | `max-width: 65ch`, an inner bound *inside* the 900px `container` |
-| hyphens | `auto` — correct only because `<html lang>` is set per locale in `pages/+lang.ts` |
+| measure | `max-width: min(72ch, 100%)`, sized to fill `ArticleShell`'s 720px column so body, title and metadata share edges |
+| hyphens | `manual` — `auto` hyphenated English prose and read as compressed. `<html lang>` does not fix this: it follows the URL prefix, not the content's language |
 
 Prefer variable builds: one file per family, not one per weight. Headings take their hierarchy
 from weight and whitespace, not from a size ratio.

@@ -8,20 +8,26 @@ decisions already made — **§4 does not**, and is marked as the open decision 
 
 ---
 
-## 1. Hyphenation — one property, do first
+## 1. Hyphenation — done
 
-English body text hyphenates (`be-cause`, `securi-ty`). Ragged-plus-hyphenated is the main
-source of the "compressed" feeling; the measure itself is fine.
+English body text hyphenated (`be-cause`, `securi-ty`). Ragged-plus-hyphenated was the main
+source of the "compressed" feeling; the measure itself was fine.
 
-`hyphens: "auto"` is set unconditionally in `components/Post.styles.ts` — on both
-`title` and `contentContainer`. The comment there and the `hyphens` row in `README.md`
-justify it with "correct only because `<html lang>` is set", but `lang` only makes *German*
-hyphenate by German rules. It never stops English from hyphenating at all. The existing
-justification does not cover the defect.
+`hyphens: "auto"` was set unconditionally at three call sites — `post.title` and
+`post.contentContainer` in `components/Post.styles.ts`, and `titleBar.title` in
+`layouts/shared.ts`. The comments there and the `hyphens` row in `README.md` justified it
+with "correct only because `<html lang>` is set", but `lang` only makes *German* hyphenate by
+German rules; it never stops English from hyphenating at all.
 
-Fix: set `hyphens: "manual"` at both call sites and scope `auto` to `:lang(de)` globally.
-A `:lang(en)` global rule alone will not work — it loses to the Panda atomic class on
-`contentContainer`. Update the `README.md` row to match.
+**Done:** all three set to `hyphens: "manual"`. No `:lang()` rule.
+
+The earlier proposal here was to scope `auto` to `:lang(de)`. That was dropped: `<html lang>`
+follows the URL prefix, not the content's language. Blog posts are untranslated and serve
+under both `/blog/` and `/de/blog/`, so a `:lang(de)` rule would hyphenate English prose under
+`/de` by German rules and still miss the one genuinely German post
+(`blog/sprit_national.mdx`). Correct scoping would need a `lang` frontmatter field plumbed to
+the prose container — not worth it for one post. `pages/+lang.ts` stays as it is; it is still
+right for screen readers and `hreflang`, it is simply no longer load-bearing here.
 
 ## 2. ToC and layout spacing — craft, no identity risk
 

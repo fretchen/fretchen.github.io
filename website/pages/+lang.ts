@@ -5,9 +5,11 @@ import { defaultLocale } from "../locales/locales";
  * `<html lang>`, following the URL locale that +onBeforeRoute.ts puts on the pageContext.
  *
  * This was previously unset, so every page — including the `/de/` routes — claimed to be
- * English. Beyond being wrong for screen readers and search engines, it is what makes
- * `hyphens: auto` on the prose container safe: without a correct lang the browser
- * hyphenates German compounds by English rules.
+ * English, which is wrong for screen readers and search engines.
+ *
+ * Not load-bearing for hyphenation, despite what an earlier comment here claimed: the prose
+ * container sets `hyphens: manual`, and this value follows the URL prefix rather than the
+ * content's language anyway — blog posts are untranslated and serve under both prefixes.
  *
  * Lives in its own file because Vike serialises +config.ts values to JSON and so rejects
  * function-valued configs there.

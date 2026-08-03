@@ -45,18 +45,18 @@ You prepaid into a smart contract, and then I settled messages in [batches](/blo
 - **Every message left a public trace.** Settling on-chain meant publishing, for each message, which address sent it, what it cost, and when. Balances were readable by anyone. I had built an assistant you could pay anonymously that kept a public log of everyone's usage. That bothered me more the longer it ran — enough that I never really used my own assistant.
 - **It was custom-made.** The code was open source, but the API was artisanal. I was learning serverless functions at the time and wanted the simplest thing that worked. So there was no specification, and nothing another program could find or read.
 
-None of these were bugs but real limitations that bothered me. 
+None of these were bugs but real limitations that bothered me.
 
 ## Moving towards x402
 
-I was able to tackle of of them with new technology in form of x402 [batch-settlement](https://x402.org/x402-batch-settlement/). I already covered [x402 itself](/blog/22/) when I put it behind my image generator.
+x402 recently added a new payment mode called [batch-settlement](https://x402.org/x402-batch-settlement/). It takes care of the first two — the money and the public trace. I already covered [x402 itself](/blog/22/) when I put it behind my image generator.
 Briefly: you call an endpoint, get back `402 Payment Required` with machine-readable instructions, sign a payment, and retry. No accounts, no API keys.
 
 That previous approach used the `exact` scheme — one signed payment, one on-chain settlement, per request. This works nicely for a 7-cent image. However, it is too expensive and too slow for chat. A message typically costs a fraction of a cent, so gas would dwarf the payment — and every message would wait on an on-chain confirmation before the reply came back.
 
 The new _Batch-settlement_ uses a payment channel instead, which works like a bar tab:
 
-1. **Open the tab.** Your first message deposits USDC into an escrow contract. This is your one transaction.
+1. **Open the tab.** Your first message deposits USDC into an escrow contract — the minimum is currently 50 cents, which covers at least 150 messages. This is your one transaction.
 2. **Run up the tab.** Every later message signs a _voucher_ — an off-chain IOU capping what the agent may claim in total. Just a signature. No transaction, no gas, no waiting.
 3. **Cash out.** A cron job on my side runs `claimAndSettle()` every 12 hours, through a facilitator — the service that checks payments are valid and pushes them on-chain.
 
@@ -77,6 +77,8 @@ Pricing got more sophisticated as a side effect. Each message advertises a ceili
 | Per message, on-chain  | Address, token count, cost, timestamp | Nothing                                               |
 | Getting your money out | Via my contract                       | You withdraw it yourself, even if I disappear         |
 | Settlement trust       | My batch, my Merkle root              | Facilitator — swappable, and cryptographically capped |
+
+To be clear, this is less exposure rather than none. The deposit and the final payout are still on-chain, so anyone can see that your wallet opened a channel with my agent and roughly what it paid in the end. What is gone is everything in between: how many messages, how long they were, and when you sent them.
 
 There is still a facilitator in the picture, and I [complained about facilitator trust](/blog/22/) when I built one. The difference now is that facilitators are interchangeable: if I stop trusting mine, I point at another one and nothing else changes. My old settlement contract could not be swapped for anything. Getting it wrong meant rebuilding the service.
 
@@ -107,7 +109,7 @@ It declares the schemas, the model IDs actually served, the price ceiling, and �
   Base (eip155:8453), scheme batch-settlement."
 ```
 
-A very low bar: speak this body shape, accept USDC on Optimism or Base via batch-settlement, and you are an `llm/v1` agent. Anything that can pay one can pay all of them. [x402scan](https://www.x402scan.com) is a crawler that indexes x402-payable endpoints. It found my agents, read their specs, and listed them — the [AI assistant](https://www.x402scan.com/server/f2788b7c-7933-42c2-9e69-ed57cf91e58a) and the [image generator](https://www.x402scan.com/server/1246cf89-3c1d-4a2d-9cb7-d96a4b40e9a6).
+A very low bar: speak this body shape, accept USDC on Optimism or Base via batch-settlement, and you are an `llm/v1` agent. Anything that can pay one can pay all of them. Optimism needed a small fix in the x402 SDK first, which I [sent upstream](https://github.com/x402-foundation/x402/pull/2924) — batch-settlement now works on any EVM chain, not just the ones on the SDK's built-in list. [x402scan](https://www.x402scan.com) is a crawler that indexes x402-payable endpoints. It found my agents, read their specs, and listed them — the [AI assistant](https://www.x402scan.com/server/f2788b7c-7933-42c2-9e69-ed57cf91e58a) and the [image generator](https://www.x402scan.com/server/1246cf89-3c1d-4a2d-9cb7-d96a4b40e9a6).
 All I had to do was prove the origins were mine: sign the origin URL with the receiving wallet, paste the signature into `x-discovery.ownershipProofs`. A one-line script and a static field. A directory I have no relationship with can now hand my agent to a paying client that has never heard of me.
 
 My own frontend takes the same route. The `useX402Chat` hook takes an agent URL, mine is just the default, and channel state is keyed per origin so switching is isolated — it can pay any `llm/v1` agent, not only my own.
@@ -120,6 +122,6 @@ All of these feels like a substantial step forward:
 - Dropping per-message settlement improved privacy. The first version went for anonymous payment and still needed a fairly detailled usage log. This one publishes nothing per message.
 - And adopting the standards did more for reuse than any API I would have written myself. Two of my services now sit in a directory I never registered with.
 
-New standards keep appearing for things I built myself, and I will keep adopting them. It usually costs less than the migration looks like it will. 
+New standards keep appearing for things I built myself, and I will keep adopting them. It usually costs less than the migration looks like it will.
 
-**Try it.** Go to the [assistent](/assistent/) — connect a wallet, deposit a little USDC on Optimism or Base, and chat. The first message opens a channel; the rest are signatures. If you want to build one yourself, [/agent-onboarding](/agent-onboarding) walks through the whole flow and checks a live endpoint against the `llm/v1` contract as you go. I look forward to your feedback.
+**Try it.** Go to the [assistent](/assistent/) — connect a wallet, deposit a little USDC (50 cents is currently the minimum) on Optimism or Base, and chat. The first message opens a channel; the rest are signatures. If you want to build one yourself, [/agent-onboarding](/agent-onboarding) walks through the whole flow and checks a live endpoint against the `llm/v1` contract as you go. I look forward to your feedback.

@@ -4,6 +4,7 @@ publishing_date: "2026-08-02"
 category: "blockchain"
 secondaryCategory: "ai"
 description: "I replaced my AI assistant's custodial smart contract with x402 payment channels — so I no longer hold anyone's money, nothing is published per message, and any client can find and pay the agent."
+tokenID: 200
 ---
 
 import MermaidDiagram from "../components/MermaidDiagram";
@@ -70,15 +71,13 @@ The money never passes through me. It sits in escrow until a voucher the user si
 
 Pricing got more sophisticated as a side effect. Each message advertises a ceiling of at most 0.003 USDC, and the voucher signs against that ceiling. The actual claim is computed from real token usage afterwards, and it is almost always well under. You authorize an upper bound; I charge what it cost.
 
-|                        | First version                         | Now                                                   |
-| ---------------------- | ------------------------------------- | ----------------------------------------------------- |
-| Who holds deposits     | My upgradeable contract               | Canonical escrow, nobody's to upgrade                 |
-| Unit                   | ETH                                   | USDC                                                  |
-| Per message, on-chain  | Address, token count, cost, timestamp | Nothing                                               |
-| Getting your money out | Via my contract                       | You withdraw it yourself, even if I disappear         |
-| Settlement trust       | My batch, my Merkle root              | Facilitator — swappable, and cryptographically capped |
-
-To be clear, this is less exposure rather than none. The deposit and the final payout are still on-chain, so anyone can see that your wallet opened a channel with my agent and roughly what it paid in the end. What is gone is everything in between: how many messages, how long they were, and when you sent them.
+|                        | First version                           | Now                                                   |
+| ---------------------- | --------------------------------------- | ----------------------------------------------------- |
+| Who holds deposits     | My upgradeable contract                 | Canonical escrow, nobody's to upgrade                 |
+| Unit                   | ETH                                     | USDC                                                  |
+| What anyone can see    | Every message: your address, size, time | That you opened a channel, nothing more               |
+| Getting your money out | Via my contract                         | You withdraw it yourself, even if I disappear         |
+| Settlement trust       | My batch, my Merkle root                | Facilitator — swappable, and cryptographically capped |
 
 There is still a facilitator in the picture, and I [complained about facilitator trust](/blog/22/) when I built one. The difference now is that facilitators are interchangeable: if I stop trusting mine, I point at another one and nothing else changes. My old settlement contract could not be swapped for anything. Getting it wrong meant rebuilding the service.
 
@@ -119,7 +118,7 @@ My own frontend takes the same route. The `useX402Chat` hook takes an agent URL,
 All of these feels like a substantial step forward:
 
 - Giving up custody shrank my [threat model](/blog/30/). The worst case for my owner key used to include draining everyone's deposits; now there are nobody's deposits to drain.
-- Dropping per-message settlement improved privacy. The first version went for anonymous payment and still needed a fairly detailled usage log. This one publishes nothing per message.
+- Privacy improved. Anyone could see every message you sent, how big it was and when; now they can only see that you showed up.
 - And adopting the standards did more for reuse than any API I would have written myself. Two of my services now sit in a directory I never registered with.
 
 New standards keep appearing for things I built myself, and I will keep adopting them. It usually costs less than the migration looks like it will.

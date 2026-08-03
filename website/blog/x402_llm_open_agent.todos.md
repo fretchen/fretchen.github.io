@@ -4,27 +4,29 @@
 
 **Plan file:** Found (`x402_llm_open_agent.plan.md`). The post now diverges from it in two deliberate ways — the "What I changed" summary section was cut, and the EIP-8004 / favicon material is gone. Both look like intentional tightening rather than oversight; see Suggestions for the one consequence worth repairing.
 
-**Overall impression:** This is a large improvement. The structure now genuinely runs goal → v1 → limitations → tech, the prose is ~25% tighter again (1,272 words), and — checked line by line — **no cliffhangers or tease-then-defer constructions survive**. The problem list appears exactly once. The biggest concerns are not stylistic: there is one hard factual error that contradicts the post's own quoted spec, and the compression has left two table rows making claims the body no longer supports.
+**Overall impression:** This is a large improvement. The structure now genuinely runs goal → v1 → limitations → tech, the prose is ~25% tighter again (1,272 words), and — checked line by line — **no cliffhangers or tease-then-defer constructions survive**. The problem list appears exactly once. The remaining issues are accuracy and compression rather than style: the post quotes a version of its own spec that Optimism support has since superseded, and a table row promising "unilateral exit" lost the paragraph that explained it.
+
+**Note on chain support:** this critique was revised after `bafef29d` ("Op assistent", #589) shipped Optimism batch-settlement. Items written against the earlier Base-only state have been corrected — the prose claim "Base or Optimism" is right; the quoted JSON is what needs updating.
 
 ## Critical Issues
 
-- [ ] **[§ Being findable on x402scan]** Line 107 says a compatible agent must "accept USDC on Base **or Optimism** via batch-settlement". The agent does not advertise Optimism for batch-settlement, and the contradiction is visible on screen: the `x-interop-floor` JSON block quoted **three lines above** says Base (`eip155:8453`) only, as does the live spec (verified against `llm-agent.fretchen.eu/openapi.json`).
+- [x] **FIXED — [§ Being findable on x402scan]** The quoted `x-interop-floor` JSON block (lines 101–104) is **stale** and contradicts the prose three lines below it. The code block says Base (`eip155:8453`) only; line 107 correctly says "Base or Optimism". The prose is the accurate half — `bafef29d` ("Op assistent", #589) shipped Optimism, and the live spec now reads:
 
-      The underlying situation is more interesting than a simple typo, and worth getting right because the layers disagree:
-      - The `x402BatchSettlement` contract **is** deployed on Optimism (canonical CREATE2 address).
-      - Your facilitator **does** support it — `x402_facilitator/chain_utils.ts:68` returns `["eip155:10", "eip155:8453", "eip155:84532"]`.
-      - But the LLM agent **cannot advertise it**: `scw_js/x402_server.ts:26` omits Optimism, because `@x402/evm`'s `DEFAULT_STABLECOINS` registry has no `eip155:10` entry, so `enhancePaymentRequirements()` throws and would 500 the *entire* 402 response — not just the Optimism entry. The comment says "omit until the SDK adds it", confirmed live via notebook on 2026-07-15.
-      - Optimism **is** live for the image generator, which uses the `exact` scheme (`SUPPORTED_NETWORKS` includes `eip155:10`). That is the likely source of the slip.
+      > "…at least one accepts[] entry with asset USDC on network Optimism (eip155:10) **or** Base (eip155:8453), scheme batch-settlement."
 
-      So batch-settlement on Optimism is blocked by an upstream SDK gap, not by anything you chose. Either drop "or Optimism", or say Base-only-today and name the SDK gap — the latter would also give the post the one "here's what does not work yet" beat it currently lacks (see the EIP-8004 nitpick below).
+      (Verified against `llm-agent.fretchen.eu/openapi.json`; `scw_js/x402_server.ts:29` now sets `BATCH_SETTLEMENT_NETWORKS = ["eip155:10", "eip155:8453", "eip155:84532"]`, matching the facilitator.) Fix is simply to paste the current value into the code block. This audience reads spec blocks, and a post that quotes a spec incorrectly next to the link to that spec is checkable in one click.
 
-- [ ] **[§ Moving towards x402]** The comparison table promises "Getting your money out → **Unilateral exit after a delay**", but the paragraph that explained the unilateral exit was cut in this revision. "Unilateral exit" is precisely the payment-channel vocabulary this audience half-knows and cannot reconstruct: they will not know that they can force their escrow back *without the operator cooperating*, nor that the delay is 24 hours and deliberately set to twice the claim cron's interval. This is one of the five rows carrying the entire trust argument, and it is currently an unbacked assertion. One sentence in the body restores it.
+- [x] **FIXED — [§ Moving towards x402]** The comparison table promised "Getting your money out → **Unilateral exit after a delay**" while the paragraph explaining it had been cut. Resolved by making the row self-contained ("You withdraw it yourself, even if I disappear") rather than adding body text — the jargon goes away and the escrow-lock objection is still answered.
 
-- [ ] **[§ What it bought]** The final sentence of the post is broken: *"It just and buys more than its feature list suggests."* Words are missing. This is the last thing the reader sees, and a garbled closing line undercuts the confident, considered register the rest of the post earns.
+- [x] **FIXED — [§ What it bought]** The final sentence was broken (*"It just and buys more than its feature list suggests."*). Replaced with a plain three-sentence close that keeps the cost/benefit point.
 
 - [ ] **[Frontmatter]** `tokenID` is absent. Every sibling post in `website/blog/` that is published carries it, and the field is listed as required. If the mint is still pending this is a publish blocker rather than a writing problem, but it must not ship without it.
 
 ## Suggestions
+
+- [x] **PARTLY FIXED — [§ Adapting the frontend + sequence diagram]** The call to action now reads "deposit a little USDC on Optimism or Base". **Still open:** the sequence diagram labels the chain participant `Base<br/>(USDC escrow)` (line 16) — left single-chain as an illustration, but change it to something chain-neutral if the Base-only label reads as a constraint.
+
+- [ ] **[§ Being findable on x402scan]** Optimism support is a better story than the post currently tells, and it argues the post's own thesis. Per `x402_server.ts:29`, Optimism was blocked until `@x402/evm` 2.20: `enhancePaymentRequirements()` resolved the asset from the SDK's own `DEFAULT_STABLECOINS` registry, which has no `eip155:10` entry, so it threw and 500'd the entire 402 response. Upstream fixed it (x402-foundation/x402#2910) to honour the caller's `asset`/`extra`, and a second chain became available to you for essentially no work. That is a concrete instance of "adopting the standard buys more than its feature list suggests" — the claim the closing paragraph makes in the abstract. It would also restore the one "here's what did not work" beat the post lacks, with the advantage that this one has a happy ending.
 
 - [ ] **[§ Moving towards x402 / structure]** Cutting the "What I changed" summary tightened the post, but it removed the signposting that mapped the three rough edges onto the three following sections. The mapping still exists (custody + trace → *Moving towards x402*; custom-made → *One API* and *Being findable*) and is recovered in "What it bought", but the reader has to hold it in their head unaided for the whole middle of the post. A single bridging line after "None of these were bugs…" — naming that the next three sections take the three edges in order — would restore the spine without bringing the cut section back.
 

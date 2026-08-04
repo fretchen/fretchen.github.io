@@ -9,7 +9,9 @@ export const layout = {
     flexDirection: "column",
     width: "100%", // Full width instead of constrained
     padding: "0 32px", // Generous side margins for breathing room
-    backgroundColor: "gray.50", // Subtle background for content area
+    // No background: the page ground is white. The grey here only existed to make white
+    // cards visible; with those gone it would tint the whole site for nothing.
+    // See IDENTITY.md — whitespace structures, not tinted panels.
     "@media (max-width: 768px)": {
       padding: "0 16px", // Smaller margins on tablet
     },

@@ -320,10 +320,11 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
       {/* Expanded Details */}
       {isExpanded && (
         <div
+          // No bg: gray.50 was invisible on the old grey page and reads as a tinted panel on
+          // white. The border already groups the details.
           className={css({
             mt: "3",
             p: "3",
-            bg: "gray.50",
             border: "1px solid",
             borderColor: "gray.200",
             borderRadius: "md",

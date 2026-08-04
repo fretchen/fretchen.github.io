@@ -10,12 +10,6 @@ import { CATEGORIES, getCategoryIds, type CategoryId } from "../../types/Categor
 import type { BlogPost } from "../../types/BlogPost";
 import { button, sectionRule } from "../../styled-system/recipes";
 
-// Page-local style — nothing else uses it.
-const paragraph = css({
-  marginBottom: "sm",
-  lineHeight: "normal",
-});
-
 const App: React.FC = function () {
   // Get pre-loaded data from +data.ts
   const pageContext = usePageContext();
@@ -39,7 +33,7 @@ const App: React.FC = function () {
     <div className={styles.container}>
       <h1 className={styles.titleBar.title}>Blog</h1>
       <span className={sectionRule({ territory: "voice" })} aria-hidden="true" />
-      <p className={paragraph}>
+      <p className={styles.pageIntro}>
         Game theory and economics, quantum physics, and what I learned building on the web — often with something you
         can play with.
       </p>

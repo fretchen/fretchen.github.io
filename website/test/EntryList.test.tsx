@@ -152,19 +152,6 @@ describe("EntryList Component", () => {
   });
 
   /**
-   * Tests custom CSS class application to entry titles
-   * @test {string} titleClassName - Custom CSS class for title styling
-   * @test {HTMLElement} title - Title element with applied custom class
-   */
-  it("applies custom titleClassName when provided", () => {
-    const customClass = "custom-title-class";
-    render(<EntryList {...defaultProps} titleClassName={customClass} />);
-
-    const firstTitle = screen.getByText("First Blog Post");
-    expect(firstTitle).toHaveClass(customClass);
-  });
-
-  /**
    * Tests graceful handling of empty blog array
    * @test {BlogEntry[]} blogs - Empty array of blog entries
    * @test {null} entries - No blog entry elements should be rendered

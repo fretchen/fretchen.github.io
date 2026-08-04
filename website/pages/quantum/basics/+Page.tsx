@@ -4,7 +4,7 @@ import * as React from "react";
 import EntryList from "../../../components/EntryList";
 import { usePageContext } from "vike-react/usePageContext";
 import { titleBar } from "../../../layouts/shared";
-import { css } from "../../../styled-system/css";
+import * as styles from "../../../layouts/shared";
 import type { BlogPost } from "../../../types/BlogPost";
 import { sectionRule } from "../../../styled-system/recipes";
 
@@ -14,10 +14,10 @@ const App: React.FC = function () {
   const { blogs } = pageContext.data as { blogs: BlogPost[] };
 
   return (
-    <div className={css({ maxWidth: "900px", mx: "auto", px: "md" })}>
+    <div className={styles.container}>
       <h1 className={titleBar.title}>Quantum Basics</h1>
       <span className={sectionRule({ territory: "voice" })} aria-hidden="true" />
-      <p className={css({ marginBottom: "md", lineHeight: "normal" })}>
+      <p className={styles.pageIntro}>
         The hipster role is rather new to the quantum sector which has largely evolved under the radar to the greater
         public for the last one hundred years. To bring this into context, we will summarize some basic concepts of
         quantum physics and then discuss the four pillars of quantum technologies. Finishing this series of tutorials,

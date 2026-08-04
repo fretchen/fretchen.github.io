@@ -1,5 +1,5 @@
 import * as React from "react";
-import { baseContentCard } from "../layouts/shared";
+import { entryNftImage } from "./EntryNftImage.styles";
 import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS, isTestnet } from "@fretchen/chain-utils";
 import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
 import { NFTMetadata } from "../types/components";
@@ -94,12 +94,16 @@ export const EntryNftImage: React.FC<EntryNftImageProps> = ({ tokenId, fallbackI
   return (
     <>
       {isLoading ? (
-        <div className={baseContentCard.image} style={{ backgroundColor: "#f3f4f6" }} title="Loading NFT artwork..." />
+        <div className={entryNftImage.placeholder} title="Loading NFT artwork..." />
       ) : (
         <img
           src={imageUrl!}
           alt={nftName || "NFT Artwork"}
-          className={baseContentCard.image}
+          // u-featured sits on the <img>, not on a wrapper: mf2 reads `src` straight off a
+          // u-* img (its primary rule, rather than the only-child fallback), and the class
+          // then exists exactly when an image does. The old wrapper was rendered whenever
+          // blog.tokenID was truthy, so a failed lookup emitted an empty u-featured.
+          className={`u-featured ${entryNftImage.image}`}
           title={`NFT Artwork${nftName ? `: ${nftName}` : ""}`}
           onError={() => setImageUrl(null)}
           loading="lazy"

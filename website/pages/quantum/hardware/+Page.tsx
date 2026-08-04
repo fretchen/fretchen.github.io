@@ -4,7 +4,7 @@ import * as React from "react";
 import EntryList from "../../../components/EntryList";
 import { usePageContext } from "vike-react/usePageContext";
 import { titleBar } from "../../../layouts/shared";
-import { css } from "../../../styled-system/css";
+import * as styles from "../../../layouts/shared";
 import type { BlogPost } from "../../../types/BlogPost";
 import { sectionRule } from "../../../styled-system/recipes";
 
@@ -14,10 +14,10 @@ const App: React.FC = function () {
   const { blogs } = pageContext.data as { blogs: BlogPost[] };
 
   return (
-    <div className={css({ maxWidth: "900px", mx: "auto", px: "md" })}>
+    <div className={styles.container}>
       <h1 className={titleBar.title}>Quantum Hardware</h1>
       <span className={sectionRule({ territory: "voice" })} aria-hidden="true" />
-      <p className={css({ marginBottom: "md", lineHeight: "normal" })}>
+      <p className={styles.pageIntro}>
         Quantum technologies are rapidly evolving and different applications require very different hardware platforms.
         Especially for computational tasks there is a fierce competition with unknown outcome. In this series of
         tutorials on quantum hardware, we provide a basic introduction into some of the fundamental concepts behind

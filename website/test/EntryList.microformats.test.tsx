@@ -1,6 +1,7 @@
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
-import { render, waitFor } from "@testing-library/react";
+import { render } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import EntryList from "../components/EntryList";
 import { BlogEntry } from "../types/components";
 import "@testing-library/jest-dom";
@@ -30,22 +31,22 @@ vi.mock("../hooks/useConfiguredPublicClient", () => ({
  *
  * @see https://microformats.org/wiki/h-entry
  */
-describe("EntryList microformats", () => {
-  const blogs: BlogEntry[] = [
-    {
-      title: "A Post With Everything",
-      publishing_date: "2024-01-15",
-      description: "Description of the first post",
-      category: "blockchain",
-      secondaryCategory: "others",
-      nftMetadata: { imageUrl: "https://example.invalid/art.png", name: "Art" },
-    },
-    {
-      title: "A Bare Post",
-      publishing_date: "2024-02-20",
-    },
-  ] as BlogEntry[];
+const blogs: BlogEntry[] = [
+  {
+    title: "A Post With Everything",
+    publishing_date: "2024-01-15",
+    description: "Description of the first post",
+    category: "blockchain",
+    secondaryCategory: "others",
+    nftMetadata: { imageUrl: "https://example.invalid/art.png", name: "Art" },
+  },
+  {
+    title: "A Bare Post",
+    publishing_date: "2024-02-20",
+  },
+] as BlogEntry[];
 
+describe("EntryList microformats", () => {
   const renderList = () => render(<EntryList blogs={blogs} basePath="/blog" showDate={true} />);
 
   it("marks every entry as an h-entry", () => {
@@ -97,18 +98,20 @@ describe("EntryList microformats", () => {
     expect(container.querySelectorAll('a.u-bridgy-fed[href="https://fed.brid.gy/"]')).toHaveLength(2);
   });
 
-  it("emits u-featured only for entries that have artwork, on the <img> itself", async () => {
+  it("emits u-featured only for entries that have artwork, on the <img> itself", () => {
     const { container } = renderList();
 
     // Queried by class, not by structure — but pinned to IMG, because mf2 reads `src`
     // straight off a u-* img. On a wrapper it would fall back to the only-child rule, and a
     // failed image lookup would leave an empty u-featured behind.
-    await waitFor(() => {
-      const featured = container.querySelectorAll(".u-featured");
-      expect(featured).toHaveLength(1);
-      expect(featured[0].tagName).toBe("IMG");
-      expect(featured[0]).toHaveAttribute("src", "https://example.invalid/art.png");
-    });
+    //
+    // Deliberately synchronous, no waitFor: when the URL comes from build-time metadata the
+    // image must be there on the first render, or it is missing from the prerendered HTML
+    // that syndication actually reads. See test/EntryNftImage.ssr.test.tsx.
+    const featured = container.querySelectorAll(".u-featured");
+    expect(featured).toHaveLength(1);
+    expect(featured[0].tagName).toBe("IMG");
+    expect(featured[0]).toHaveAttribute("src", "https://example.invalid/art.png");
   });
 
   it("keeps the microformat anchors out of the accessible link list", () => {
@@ -118,5 +121,42 @@ describe("EntryList microformats", () => {
     const hidden = [...container.querySelectorAll("a.p-author, a.u-url, a.u-bridgy-fed")];
     expect(hidden).toHaveLength(6);
     hidden.forEach((a) => expect(a).toHaveStyle({ display: "none" }));
+  });
+});
+
+/**
+ * The same contract, in the prerendered HTML.
+ *
+ * This is the form that matters: Bridgy Fed fetches the built page, not a hydrated DOM. The
+ * jsdom assertions above run after effects, so they cannot tell a server-rendered property
+ * from one applied on hydration.
+ */
+describe("EntryList microformats, server-rendered", () => {
+  const html = () => renderToString(<EntryList blogs={blogs} basePath="/blog" showDate={true} />);
+
+  it("emits one h-entry per blog with its core properties", () => {
+    const markup = html();
+
+    expect(markup.match(/h-entry/g)).toHaveLength(2);
+    expect(markup).toContain("p-name");
+    expect(markup).toContain("dt-published");
+    expect(markup).toContain("p-summary");
+    expect(markup).toContain("u-url");
+    expect(markup).toContain("u-bridgy-fed");
+  });
+
+  it("emits u-featured with the real image URL for the entry that has artwork", () => {
+    const markup = html();
+
+    expect(markup.match(/u-featured/g)).toHaveLength(1);
+    expect(markup).toContain('src="https://example.invalid/art.png"');
+  });
+
+  it("emits no empty u-featured for an entry without artwork", () => {
+    // An empty u-featured element resolves to the page's base URL, so every such post would
+    // claim the blog index as its featured image. Absent is the correct output.
+    const markup = renderToString(<EntryList blogs={[blogs[1]]} basePath="/blog" showDate={true} />);
+
+    expect(markup).not.toContain("u-featured");
   });
 });

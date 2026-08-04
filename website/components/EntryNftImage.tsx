@@ -20,8 +20,20 @@ const MAINNET_NETWORKS = GENAI_NFT_NETWORKS.filter((n) => !isTestnet(n));
  * This component tries each mainnet until it finds the token.
  */
 export const EntryNftImage: React.FC<EntryNftImageProps> = ({ tokenId, fallbackImageUrl, nftName }) => {
-  const [imageUrl, setImageUrl] = React.useState<string | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
+  // Seeded from the prop so the FIRST render — including SSR — already has the image.
+  // Effects don't run while prerendering, so resolving only in the effect meant the built
+  // HTML shipped a placeholder and no u-featured, and that HTML is what Bridgy Fed and every
+  // other microformats consumer reads.
+  //
+  // Safe for hydration: fallbackImageUrl comes from build-time metadata that vike serialises
+  // into the client pageContext, so server and client compute identical initial state. (The
+  // useIsMounted pattern used elsewhere is for wallet state, which genuinely differs.)
+  //
+  // The initialiser runs once, so a fallbackImageUrl that *changed* on a live instance would
+  // not take effect. EntryList keys each entry by its stable blog index, so an instance maps
+  // to one post for its lifetime.
+  const [imageUrl, setImageUrl] = React.useState<string | null>(fallbackImageUrl ?? null);
+  const [isLoading, setIsLoading] = React.useState(!fallbackImageUrl);
 
   // Default to first mainnet for public client (we'll try all networks anyway)
   const defaultNetwork = MAINNET_NETWORKS[0];
@@ -50,16 +62,19 @@ export const EntryNftImage: React.FC<EntryNftImageProps> = ({ tokenId, fallbackI
   };
 
   React.useEffect(() => {
+    // Already resolved from build-time metadata at first render — there is nothing to fetch.
+    // Returning early also stops a re-run from resurrecting an image that onError just
+    // cleared, and keeps setIsLoading(true) from flickering back to the placeholder.
+    if (fallbackImageUrl) return;
+
     const loadNFTImage = async () => {
       try {
         setIsLoading(true);
 
-        if (fallbackImageUrl) {
-          setImageUrl(fallbackImageUrl);
-          setIsLoading(false);
-          return;
-        }
-
+        // Only reachable when build-time metadata is missing. Today every tokenID gets it,
+        // so this is a fallback rather than a hot path — but it has to stay: the build-time
+        // loader queries one chain (utils/nodeChainUtils.ts getDefaultNetwork) while this
+        // component covers all mainnets, so a Base-minted NFT would land here.
         if (tokenId && publicClient) {
           // Get token URI using public client (same as NFTFloatImage)
           const tokenURIResult = await publicClient.readContract({

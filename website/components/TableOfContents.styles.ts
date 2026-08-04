@@ -7,8 +7,11 @@ export const toc = {
   /** Main container - sticky positioning */
   container: css({
     position: "sticky",
-    top: "100px",
-    maxHeight: "calc(100vh - 120px)",
+    // The app bar is `position: relative` (layouts/LayoutDefault.styles.ts) and scrolls
+    // away, so there is no fixed header to clear. The old 100px/120px pair was sized for
+    // one that does not exist and parked the ToC a long way down the viewport.
+    top: "20px",
+    maxHeight: "calc(100vh - 40px)",
     overflowY: "auto",
     paddingRight: "sm",
     paddingBottom: "lg",
@@ -49,8 +52,17 @@ export const toc = {
 
   /** Individual list item */
   listItem: css({
-    margin: 0,
+    // Entry separation lives here, NOT on the link's paddingY: padding sits inside the
+    // border-left rail, so widening it would stretch the active indicator instead of
+    // separating entries. The rail must stay flush to exactly one entry.
+    // Longhands rather than `margin: 0` so this can't lose a shorthand-vs-longhand
+    // ordering race with marginBottom in Panda's atomic output.
+    marginTop: "0",
+    marginBottom: "0.5em",
     padding: 0,
+    "&:last-child": {
+      marginBottom: "0",
+    },
   }),
 
   /** Link styling - base state */
@@ -59,7 +71,9 @@ export const toc = {
     paddingY: "xs",
     paddingX: "sm",
     fontSize: "sm",
-    lineHeight: "normal",
+    // snug (1.375), not normal (1.5): a wrapped entry's own lines must sit tighter than the
+    // gap between entries, or item boundaries are ambiguous. Keep in sync with linkActive.
+    lineHeight: "snug",
     color: "gray.600",
     textDecoration: "none",
     borderLeft: "2px solid transparent",
@@ -77,7 +91,7 @@ export const toc = {
     paddingY: "xs",
     paddingX: "sm",
     fontSize: "sm",
-    lineHeight: "normal",
+    lineHeight: "snug", // must match link above
     color: "gray.900",
     fontWeight: "semibold",
     textDecoration: "none",

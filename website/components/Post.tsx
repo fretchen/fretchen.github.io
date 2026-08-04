@@ -18,6 +18,7 @@ import { useWebmentionUrls } from "../hooks/useWebmentionUrls";
 import { fetchWebmentions } from "../utils/webmentionUtils";
 import { SITE } from "../utils/siteData";
 import { TableOfContents } from "./TableOfContents";
+import { ArticleShell } from "./ArticleShell";
 
 import { Webmentions } from "./Webmentions";
 import { CommentsSection } from "./CommentsSection";
@@ -205,64 +206,56 @@ export function Post({
       <a className="u-bridgy-omit-link" href="https://brid.gy/publish/mastodon" style={{ display: "none" }} />
       <a className="u-bridgy-omit-link" href="https://brid.gy/publish/bluesky" style={{ display: "none" }} />
 
-      {/* 3-column grid layout: spacer | content | ToC sidebar */}
-      <div className={post.articleLayout}>
-        {/* Left spacer (empty on all screen sizes) */}
-        <div />
-
-        {/* Main content column */}
-        <div className={post.articleContent}>
-          <h1 className={`p-name ${post.title}`}>{title}</h1>
-
-          <MetadataLine publishingDate={publishing_date} showSupport={true} reactionCount={reactionCount} />
-
-          {/* Render based on post type */}
-          <div className="e-content" ref={contentRef}>
-            <ReactPostRenderer
-              key={componentPath}
-              componentPath={componentPath ?? ""}
-              tokenID={tokenID}
-              contentRef={contentRef}
-              onReady={handleContentReady}
-            />
-          </div>
-
-          {/* Navigation zwischen Posts */}
-          {(prevPost || nextPost) && (
-            <div className={post.navigation}>
-              {prevPost ? (
-                <div className={`${post.navLink} ${post.navLinkPrev}`}>
-                  <Link href={`${basePath}/${prevPost.id}`}>
-                    <span className={post.navLabel}>Previous: </span>
-                    <span className={post.navTitle}>{prevPost.title}</span>
-                  </Link>
-                </div>
-              ) : (
-                <div></div>
-              )}
-
-              {nextPost ? (
-                <div className={`${post.navLink} ${post.navLinkNext}`}>
-                  <Link href={`${basePath}/${nextPost.id}`}>
-                    <span className={post.navLabel}>Next: </span>
-                    <span className={post.navTitle}>{nextPost.title}</span>
-                  </Link>
-                </div>
-              ) : (
-                <div></div>
-              )}
-            </div>
-          )}
-
-          <Webmentions />
-          <CommentsSection />
+      <ArticleShell
+        header={
+          <>
+            <h1 className={`p-name ${post.title}`}>{title}</h1>
+            <MetadataLine publishingDate={publishing_date} showSupport={true} reactionCount={reactionCount} />
+          </>
+        }
+        toc={<TableOfContents contentRef={contentRef} isReady={contentReady} />}
+      >
+        {/* Render based on post type */}
+        <div className="e-content" ref={contentRef}>
+          <ReactPostRenderer
+            key={componentPath}
+            componentPath={componentPath ?? ""}
+            tokenID={tokenID}
+            contentRef={contentRef}
+            onReady={handleContentReady}
+          />
         </div>
 
-        {/* Right sidebar with Table of Contents */}
-        <aside className={post.articleSidebar}>
-          <TableOfContents contentRef={contentRef} isReady={contentReady} />
-        </aside>
-      </div>
+        {/* Navigation zwischen Posts */}
+        {(prevPost || nextPost) && (
+          <div className={post.navigation}>
+            {prevPost ? (
+              <div className={`${post.navLink} ${post.navLinkPrev}`}>
+                <Link href={`${basePath}/${prevPost.id}`}>
+                  <span className={post.navLabel}>Previous: </span>
+                  <span className={post.navTitle}>{prevPost.title}</span>
+                </Link>
+              </div>
+            ) : (
+              <div></div>
+            )}
+
+            {nextPost ? (
+              <div className={`${post.navLink} ${post.navLinkNext}`}>
+                <Link href={`${basePath}/${nextPost.id}`}>
+                  <span className={post.navLabel}>Next: </span>
+                  <span className={post.navTitle}>{nextPost.title}</span>
+                </Link>
+              </div>
+            ) : (
+              <div></div>
+            )}
+          </div>
+        )}
+
+        <Webmentions />
+        <CommentsSection />
+      </ArticleShell>
     </article>
   );
 }

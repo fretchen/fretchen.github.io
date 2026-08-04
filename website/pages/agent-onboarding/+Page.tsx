@@ -2,8 +2,8 @@ import React, { useRef } from "react";
 import { css } from "../../styled-system/css";
 import * as styles from "../../layouts/shared";
 import { sectionRule } from "../../styled-system/recipes";
-import { post } from "../../components/Post.styles";
 import { AgentChecker } from "../../components/AgentChecker";
+import { ArticleShell } from "../../components/ArticleShell";
 import { TableOfContents } from "../../components/TableOfContents";
 import { CommentsSection } from "../../components/CommentsSection";
 import { ParamTable } from "../../components/ParamTable";
@@ -53,10 +53,11 @@ sequenceDiagram
 
 /**
  * No section cards: boxes are reserved for things that are genuinely a distinct block (a
- * gotcha, a foldable, code, a diagram), never for "this is a section". scrollMarginTop keeps
- * ToC jumps clear of the fixed header.
+ * gotcha, a foldable, code, a diagram), never for "this is a section". scrollMarginTop gives
+ * anchor landings some breathing room — matched to headerOffset in TableOfContents.tsx.
+ * (There is no fixed header; the app bar scrolls away.)
  */
-const section = css({ scrollMarginTop: "90px" });
+const section = css({ scrollMarginTop: "24px" });
 
 // Section breaks are carried by size, weight and top margin alone — no bottom rule. The six
 // numbered Step separators already put horizontal rules through the page, and section rules
@@ -188,16 +189,21 @@ export default function Page() {
 
   return (
     <div className={styles.container}>
-      {/* Same breakout grid blog posts use: empty | content | sticky ToC, collapsing < 1200px. */}
-      <div className={post.articleLayout}>
-        <div />
-        <article ref={contentRef} className={css({ padding: "4" })}>
-          {/* Title first, like every other page; the status banner follows it. */}
-          <h1 className={css({ fontSize: "3xl", fontWeight: "bold", mb: "3", color: "gray.800" })}>
-            Build your own agent
-          </h1>
-          <span className={sectionRule({ territory: "explore" })} aria-hidden="true" />
-
+      {/* The same shell blog posts use — see components/ArticleShell. */}
+      <ArticleShell
+        header={
+          <>
+            {/* Title first, like every other page; the status banner follows it. */}
+            <h1 className={css({ fontSize: "3xl", fontWeight: "bold", mb: "3", color: "gray.800" })}>
+              Build your own agent
+            </h1>
+            <span className={sectionRule({ territory: "explore" })} aria-hidden="true" />
+          </>
+        }
+        toc={<TableOfContents contentRef={contentRef} />}
+      >
+        {/* No padding: the shell owns the column, so the body shares the header's edges. */}
+        <article ref={contentRef}>
           {/* Status banner: scope + honesty, not a warning label — hence the lab's purple
               rather than an alarm colour. */}
           <div
@@ -1017,10 +1023,7 @@ export default function Page() {
             <CommentsSection />
           </section>
         </article>
-        <aside className={post.articleSidebar}>
-          <TableOfContents contentRef={contentRef} />
-        </aside>
-      </div>
+      </ArticleShell>
     </div>
   );
 }

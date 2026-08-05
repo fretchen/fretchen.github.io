@@ -40,9 +40,9 @@ export const post = {
   contentContainer: css({
     // Container to handle floating layout
     overflow: "hidden", // Clears the float
-    lineHeight: "relaxed",
-    fontFamily: "reading",
-    fontSize: "lg", // 18px — prose reads larger than interface text
+    // The reading surface — family, size and leading come from the shared text style in
+    // panda.config.ts, which the /x402 and /agent-onboarding guides use too.
+    textStyle: "prose",
     // The measure, sized to fill ArticleShell's 720px column so the body shares its edges
     // with the title and metadata. Was 65ch (~640px), which left 80px of the column
     // unreachable — `overflow: hidden` above means nothing, not even a float, could use it.

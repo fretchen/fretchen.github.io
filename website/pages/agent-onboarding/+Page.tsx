@@ -59,13 +59,13 @@ sequenceDiagram
  */
 const section = css({ scrollMarginTop: "24px" });
 
-// Headings carry no local styles: they fall through to the one scale in panda.config.ts
-// globalCss, so this page cannot drift from the articles. Section breaks are still carried by
-// size, weight and top margin alone — no bottom rule. The six numbered Step separators already
-// put horizontal rules through the page, and section rules on top of those read as clutter.
-const para = css({ color: "gray.700", mb: "4", lineHeight: "relaxed" });
+// Headings, paragraphs and links carry no local styles: they fall through to the same rules
+// an article body uses — @layer base, and the one heading scale in panda.config.ts globalCss.
+// The reading face comes from `textStyle: "prose"` on the <article> below. This page is
+// documentation, not a tool, so it reads like an article; see IDENTITY.md.
+//
+// What stays local is what is genuinely this page's own furniture:
 const inlineCode = css({ fontFamily: "code", fontSize: "0.9em", bg: "gray.100", px: "1", borderRadius: "sm" });
-const extLink = css({ color: "brand", textDecoration: "underline", _hover: { color: "blue.800" } });
 const caption = css({ fontSize: "sm", color: "gray.500", mb: "1" });
 const note = css({
   fontSize: "sm",
@@ -87,7 +87,7 @@ function SrcRef({ path, lines, label }: { path: string; lines?: string; label?: 
   const file = path.split("/").pop();
   const anchor = lines ? `#L${lines.replace("-", "-L")}` : "";
   return (
-    <a href={`${GH_PIN}/${path}${anchor}`} target="_blank" rel="noopener noreferrer" className={extLink}>
+    <a href={`${GH_PIN}/${path}${anchor}`} target="_blank" rel="noopener noreferrer">
       {label ?? `${file}${lines ? `:${lines}` : ""}`}
     </a>
   );
@@ -155,7 +155,7 @@ function ApiReference() {
       <p className={css({ fontSize: "sm", color: "gray.600" })}>
         Couldn&apos;t load the live spec right now (the service scales to zero, so it may be waking up). Read it
         directly at{" "}
-        <a href={SPEC_URL} target="_blank" rel="noopener noreferrer" className={extLink}>
+        <a href={SPEC_URL} target="_blank" rel="noopener noreferrer">
           {SPEC_URL}
         </a>
         .
@@ -169,7 +169,7 @@ function ApiReference() {
       <ParamTable schema={schemas.LLMChatResponse} caption="Response body (HTTP 200)" />
       <p className={css({ fontSize: "sm", color: "gray.500" })}>
         These tables are generated from the live{" "}
-        <a href={SPEC_URL} target="_blank" rel="noopener noreferrer" className={extLink}>
+        <a href={SPEC_URL} target="_blank" rel="noopener noreferrer">
           openapi.json
         </a>{" "}
         — so they can&apos;t drift from what the service actually serves.
@@ -200,7 +200,7 @@ export default function Page() {
         toc={<TableOfContents contentRef={contentRef} />}
       >
         {/* No padding: the shell owns the column, so the body shares the header's edges. */}
-        <article ref={contentRef}>
+        <article ref={contentRef} className={css({ textStyle: "prose" })}>
           {/* Status banner: scope + honesty, not a warning label — hence the lab's purple
               rather than an alarm colour. */}
           <div
@@ -246,7 +246,7 @@ export default function Page() {
 
           <section className={section}>
             <h2>Who this is for</h2>
-            <p className={para}>
+            <p>
               A backend developer comfortable with <strong>Node and TypeScript</strong> who already has (or can put
               together) an LLM endpoint. <strong>No prior x402 or crypto-payments experience assumed</strong> — the one
               concept you need is explained below, and everything deeper is linked out rather than re-taught here.
@@ -262,12 +262,7 @@ export default function Page() {
                 <strong>Node + TypeScript</strong>, and the two SDK packages:{" "}
                 <code className={inlineCode}>npm install @x402/core @x402/evm</code>. The snippets below target{" "}
                 <strong>v2.20</strong> (check{" "}
-                <a
-                  href={`${GH_BLOB}/scw_js/package.json`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={extLink}
-                >
+                <a href={`${GH_BLOB}/scw_js/package.json`} target="_blank" rel="noopener noreferrer">
                   scw_js/package.json
                 </a>{" "}
                 for what we actually run) — batch-settlement is young and its APIs still move between minor versions, so
@@ -293,7 +288,7 @@ export default function Page() {
           {/* SECTION — how payment works */}
           <section className={section}>
             <h2>How the payment works</h2>
-            <p className={para}>
+            <p>
               When someone calls your endpoint without paying, you reply <strong>402 Payment Required</strong> plus a
               header describing how to pay. Their client pays in <strong>USDC</strong> (a dollar stablecoin) and
               retries. One blockchain transaction per chat message would be far too slow and expensive, so payment uses
@@ -304,18 +299,13 @@ export default function Page() {
 
             <MermaidDiagram definition={paymentFlowDiagram} title="Batch-settlement payment flow" />
 
-            <p className={para}>
+            <p>
               You don&apos;t implement the protocol yourself — the <code className={inlineCode}>@x402/evm</code> SDK
               does that. New to x402? These are the canonical docs:
             </p>
             <ul className={css({ color: "gray.700", pl: "4", lineHeight: "relaxed", mb: "0" })}>
               <li>
-                <a
-                  href={`${X402_DOCS}/core-concepts/http-402`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={extLink}
-                >
+                <a href={`${X402_DOCS}/core-concepts/http-402`} target="_blank" rel="noopener noreferrer">
                   The 402 challenge →
                 </a>
               </li>
@@ -324,28 +314,17 @@ export default function Page() {
                   href={`${X402_DOCS}/getting-started/quickstart-for-sellers`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={extLink}
                 >
                   Quickstart for sellers →
                 </a>
               </li>
               <li>
-                <a
-                  href={`${X402_DOCS}/schemes/batch-settlement`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={extLink}
-                >
+                <a href={`${X402_DOCS}/schemes/batch-settlement`} target="_blank" rel="noopener noreferrer">
                   The batch-settlement scheme →
                 </a>
               </li>
               <li>
-                <a
-                  href={`${X402_DOCS}/core-concepts/facilitator`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={extLink}
-                >
+                <a href={`${X402_DOCS}/core-concepts/facilitator`} target="_blank" rel="noopener noreferrer">
                   What a facilitator does →
                 </a>
               </li>
@@ -355,7 +334,7 @@ export default function Page() {
           {/* SECTION — the API */}
           <section className={section}>
             <h2>The API you expose</h2>
-            <p className={para}>
+            <p>
               One route: <code className={inlineCode}>POST /</code>, in the OpenAI chat-completions format — so it looks
               like any other LLM API and existing types just work.
             </p>
@@ -370,7 +349,7 @@ export default function Page() {
             </div>
 
             <h3>Try it right now</h3>
-            <p className={para}>
+            <p>
               Send an unpaid request to our live agent. You can run this verbatim — it costs nothing, and the 402 it
               returns is exactly what your own endpoint has to produce:
             </p>
@@ -404,20 +383,20 @@ export default function Page() {
     }, { "network": "eip155:84532", "...": "the same, for Base Sepolia" }]
   }`}</CodeBlock>
 
-            <p className={para}>
+            <p>
               You can&apos;t get past this point with curl — the next request has to carry a signed payment, which means
               opening a channel. For a <strong>real, runnable paid round-trip</strong>, use the buyer notebook: it
               drives a server through deposit → voucher → verify → settle over plain HTTP, on testnet by default (
               <code className={inlineCode}>USE_MAINNET = false</code>).
             </p>
-            <p className={para}>
+            <p>
               <SrcRef
                 path="scw_js/notebooks/sc_llm_x402_buyer.ipynb"
                 label="→ sc_llm_x402_buyer.ipynb (Deno notebook)"
               />
             </p>
 
-            <p className={para}>
+            <p>
               After payment your endpoint returns the ordinary OpenAI completion object shown in the response table
               above — <code className={inlineCode}>usage</code> included. Errors use the OpenAI shape,{" "}
               <code className={inlineCode}>{`{ error: { message, type, code } }`}</code>, with{" "}
@@ -429,37 +408,27 @@ export default function Page() {
           {/* SECTION — build it */}
           <section className={section}>
             <h2>Build it, step by step</h2>
-            <p className={para}>
+            <p>
               Each step shows the requirement and the real code from our implementation (
-              <a
-                href={`${GH_BLOB}/scw_js/sc_llm_x402.ts`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={extLink}
-              >
+              <a href={`${GH_BLOB}/scw_js/sc_llm_x402.ts`} target="_blank" rel="noopener noreferrer">
                 sc_llm_x402.ts
               </a>{" "}
               and{" "}
-              <a
-                href={`${GH_BLOB}/scw_js/x402_server.ts`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={extLink}
-              >
+              <a href={`${GH_BLOB}/scw_js/x402_server.ts`} target="_blank" rel="noopener noreferrer">
                 x402_server.ts
               </a>
               ), trimmed for readability and with our infrastructure swapped for portable equivalents. Each snippet ends
               with a line-anchored link to the original, so you can always diff against something that runs in
               production.
             </p>
-            <p className={para}>
+            <p>
               Snippets use a <strong>plain-object handler</strong> — an event in, a{" "}
               <code className={inlineCode}>{`{ statusCode, headers, body }`}</code> out. That&apos;s what serverless
               platforms hand you, and it maps to Express or Fetch handlers in a couple of lines.
             </p>
 
             <h3>Where everything goes</h3>
-            <p className={para}>
+            <p>
               This is the whole thing, with a slot for each step. Read it once — every later snippet fills exactly one
               of these slots, so you always know whether code belongs at module scope (runs once) or inside the handler
               (runs per request).
@@ -505,7 +474,7 @@ export default function Page() {
   // openapi.json   — discovery doc + the route that serves it    ── step 6`}</CodeBlock>
 
             <Step n={1} title="Start from an OpenAI-shaped endpoint">
-              <p className={para}>
+              <p>
                 If you already proxy an OpenAI-compatible model, you&apos;re done with this step — just validate the
                 input and reject streaming. Nothing here is x402-specific yet.
               </p>
@@ -548,30 +517,20 @@ export default function Page() {
             </Step>
 
             <Step n={2} title="Wire up the x402 resource server">
-              <p className={para}>
+              <p>
                 Create the resource server once at startup and register the batch-settlement scheme for each network you
                 accept. Two keys are involved: the <strong>receiver</strong> address that funds go to, and a separate{" "}
                 <strong>authorizer</strong> key that signs channel configuration off-chain (it never needs funding).
               </p>
-              <p className={para}>
+              <p>
                 For <code className={inlineCode}>FACILITATOR_URL</code>, pick a facilitator that advertises{" "}
                 <code className={inlineCode}>batch-settlement</code> on your network — check its{" "}
                 <code className={inlineCode}>/supported</code> endpoint. Public options are listed in the{" "}
-                <a
-                  href={`${X402_DOCS}/dev-tools/facilitators`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={extLink}
-                >
+                <a href={`${X402_DOCS}/dev-tools/facilitators`} target="_blank" rel="noopener noreferrer">
                   facilitator list
                 </a>{" "}
                 (e.g.{" "}
-                <a
-                  href="https://api.solvador.com/supported"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={extLink}
-                >
+                <a href="https://api.solvador.com/supported" target="_blank" rel="noopener noreferrer">
                   Solvador
                 </a>
                 ), or you can run your own.
@@ -603,7 +562,7 @@ export default function Page() {
             </Step>
 
             <Step n={3} title="Answer unpaid requests with a 402">
-              <p className={para}>
+              <p>
                 Build the payment requirements — the &quot;here&apos;s how to pay me&quot; description — and return them
                 as a 402. The SDK verifies and settles for you, but the <strong>HTTP transport</strong> — which headers,
                 encoded how — is yours to write. It&apos;s three ~15-line helpers, shown in this step and the next.
@@ -690,7 +649,7 @@ export default function Page() {
             </Step>
 
             <Step n={4} title="Verify, answer, settle">
-              <p className={para}>
+              <p>
                 This is the step that turns a plain endpoint into a paid one. Verify the voucher, run your inference,
                 then settle — and note the trick: you <strong>verify against a ceiling</strong> but{" "}
                 <strong>settle the amount actually used</strong>, so a short reply costs the user less.
@@ -792,7 +751,7 @@ export default function Page() {
             </Step>
 
             <Step n={5} title="Collect your money">
-              <p className={para}>
+              <p>
                 Per-message settlements are <strong>bookkeeping only</strong> — no funds move. A scheduled job redeems
                 the accumulated vouchers on-chain. Skip this and you never get paid. It&apos;s genuinely this short:
               </p>
@@ -816,7 +775,7 @@ export default function Page() {
             </Step>
 
             <Step n={6} title="Publish discovery + allow the browser in">
-              <p className={para}>
+              <p>
                 Finally, make yourself findable. Serve an OpenAPI document at{" "}
                 <code className={inlineCode}>GET /openapi.json</code> containing{" "}
                 <code className={inlineCode}>&quot;x-service-type&quot;: &quot;llm/v1&quot;</code>, your{" "}
@@ -876,15 +835,15 @@ export default function Page() {
           {/* SECTION — test it */}
           <section className={section}>
             <h2>Test it</h2>
-            <p className={para}>
+            <p>
               <strong>Start on Base Sepolia</strong> (<code className={inlineCode}>eip155:84532</code>) — same code
               path, no real money. Fund your test wallet from the{" "}
-              <a href="https://faucet.circle.com" target="_blank" rel="noopener noreferrer" className={extLink}>
+              <a href="https://faucet.circle.com" target="_blank" rel="noopener noreferrer">
                 Circle faucet
               </a>
               , and use the testnet USDC constants from step 3.
             </p>
-            <p className={para}>
+            <p>
               While developing, the checker below can point straight at{" "}
               <code className={inlineCode}>http://localhost:3000</code> — browsers treat localhost as a secure context,
               so a page on https can still reach it (current Chrome and Firefox). Just remember your CORS headers apply
@@ -896,7 +855,7 @@ export default function Page() {
               <code className={inlineCode}>eip155:10</code> or <code className={inlineCode}>eip155:8453</code>. Either
               one is enough. Everything above it — discovery, service type, the 402 challenge — should already be green.
             </div>
-            <p className={para}>
+            <p>
               <strong>The first real payment.</strong> Point the{" "}
               <SrcRef path="scw_js/notebooks/sc_llm_x402_buyer.ipynb" label="buyer notebook" /> at your server and run
               it top to bottom. It opens a channel, sends a paid message, and prints the settlement — the fastest way to
@@ -905,15 +864,10 @@ export default function Page() {
             </p>
             <p className={css({ color: "gray.700", lineHeight: "relaxed", mb: "0" })}>
               <strong>Then: pay yourself from a browser.</strong> Once the checker passes on mainnet, open the{" "}
-              <a href="/assistent" className={extLink}>
-                assistant
-              </a>
-              , open <em>Use a different agent</em>, paste your URL, and send one real message. That exercises the whole
-              path — deposit, voucher, verify, settle — from a real client. Being honest: this is currently the only
-              ready-made batch-settlement client there is (see{" "}
-              <a href="#challenges" className={extLink}>
-                Known limitations
-              </a>
+              <a href="/assistent">assistant</a>, open <em>Use a different agent</em>, paste your URL, and send one real
+              message. That exercises the whole path — deposit, voucher, verify, settle — from a real client. Being
+              honest: this is currently the only ready-made batch-settlement client there is (see{" "}
+              <a href="#challenges">Known limitations</a>
               ).
             </p>
           </section>
@@ -921,7 +875,7 @@ export default function Page() {
           {/* SECTION — checker */}
           <section id="checker" className={section}>
             <h2>Check your endpoint</h2>
-            <p className={para}>
+            <p>
               Paste your URL. This runs exactly the checks the assistant runs before it will talk to an endpoint — down
               to reading the base64 <code className={inlineCode}>Payment-Required</code> header from step 3 — and tells
               you which ones fail.
@@ -932,17 +886,12 @@ export default function Page() {
           {/* SECTION — known limitations */}
           <section id="challenges" className={section}>
             <h2>Known limitations</h2>
-            <p className={para}>Documented openly — these are rough edges of a young ecosystem, not of your code.</p>
+            <p>Documented openly — these are rough edges of a young ecosystem, not of your code.</p>
 
             <Challenge title="Few facilitators support batch-settlement">
               Most public facilitators (including Coinbase&apos;s) only support the simpler{" "}
               <code className={inlineCode}>exact</code> scheme. A handful run batch-settlement on mainnet —{" "}
-              <a
-                href="https://api.solvador.com/supported"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={extLink}
-              >
+              <a href="https://api.solvador.com/supported" target="_blank" rel="noopener noreferrer">
                 Solvador
               </a>{" "}
               and this project — so your options are limited today. The scheme is standard; its EVM wire binding is
@@ -984,27 +933,19 @@ export default function Page() {
           {/* SECTION — contact */}
           <section className={section}>
             <h2>Where this is going</h2>
-            <p className={para}>
+            <p>
               The endpoint contract is stable; what&apos;s filling in is the ecosystem around it — a drop-in client,
               more facilitators, more agents. The assistant already lets you point it at any compatible agent by URL; a
               curated picker only makes sense once there are enough of them to list.
             </p>
             <p className={css({ color: "gray.700", lineHeight: "relaxed", mb: "0" })}>
               Built one, or want to be listed when a picker ships? Reach out at{" "}
-              <a href="mailto:fretchen.dev@proton.me" className={extLink}>
-                fretchen.dev@proton.me
-              </a>{" "}
-              or on{" "}
-              <a
-                href="https://github.com/fretchen/fretchen.github.io"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={extLink}
-              >
+              <a href="mailto:fretchen.dev@proton.me">fretchen.dev@proton.me</a> or on{" "}
+              <a href="https://github.com/fretchen/fretchen.github.io" target="_blank" rel="noopener noreferrer">
                 GitHub
               </a>
               . The full reference implementation lives in{" "}
-              <a href={`${GH_BLOB}/scw_js/README.md`} target="_blank" rel="noopener noreferrer" className={extLink}>
+              <a href={`${GH_BLOB}/scw_js/README.md`} target="_blank" rel="noopener noreferrer">
                 scw_js/README.md
               </a>
               .
@@ -1014,12 +955,13 @@ export default function Page() {
           {/* SECTION — feedback */}
           <section className={section}>
             <h2>Feedback</h2>
-            <p className={para}>
-              Stuck on a step, or built one? Leave a note — it helps the next builder as much as it helps us.
-            </p>
-            <CommentsSection />
+            <p>Stuck on a step, or built one? Leave a note — it helps the next builder as much as it helps us.</p>
           </section>
         </article>
+
+        {/* Outside <article>, so comments stay in the sans — the same placement Post.tsx
+            uses, and what IDENTITY.md asks for. */}
+        <CommentsSection />
       </ArticleShell>
     </div>
   );

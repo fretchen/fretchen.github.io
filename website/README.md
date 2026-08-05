@@ -94,11 +94,18 @@ All three OFL 1.1, self-hosted, Latin + Latin-Extended only. No CDN, no third-pa
 The `@font-face` rules live in `layouts/fonts.css`; the stacks are named there and in
 `panda.config.ts` and **nowhere else**.
 
-**The rule: serif reads, sans operates.** Sans is the site-wide default (`globalCss`), because
-most routes are surfaces you operate. Serif is *opted into* by one rule —
-`post.contentContainer` in `components/Post.styles.ts` — which is the only place the boundary
-is drawn. `Post` has its own title style for the same reason: `titleBar.title` is shared with
-`/lab` and the index pages, which must stay sans.
+**The rule: serif reads, sans operates** — decided by what the content *is*, not by which route
+it sits on. Sans is the site-wide default (`globalCss`), because most surfaces are ones you
+operate. Serif is *opted into* by the `prose` **text style** in `panda.config.ts`, applied as
+`textStyle: "prose"`. Three surfaces use it: `post.contentContainer` (article bodies) and the
+`/x402` and `/agent-onboarding` guides, which are documentation rather than tools.
+
+Everything inside such a container inherits the reading face, widgets included — that is
+deliberate, and already true of the interactive components in `components/blog/`. A component
+that must stay in the interface face says so itself with `fontFamily: "ui"`.
+
+`Post` has its own title style because `titleBar.title` is shared with `/lab` and the index
+pages, whose titles are labels on tools and stay sans.
 
 **Maths is not a face.** KaTeX ships Computer Modern and renders in its own fonts. It is never
 restyled, and the body serif is chosen to sit *beside* it, not to match it. `katex.min.css` is

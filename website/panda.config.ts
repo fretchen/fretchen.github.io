@@ -201,6 +201,22 @@ export default defineConfig({
   // Useful for theme customization
   theme: {
     extend: {
+      // The reading surface, defined once. Applied with `textStyle: "prose"` — see
+      // components/Post.styles.ts (article bodies) and the /x402 and /agent-onboarding
+      // guides, which are documentation rather than tools and so read in the serif.
+      //
+      // No maxWidth here: the measure differs per surface (an article column vs a
+      // full-width page), and Panda asks that layout properties stay out of a text style.
+      textStyles: {
+        prose: {
+          description: "The reading surface — article bodies, guides and reference pages.",
+          value: {
+            fontFamily: "reading",
+            fontSize: "lg", // 18px — prose reads larger than interface text
+            lineHeight: "relaxed",
+          },
+        },
+      },
       tokens: {
         colors: {
           brand: { value: "#0066cc" },

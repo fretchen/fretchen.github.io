@@ -6,7 +6,7 @@ import { useData } from "vike-react/useData";
 import type { BlogPost } from "../../types/BlogPost";
 import * as styles from "../../layouts/shared";
 import { css } from "../../styled-system/css";
-import { sectionRule } from "../../styled-system/recipes";
+import { PageHeader } from "../../components/PageHeader";
 
 // Page-local styles — nothing else uses these.
 // Section header styles
@@ -26,9 +26,9 @@ export default function Page() {
   return (
     <div className={styles.container}>
       {/* Hero section */}
-      <h1 className={styles.titleBar.title}>fretchen</h1>
-      <span className={sectionRule({ territory: "voice" })} aria-hidden="true" />
-      <p className={styles.pageIntro}>Notes, essays and things I built while working topics out.</p>
+      <PageHeader title="fretchen" territory="voice">
+        Notes, essays and things I built while working topics out.
+      </PageHeader>
 
       {/* Main areas */}
       <section>

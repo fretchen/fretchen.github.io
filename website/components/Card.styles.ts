@@ -32,7 +32,7 @@ export const cardList = {
 
 export const card = {
   item: css({
-    maxWidth: "measure", // shared with entryList.row and pageIntro — one right edge per page
+    maxWidth: "measure", // shared with entryList.row and PageHeader's intro — one right edge per page
   }),
 
   link: css({

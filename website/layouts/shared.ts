@@ -27,21 +27,6 @@ export const container = css({
   width: "100%", // Take full width up to maxWidth
 });
 
-/**
- * The lead paragraph under a section title, on every index page.
- *
- * Bounded to the same measure as the article body (components/Post.styles.ts) so a page's
- * intro and the list below it share one right edge — previously these ran to the full 900px
- * while everything else was measured. Serif because it is a description: prose you read,
- * not a control you operate.
- */
-export const pageIntro = css({
-  fontFamily: "reading",
-  maxWidth: "measure", // shared with card.item and entryList.row — one right edge per page
-  marginBottom: "lg",
-  lineHeight: "relaxed",
-});
-
 // ===== VEREINFACHTE INTERAKTIVE ELEMENTE =====
 
 // Universeller Spinner

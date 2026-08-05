@@ -8,7 +8,8 @@ import * as styles from "../../layouts/shared";
 import { css } from "../../styled-system/css";
 import { CATEGORIES, getCategoryIds, type CategoryId } from "../../types/Categories";
 import type { BlogPost } from "../../types/BlogPost";
-import { button, sectionRule } from "../../styled-system/recipes";
+import { button } from "../../styled-system/recipes";
+import { PageHeader } from "../../components/PageHeader";
 
 const App: React.FC = function () {
   // Get pre-loaded data from +data.ts
@@ -31,12 +32,10 @@ const App: React.FC = function () {
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.titleBar.title}>Blog</h1>
-      <span className={sectionRule({ territory: "voice" })} aria-hidden="true" />
-      <p className={styles.pageIntro}>
+      <PageHeader title="Blog" territory="voice">
         Game theory and economics, quantum physics, and what I learned building on the web — often with something you
         can play with.
-      </p>
+      </PageHeader>
 
       {/* Category Filter Buttons */}
       <div

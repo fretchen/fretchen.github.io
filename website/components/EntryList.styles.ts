@@ -38,7 +38,8 @@ export const entryList = {
     gap: "6", // 1.5rem, thumbnail → text
     // The measure bounds the whole row, thumbnail included — that is what makes an entry end
     // on the same right edge as a card, which has no thumbnail. Bounding the text column
-    // instead pushed every entry 104px past the cards. Shared with card.item and pageIntro.
+    // instead pushed every entry 104px past the cards. Shared with card.item and the intro
+    // paragraph in components/PageHeader.
     maxWidth: "measure",
   }),
 

@@ -11,7 +11,6 @@ import remarkGfm from "remark-gfm";
 import { AgentInfoPanel } from "./AgentInfoPanel";
 import { AgentSelector } from "./AgentSelector";
 import * as chat from "./AssistantChat.styles";
-import { titleBar } from "../layouts/shared";
 import { useLocale } from "../hooks/useLocale";
 import { useUmami } from "../hooks/useUmami";
 import { css } from "../styled-system/css";
@@ -22,7 +21,8 @@ import { fetchAgentCard, precheckLlmV1Agent, type AgentCard } from "../hooks/x40
 import { getViemChain, toCAIP2 } from "@fretchen/chain-utils";
 import { useChainId } from "wagmi";
 import { ChainBadge, getChainName } from "./ChainBadge";
-import { button, sectionRule } from "../styled-system/recipes";
+import { button } from "../styled-system/recipes";
+import { PageHeader } from "./PageHeader";
 
 // The custom-URL escape hatch (AgentSelector) lets the chat pay any llm/v1 agent. It is also
 // the only ready-made batch-settlement client there is, so it doubles as the end-to-end test
@@ -356,8 +356,7 @@ export function AssistantChat() {
               beside it, which is what the old mobile-only header existed for. */}
           <div className={chat.titleRow}>
             <div>
-              <h1 className={titleBar.title}>{titleLabel}</h1>
-              <span className={sectionRule({ territory: "explore" })} aria-hidden="true" />
+              <PageHeader title={titleLabel} territory="explore" />
             </div>
             {isMobile && (
               <div className={chat.mobileActions}>

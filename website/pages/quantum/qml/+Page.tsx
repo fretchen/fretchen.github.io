@@ -3,11 +3,10 @@ import * as React from "react";
 // Direkte Imports der benötigten Komponenten und Daten
 import EntryList from "../../../components/EntryList";
 import { usePageContext } from "vike-react/usePageContext";
-import { titleBar } from "../../../layouts/shared";
 import * as styles from "../../../layouts/shared";
 import { css } from "../../../styled-system/css";
 import type { BlogPost } from "../../../types/BlogPost";
-import { sectionRule } from "../../../styled-system/recipes";
+import { PageHeader } from "../../../components/PageHeader";
 
 const App: React.FC = function () {
   // Get pre-loaded data from +data.ts
@@ -16,14 +15,12 @@ const App: React.FC = function () {
 
   return (
     <div className={styles.container}>
-      <h1 className={titleBar.title}>Beginners guide to Quantum Machine Learning</h1>
-      <span className={sectionRule({ territory: "voice" })} aria-hidden="true" />
-      <p className={styles.pageIntro}>
+      <PageHeader title="Beginners guide to Quantum Machine Learning" territory="voice">
         Classical machine learning has changed the internet in a dramatic fashion. Because of this, researchers put a
         substantial effort into the develop of quantum machine learning. In this series of tutorials on quantum
         technologies, we provide a basic introduction into some of the fundamental concepts behind supervised quantum
         machine learning algorithms.
-      </p>
+      </PageHeader>
 
       <h2>Requirements</h2>
       <p>

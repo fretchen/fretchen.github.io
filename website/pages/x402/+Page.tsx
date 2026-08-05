@@ -3,10 +3,9 @@ import { css } from "../../styled-system/css";
 import MermaidDiagram from "../../components/MermaidDiagram";
 import { FacilitatorApproval } from "../../components/FacilitatorApproval";
 import { CodeBlock } from "../../components/CodeBlock";
-import { titleBar } from "../../layouts/shared";
 import * as styles from "../../layouts/shared";
 import { Link } from "../../components/Link";
-import { sectionRule } from "../../styled-system/recipes";
+import { PageHeader } from "../../components/PageHeader";
 
 // ─── Mermaid diagram definitions ─────────────────────────────────────────────
 
@@ -236,8 +235,8 @@ const feeComparisonTable = css({
 export default function Page() {
   return (
     <div className={styles.container}>
-      <h1 className={titleBar.title}>x402 Facilitator</h1>
-      <span className={sectionRule({ territory: "explore" })} aria-hidden="true" />
+      {/* No intro here: this page's lead paragraph belongs to the prose surface below. */}
+      <PageHeader title="x402 Facilitator" territory="explore" />
 
       <div className={prose}>
         {/* ── 1. Hero ──────────────────────────────────────────────────── */}

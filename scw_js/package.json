@@ -33,7 +33,7 @@
     "@vitest/eslint-plugin": "^1.6.24",
     "eslint": "^10.0.0",
     "eslint-plugin-node": "^11.1.0",
-    "fastify": "^5.11.0",
+    "fastify": "^5.11.1",
     "prettier": "^3.6.2",
     "serverless-scaleway-functions": ">=0.5.1",
     "tsup": "^8.5.1",

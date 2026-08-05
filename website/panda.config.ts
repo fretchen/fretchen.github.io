@@ -297,6 +297,16 @@ export default defineConfig({
         },
         sizes: {
           container: { value: "900px" },
+          // The index-page measure: page intros, cards and entry rows all bound to this, so
+          // every block on a page shares one right edge.
+          //
+          // Deliberately NOT expressed in `ch`. These bounds sit on containers whose
+          // inherited font differs from the text inside them — a card's <li> inherits the
+          // sans body font while its title renders in serif at 20px — so `ch` there silently
+          // means a different width per block, which is exactly the bug this replaced. rem is
+          // font-independent. The one legitimate `ch` bound is Post.styles.ts's
+          // contentContainer, where the rule sits on the prose element itself.
+          measure: { value: "48rem" },
         },
         borders: {
           light: { value: "2px solid {colors.border}" },

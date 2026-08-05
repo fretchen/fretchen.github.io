@@ -37,7 +37,7 @@ export const container = css({
  */
 export const pageIntro = css({
   fontFamily: "reading",
-  maxWidth: "min(72ch, 100%)",
+  maxWidth: "measure", // shared with card.item and entryList.row — one right edge per page
   marginBottom: "lg",
   lineHeight: "relaxed",
 });

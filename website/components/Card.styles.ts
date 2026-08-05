@@ -32,7 +32,7 @@ export const cardList = {
 
 export const card = {
   item: css({
-    maxWidth: "min(72ch, 100%)", // same measure as the article body — see Post.styles.ts
+    maxWidth: "measure", // shared with entryList.row and pageIntro — one right edge per page
   }),
 
   link: css({

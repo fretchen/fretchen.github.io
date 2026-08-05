@@ -36,6 +36,10 @@ export const entryList = {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: "6", // 1.5rem, thumbnail → text
+    // The measure bounds the whole row, thumbnail included — that is what makes an entry end
+    // on the same right edge as a card, which has no thumbnail. Bounding the text column
+    // instead pushed every entry 104px past the cards. Shared with card.item and pageIntro.
+    maxWidth: "measure",
   }),
 
   // Held at 80px whether or not an image renders: EntryNftImage returns null when there is
@@ -48,10 +52,11 @@ export const entryList = {
     flexShrink: 0,
   }),
 
+  // No maxWidth: the row above carries the measure, so this simply fills what the thumbnail
+  // leaves. Bounding here too would re-create the offset the row bound exists to remove.
   text: css({
     flex: 1,
     minWidth: 0, // stops a long unbroken title from blowing the row out
-    maxWidth: "min(72ch, 100%)", // same measure as the article body — see Post.styles.ts
   }),
 
   // Metadata stays sans: IDENTITY.md keeps the metadata column in the UI face.

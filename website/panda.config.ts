@@ -100,7 +100,7 @@ const button = defineRecipe({
           color: "textMuted",
         },
       },
-      // Sits on top of an image or a dark code block: translucent, blurred backdrop.
+      // Sits on top of an image: translucent, blurred backdrop.
       overlay: {
         backgroundColor: "rgba(0, 0, 0, 0.5)",
         color: "light",
@@ -270,10 +270,20 @@ export default defineConfig({
           dangerSurface: { value: "#fef2f2" }, // red.50
           dangerBorder: { value: "#fecaca" }, // red.200
 
-          // Dark code block. The `codeBg` above is the *inline* code background (light);
-          // these two are the fenced-block pair. 11.25:1.
-          codeSurface: { value: "#1e1e1e" },
-          codeText: { value: "#d4d4d4" },
+          // ─── Fenced code block ────────────────────────────────────────────────
+          // The block reads as a quiet panel in the prose, not as a hole punched
+          // through it: same paper as inline code (`codeBg`) and the spec tables, with
+          // the standard hairline border. It was #1e1e1e until the near-black rectangle
+          // turned out to be the only dark surface on the whole site.
+          //
+          // Syntax colours reuse the identity hues rather than a third-party theme:
+          // `textMuted` comments, `explore` keywords, `brand` numbers and attributes.
+          // `codeString` is the one addition — a dark step of the support hue, because
+          // strings are far too common to carry a status colour and green/red/amber are
+          // status only. Every pair here clears AA on the surface (5.4:1 the lowest).
+          codeSurface: { value: "#f9fafb" },
+          codeText: { value: "#333333" }, // 11.5:1
+          codeString: { value: "#9a3412" }, // orange.800 · 7.1:1
         },
 
         // Three faces, one job each — see README.md "Typography".

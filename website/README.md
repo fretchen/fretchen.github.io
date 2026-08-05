@@ -137,7 +137,7 @@ button({ visual: "secondary", size: "sm" })      // bordered, lower emphasis
 button({ visual: "ghost" })                      // text only, inline
 button({ visual: "danger" | "success" })         // destructive / confirming
 button({ visual: "support" })                    // the orange tip/collect CTA
-button({ visual: "overlay", shape: "circle" })   // over an image or dark code
+button({ visual: "overlay", shape: "circle" })   // over an image
 ```
 
 Plus `size` (sm/md), `active`, `fullWidth`. Hover, active and disabled live in the recipe base,

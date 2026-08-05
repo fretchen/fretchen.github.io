@@ -53,7 +53,8 @@ export interface PostNavigationItem {
  */
 export interface CardProps extends BaseComponentProps {
   title: string;
-  description: string;
+  /** One sentence. Optional so a bare list of links is possible. */
+  description?: string;
   link: string;
 }
 
@@ -97,8 +98,6 @@ export interface EntryListProps extends BaseComponentProps {
   blogs: BlogEntry[];
   /** Base path for entry links */
   basePath: string;
-  /** Optional CSS class name for title elements */
-  titleClassName?: string;
   /** Whether to display the publishing date */
   showDate?: boolean;
   /** Whether to reverse the order of entries */

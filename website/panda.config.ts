@@ -201,6 +201,22 @@ export default defineConfig({
   // Useful for theme customization
   theme: {
     extend: {
+      // The reading surface, defined once. Applied with `textStyle: "prose"` — see
+      // components/Post.styles.ts (article bodies) and the /x402 and /agent-onboarding
+      // guides, which are documentation rather than tools and so read in the serif.
+      //
+      // No maxWidth here: the measure differs per surface (an article column vs a
+      // full-width page), and Panda asks that layout properties stay out of a text style.
+      textStyles: {
+        prose: {
+          description: "The reading surface — article bodies, guides and reference pages.",
+          value: {
+            fontFamily: "reading",
+            fontSize: "lg", // 18px — prose reads larger than interface text
+            lineHeight: "relaxed",
+          },
+        },
+      },
       tokens: {
         colors: {
           brand: { value: "#0066cc" },
@@ -297,6 +313,16 @@ export default defineConfig({
         },
         sizes: {
           container: { value: "900px" },
+          // The index-page measure: page intros, cards and entry rows all bound to this, so
+          // every block on a page shares one right edge.
+          //
+          // Deliberately NOT expressed in `ch`. These bounds sit on containers whose
+          // inherited font differs from the text inside them — a card's <li> inherits the
+          // sans body font while its title renders in serif at 20px — so `ch` there silently
+          // means a different width per block, which is exactly the bug this replaced. rem is
+          // font-independent. The one legitimate `ch` bound is Post.styles.ts's
+          // contentContainer, where the rule sits on the prose element itself.
+          measure: { value: "48rem" },
         },
         borders: {
           light: { value: "2px solid {colors.border}" },
@@ -322,6 +348,30 @@ export default defineConfig({
     ":root": { "--global-font-body": "token(fonts.ui)" },
     body: { fontFamily: "ui" },
     "code, pre": { fontFamily: "code" },
+
+    // Headings, for every bare <h1>–<h6> on the site — MDX prose above all, which emits
+    // unclassed elements. Size steps are deliberately small: IDENTITY.md says hierarchy
+    // comes from weight and whitespace, not from a size ratio, so the space above each
+    // level is what actually separates them.
+    //
+    // Sizes are token names, never em multiples of the container. The previous rules lived
+    // in layouts/panda.css as `h2 { font-size: 1.5em }`, which against 18px prose silently
+    // produced a 27px h2 — larger than every page title on the site. Nobody chose 27px; it
+    // fell out of a multiplication.
+    "h1, h2, h3, h4, h5, h6": { marginBottom: "0.5em", lineHeight: "1.2" },
+
+    h1: { fontSize: "2xl", fontWeight: "bold", marginTop: "2.5em" },
+    h2: { fontSize: "xl", fontWeight: "bold", marginTop: "2.5em" },
+    // semibold, not bold: h2 and h3 are only 2px apart, so weight carries the distinction
+    // that size cannot.
+    h3: { fontSize: "lg", fontWeight: "semibold", marginTop: "1.75em" },
+    // h4–h6 are all but unused (six occurrences in the whole corpus) — one quiet level.
+    "h4, h5, h6": { fontSize: "lg", fontWeight: "semibold", marginTop: "1.25em" },
+
+    // margins stay in em on purpose: they resolve against the heading's OWN size, so the
+    // space scales with the level. A spacing token would be wrong here.
+    // A heading that opens its container already has the space above it.
+    ":is(h1, h2, h3, h4, h5, h6):first-child": { marginTop: 0 },
   },
 
   // The output directory for your css system

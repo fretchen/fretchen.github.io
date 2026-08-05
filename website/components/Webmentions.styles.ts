@@ -84,17 +84,13 @@ export const webmentions = {
     margin: 0,
     marginTop: "sm",
   }),
+  // Fill and shadow removed for the same reason as CommentsSection.comment: on the white
+  // page ground the fill was a no-op and the shadow left a floating card behind.
   replyCard: css({
     marginTop: "md",
     padding: "md",
-    backgroundColor: "white",
     borderRadius: "sm",
     border: "1px solid token(colors.border)",
-    boxShadow: "sm",
-    transition: "all {durations.normal} ease",
-    _hover: {
-      boxShadow: "md",
-    },
     "@media (max-width: 768px)": {
       padding: "sm",
       marginTop: "sm",

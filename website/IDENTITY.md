@@ -41,9 +41,16 @@ a major project, not a config change. Over half the site is maths — 35 of 65 c
 and the quantum notes are 64% of the prose by volume — so the prose sits with the equations
 rather than against them. Not a taste decision, a content one.
 
-**Serif = things to read, sans = things to operate.** The article body and its title in the
-serif; nav, metadata, comments, buttons, labels and the `/lab` tools in the sans. A visitor
-learns the rule in two pages without being told, and edge cases answer themselves.
+**Serif = things to read, sans = things to operate.** Prose reads in the serif wherever it
+lives — an article, a guide, a reference page. The sans is for what you operate: nav,
+metadata, comments, buttons, labels, and the tools themselves. A visitor learns the rule in
+two pages without being told, and edge cases answer themselves.
+
+The rule is about the **content**, not the route. It once read "…and the `/lab` tools in the
+sans", which put `/x402` and `/agent-onboarding` — 1,200 and 3,300 words of documentation —
+in the interface face because of the directory they sit in, while the blog post covering the
+same subject read in the serif. A page of prose under `/lab` is still a page of prose;
+`/imagegen`, at 88 words and four buttons, is still a tool.
 
 **Source Serif 4 / Source Sans 3 / Source Code Pro**, OFL 1.1, self-hosted and subset.
 Drawn for screen reading at body sizes, quiet enough to pass `clean`, and with enough

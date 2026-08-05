@@ -1,48 +1,77 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import React from "react";
+import { render, screen } from "@testing-library/react";
 import { Card } from "../components/Card";
+import { CardList } from "../components/CardList";
+import "@testing-library/jest-dom";
+
+vi.mock("../components/Link", () => ({
+  Link: ({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) => (
+    <a href={href} className={className}>
+      {children}
+    </a>
+  ),
+}));
 
 /**
- * Basic component tests for the Card component
- * Tests component importability and props interface
+ * Component tests for Card and its CardList container.
  *
- * @fileoverview Simple unit tests covering component structure and prop validation
- * for the Card component without complex rendering tests
+ * Card renders an <li>, so every test mounts it inside CardList — that pairing is the
+ * component's contract, not an incidental detail of the call sites.
  */
-describe("Card Component", () => {
-  /**
-   * Tests component importability and function type
-   * @test {Function} Card - Component should be importable as function
-   */
-  it("should be importable", () => {
-    expect(typeof Card).toBe("function");
+describe("Card", () => {
+  const renderCard = (props: { title: string; description?: string; link: string }) =>
+    render(
+      <CardList>
+        <Card {...props} />
+      </CardList>,
+    );
+
+  it("renders the title and description", () => {
+    renderCard({ title: "Quantum", description: "Tutorials and notes.", link: "/quantum" });
+
+    expect(screen.getByText("Quantum")).toBeInTheDocument();
+    expect(screen.getByText("Tutorials and notes.")).toBeInTheDocument();
   });
 
-  /**
-   * Tests component definition and React component structure
-   * @test {Function} Card - Component should be defined as React function
-   */
-  it("should be a React component", () => {
-    expect(Card).toBeDefined();
-    expect(typeof Card).toBe("function");
+  it("links to the given destination", () => {
+    renderCard({ title: "Lab", description: "Experiments.", link: "/lab" });
+
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/lab");
   });
 
-  /**
-   * Tests props interface compatibility and React element creation
-   * @test {Object} props - Component props interface validation
-   * @test {ReactElement} element - React element creation without errors
-   */
-  it("should accept the correct props interface", () => {
-    const mockProps = {
-      title: "Test Title",
-      description: "Test Description",
-      link: "/test-link",
-    };
+  it("omits the description element when none is given", () => {
+    const { container } = renderCard({ title: "Blog", link: "/blog" });
 
-    // Teste dass keine Fehler beim Erstellen mit korrekten Props auftreten
-    expect(() => {
-      const element = React.createElement(Card, mockProps);
-      expect(element).toBeDefined();
-    }).not.toThrow();
+    expect(screen.getByText("Blog")).toBeInTheDocument();
+    // Title is the only span inside the link.
+    expect(container.querySelectorAll("a > span")).toHaveLength(1);
+  });
+});
+
+describe("CardList", () => {
+  it("renders one list item per card", () => {
+    const { container } = render(
+      <CardList>
+        <Card title="Blog" description="Writing." link="/blog" />
+        <Card title="Quantum" description="Notes." link="/quantum" />
+        <Card title="Lab" description="Experiments." link="/lab" />
+      </CardList>,
+    );
+
+    expect(container.querySelectorAll("ul > li")).toHaveLength(3);
+    expect(screen.getAllByRole("link").map((a) => a.getAttribute("href"))).toEqual(["/blog", "/quantum", "/lab"]);
+  });
+
+  it("exposes the cards as a single list to assistive technology", () => {
+    render(
+      <CardList>
+        <Card title="Blog" link="/blog" />
+        <Card title="Lab" link="/lab" />
+      </CardList>,
+    );
+
+    expect(screen.getByRole("list")).toBeInTheDocument();
+    expect(screen.getAllByRole("listitem")).toHaveLength(2);
   });
 });

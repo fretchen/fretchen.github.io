@@ -3,10 +3,9 @@ import { css } from "../../styled-system/css";
 import MermaidDiagram from "../../components/MermaidDiagram";
 import { FacilitatorApproval } from "../../components/FacilitatorApproval";
 import { CodeBlock } from "../../components/CodeBlock";
-import { titleBar } from "../../layouts/shared";
 import * as styles from "../../layouts/shared";
 import { Link } from "../../components/Link";
-import { sectionRule } from "../../styled-system/recipes";
+import { PageHeader } from "../../components/PageHeader";
 
 // ─── Mermaid diagram definitions ─────────────────────────────────────────────
 
@@ -100,61 +99,14 @@ function SupportedStatus() {
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
-const prose = css({
-  "& h2": {
-    fontSize: "xl",
-    fontWeight: "semibold",
-    marginTop: "10",
-    marginBottom: "4",
-    paddingBottom: "2",
-    borderBottom: "1px solid token(colors.border)",
-  },
-  "& h3": {
-    fontSize: "lg",
-    fontWeight: "semibold",
-    marginTop: "6",
-    marginBottom: "3",
-  },
-  "& p": {
-    marginBottom: "4",
-    lineHeight: "relaxed",
-  },
-  "& ul, & ol": {
-    paddingLeft: "8",
-    marginBottom: "4",
-  },
-  "& li": {
-    marginBottom: "2",
-    lineHeight: "relaxed",
-  },
-  "& a": {
-    color: "brand",
-    textDecoration: "underline",
-    _hover: { color: "brandHover" },
-  },
-  "& code": {
-    fontSize: "sm",
-    backgroundColor: "codeBg",
-    padding: "2px 4px",
-    borderRadius: "sm",
-    fontFamily: "code",
-  },
-  "& pre": {
-    backgroundColor: "codeSurface",
-    color: "codeText",
-    padding: "4",
-    borderRadius: "lg",
-    overflowX: "auto",
-    marginBottom: "4",
-    fontSize: "sm",
-    lineHeight: "normal",
-    "& code": {
-      backgroundColor: "transparent",
-      padding: "0",
-      color: "inherit",
-    },
-  },
-});
+// The reading surface. This page is documentation, not a tool, so it reads in the serif like
+// an article body — see IDENTITY.md on prose vs things you operate.
+//
+// Nothing else is declared here on purpose. Paragraphs, lists, links and tables come from
+// @layer base; headings from the one scale in panda.config.ts globalCss; code from CodeBlock,
+// which carries its own dark surface. The local prose block that used to sit here restated
+// all of that, so the page could drift from every article without anyone noticing.
+const prose = css({ textStyle: "prose", maxWidth: "measure" });
 
 const table = css({
   width: "100%",
@@ -283,8 +235,8 @@ const feeComparisonTable = css({
 export default function Page() {
   return (
     <div className={styles.container}>
-      <h1 className={titleBar.title}>x402 Facilitator</h1>
-      <span className={sectionRule({ territory: "explore" })} aria-hidden="true" />
+      {/* No intro here: this page's lead paragraph belongs to the prose surface below. */}
+      <PageHeader title="x402 Facilitator" territory="explore" />
 
       <div className={prose}>
         {/* ── 1. Hero ──────────────────────────────────────────────────── */}

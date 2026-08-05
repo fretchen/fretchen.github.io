@@ -18,13 +18,14 @@ export const commentSection = {
   loading: css({ color: "gray.500", fontStyle: "italic" }),
   empty: css({ color: "gray.500", fontStyle: "italic", marginBottom: "md" }),
   list: css({ listStyle: "none", padding: 0, marginTop: "md" }),
+  // No fill and no shadow: on the white page ground the fill did nothing and the shadow was
+  // all that remained, leaving a card on a site that no longer has any. The border stays —
+  // comments are other people's words, and the edge marks where each one begins.
   comment: css({
     padding: "md",
     marginBottom: "sm",
-    backgroundColor: "white",
     borderRadius: "sm",
     border: "1px solid token(colors.border)",
-    boxShadow: "sm",
     "@media (max-width: 768px)": {
       padding: "sm",
     },
@@ -43,7 +44,8 @@ export const commentSection = {
     gap: "sm",
     padding: "md",
     marginTop: "md",
-    backgroundColor: "gray.50",
+    // No fill: gray.50 was invisible against the old grey page, but on white it reads as a
+    // tinted panel — the thing IDENTITY.md rules out. The border is enough to group the form.
     borderRadius: "sm",
     border: "1px solid token(colors.border)",
     "@media (max-width: 480px)": {

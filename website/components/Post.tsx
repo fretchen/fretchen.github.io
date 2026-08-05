@@ -133,7 +133,12 @@ const ReactPostRenderer: React.FC<{
   }
 
   return (
-    <div className={post.contentContainer} ref={contentRef}>
+    // e-content lives here, on the article itself, rather than on the wrapper in Post below.
+    // The wrapper is always present, but the body only exists once this dynamic import has
+    // resolved — so on the prerendered page the class used to describe the loading box, and
+    // mf2 parsed the post's content as "🔄 Lade interaktive Komponente...Pfad: ../blog/…".
+    // That string is what Bridgy Fed syndicated as the body of every post.
+    <div className={`e-content ${post.contentContainer}`} ref={contentRef}>
       {tokenID && <NFTFloatImage tokenId={tokenID} />}
       <Component components={{ pre: MdxPre }} />
     </div>
@@ -216,7 +221,9 @@ export function Post({
         toc={<TableOfContents contentRef={contentRef} isReady={contentReady} />}
       >
         {/* Render based on post type */}
-        <div className="e-content" ref={contentRef}>
+        {/* Carries the ref the ToC and KaTeX scan. Deliberately no e-content: that class
+            belongs to the rendered article, which ReactPostRenderer adds once it exists. */}
+        <div ref={contentRef}>
           <ReactPostRenderer
             key={componentPath}
             componentPath={componentPath ?? ""}

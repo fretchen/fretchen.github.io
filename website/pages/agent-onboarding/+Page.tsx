@@ -59,11 +59,10 @@ sequenceDiagram
  */
 const section = css({ scrollMarginTop: "24px" });
 
-// Section breaks are carried by size, weight and top margin alone — no bottom rule. The six
-// numbered Step separators already put horizontal rules through the page, and section rules
-// on top of those read as clutter rather than structure.
-const h2 = css({ fontSize: "xl", fontWeight: "semibold", mt: "10", mb: "4", color: "gray.800" });
-const h3 = css({ fontSize: "md", fontWeight: "semibold", mt: "6", mb: "2", color: "gray.800" });
+// Headings carry no local styles: they fall through to the one scale in panda.config.ts
+// globalCss, so this page cannot drift from the articles. Section breaks are still carried by
+// size, weight and top margin alone — no bottom rule. The six numbered Step separators already
+// put horizontal rules through the page, and section rules on top of those read as clutter.
 const para = css({ color: "gray.700", mb: "4", lineHeight: "relaxed" });
 const inlineCode = css({ fontFamily: "code", fontSize: "0.9em", bg: "gray.100", px: "1", borderRadius: "sm" });
 const extLink = css({ color: "brand", textDecoration: "underline", _hover: { color: "blue.800" } });
@@ -98,7 +97,7 @@ function SrcRef({ path, lines, label }: { path: string; lines?: string; label?: 
 function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
     <div className={css({ mb: "6", pb: "6", borderBottom: "1px solid token(colors.border, #e5e7eb)" })}>
-      <h3 className={h3}>
+      <h3>
         <span
           className={css({
             display: "inline-flex",
@@ -194,9 +193,7 @@ export default function Page() {
         header={
           <>
             {/* Title first, like every other page; the status banner follows it. */}
-            <h1 className={css({ fontSize: "3xl", fontWeight: "bold", mb: "3", color: "gray.800" })}>
-              Build your own agent
-            </h1>
+            <h1 className={styles.titleBar.title}>Build your own agent</h1>
             <span className={sectionRule({ territory: "explore" })} aria-hidden="true" />
           </>
         }
@@ -248,14 +245,14 @@ export default function Page() {
           </div>
 
           <section className={section}>
-            <h2 className={h2}>Who this is for</h2>
+            <h2>Who this is for</h2>
             <p className={para}>
               A backend developer comfortable with <strong>Node and TypeScript</strong> who already has (or can put
               together) an LLM endpoint. <strong>No prior x402 or crypto-payments experience assumed</strong> — the one
               concept you need is explained below, and everything deeper is linked out rather than re-taught here.
             </p>
 
-            <h3 className={h3}>What you&apos;ll need</h3>
+            <h3>What you&apos;ll need</h3>
             <ul className={css({ color: "gray.700", pl: "4", lineHeight: "relaxed", mb: "0" })}>
               <li>
                 <strong>An OpenAI-compatible LLM</strong> to proxy — Mistral, an OpenAI key, a local model, anything
@@ -295,7 +292,7 @@ export default function Page() {
 
           {/* SECTION — how payment works */}
           <section className={section}>
-            <h2 className={h2}>How the payment works</h2>
+            <h2>How the payment works</h2>
             <p className={para}>
               When someone calls your endpoint without paying, you reply <strong>402 Payment Required</strong> plus a
               header describing how to pay. Their client pays in <strong>USDC</strong> (a dollar stablecoin) and
@@ -357,7 +354,7 @@ export default function Page() {
 
           {/* SECTION — the API */}
           <section className={section}>
-            <h2 className={h2}>The API you expose</h2>
+            <h2>The API you expose</h2>
             <p className={para}>
               One route: <code className={inlineCode}>POST /</code>, in the OpenAI chat-completions format — so it looks
               like any other LLM API and existing types just work.
@@ -372,7 +369,7 @@ export default function Page() {
               which needs the whole reply).
             </div>
 
-            <h3 className={h3}>Try it right now</h3>
+            <h3>Try it right now</h3>
             <p className={para}>
               Send an unpaid request to our live agent. You can run this verbatim — it costs nothing, and the 402 it
               returns is exactly what your own endpoint has to produce:
@@ -431,7 +428,7 @@ export default function Page() {
 
           {/* SECTION — build it */}
           <section className={section}>
-            <h2 className={h2}>Build it, step by step</h2>
+            <h2>Build it, step by step</h2>
             <p className={para}>
               Each step shows the requirement and the real code from our implementation (
               <a
@@ -461,7 +458,7 @@ export default function Page() {
               platforms hand you, and it maps to Express or Fetch handlers in a couple of lines.
             </p>
 
-            <h3 className={h3}>Where everything goes</h3>
+            <h3>Where everything goes</h3>
             <p className={para}>
               This is the whole thing, with a slot for each step. Read it once — every later snippet fills exactly one
               of these slots, so you always know whether code belongs at module scope (runs once) or inside the handler
@@ -878,7 +875,7 @@ export default function Page() {
 
           {/* SECTION — test it */}
           <section className={section}>
-            <h2 className={h2}>Test it</h2>
+            <h2>Test it</h2>
             <p className={para}>
               <strong>Start on Base Sepolia</strong> (<code className={inlineCode}>eip155:84532</code>) — same code
               path, no real money. Fund your test wallet from the{" "}
@@ -923,7 +920,7 @@ export default function Page() {
 
           {/* SECTION — checker */}
           <section id="checker" className={section}>
-            <h2 className={h2}>Check your endpoint</h2>
+            <h2>Check your endpoint</h2>
             <p className={para}>
               Paste your URL. This runs exactly the checks the assistant runs before it will talk to an endpoint — down
               to reading the base64 <code className={inlineCode}>Payment-Required</code> header from step 3 — and tells
@@ -934,7 +931,7 @@ export default function Page() {
 
           {/* SECTION — known limitations */}
           <section id="challenges" className={section}>
-            <h2 className={h2}>Known limitations</h2>
+            <h2>Known limitations</h2>
             <p className={para}>Documented openly — these are rough edges of a young ecosystem, not of your code.</p>
 
             <Challenge title="Few facilitators support batch-settlement">
@@ -986,7 +983,7 @@ export default function Page() {
 
           {/* SECTION — contact */}
           <section className={section}>
-            <h2 className={h2}>Where this is going</h2>
+            <h2>Where this is going</h2>
             <p className={para}>
               The endpoint contract is stable; what&apos;s filling in is the ecosystem around it — a drop-in client,
               more facilitators, more agents. The assistant already lets you point it at any compatible agent by URL; a
@@ -1016,7 +1013,7 @@ export default function Page() {
 
           {/* SECTION — feedback */}
           <section className={section}>
-            <h2 className={h2}>Feedback</h2>
+            <h2>Feedback</h2>
             <p className={para}>
               Stuck on a step, or built one? Leave a note — it helps the next builder as much as it helps us.
             </p>

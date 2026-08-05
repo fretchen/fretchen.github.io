@@ -100,21 +100,10 @@ function SupportedStatus() {
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
+// Headings carry no local styles: they fall through to the one scale in panda.config.ts
+// globalCss. The h2 also loses its bottom rule — IDENTITY.md: whitespace structures, not
+// borders, and the ~50px above each h2 now does that work.
 const prose = css({
-  "& h2": {
-    fontSize: "xl",
-    fontWeight: "semibold",
-    marginTop: "10",
-    marginBottom: "4",
-    paddingBottom: "2",
-    borderBottom: "1px solid token(colors.border)",
-  },
-  "& h3": {
-    fontSize: "lg",
-    fontWeight: "semibold",
-    marginTop: "6",
-    marginBottom: "3",
-  },
   "& p": {
     marginBottom: "4",
     lineHeight: "relaxed",

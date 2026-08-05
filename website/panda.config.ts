@@ -332,6 +332,30 @@ export default defineConfig({
     ":root": { "--global-font-body": "token(fonts.ui)" },
     body: { fontFamily: "ui" },
     "code, pre": { fontFamily: "code" },
+
+    // Headings, for every bare <h1>–<h6> on the site — MDX prose above all, which emits
+    // unclassed elements. Size steps are deliberately small: IDENTITY.md says hierarchy
+    // comes from weight and whitespace, not from a size ratio, so the space above each
+    // level is what actually separates them.
+    //
+    // Sizes are token names, never em multiples of the container. The previous rules lived
+    // in layouts/panda.css as `h2 { font-size: 1.5em }`, which against 18px prose silently
+    // produced a 27px h2 — larger than every page title on the site. Nobody chose 27px; it
+    // fell out of a multiplication.
+    "h1, h2, h3, h4, h5, h6": { marginBottom: "0.5em", lineHeight: "1.2" },
+
+    h1: { fontSize: "2xl", fontWeight: "bold", marginTop: "2.5em" },
+    h2: { fontSize: "xl", fontWeight: "bold", marginTop: "2.5em" },
+    // semibold, not bold: h2 and h3 are only 2px apart, so weight carries the distinction
+    // that size cannot.
+    h3: { fontSize: "lg", fontWeight: "semibold", marginTop: "1.75em" },
+    // h4–h6 are all but unused (six occurrences in the whole corpus) — one quiet level.
+    "h4, h5, h6": { fontSize: "lg", fontWeight: "semibold", marginTop: "1.25em" },
+
+    // margins stay in em on purpose: they resolve against the heading's OWN size, so the
+    // space scales with the level. A spacing token would be wrong here.
+    // A heading that opens its container already has the space above it.
+    ":is(h1, h2, h3, h4, h5, h6):first-child": { marginTop: 0 },
   },
 
   // The output directory for your css system

@@ -13,35 +13,8 @@
     box-sizing: border-box;
   }
 
-  /* Überschriften */
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    margin-top: 1em;
-    margin-bottom: 0.5em;
-    font-weight: 700;
-    line-height: 1.2;
-  }
-
-  h1 {
-    font-size: 2em;
-  }
-  h2 {
-    font-size: 1.5em;
-  }
-  h3 {
-    font-size: 1.25em;
-  }
-  h4 {
-    font-size: 1.1em;
-  }
-  h5,
-  h6 {
-    font-size: 1em;
-  }
+  /* Überschriften leben in panda.config.ts globalCss — wie font-family, und aus demselben
+     Grund: Größen sind dort Token-Namen statt em-Vielfache des Containers. */
 
   /* Links */
   a {

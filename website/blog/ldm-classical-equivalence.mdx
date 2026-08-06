@@ -1,0 +1,185 @@
+---
+publishing_date: 2026-08-06
+title: Continuous variable quantum games
+category: "quantum"
+description: Working notes on continuous variable games...
+---
+
+_Derivation:_ The Li–Du–Massar Quantum Cournot Duopoly is Strategically Equivalent to Classical Cournot with Partial Profit Internalization
+
+## 1. Setup and notation
+
+The Li–Du–Massar (LDM) protocol [Li, Du, Massar, *Phys. Lett. A* 306 (2002) 73] defines, for each squeezing parameter $\gamma \ge 0$, a two-player game $Q_\gamma$:
+
+**Strategy sets.** Each firm $j \in \{1,2\}$ chooses $x_j \in S_j = [0,\infty)$ (the displacement amplitude of the unitary $\hat D_j(x_j) = \exp(-i x_j \hat P_j)$).
+
+**Measured quantities.** The homodyne measurement after disentangling yields (LDM Eq. 11)
+
+$$
+q_1 = x_1 \cosh\gamma + x_2 \sinh\gamma, \qquad q_2 = x_2 \cosh\gamma + x_1 \sinh\gamma .
+$$
+
+**Payoffs.** With inverse demand $P(Q) = k - Q$ (net of constant marginal cost, $k = a - c$) and total quantity $Q = q_1 + q_2 = e^{\gamma}(x_1 + x_2)$,
+
+$$
+u_j^{Q}(x_1, x_2) = \left( x_j \cosh\gamma + x_{-j}\sinh\gamma \right)\left[ k - e^{\gamma}(x_1 + x_2) \right]. \tag{LDM 12}
+$$
+
+**Preliminary observation.** $Q_\gamma$ is, at the level of its normal form, a _classical_ strategic game: deterministic strategy sets and deterministic payoff functions $\mathbb{R}_+^2 \to \mathbb{R}$. The quantum apparatus (vacuum states, $\hat J(\gamma)$, homodyne detection) is solely a physical _evaluation device_ for the map $(x_1, x_2) \mapsto (u_1^Q, u_2^Q)$. Two strategic games with identical strategy sets and payoff functions are the same game, whatever machinery computes the payoffs. The question "what is the classical equivalent?" is therefore well-posed and purely algebraic.
+
+## 2. Equivalence notions
+
+We use two standard notions, in decreasing strength:
+
+**Definition 1 (Strategic isomorphism up to positive scaling).** Games $G = (S_1, S_2; f_1, f_2)$ and $G' = (S_1', S_2'; g_1, g_2)$ are _strategically isomorphic up to positive scaling_ if there exist bijections $\varphi_j : S_j \to S_j'$ and constants $c_j > 0$ such that
+
+$$
+f_j(s_1, s_2) = c_j \, g_j\big(\varphi_1(s_1), \varphi_2(s_2)\big) \quad \text{for all profiles } (s_1,s_2).
+$$
+
+Since expected-utility preferences are invariant under positive affine transformations, isomorphic games have identical best-reply correspondences (under $\varphi$), identical Nash sets, identical correlated-equilibrium sets, and equilibrium payoffs related by the constants $c_j$.
+
+**Definition 2 (Best-reply equivalence).** $G$ and $G'$ with common strategy sets are _best-reply equivalent_ if $\mathrm{BR}_j^{G} = \mathrm{BR}_j^{G'}$ for all $j$. This preserves Nash sets but not payoff levels.
+
+## 3. Main result
+
+Define the **classical internalization game** $C_\lambda$ for $\lambda \in [0,1)$: strategy sets $[0,\infty)$, classical Cournot profits $u_j(q_1, q_2) = q_j\,(k - q_1 - q_2)$, and objectives
+
+$$
+V_j(q_1, q_2) = u_j(q_1, q_2) + \lambda\, u_{-j}(q_1, q_2).
+$$
+
+This is the _coefficient-of-cooperation_ family (Cyert & DeGroot 1973): $\lambda = 0$ is Cournot, $\lambda \to 1$ is joint profit maximization.
+
+**Proposition 1.** For every $\gamma \ge 0$, $Q_\gamma$ is strategically isomorphic up to positive scaling to $C_\lambda$ with
+
+$$
+\boxed{\;\lambda = \tanh\gamma\;}
+$$
+
+via the relabeling $\varphi(x) = e^{\gamma} x$ (a bijection of $[0,\infty)$ onto itself) and the common constant $c(\gamma) = e^{-\gamma}\cosh\gamma = \tfrac{1}{2}\left(1 + e^{-2\gamma}\right) > 0$. Explicitly,
+
+$$
+u_j^{Q}(x_1, x_2) = c(\gamma)\, V_j\!\left(e^{\gamma}x_1,\; e^{\gamma}x_2\right) \quad \text{for all } x_1, x_2 \ge 0.
+$$
+
+**Proof.** Write $t = \tanh\gamma$ and $\tilde q_j = e^{\gamma} x_j$. Then
+
+$$
+x_j \cosh\gamma + x_{-j}\sinh\gamma \;=\; \cosh\gamma\,\big(x_j + t\, x_{-j}\big) \;=\; e^{-\gamma}\cosh\gamma\,\big(\tilde q_j + t\,\tilde q_{-j}\big),
+$$
+
+and $k - e^{\gamma}(x_1 + x_2) = k - \tilde q_1 - \tilde q_2$. Hence
+
+$$
+\begin{aligned}
+u_j^{Q} &= e^{-\gamma}\cosh\gamma \,\big(\tilde q_j + t\,\tilde q_{-j}\big)\big(k - \tilde q_1 - \tilde q_2\big) \\
+&= c(\gamma)\,\Big[\, \tilde q_j\,(k - \tilde Q) \;+\; t\,\tilde q_{-j}\,(k - \tilde Q) \,\Big] \\
+&= c(\gamma)\,\Big[\, u_j(\tilde q) + t\, u_{-j}(\tilde q) \,\Big] \;=\; c(\gamma)\, V_j(\tilde q_1, \tilde q_2). \qquad \blacksquare
+\end{aligned}
+$$
+
+Note this is an _exact identity of payoff functions_, not merely a first-order-condition match: every strategic property of $Q_\gamma$ (best replies, equilibrium sets of every kind, comparative statics, even off-equilibrium dynamics such as best-response adjustment) transfers verbatim.
+
+**Verification against LDM's stated results.** The unique equilibrium of $C_\lambda$ solves $k - 2q_j - (1+\lambda)\,q_{-j} = 0$, giving $q^* = \dfrac{k}{3+\lambda}$. Mapping back, $x^* = e^{-\gamma}\dfrac{k}{3 + \tanh\gamma}$. Using $3\cosh\gamma + \sinh\gamma = e^{-\gamma}\left(1 + 2e^{2\gamma}\right)$:
+
+$$
+x^* = \frac{k \cosh\gamma}{1 + 2e^{2\gamma}},
+$$
+
+which is LDM Eq. (13). Equilibrium payoff: $V^* = q^*(1+\lambda)\big(k - 2q^*\big) = \dfrac{k^2 (1+\lambda)^2}{(3+\lambda)^2}$, so
+
+$$
+u^{Q*} = c(\gamma)\, V^* = \frac{k^2\, e^{\gamma} \cosh\gamma}{\left(3\cosh\gamma + \sinh\gamma\right)^2},
+$$
+
+which is LDM Eq. (14), with the limits $k^2/9$ ($\gamma = 0$, $\lambda = 0$: Cournot) and $k^2/8$ ($\gamma \to \infty$, $\lambda \to 1$: cartel/monopoly output split equally). The entire profit curve in LDM Fig. 2 is the classical interpolation between own-profit and joint-profit maximization, reparametrized by $\lambda = \tanh\gamma$.
+
+## 4. The resulting object: three classical readings of $\lambda = \tanh\gamma$
+
+### (a) Reciprocal cross-shareholding — exact, payoff-level
+
+Let each firm hold a silent (non-controlling in operations, but counted in the objective) equity stake $s$ in the other. Shareholder value satisfies the fixed point $\pi_j = u_j + s\,\pi_{-j}$, whose solution is
+
+$$
+\pi_j = \frac{u_j + s\, u_{-j}}{1 - s^2} = \cosh^2\!\gamma \,\big(u_j + s\, u_{-j}\big) \qquad \text{for } s = \tanh\gamma,
+$$
+
+using $\dfrac{1}{1-\tanh^2\gamma} = \cosh^2\gamma$. Combining with Proposition 1:
+
+$$
+u_j^{Q}(x) = \frac{e^{-\gamma}}{\cosh\gamma}\; \pi_j\!\left(e^{\gamma} x\right).
+$$
+
+So the realized LDM "quantum profit" is _proportional_ to shareholder value in a classical duopoly with reciprocal cross-ownership $s = \tanh\gamma$ (Reynolds & Snapp, _Int. J. Ind. Org._ 1986). Maximal entanglement $=$ full mutual ownership $=$ merger. The measurement rule $q_j = x_j\cosh\gamma + x_{-j}\sinh\gamma$ acquires a direct meaning: a claim on output that partially consists of the rival's decision — which is what equity stakes do to profit claims.
+
+### (b) Pigouvian spillover tax — best-reply equivalent
+
+Let a regulator levy on firm $j$ a per-unit tax at rate $\tau_j = \lambda\, q_{-j}$ (each firm taxed in proportion to the _other's_ output — the marginal price externality it imposes — with revenue disposed lump-sum). Firm $j$'s objective becomes
+
+$$
+W_j = q_j\,(k - Q) - \lambda\, q_j\, q_{-j}.
+$$
+
+As a function of $q_j$, the difference $V_j - W_j = \lambda\, q_{-j}\,(k - q_{-j})$ is independent of $q_j$, hence
+
+$$
+\frac{\partial W_j}{\partial q_j} = \frac{\partial V_j}{\partial q_j}
+$$
+
+everywhere. So $C_\lambda$ and the taxed game are best-reply equivalent (Definition 2), with identical Nash sets. This formalizes the "spillover tax" intuition: the entangler implements internalization of the appropriation externality at fraction $\tanh\gamma$ — in common-pool-resource terms, a regulator dialed continuously from absent ($\gamma = 0$) to fully internalizing ($\gamma \to \infty$). Note the hierarchy: reading (a) matches payoffs up to a positive constant; reading (b) matches only best replies (realized profits differ by the tax burden).
+
+### (c) Conjectural variations
+
+The first-order condition $k - 2q_j - (1+\lambda)\,q_{-j} = 0$ is also that of a Cournot firm holding the conjecture $\dfrac{dq_{-j}}{dq_j} = \lambda$. This is the textbook one-parameter bridge between competitive ($\lambda = -1$), Cournot ($\lambda = 0$) and collusive ($\lambda = 1$) conduct; $\lambda$ is the "conduct parameter" of the empirical IO literature. The LDM protocol with $\gamma \ge 0$ reaches exactly the sub-interval $\lambda \in [0,1)$: cooperative conduct up to, but never beyond, the cartel. (The "relative profit maximization" variants studied in the quantum-duopoly follow-up literature are the $\lambda < 0$ branch of the same family.)
+
+## 5. Robustness and scope of the equivalence
+
+**General demand.** Proposition 1 uses linearity of $P$ only through the fact that the price term is a common factor. For _arbitrary_ inverse demand $P(Q)$ and common constant marginal cost $c$, with $u_j(q) = q_j\big(P(Q) - c\big)$:
+
+$$
+u_j^{Q}(x) = q_j^{\mathrm{meas}}\,\big(P(\tilde Q) - c\big) = c(\gamma)\,\big(\tilde q_j + t\,\tilde q_{-j}\big)\big(P(\tilde Q) - c\big) = c(\gamma)\,\big[\, u_j(\tilde q) + t\, u_{-j}(\tilde q)\,\big].
+$$
+
+The isomorphism holds unchanged. This immediately explains, without any quantum computation, Frąckiewicz's result (_Int. J. Theor. Phys._ 2018) that for a large class of Cournot-type games the LDM equilibrium converges to the symmetric Pareto-optimal profile as $\gamma \to \infty$: joint profit maximization is Pareto-optimal in the symmetric class, full stop.
+
+**Asymmetric costs.** With $c_1 \ne c_2$ the factorization breaks by a linear term:
+
+$$
+u_j^{Q}(x) = c(\gamma)\,\Big[\, u_j(\tilde q) + t\, u_{-j}(\tilde q) + t\,\big(c_{-j} - c_j\big)\,\tilde q_{-j} \,\Big].
+$$
+
+Still an exact classical game — internalization plus a strategic per-unit transfer indexed to the rival's output — but no longer pure cross-shareholding. This is consistent with (and demystifies) the more intricate "existence region" phenomenology reported in the asymmetric-cost quantum-duopoly literature.
+
+**$N$ players.** With the symmetric multimode entangler
+
+$$
+\hat J(\gamma) = \exp\Big\{-\gamma \sum_{i<j} \big(\hat a_i^{\dagger}\hat a_j^{\dagger} - \hat a_i \hat a_j\big)\Big\}
+$$
+
+the same computation (diagonalizing on the symmetric collective mode) yields measured quantities affine in all $x_i$ and, by the identical factorization argument, objectives of the form
+
+$$
+V_j = u_j + \lambda(\gamma, N) \sum_{i \ne j} u_i
+$$
+
+— the $N$-firm coefficient-of-cooperation oligopoly, converging to the $N$-firm cartel in the maximal-entanglement limit.
+
+**Boundary of validity (van Enk–Pike caveat).** The equivalence is a statement about the game _as defined by LDM_, i.e., with strategy sets restricted to displacements $S_j = \{\exp(-i x_j \hat P_j)\}$. If players are granted larger sets of local operations (e.g., local squeezing before displacement, or displacements along $\hat X_j$), the induced normal form changes and Proposition 1 no longer describes it — but then LDM's own equilibrium analysis fails as well. Within the "minimal extension" that constitutes the paper's model, the equivalence is exact and total.
+
+## 6. Interpretation
+
+**1. No quantum advantage in the game-theoretic sense.** Every solution-concept statement about $Q_\gamma$ is a statement about the classical game $C_{\tanh\gamma}$. In particular the cartel outcome at $\gamma \to \infty$ is not a correlated equilibrium of classical Cournot being reached by quantum means; it is the Nash equilibrium of a _different_ classical game in which the externality has been internalized by construction. (This is the continuous-variable instance of the general Zhang-style no-go: honest pre-play protocols cannot escape the correlated-equilibrium polytope of the underlying game; anything beyond it requires changing the game.)
+
+**2. Where the institution went.** The classical implementations of $\lambda$ — equity stakes, taxes, CPR appropriation rules — all presuppose an enforcement institution. In LDM the referee who prepares $\hat J(\gamma)\lvert \mathrm{vac}\rangle\lvert \mathrm{vac}\rangle$, applies $\hat J(\gamma)^{\dagger}$, and measures _is_ that institution: the internalization coefficient $\tanh\gamma$ is hardwired into his payoff-evaluation procedure. The entangler does not eliminate the regulator; it compiles the regulator into the physics of the payoff channel. The physically interesting residue is thus not game-theoretic but _implementation-theoretic_: entanglement provides a tamper-evident physical carrier for a commitment device, with the commitment strength set by a physical parameter (squeezing) rather than by contract.
+
+**3. The $\tanh$ compactification.** $\gamma \in [0,\infty)$ maps onto $\lambda \in [0,1)$: physically realizable squeezing buys conduct strictly between Cournot and cartel, approaching but never attaining full collusion — and, since experimental squeezing is bounded (finite dB), a laboratory implementation corresponds to a definite, modest $\lambda$. E.g., $10\,\mathrm{dB}$ of squeezing ($\gamma \approx 1.15$) gives $\lambda \approx 0.82$.
+
+## 7. Cited literature for the classical objects
+
+- Cyert, R. & DeGroot, M. (1973), "An analysis of cooperation and learning in a duopoly context," _Am. Econ. Rev._ 63(1) — coefficient of cooperation.
+- Reynolds, R. & Snapp, B. (1986), "The competitive effects of partial equity interests and joint ventures," _Int. J. Ind. Org._ 4 — cross-shareholding softens competition; fixed-point valuation.
+- Bowley, A. (1924) / conduct-parameter literature (e.g., Bresnahan 1989, _Handbook of IO_) — conjectural variations reading.
+- Li, H., Du, J., Massar, S. (2002), "Continuous-variable quantum games," _Phys. Lett. A_ 306, 73 — the quantum protocol.
+- van Enk, S. & Pike, R. (2002), "Classical rules in quantum games," _Phys. Rev. A_ 66, 024306 — generic classical-equivalence critique (does not work out the Cournot/IO mapping).
+- Frąckiewicz, P. (2018), "Quantum approach to Cournot-type competition," _Int. J. Theor. Phys._ 57, 353 — LDM equilibrium $\to$ Pareto-optimal profile for general Cournot-type games (explained by §5).

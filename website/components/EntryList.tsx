@@ -2,7 +2,7 @@ import * as React from "react";
 import { Link } from "./Link";
 import { EntryNftImage } from "./EntryNftImage";
 import { EntryListProps } from "../types/components";
-import { entryList } from "../layouts/styles";
+import { entryList } from "./EntryList.styles";
 import { SITE } from "../utils/siteData";
 
 /**
@@ -20,7 +20,6 @@ import { SITE } from "../utils/siteData";
 const EntryList: React.FC<EntryListProps> = ({
   blogs,
   basePath: rawBasePath,
-  titleClassName,
   showDate = false,
   reverseOrder = false,
   limit,
@@ -48,52 +47,48 @@ const EntryList: React.FC<EntryListProps> = ({
 
         return (
           <article key={linkIndex} className="h-entry">
-            <Link href={entryUrl} className={entryList.entry}>
-              <div className={entryList.entryContent}>
-                {/* Large NFT image on the left side of the entire entry (u-featured for h-entry) */}
-                {(blog.tokenID || blog.nftMetadata?.imageUrl) && (
-                  <div className="u-featured">
+            <Link href={entryUrl} className={entryList.link}>
+              <div className={entryList.row}>
+                {/* Thumbnail column. Rendered even when the entry has no artwork, so every
+                    entry's text starts on the same vertical line. u-featured lives on the
+                    <img> inside EntryNftImage, so it exists exactly when an image does. */}
+                <div className={entryList.thumb}>
+                  {(blog.tokenID || blog.nftMetadata?.imageUrl) && (
                     <EntryNftImage
                       tokenId={blog.tokenID}
                       fallbackImageUrl={blog.nftMetadata?.imageUrl}
                       nftName={blog.nftMetadata?.name}
                     />
-                  </div>
-                )}
+                  )}
+                </div>
 
-                {/* Text content */}
-                <div className={blog.description ? entryList.entryTextCompact : entryList.entryText}>
-                  <div className={entryList.entryTextContent}>
-                    {/* Date - use substantially tighter spacing when description is present */}
-                    {showDate && blog.publishing_date && (
-                      <div className={blog.description ? entryList.entryDateWithDescription : entryList.entryDate}>
-                        {/* dt-published for h-entry microformat */}
-                        <time className="dt-published" dateTime={isoDatetime || undefined}>
-                          {blog.publishing_date}
-                        </time>
-                      </div>
-                    )}
+                <div className={entryList.text}>
+                  {showDate && blog.publishing_date && (
+                    <div className={entryList.date}>
+                      {/* dt-published for h-entry microformat */}
+                      <time className="dt-published" dateTime={isoDatetime || undefined}>
+                        {blog.publishing_date}
+                      </time>
+                    </div>
+                  )}
 
-                    {/* Title (p-name for h-entry) */}
-                    <h3 className={`p-name ${entryList.entryTitle} ${titleClassName || ""}`}>{blog.title}</h3>
+                  {/* Title (p-name for h-entry) */}
+                  <h3 className={`p-name ${entryList.title}`}>{blog.title}</h3>
 
-                    {/* Description (p-summary for h-entry) */}
-                    {blog.description && (
-                      <div className={`p-summary ${entryList.entryDescription}`}>{blog.description}</div>
-                    )}
+                  {/* Description (p-summary for h-entry) */}
+                  {blog.description && <div className={`p-summary ${entryList.description}`}>{blog.description}</div>}
 
-                    {/* Categories (p-category for h-entry) */}
-                    {blog.category && (
-                      <span className="p-category" style={{ display: "none" }}>
-                        {blog.category}
-                      </span>
-                    )}
-                    {blog.secondaryCategory && (
-                      <span className="p-category" style={{ display: "none" }}>
-                        {blog.secondaryCategory}
-                      </span>
-                    )}
-                  </div>
+                  {/* Categories (p-category for h-entry) */}
+                  {blog.category && (
+                    <span className="p-category" style={{ display: "none" }}>
+                      {blog.category}
+                    </span>
+                  )}
+                  {blog.secondaryCategory && (
+                    <span className="p-category" style={{ display: "none" }}>
+                      {blog.secondaryCategory}
+                    </span>
+                  )}
                 </div>
               </div>
             </Link>

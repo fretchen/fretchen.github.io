@@ -92,7 +92,7 @@ const MOCK_SUPPORTED_RESPONSE = {
 const FACILITATOR_ADDRESS = "0xFacilitatorAddress1234567890123456789012";
 
 describe("FacilitatorApproval", () => {
-  let mockWriteContract: ReturnType<typeof vi.fn>;
+  let mockWriteContract: ReturnType<typeof vi.fn<(...args: unknown[]) => unknown>>;
 
   beforeEach(() => {
     vi.clearAllMocks();

@@ -4,10 +4,12 @@ import { useState } from "react";
 // Dynamic blog loading with hot reload support
 import EntryList from "../../components/EntryList";
 import { usePageContext } from "vike-react/usePageContext";
-import * as styles from "../../layouts/styles";
+import * as styles from "../../layouts/shared";
 import { css } from "../../styled-system/css";
 import { CATEGORIES, getCategoryIds, type CategoryId } from "../../types/Categories";
 import type { BlogPost } from "../../types/BlogPost";
+import { button } from "../../styled-system/recipes";
+import { PageHeader } from "../../components/PageHeader";
 
 const App: React.FC = function () {
   // Get pre-loaded data from +data.ts
@@ -30,8 +32,10 @@ const App: React.FC = function () {
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.titleBar.title}>Welcome to my blog!</h1>
-      <p className={styles.paragraph}>It contains notes about all kind of topic, ideas etc.</p>
+      <PageHeader title="Blog" territory="voice">
+        Game theory and economics, quantum physics, and what I learned building on the web — often with something you
+        can play with.
+      </PageHeader>
 
       {/* Category Filter Buttons */}
       <div
@@ -45,7 +49,7 @@ const App: React.FC = function () {
       >
         <button
           onClick={() => setSelectedCategory(null)}
-          className={selectedCategory === null ? styles.categoryFilterButtonActive : styles.categoryFilterButton}
+          className={button({ visual: "secondary", size: "sm", active: selectedCategory === null })}
         >
           All Categories
         </button>
@@ -58,7 +62,7 @@ const App: React.FC = function () {
             <button
               key={categoryId}
               onClick={() => setSelectedCategory(categoryId)}
-              className={isSelected ? styles.categoryFilterButtonActive : styles.categoryFilterButton}
+              className={button({ visual: "secondary", size: "sm", active: isSelected })}
             >
               <span>{category.label}</span>
             </button>

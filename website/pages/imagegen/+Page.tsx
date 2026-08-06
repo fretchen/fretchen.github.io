@@ -3,7 +3,7 @@ import { useAccount } from "wagmi";
 import ImageGenerator from "../../components/ImageGenerator";
 import NFTList from "../../components/NFTList";
 import { NFTMetadata } from "../../types/components";
-import * as styles from "../../layouts/styles";
+import * as styles from "../../layouts/shared";
 
 export default function Page() {
   const { isConnected } = useAccount();

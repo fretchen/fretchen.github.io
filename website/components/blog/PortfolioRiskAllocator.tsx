@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { css } from "../../styled-system/css";
 import { DATA } from "./etfData";
+import { ESSAY_ACCENT } from "./palette";
 
 const N_ETF = DATA.etf_names.length;
 const ETF_INDEX = new Map(DATA.etf_names.map((name, i) => [name, i]));
@@ -201,20 +202,20 @@ export default function PortfolioRiskAllocator() {
   return (
     <div
       className={css({
-        margin: "2rem 0",
-        padding: "1.5rem",
+        margin: "32px 0",
+        padding: "6",
         backgroundColor: "rgba(78, 121, 167, 0.04)",
-        borderRadius: "8px",
+        borderRadius: "lg",
         border: "1px solid rgba(78, 121, 167, 0.15)",
       })}
     >
       {/* ── Header ── */}
       <p
         className={css({
-          fontSize: "1.1rem",
+          fontSize: "lg",
           fontWeight: "bold",
-          color: "#1f2937",
-          marginBottom: "0.25rem",
+          color: "gray.800",
+          marginBottom: "1",
           marginTop: 0,
         })}
       >
@@ -222,9 +223,9 @@ export default function PortfolioRiskAllocator() {
       </p>
       <p
         className={css({
-          fontSize: "0.85rem",
-          color: "#6b7280",
-          marginBottom: "1.25rem",
+          fontSize: "sm",
+          color: "gray.500",
+          marginBottom: "5",
           marginTop: 0,
         })}
       >
@@ -232,25 +233,25 @@ export default function PortfolioRiskAllocator() {
       </p>
 
       {/* ── Preset buttons ── */}
-      <div className={css({ marginBottom: "1rem" })}>
-        <div className={css({ display: "flex", gap: "0.5rem", flexWrap: "wrap" })}>
+      <div className={css({ marginBottom: "4" })}>
+        <div className={css({ display: "flex", gap: "2", flexWrap: "wrap" })}>
           {PRESETS.map((p, i) => (
             <button
               key={p.label}
               onClick={() => applyPreset(i)}
               className={css({
-                padding: "0.4rem 0.75rem",
-                fontSize: "0.8rem",
-                borderRadius: "6px",
+                padding: "6px 12px",
+                fontSize: "sm",
+                borderRadius: "md",
                 cursor: "pointer",
                 border: "2px solid",
-                fontWeight: "600",
-                transition: "all 0.15s",
+                fontWeight: "semibold",
+                transition: "all {durations.normal} ease",
               })}
               style={{
-                borderColor: activePreset === i ? "#7b3fa0" : "#d1d5db",
+                borderColor: activePreset === i ? ESSAY_ACCENT : "#d1d5db",
                 backgroundColor: activePreset === i ? "rgba(123,63,160,0.08)" : "white",
-                color: activePreset === i ? "#7b3fa0" : "#374151",
+                color: activePreset === i ? ESSAY_ACCENT : "#374151",
               }}
             >
               {p.label}
@@ -258,15 +259,15 @@ export default function PortfolioRiskAllocator() {
           ))}
         </div>
         {activePreset >= 0 && (
-          <p className={css({ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.3rem", fontStyle: "italic" })}>
+          <p className={css({ fontSize: "xs", color: "gray.500", marginTop: "1", fontStyle: "italic" })}>
             {PRESETS[activePreset].description}
           </p>
         )}
       </div>
 
       {/* ── Draggable risk-budget bar ── */}
-      <div className={css({ marginBottom: "1.25rem" })}>
-        <div className={css({ fontSize: "0.8rem", color: "#374151", marginBottom: "0.35rem", fontWeight: "600" })}>
+      <div className={css({ marginBottom: "5" })}>
+        <div className={css({ fontSize: "sm", color: "gray.700", marginBottom: "1.5", fontWeight: "semibold" })}>
           Refine your mix — drag the ● circles to adjust
         </div>
         {/* Percentage labels above the track */}
@@ -275,7 +276,7 @@ export default function PortfolioRiskAllocator() {
             position: "relative",
             display: "flex",
             height: "1.1rem",
-            marginBottom: "0.2rem",
+            marginBottom: "1",
             userSelect: "none",
           })}
         >
@@ -290,7 +291,7 @@ export default function PortfolioRiskAllocator() {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: "0.7rem",
+                fontSize: "xs",
                 fontWeight: "bold",
                 overflow: "hidden",
                 whiteSpace: "nowrap",
@@ -321,7 +322,7 @@ export default function PortfolioRiskAllocator() {
               right: "0",
               bottom: "0",
               display: "flex",
-              borderRadius: "5px",
+              borderRadius: "sm",
               overflow: "hidden",
               border: "1px solid rgba(0,0,0,0.12)",
             })}
@@ -379,37 +380,34 @@ export default function PortfolioRiskAllocator() {
           })}
         </div>
         {/* Legend */}
-        <div className={css({ display: "flex", gap: "0.75rem", marginTop: "0.5rem", flexWrap: "wrap" })}>
+        <div className={css({ display: "flex", gap: "3", marginTop: "2", flexWrap: "wrap" })}>
           {DATA.clusters.map((cluster) => (
-            <div key={cluster.name} className={css({ display: "flex", alignItems: "center", gap: "0.25rem" })}>
+            <div key={cluster.name} className={css({ display: "flex", alignItems: "center", gap: "1" })}>
               <span
-                className={css({ width: "8px", height: "8px", borderRadius: "50%", flexShrink: 0 })}
+                className={css({ width: "8px", height: "8px", borderRadius: "full", flexShrink: 0 })}
                 style={{ backgroundColor: cluster.color }}
               />
-              <span className={css({ fontSize: "0.65rem", color: "#6b7280" })}>{cluster.name}</span>
+              <span className={css({ fontSize: "xs", color: "gray.500" })}>{cluster.name}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* ── Bumpiness gauge (between drag bar and results) ── */}
-      <div className={css({ marginBottom: "1.25rem" })}>
-        <div className={css({ display: "flex", alignItems: "baseline", gap: "0.5rem", marginBottom: "0.3rem" })}>
-          <span className={css({ fontSize: "0.8rem", color: "#374151" })}>How bumpy is this portfolio?</span>
-          <span
-            className={css({ fontSize: "1.1rem", fontWeight: "bold" })}
-            style={{ color: bumpinessColor(risk.portVol) }}
-          >
+      <div className={css({ marginBottom: "5" })}>
+        <div className={css({ display: "flex", alignItems: "baseline", gap: "2", marginBottom: "1" })}>
+          <span className={css({ fontSize: "sm", color: "gray.700" })}>How bumpy is this portfolio?</span>
+          <span className={css({ fontSize: "lg", fontWeight: "bold" })} style={{ color: bumpinessColor(risk.portVol) }}>
             {risk.portVol.toFixed(1)}%
           </span>
-          <span className={css({ fontSize: "0.65rem", color: "#9ca3af" })}>per year</span>
+          <span className={css({ fontSize: "xs", color: "gray.400" })}>per year</span>
         </div>
         <div
           className={css({
             position: "relative",
             height: "10px",
-            borderRadius: "5px",
-            backgroundColor: "#f3f4f6",
+            borderRadius: "sm",
+            backgroundColor: "gray.100",
             overflow: "hidden",
           })}
         >
@@ -427,9 +425,9 @@ export default function PortfolioRiskAllocator() {
           className={css({
             display: "flex",
             justifyContent: "space-between",
-            fontSize: "0.6rem",
-            color: "#9ca3af",
-            marginTop: "0.15rem",
+            fontSize: "xs",
+            color: "gray.400",
+            marginTop: "0.5",
           })}
         >
           <span>smoothest mix ({MIN_VOL.toFixed(1)}%)</span>
@@ -440,22 +438,22 @@ export default function PortfolioRiskAllocator() {
       {/* ── Portfolio summary ── */}
       <div
         className={css({
-          padding: "1rem",
-          borderRadius: "8px",
+          padding: "4",
+          borderRadius: "lg",
           backgroundColor: "white",
           border: "1px solid #e5e7eb",
         })}
       >
         {/* Capital allocation bar */}
-        <div className={css({ marginBottom: "0.75rem" })}>
-          <div className={css({ fontSize: "0.7rem", color: "#6b7280", marginBottom: "0.2rem" })}>
+        <div className={css({ marginBottom: "3" })}>
+          <div className={css({ fontSize: "xs", color: "gray.500", marginBottom: "1" })}>
             Capital allocation (computed)
           </div>
           <div
             className={css({
               display: "flex",
               height: "26px",
-              borderRadius: "4px",
+              borderRadius: "sm",
               overflow: "hidden",
               border: "1px solid #e5e7eb",
             })}
@@ -474,7 +472,7 @@ export default function PortfolioRiskAllocator() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontSize: "0.7rem",
+                    fontSize: "xs",
                     fontWeight: "bold",
                     color: "white",
                     overflow: "hidden",
@@ -490,7 +488,7 @@ export default function PortfolioRiskAllocator() {
         </div>
 
         {/* ── Cluster detail cards ── */}
-        <div className={css({ marginTop: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" })}>
+        <div className={css({ marginTop: "3", display: "flex", flexDirection: "column", gap: "2" })}>
           {DATA.clusters.map((cluster, ci) => {
             const isOpen = expandedCluster === ci;
             return (
@@ -498,12 +496,12 @@ export default function PortfolioRiskAllocator() {
                 key={cluster.name}
                 className={css({
                   borderLeft: "4px solid",
-                  borderRadius: "6px",
-                  backgroundColor: isOpen ? "#f9fafb" : "white",
+                  borderRadius: "md",
+                  backgroundColor: isOpen ? "codeBg" : "white",
                   border: "1px solid #e5e7eb",
                   overflow: "hidden",
-                  transition: "background-color 0.15s",
-                  _hover: { backgroundColor: "#f9fafb" },
+                  transition: "background-color {durations.normal} ease",
+                  _hover: { backgroundColor: "codeBg" },
                 })}
                 style={{ borderLeftColor: cluster.color, borderLeftWidth: "4px", borderLeftStyle: "solid" }}
               >
@@ -514,41 +512,37 @@ export default function PortfolioRiskAllocator() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    padding: "0.6rem 0.75rem",
+                    padding: "10px 12px",
                     background: "none",
                     border: "none",
                     cursor: "pointer",
                     textAlign: "left",
                   })}
                 >
-                  <div className={css({ display: "flex", alignItems: "center", gap: "0.5rem" })}>
-                    <span className={css({ fontSize: "0.85rem", fontWeight: "bold" })} style={{ color: cluster.color }}>
+                  <div className={css({ display: "flex", alignItems: "center", gap: "2" })}>
+                    <span className={css({ fontSize: "sm", fontWeight: "bold" })} style={{ color: cluster.color }}>
                       {cluster.name}
                     </span>
-                    <span className={css({ fontSize: "0.8rem", color: "#374151", fontWeight: "600" })}>
+                    <span className={css({ fontSize: "sm", color: "gray.700", fontWeight: "semibold" })}>
                       {risk.clusterWeight[ci].toFixed(0)}% capital
                     </span>
                   </div>
-                  <span className={css({ fontSize: "0.75rem", color: "#6b7280" })}>
+                  <span className={css({ fontSize: "xs", color: "gray.500" })}>
                     {isOpen ? "▾ Hide ETFs" : "▸ Show ETFs"}
                   </span>
                 </button>
 
                 {isOpen && (
-                  <div className={css({ padding: "0 0.75rem 0.6rem" })}>
-                    <table className={css({ width: "100%", fontSize: "0.7rem", borderCollapse: "collapse" })}>
+                  <div className={css({ padding: "0 12px 10px" })}>
+                    <table className={css({ width: "100%", fontSize: "xs", borderCollapse: "collapse" })}>
                       <thead>
                         <tr className={css({ borderBottom: "1px solid #e5e7eb" })}>
-                          <th className={css({ textAlign: "left", padding: "0.2rem 0.3rem", color: "#6b7280" })}>
-                            ETF
-                          </th>
-                          <th className={css({ textAlign: "right", padding: "0.2rem 0.3rem", color: "#6b7280" })}>
-                            Weight
-                          </th>
-                          <th className={css({ textAlign: "right", padding: "0.2rem 0.3rem", color: "#6b7280" })}>
+                          <th className={css({ textAlign: "left", padding: "4px 4px", color: "gray.500" })}>ETF</th>
+                          <th className={css({ textAlign: "right", padding: "4px 4px", color: "gray.500" })}>Weight</th>
+                          <th className={css({ textAlign: "right", padding: "4px 4px", color: "gray.500" })}>
                             Vol (ann.)
                           </th>
-                          <th className={css({ textAlign: "right", padding: "0.2rem 0.3rem", color: "#6b7280" })}>
+                          <th className={css({ textAlign: "right", padding: "4px 4px", color: "gray.500" })}>
                             Risk contrib.
                           </th>
                         </tr>
@@ -559,32 +553,30 @@ export default function PortfolioRiskAllocator() {
                           const etfVol = Math.sqrt(DATA.cov_etf_ann[idx][idx]) * 100;
                           return (
                             <tr key={etf} className={css({ borderBottom: "1px solid #f3f4f6" })}>
-                              <td className={css({ padding: "0.2rem 0.3rem", color: "#374151" })}>
+                              <td className={css({ padding: "4px 4px", color: "gray.700" })}>
                                 {DATA.etf_labels[idx]}{" "}
                                 <a
                                   href={DATA.etf_urls[idx]}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className={css({
-                                    color: "#6b7280",
+                                    color: "gray.500",
                                     textDecoration: "underline",
-                                    _hover: { color: "#374151" },
+                                    _hover: { color: "gray.700" },
                                   })}
                                 >
                                   {etf}
                                 </a>
                               </td>
-                              <td className={css({ textAlign: "right", padding: "0.2rem 0.3rem" })}>
+                              <td className={css({ textAlign: "right", padding: "4px 4px" })}>
                                 {(weights[idx] * 100).toFixed(1)}%
                               </td>
-                              <td className={css({ textAlign: "right", padding: "0.2rem 0.3rem" })}>
-                                {etfVol.toFixed(1)}%
-                              </td>
+                              <td className={css({ textAlign: "right", padding: "4px 4px" })}>{etfVol.toFixed(1)}%</td>
                               <td
                                 className={css({
                                   textAlign: "right",
-                                  padding: "0.2rem 0.3rem",
-                                  fontWeight: "600",
+                                  padding: "4px 4px",
+                                  fontWeight: "semibold",
                                 })}
                               >
                                 {risk.rc[idx].toFixed(1)}%

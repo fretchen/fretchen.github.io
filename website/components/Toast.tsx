@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import * as styles from "../layouts/styles";
+import { toast } from "./Toast.styles";
 
 export type ToastType = "success" | "error" | "warning";
 
@@ -47,10 +47,10 @@ export function Toast({ message, type, duration, onClose }: ToastProps) {
   };
 
   return (
-    <div className={styles.toast.container}>
-      <div className={styles.toast.content} data-type={type}>
-        <span className={styles.toast.icon}>{getIcon()}</span>
-        <span className={styles.toast.message}>{message}</span>
+    <div className={toast.container}>
+      <div className={toast.content} data-type={type}>
+        <span className={toast.icon}>{getIcon()}</span>
+        <span className={toast.message}>{message}</span>
       </div>
     </div>
   );

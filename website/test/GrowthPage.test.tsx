@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import { useAccount, useConnect } from "wagmi";
 import { OWNER_ADDRESS } from "../utils/getChain";
+import { buildAccountData, buildConnectData } from "./setup";
 
 // Mock the new TQ-based growth hooks
 const mockUseGrowthDrafts = vi.fn();
@@ -79,54 +80,44 @@ describe("Growth Page", () => {
   });
 
   it("shows connect prompt when wallet is not connected", () => {
-    vi.mocked(useAccount).mockReturnValue({
-      address: undefined,
-      isConnected: false,
-      status: "disconnected",
-    } as ReturnType<typeof useAccount>);
+    vi.mocked(useAccount).mockReturnValue(
+      buildAccountData({ address: undefined, isConnected: false, status: "disconnected" }),
+    );
 
-    vi.mocked(useConnect).mockReturnValue({
-      connectors: [{ name: "MetaMask" }],
-      connect: vi.fn(),
-    } as unknown as ReturnType<typeof useConnect>);
+    vi.mocked(useConnect).mockReturnValue(buildConnectData({ connectors: [{ name: "MetaMask" }] }));
 
     render(<Page />);
     expect(screen.getByText("Connect Wallet")).toBeInTheDocument();
   });
 
   it("prewarms the growth API on mount even when wallet is not connected", () => {
-    vi.mocked(useAccount).mockReturnValue({
-      address: undefined,
-      isConnected: false,
-      status: "disconnected",
-    } as ReturnType<typeof useAccount>);
+    vi.mocked(useAccount).mockReturnValue(
+      buildAccountData({ address: undefined, isConnected: false, status: "disconnected" }),
+    );
 
-    vi.mocked(useConnect).mockReturnValue({
-      connectors: [{ name: "MetaMask" }],
-      connect: vi.fn(),
-    } as unknown as ReturnType<typeof useConnect>);
+    vi.mocked(useConnect).mockReturnValue(buildConnectData({ connectors: [{ name: "MetaMask" }] }));
 
     render(<Page />);
     expect(mockPrewarmGrowthApi).toHaveBeenCalledOnce();
   });
 
   it("shows owner-only message for wrong address", () => {
-    vi.mocked(useAccount).mockReturnValue({
-      address: "0x1111111111111111111111111111111111111111",
-      isConnected: true,
-      status: "connected",
-    } as ReturnType<typeof useAccount>);
+    vi.mocked(useAccount).mockReturnValue(
+      buildAccountData({
+        address: "0x1111111111111111111111111111111111111111",
+        isConnected: true,
+        status: "connected",
+      }),
+    );
 
     render(<Page />);
     expect(screen.getByText("This page is restricted to the site owner.")).toBeInTheDocument();
   });
 
   it("fetches and renders drafts for owner wallet", async () => {
-    vi.mocked(useAccount).mockReturnValue({
-      address: OWNER_ADDRESS,
-      isConnected: true,
-      status: "connected",
-    } as ReturnType<typeof useAccount>);
+    vi.mocked(useAccount).mockReturnValue(
+      buildAccountData({ address: OWNER_ADDRESS, isConnected: true, status: "connected" }),
+    );
 
     render(<Page />);
 
@@ -140,11 +131,9 @@ describe("Growth Page", () => {
   });
 
   it("toggles edit mode with textarea", async () => {
-    vi.mocked(useAccount).mockReturnValue({
-      address: OWNER_ADDRESS,
-      isConnected: true,
-      status: "connected",
-    } as ReturnType<typeof useAccount>);
+    vi.mocked(useAccount).mockReturnValue(
+      buildAccountData({ address: OWNER_ADDRESS, isConnected: true, status: "connected" }),
+    );
 
     render(<Page />);
 
@@ -160,11 +149,9 @@ describe("Growth Page", () => {
   });
 
   it("calls approveDraft when approve flow is completed", async () => {
-    vi.mocked(useAccount).mockReturnValue({
-      address: OWNER_ADDRESS,
-      isConnected: true,
-      status: "connected",
-    } as ReturnType<typeof useAccount>);
+    vi.mocked(useAccount).mockReturnValue(
+      buildAccountData({ address: OWNER_ADDRESS, isConnected: true, status: "connected" }),
+    );
 
     render(<Page />);
 
@@ -189,11 +176,9 @@ describe("Growth Page", () => {
   });
 
   it("calls rejectDraft when reject is clicked", async () => {
-    vi.mocked(useAccount).mockReturnValue({
-      address: OWNER_ADDRESS,
-      isConnected: true,
-      status: "connected",
-    } as ReturnType<typeof useAccount>);
+    vi.mocked(useAccount).mockReturnValue(
+      buildAccountData({ address: OWNER_ADDRESS, isConnected: true, status: "connected" }),
+    );
 
     render(<Page />);
 
@@ -209,11 +194,9 @@ describe("Growth Page", () => {
   });
 
   it("shows empty state for tabs with no drafts", async () => {
-    vi.mocked(useAccount).mockReturnValue({
-      address: OWNER_ADDRESS,
-      isConnected: true,
-      status: "connected",
-    } as ReturnType<typeof useAccount>);
+    vi.mocked(useAccount).mockReturnValue(
+      buildAccountData({ address: OWNER_ADDRESS, isConnected: true, status: "connected" }),
+    );
 
     render(<Page />);
 
@@ -231,11 +214,9 @@ describe("Growth Page", () => {
   it("shows error banner when API call fails", async () => {
     mockUseGrowthDrafts.mockReturnValue({ data: undefined, isPending: false, error: new Error("Network error") });
 
-    vi.mocked(useAccount).mockReturnValue({
-      address: OWNER_ADDRESS,
-      isConnected: true,
-      status: "connected",
-    } as ReturnType<typeof useAccount>);
+    vi.mocked(useAccount).mockReturnValue(
+      buildAccountData({ address: OWNER_ADDRESS, isConnected: true, status: "connected" }),
+    );
 
     render(<Page />);
 
@@ -245,11 +226,9 @@ describe("Growth Page", () => {
   });
 
   it("shows character counter in edit mode", async () => {
-    vi.mocked(useAccount).mockReturnValue({
-      address: OWNER_ADDRESS,
-      isConnected: true,
-      status: "connected",
-    } as ReturnType<typeof useAccount>);
+    vi.mocked(useAccount).mockReturnValue(
+      buildAccountData({ address: OWNER_ADDRESS, isConnected: true, status: "connected" }),
+    );
 
     render(<Page />);
 
@@ -271,11 +250,9 @@ describe("Growth Page", () => {
       error: null,
     });
 
-    vi.mocked(useAccount).mockReturnValue({
-      address: OWNER_ADDRESS,
-      isConnected: true,
-      status: "connected",
-    } as ReturnType<typeof useAccount>);
+    vi.mocked(useAccount).mockReturnValue(
+      buildAccountData({ address: OWNER_ADDRESS, isConnected: true, status: "connected" }),
+    );
 
     render(<Page />);
 
@@ -297,11 +274,9 @@ describe("Growth Page", () => {
       error: null,
     });
 
-    vi.mocked(useAccount).mockReturnValue({
-      address: OWNER_ADDRESS,
-      isConnected: true,
-      status: "connected",
-    } as ReturnType<typeof useAccount>);
+    vi.mocked(useAccount).mockReturnValue(
+      buildAccountData({ address: OWNER_ADDRESS, isConnected: true, status: "connected" }),
+    );
 
     render(<Page />);
 
@@ -314,11 +289,9 @@ describe("Growth Page", () => {
   });
 
   it("shows character count in view mode for owner", async () => {
-    vi.mocked(useAccount).mockReturnValue({
-      address: OWNER_ADDRESS,
-      isConnected: true,
-      status: "connected",
-    } as ReturnType<typeof useAccount>);
+    vi.mocked(useAccount).mockReturnValue(
+      buildAccountData({ address: OWNER_ADDRESS, isConnected: true, status: "connected" }),
+    );
 
     render(<Page />);
 
@@ -328,11 +301,9 @@ describe("Growth Page", () => {
   });
 
   it("calls reset on all mutations when switching tabs", async () => {
-    vi.mocked(useAccount).mockReturnValue({
-      address: OWNER_ADDRESS,
-      isConnected: true,
-      status: "connected",
-    } as ReturnType<typeof useAccount>);
+    vi.mocked(useAccount).mockReturnValue(
+      buildAccountData({ address: OWNER_ADDRESS, isConnected: true, status: "connected" }),
+    );
 
     render(<Page />);
 
@@ -354,11 +325,9 @@ describe("Growth Page", () => {
     // The "calls reset on all mutations" test above verifies reset() is actually invoked.
     mockApproveError = new Error("Approve failed");
 
-    vi.mocked(useAccount).mockReturnValue({
-      address: OWNER_ADDRESS,
-      isConnected: true,
-      status: "connected",
-    } as ReturnType<typeof useAccount>);
+    vi.mocked(useAccount).mockReturnValue(
+      buildAccountData({ address: OWNER_ADDRESS, isConnected: true, status: "connected" }),
+    );
 
     const { rerender } = render(<Page />);
 

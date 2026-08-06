@@ -64,8 +64,8 @@ interface ChainBadgeProps {
 const badgeBase = css({
   display: "inline-flex",
   alignItems: "center",
-  gap: "4px",
-  fontWeight: "600",
+  gap: "1",
+  fontWeight: "semibold",
   borderRadius: "full",
   backdropFilter: "blur(4px)",
   border: "1px solid rgba(255,255,255,0.2)",
@@ -79,7 +79,7 @@ const badgeSm = css({
 });
 
 const badgeMd = css({
-  fontSize: "12px",
+  fontSize: "xs",
   padding: "4px 8px",
 });
 
@@ -136,14 +136,14 @@ interface ChainInfoDisplayProps {
 const infoRow = css({
   display: "flex",
   alignItems: "center",
-  gap: "8px",
-  fontSize: "14px",
+  gap: "2",
+  fontSize: "sm",
   color: "gray.600",
-  marginTop: "8px",
+  marginTop: "2",
 });
 
 const infoLabel = css({
-  fontWeight: "500",
+  fontWeight: "semibold",
 });
 
 export function ChainInfoDisplay({ network, tokenId }: ChainInfoDisplayProps) {

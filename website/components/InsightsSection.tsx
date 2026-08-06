@@ -12,7 +12,7 @@ const insightsList = css({
   paddingLeft: "lg",
   fontSize: "sm",
   color: "gray.700",
-  lineHeight: "1.6",
+  lineHeight: "relaxed",
 });
 
 const sectionHeading = { fontWeight: 600, marginBottom: "4px", marginTop: "12px" } as const;

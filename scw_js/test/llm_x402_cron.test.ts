@@ -83,6 +83,33 @@ describe("llm_x402_cron", () => {
     expect(body.results[0]).toEqual({ network: "eip155:10", claims: 1, settled: true });
   });
 
+  /**
+   * Regression guard for the Optimism enablement: `createChannelManager`'s token argument is
+   * optional, and omitting it makes the SDK fall back to its `DEFAULT_STABLECOINS` registry —
+   * which has no eip155:10 entry and throws "No default asset configured". The cron would
+   * then silently stop claiming revenue on Optimism.
+   */
+  it("passes each network's USDC address explicitly, never relying on the SDK registry", async () => {
+    await handle(makeEvent() as never, {});
+
+    expect(mockCreateChannelManager).toHaveBeenNthCalledWith(
+      1,
+      expect.anything(),
+      "eip155:10",
+      "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+    );
+    expect(mockCreateChannelManager).toHaveBeenNthCalledWith(
+      2,
+      expect.anything(),
+      "eip155:8453",
+      "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    );
+    // Every call must have a third argument — the fallback is never acceptable.
+    for (const call of mockCreateChannelManager.mock.calls) {
+      expect(call[2]).toMatch(/^0x[a-fA-F0-9]{40}$/);
+    }
+  });
+
   it("reports settled:false when claimAndSettle returns no settle result", async () => {
     mockClaimAndSettle.mockResolvedValue({ claims: [], settle: undefined });
     const res = await handle(makeEvent() as never, {});

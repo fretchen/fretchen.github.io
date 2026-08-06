@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { readContract } from "wagmi/actions";
-import { config } from "../wagmi.config";
+import { config, asConfiguredChainId } from "../wagmi.config";
 import { getGenAiNFTAddress, GenImNFTv4ABI, fromCAIP2 } from "@fretchen/chain-utils";
 
 export interface UseNFTListedStatusOptions {
@@ -24,7 +24,7 @@ export function useNFTListedStatus({
   enabled = true,
 }: UseNFTListedStatusOptions): UseNFTListedStatusResult {
   const queryClient = useQueryClient();
-  const chainId = fromCAIP2(network);
+  const chainId = asConfiguredChainId(fromCAIP2(network));
   const contractAddress = getGenAiNFTAddress(network);
   const tokenIdStr = tokenId.toString();
   const queryKey = ["nftListedStatus", tokenIdStr, network] as const;

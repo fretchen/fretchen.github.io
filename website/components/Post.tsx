@@ -3,26 +3,38 @@ import { PostProps } from "../types/components";
 import MetadataLine from "./MetadataLine";
 import { Link } from "./Link";
 import { NFTFloatImage } from "./NFTFloatImage";
-import { post, titleBar } from "../layouts/styles";
+import { MdxPre } from "./MdxCodeBlock";
+import { post } from "./Post.styles";
+import { button } from "../styled-system/recipes";
 import { loadLazyModuleFromDirectory } from "../utils/lazyGlobRegistry";
 import { isSupportedDirectory, getSupportedDirectories } from "../utils/supportedDirectories";
 import { useKaTeXRenderer } from "../hooks/useKaTeXRenderer";
+// KaTeX's own stylesheet — it carries the Computer Modern @font-face rules and the math
+// layout. It lives here, not on the routes, because every prose route (blog and all four
+// quantum sections) renders through this shell. Previously only /blog/@id imported it, so
+// lecture math shipped KaTeX markup with no KaTeX CSS.
+import "katex/dist/katex.min.css";
 import { useWebmentionUrls } from "../hooks/useWebmentionUrls";
 import { fetchWebmentions } from "../utils/webmentionUtils";
 import { SITE } from "../utils/siteData";
 import { TableOfContents } from "./TableOfContents";
+import { ArticleShell } from "./ArticleShell";
 
 import { Webmentions } from "./Webmentions";
 import { CommentsSection } from "./CommentsSection";
+
+// MDX components accept an extra `components` override prop (used to route `pre` through
+// MdxPre); plain TSX posts simply ignore it.
+type PostComponent = React.ComponentType<{ components?: Record<string, React.ComponentType> }>;
 
 // Dynamic React component renderer
 const ReactPostRenderer: React.FC<{
   componentPath: string;
   tokenID?: number;
-  contentRef: React.RefObject<HTMLDivElement>;
+  contentRef: React.RefObject<HTMLDivElement | null>;
   onReady?: () => void;
 }> = ({ componentPath, tokenID, contentRef, onReady }) => {
-  const [Component, setComponent] = React.useState<React.ComponentType | null>(null);
+  const [Component, setComponent] = React.useState<PostComponent | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState<boolean>(true);
 
@@ -78,9 +90,9 @@ const ReactPostRenderer: React.FC<{
   if (loading) {
     return (
       <div className={post.contentContainer}>
-        <div style={{ padding: "20px", textAlign: "center" }}>
+        <div className={post.loadingBox}>
           <p>🔄 Lade interaktive Komponente...</p>
-          <p style={{ fontSize: "0.9em", color: "#666" }}>
+          <p className={post.loadingPath}>
             Pfad: <code>{componentPath}</code>
           </p>
         </div>
@@ -91,16 +103,7 @@ const ReactPostRenderer: React.FC<{
   if (error || !Component) {
     return (
       <div className={post.contentContainer}>
-        <div
-          style={{
-            border: "1px solid #dc3545",
-            borderRadius: "4px",
-            padding: "20px",
-            backgroundColor: "#f8d7da",
-            color: "#721c24",
-            margin: "20px 0",
-          }}
-        >
+        <div className={post.errorBox}>
           <h3>❌ Fehler beim Laden der React-Komponente</h3>
           <p>
             <strong>Fehler:</strong> {error || "Komponente konnte nicht geladen werden"}
@@ -109,22 +112,15 @@ const ReactPostRenderer: React.FC<{
             <strong>Pfad:</strong> <code>{componentPath}</code>
           </p>
           <button
+            type="button"
             onClick={() => window.location.reload()}
-            style={{
-              marginTop: "10px",
-              padding: "8px 16px",
-              border: "1px solid #721c24",
-              borderRadius: "4px",
-              backgroundColor: "transparent",
-              color: "#721c24",
-              cursor: "pointer",
-            }}
+            className={`${button({ visual: "secondary", size: "sm" })} ${post.errorSpacing}`}
           >
             🔄 Seite neu laden
           </button>
-          <details style={{ marginTop: "10px" }}>
+          <details className={post.errorSpacing}>
             <summary>Mögliche Lösungen</summary>
-            <ul style={{ marginTop: "10px" }}>
+            <ul className={post.errorSpacing}>
               <li>Laden Sie die Seite neu (hilft nach einem Update der Website)</li>
               <li>Überprüfen Sie, ob die TSX-Datei existiert</li>
               <li>Stellen Sie sicher, dass die Komponente als default export verfügbar ist</li>
@@ -137,9 +133,14 @@ const ReactPostRenderer: React.FC<{
   }
 
   return (
-    <div className={post.contentContainer} ref={contentRef}>
+    // e-content lives here, on the article itself, rather than on the wrapper in Post below.
+    // The wrapper is always present, but the body only exists once this dynamic import has
+    // resolved — so on the prerendered page the class used to describe the loading box, and
+    // mf2 parsed the post's content as "🔄 Lade interaktive Komponente...Pfad: ../blog/…".
+    // That string is what Bridgy Fed syndicated as the body of every post.
+    <div className={`e-content ${post.contentContainer}`} ref={contentRef}>
       {tokenID && <NFTFloatImage tokenId={tokenID} />}
-      <Component />
+      <Component components={{ pre: MdxPre }} />
     </div>
   );
 };
@@ -210,64 +211,58 @@ export function Post({
       <a className="u-bridgy-omit-link" href="https://brid.gy/publish/mastodon" style={{ display: "none" }} />
       <a className="u-bridgy-omit-link" href="https://brid.gy/publish/bluesky" style={{ display: "none" }} />
 
-      {/* 3-column grid layout: spacer | content | ToC sidebar */}
-      <div className={post.articleLayout}>
-        {/* Left spacer (empty on all screen sizes) */}
-        <div />
-
-        {/* Main content column */}
-        <div className={post.articleContent}>
-          <h1 className={`p-name ${titleBar.title}`}>{title}</h1>
-
-          <MetadataLine publishingDate={publishing_date} showSupport={true} reactionCount={reactionCount} />
-
-          {/* Render based on post type */}
-          <div className="e-content" ref={contentRef}>
-            <ReactPostRenderer
-              key={componentPath}
-              componentPath={componentPath ?? ""}
-              tokenID={tokenID}
-              contentRef={contentRef}
-              onReady={handleContentReady}
-            />
-          </div>
-
-          {/* Navigation zwischen Posts */}
-          {(prevPost || nextPost) && (
-            <div className={post.navigation}>
-              {prevPost ? (
-                <div className={`${post.navLink} ${post.navLinkPrev}`}>
-                  <Link href={`${basePath}/${prevPost.id}`}>
-                    <span className={post.navLabel}>Previous: </span>
-                    <span className={post.navTitle}>{prevPost.title}</span>
-                  </Link>
-                </div>
-              ) : (
-                <div></div>
-              )}
-
-              {nextPost ? (
-                <div className={`${post.navLink} ${post.navLinkNext}`}>
-                  <Link href={`${basePath}/${nextPost.id}`}>
-                    <span className={post.navLabel}>Next: </span>
-                    <span className={post.navTitle}>{nextPost.title}</span>
-                  </Link>
-                </div>
-              ) : (
-                <div></div>
-              )}
-            </div>
-          )}
-
-          <Webmentions />
-          <CommentsSection />
+      <ArticleShell
+        header={
+          <>
+            <h1 className={`p-name ${post.title}`}>{title}</h1>
+            <MetadataLine publishingDate={publishing_date} showSupport={true} reactionCount={reactionCount} />
+          </>
+        }
+        toc={<TableOfContents contentRef={contentRef} isReady={contentReady} />}
+      >
+        {/* Render based on post type */}
+        {/* Carries the ref the ToC and KaTeX scan. Deliberately no e-content: that class
+            belongs to the rendered article, which ReactPostRenderer adds once it exists. */}
+        <div ref={contentRef}>
+          <ReactPostRenderer
+            key={componentPath}
+            componentPath={componentPath ?? ""}
+            tokenID={tokenID}
+            contentRef={contentRef}
+            onReady={handleContentReady}
+          />
         </div>
 
-        {/* Right sidebar with Table of Contents */}
-        <aside className={post.articleSidebar}>
-          <TableOfContents contentRef={contentRef} isReady={contentReady} />
-        </aside>
-      </div>
+        {/* Navigation zwischen Posts */}
+        {(prevPost || nextPost) && (
+          <div className={post.navigation}>
+            {prevPost ? (
+              <div className={`${post.navLink} ${post.navLinkPrev}`}>
+                <Link href={`${basePath}/${prevPost.id}`}>
+                  <span className={post.navLabel}>Previous: </span>
+                  <span className={post.navTitle}>{prevPost.title}</span>
+                </Link>
+              </div>
+            ) : (
+              <div></div>
+            )}
+
+            {nextPost ? (
+              <div className={`${post.navLink} ${post.navLinkNext}`}>
+                <Link href={`${basePath}/${nextPost.id}`}>
+                  <span className={post.navLabel}>Next: </span>
+                  <span className={post.navTitle}>{nextPost.title}</span>
+                </Link>
+              </div>
+            ) : (
+              <div></div>
+            )}
+          </div>
+        )}
+
+        <Webmentions />
+        <CommentsSection />
+      </ArticleShell>
     </article>
   );
 }

@@ -5,7 +5,7 @@ import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS } from "@fretchen
 import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
 import { extractPromptFromDescription } from "../utils/nftMetadataUtils";
 import { NFTMetadata } from "../types/components";
-import * as styles from "../layouts/styles";
+import { nftFloat } from "./NFTFloatImage.styles";
 
 interface NFTFloatImageProps {
   tokenId: number;
@@ -58,10 +58,10 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
 
   if (isPending) {
     return (
-      <div className={styles.nftFloat.container}>
-        <div className={styles.nftFloat.loading}>
-          <div className={styles.nftFloat.spinner}></div>
-          <p className={styles.nftFloat.loadingText}>Loading...</p>
+      <div className={nftFloat.container}>
+        <div className={nftFloat.loading}>
+          <div className={nftFloat.spinner}></div>
+          <p className={nftFloat.loadingText}>Loading...</p>
         </div>
       </div>
     );
@@ -69,25 +69,25 @@ export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
 
   if (isError || !data?.imageUrl) {
     return (
-      <div className={styles.nftFloat.container}>
-        <div className={styles.nftFloat.placeholder}>
-          <p className={styles.nftFloat.placeholderText}>NFT #{tokenId}</p>
-          <p className={styles.nftFloat.errorText}>Image unavailable</p>
+      <div className={nftFloat.container}>
+        <div className={nftFloat.placeholder}>
+          <p className={nftFloat.placeholderText}>NFT #{tokenId}</p>
+          <p className={nftFloat.errorText}>Image unavailable</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={styles.nftFloat.container}>
+    <div className={nftFloat.container}>
       <img
         src={data.imageUrl}
         alt={data.title || `NFT #${tokenId}`}
-        className={`u-photo ${styles.nftFloat.image}`}
+        className={`u-photo ${nftFloat.image}`}
         loading="lazy"
         decoding="async"
       />
-      <p className={styles.nftFloat.caption}>{getImageTitle()}</p>
+      <p className={nftFloat.caption}>{getImageTitle()}</p>
     </div>
   );
 }

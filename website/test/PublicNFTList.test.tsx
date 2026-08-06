@@ -31,7 +31,7 @@ vi.mock("../components/ImageModal", () => ({
 }));
 
 // Mock styles
-vi.mock("../layouts/styles", () => ({
+vi.mock("../layouts/shared", () => ({
   nftList: {
     loadingContainer: "loading-container",
     emptyStateContainer: "empty-state-container",

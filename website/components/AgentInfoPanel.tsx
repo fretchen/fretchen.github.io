@@ -20,15 +20,19 @@ import { useAgentInfo } from "../hooks/useAgentInfo";
 import { useLocale } from "../hooks/useLocale";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
 import { getGenAiNFTAddress, GENAI_NFT_NETWORKS } from "@fretchen/chain-utils";
+import type { AgentCard } from "../hooks/x402Discovery";
 
 interface AgentInfoPanelProps {
   // Service context (for display purposes)
   service?: "genimg" | "llm";
   // Layout variant
   variant?: "footer" | "sidebar";
+  // When set (llm escape hatch), show this pre-checked agent's provenance instead of the
+  // default single-tenant registration file. Derived live from the agent's own /openapi.json.
+  agentCard?: AgentCard | null;
 }
 
-export function AgentInfoPanel({ service = "genimg", variant = "footer" }: AgentInfoPanelProps) {
+export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCard = null }: AgentInfoPanelProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const { agent, isLoading, error } = useAgentInfo();
 
@@ -39,6 +43,42 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer" }: Agent
   const { network: genimgNetwork } = useAutoNetwork(GENAI_NFT_NETWORKS);
 
   const isSidebar = variant === "sidebar";
+
+  // llm path: render honest provenance (operator + origin + payTo) read live from the agent's
+  // own /openapi.json + 402 — who the user actually pays. Third-party agents (not a *.fretchen.eu
+  // origin) additionally carry an at-your-own-risk note. The multi-agent picker that would make
+  // a third-party card appear here isn't rendered yet (see AssistantChat / the plan).
+  if (agentCard) {
+    let isThirdParty = true;
+    try {
+      isThirdParty = !new URL(agentCard.origin).hostname.endsWith("fretchen.eu");
+    } catch {
+      // Unparseable origin — treat as third-party (safer disclosure).
+    }
+    return (
+      <div className={css({ fontSize: "xs", color: "gray.700" })}>
+        <div className={css({ fontWeight: "semibold" })}>{agentCard.operator ?? agentCard.origin}</div>
+        <div className={css({ color: "gray.500", wordBreak: "break-all" })}>{agentCard.origin}</div>
+        {agentCard.payTo && (
+          <div className={css({ fontFamily: "code", color: "gray.600", mt: "1" })} title="Payment recipient">
+            pays → {agentCard.payTo.slice(0, 6)}…{agentCard.payTo.slice(-4)}
+          </div>
+        )}
+        {isThirdParty && <div className={css({ color: "warning", mt: "1" })}>third-party agent · at your own risk</div>}
+      </div>
+    );
+  }
+
+  // The llm service is card-driven (above). Before the card resolves, show a compact
+  // placeholder rather than falling through to the legacy registration-file rendering (which
+  // carries the retired "Become a provider" / EIP-8004 JSON links we don't want on /assistent).
+  if (service === "llm") {
+    return (
+      <div className={css({ fontSize: "xs", color: "gray.500", textAlign: isSidebar ? "left" : "center", mt: "2" })}>
+        Loading agent…
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -60,7 +100,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer" }: Agent
           className={css({
             color: "brand",
             textDecoration: "none",
-            fontWeight: "medium",
+            fontWeight: "semibold",
             _hover: { textDecoration: "underline" },
           })}
         >
@@ -96,12 +136,12 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer" }: Agent
         >
           <span className={css({ display: "flex", alignItems: "center", gap: "1" })}>
             <span>🤖</span>
-            <span className={css({ fontFamily: "mono", color: "blue.600" })}>{agent.walletShort}</span>
+            <span className={css({ fontFamily: "code", color: "blue.600" })}>{agent.walletShort}</span>
           </span>
           <span
             className={css({
               color: "gray.400",
-              transition: "transform 0.2s",
+              transition: "transform {durations.normal} ease",
               transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
             })}
           >
@@ -133,7 +173,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer" }: Agent
                   })}
                 />
               )}
-              <span className={css({ fontWeight: "medium", color: "gray.800", fontSize: "xs" })}>{agent.name}</span>
+              <span className={css({ fontWeight: "semibold", color: "gray.800", fontSize: "xs" })}>{agent.name}</span>
             </div>
 
             {/* Details */}
@@ -141,7 +181,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer" }: Agent
               {serviceHostname && (
                 <div>
                   <span className={css({ color: "gray.500" })}>Endpoint: </span>
-                  <code className={css({ fontFamily: "mono", color: "gray.700" })}>{serviceHostname}</code>
+                  <code className={css({ fontFamily: "code", color: "gray.700" })}>{serviceHostname}</code>
                 </div>
               )}
               <div>
@@ -206,7 +246,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer" }: Agent
             color: "brand",
             textDecoration: "none",
             fontSize: "xs",
-            fontWeight: "medium",
+            fontWeight: "semibold",
             _hover: { textDecoration: "underline" },
           })}
         >
@@ -243,7 +283,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer" }: Agent
           <span>•</span>
           <span
             className={css({
-              fontFamily: "mono",
+              fontFamily: "code",
               color: "blue.600",
               display: "inline-flex",
               alignItems: "center",
@@ -256,7 +296,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer" }: Agent
           <span
             className={css({
               color: "gray.400",
-              transition: "transform 0.2s",
+              transition: "transform {durations.normal} ease",
               transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
             })}
           >
@@ -269,7 +309,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer" }: Agent
           className={css({
             color: "brand",
             textDecoration: "none",
-            fontWeight: "medium",
+            fontWeight: "semibold",
             _hover: { textDecoration: "underline" },
           })}
         >
@@ -280,10 +320,11 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer" }: Agent
       {/* Expanded Details */}
       {isExpanded && (
         <div
+          // No bg: gray.50 was invisible on the old grey page and reads as a tinted panel on
+          // white. The border already groups the details.
           className={css({
             mt: "3",
             p: "3",
-            bg: "gray.50",
             border: "1px solid",
             borderColor: "gray.200",
             borderRadius: "md",
@@ -304,7 +345,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer" }: Agent
                 })}
               />
             )}
-            <span className={css({ fontWeight: "medium", color: "gray.800" })}>{agent.name}</span>
+            <span className={css({ fontWeight: "semibold", color: "gray.800" })}>{agent.name}</span>
             <span
               className={css({
                 ml: "auto",
@@ -327,7 +368,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer" }: Agent
               <span className={css({ color: "gray.500", minWidth: "60px" })}>Wallet:</span>
               <code
                 className={css({
-                  fontFamily: "mono",
+                  fontFamily: "code",
                   fontSize: "xs",
                   color: "gray.700",
                   wordBreak: "break-all",
@@ -343,7 +384,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer" }: Agent
                 <span className={css({ color: "gray.500", minWidth: "60px" })}>Endpoint:</span>
                 <code
                   className={css({
-                    fontFamily: "mono",
+                    fontFamily: "code",
                     fontSize: "xs",
                     color: "gray.700",
                   })}
@@ -378,7 +419,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer" }: Agent
               className={css({
                 color: "brand",
                 textDecoration: "none",
-                fontWeight: "medium",
+                fontWeight: "semibold",
                 _hover: { textDecoration: "underline" },
               })}
             >
@@ -392,7 +433,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer" }: Agent
                 className={css({
                   color: "brand",
                   textDecoration: "none",
-                  fontWeight: "medium",
+                  fontWeight: "semibold",
                   _hover: { textDecoration: "underline" },
                 })}
               >
@@ -407,7 +448,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer" }: Agent
                 className={css({
                   color: "brand",
                   textDecoration: "none",
-                  fontWeight: "medium",
+                  fontWeight: "semibold",
                   _hover: { textDecoration: "underline" },
                 })}
               >

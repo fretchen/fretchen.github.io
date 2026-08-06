@@ -1,9 +1,24 @@
 import React from "react";
 import { Card } from "../../components/Card";
+import { CardList } from "../../components/CardList";
 import EntryList from "../../components/EntryList";
 import { useData } from "vike-react/useData";
 import type { BlogPost } from "../../types/BlogPost";
-import * as styles from "../../layouts/styles";
+import * as styles from "../../layouts/shared";
+import { css } from "../../styled-system/css";
+import { PageHeader } from "../../components/PageHeader";
+
+// Page-local styles — nothing else uses these.
+// Section header styles
+const sectionHeading = css({
+  fontSize: "lg",
+  fontWeight: "semibold",
+  marginBottom: "4",
+  paddingBottom: "2",
+  borderBottom: "1px solid token(colors.border)",
+});
+// Blog section styles
+const blogSection = css({ marginTop: "10" });
 
 export default function Page() {
   const { blogs } = useData<{ blogs: BlogPost[] }>();
@@ -11,31 +26,30 @@ export default function Page() {
   return (
     <div className={styles.container}>
       {/* Hero section */}
-      <div className={styles.heroContainer}>
-        <h1 className={styles.titleBar.title}>Welcome</h1>
-        <p className={styles.heroText}>
-          Welcome to my website with all kinds of notes etc. Nothing fancy, just me thinking out loudly.
-        </p>
-      </div>
+      <PageHeader title="fretchen" territory="voice">
+        Notes, essays and things I built while working topics out.
+      </PageHeader>
 
       {/* Main areas */}
       <section>
-        <h2 className={styles.sectionHeading}>Explore the main areas</h2>
-
-        <div className={styles.cardStack}>
-          <Card title="Blog" description="My thoughts on various topics." link="/blog" />
+        <CardList>
+          <Card
+            title="Blog"
+            description="Game theory and economics, quantum physics, and what I learned building on the web."
+            link="/blog"
+          />
           <Card title="Quantum" description="Tutorials and notes on quantum, AMO and more." link="/quantum" />
           <Card
             title="Lab"
             description="AI image generation, chat assistant, and blockchain-based payments — experiments running on Optimism and Base."
             link="/lab"
           />
-        </div>
+        </CardList>
       </section>
 
       {/* Latest blog posts */}
-      <section className={styles.blogSection}>
-        <h2 className={styles.sectionHeading}>Latest Blog Posts</h2>
+      <section className={blogSection}>
+        <h2 className={sectionHeading}>Latest posts</h2>
 
         <EntryList
           blogs={blogs}

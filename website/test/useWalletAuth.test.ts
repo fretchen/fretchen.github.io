@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useAccount, useSignMessage } from "wagmi";
 import { useWalletAuth, clearAuthCacheForTesting } from "../hooks/useWalletAuth";
+import { buildAccountData } from "./setup";
 
 // wagmi is globally mocked in test/setup.ts
 
@@ -15,10 +16,7 @@ describe("useWalletAuth", () => {
     clearAuthCacheForTesting();
     vi.clearAllMocks();
 
-    vi.mocked(useAccount).mockReturnValue({
-      address: TEST_ADDRESS,
-      isConnected: true,
-    } as ReturnType<typeof useAccount>);
+    vi.mocked(useAccount).mockReturnValue(buildAccountData({ address: TEST_ADDRESS, isConnected: true }));
 
     vi.mocked(useSignMessage).mockReturnValue({
       signMessageAsync: mockSign,
@@ -118,10 +116,7 @@ describe("useWalletAuth", () => {
   });
 
   it("throws when wallet is not connected (address is undefined)", async () => {
-    vi.mocked(useAccount).mockReturnValue({
-      address: undefined,
-      isConnected: false,
-    } as ReturnType<typeof useAccount>);
+    vi.mocked(useAccount).mockReturnValue(buildAccountData({ address: undefined, isConnected: false }));
 
     const { result } = renderHook(() => useWalletAuth("test-prefix"));
     await expect(result.current()).rejects.toThrow("Wallet not connected");

@@ -1,4 +1,10 @@
-import { callLLMAPI, convertTokensToUsdcCost, type LLMMessage } from "./llm_service.js";
+import {
+  callLLMAPI,
+  convertTokensToUsdcCost,
+  resolveModel,
+  advertisedModelIds,
+  type LLMMessage,
+} from "./llm_service.js";
 import { parseJsonBody } from "./utils.js";
 import { getUSDCConfig, isTestnet } from "@fretchen/chain-utils";
 import pino from "pino";
@@ -36,10 +42,11 @@ const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 // The REAL, usage-derived charge is computed after the LLM call and passed to
 // settlePayment() as a *separate*, smaller requirements.amount — handleBeforeSettle only
 // enforces chargedCumulativeAmount + requirements.amount <= voucher.maxClaimableAmount (a
-// ceiling, not equality), so verify and settle are free to use different amounts. This is
-// the "authorize an upper bound, claim the real amount" pattern the SDK's
-// setSettlementOverrides() wraps for Express apps — we do it manually here since we call
-// settlePayment() directly. See getSettleAmount() below.
+// ceiling, not equality), so verify and settle are free to use different amounts. We
+// implement this "authorize an upper bound, claim the real amount" split manually: verify
+// with the ceiling amount, then pass a smaller usage-derived amount to settlePayment().
+// (The installed @x402/evm — 2.18.0 — exposes no higher-level helper for this; we call the
+// resourceServer verify/settle primitives directly.) See getSettleAmount() below.
 // This endpoint uses Mistral, not IONOS — see llm_service.ts's LLM_PROVIDERS. Legacy
 // sc_llm.ts (merkle settlement) is untouched and stays on IONOS.
 const LLM_PROVIDER = "mistral";
@@ -84,6 +91,25 @@ function isHexAddress(addr: unknown): addr is `0x${string}` {
 
 function errorResponse(statusCode: number, error: string): ScwResponse {
   return { body: JSON.stringify({ error }), headers: CORS_HEADERS, statusCode };
+}
+
+/**
+ * OpenAI-shaped error body ({ error: { message, type, code } }) for request/model validation
+ * failures, so callers reusing OpenAI response types parse our errors too. Payment (402) and
+ * internal (500) errors keep the plain x402-style `errorResponse` above — those are not part
+ * of the OpenAI request contract.
+ */
+function openAiError(
+  statusCode: number,
+  message: string,
+  type: string,
+  code: string | null = null,
+): ScwResponse {
+  return {
+    body: JSON.stringify({ error: { message, type, code } }),
+    headers: CORS_HEADERS,
+    statusCode,
+  };
 }
 
 export async function handle(event: ScwEvent, _context: unknown): Promise<ScwResponse> {
@@ -142,23 +168,103 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
 
   const body = parseJsonBody(event.body);
   if (!body) {
-    return errorResponse(400, "Invalid JSON body");
+    return openAiError(400, "Invalid JSON body", "invalid_request_error");
   }
 
-  const data = body["data"] as Record<string, unknown> | undefined;
-  if (!Array.isArray(data?.["prompt"])) {
-    return errorResponse(400, "No prompt provided");
+  // ─── Payment challenge comes BEFORE request validation ───
+  // An unpaid request is answered with the 402 whatever its body says. This is the llm/v1
+  // contract this repo publishes and asks other builders to implement ("an unpaid POST is
+  // asked to pay" — see checkLlmV1Agent in website/hooks/x402Discovery.ts and the
+  // /agent-onboarding guide), and validating first violated it: a client probing for the
+  // payment terms it is supposed to discover got a 400/404 with no Payment-Required header,
+  // so this agent failed its own compatibility checker. It also broke real clients — the
+  // website negotiates which network to pay on by reading this 402 first
+  // (useX402Chat.ts), which is impossible if the challenge is gated behind knowing a valid
+  // model id.
+  //
+  // Nothing is charged here: this branch only advertises terms. A *paid* request still runs
+  // the full validation below before any voucher is verified or settled, so a malformed
+  // paid request is rejected without being charged.
+  const receiverAddressForChallenge = process.env.NFT_WALLET_PUBLIC_KEY;
+  if (!receiverAddressForChallenge || !isHexAddress(receiverAddressForChallenge)) {
+    return errorResponse(
+      500,
+      "Service provider address not configured or invalid. Set NFT_WALLET_PUBLIC_KEY to a 0x-prefixed 40-hex-char address.",
+    );
   }
-  const prompt = data["prompt"] as LLMMessage[];
+  const paymentPayloadEarly = extractPaymentPayload(event.headers) ?? body["payment"];
+  if (!paymentPayloadEarly) {
+    logger.info("No payment provided, returning 402");
+    let challengeScheme: ReturnType<typeof createLLMResourceServer>["scheme"];
+    try {
+      ({ scheme: challengeScheme } = createLLMResourceServer(receiverAddressForChallenge));
+    } catch (err) {
+      logger.error({ err }, "Failed to configure batch-settlement resource server");
+      return errorResponse(500, "Server configuration error");
+    }
+    const paymentRequirements = await createBatchSettlementPaymentRequirements({
+      resourceUrl: event.path ?? process.env.LLM_SERVICE_URL ?? "https://api.example.com/llm",
+      description: "AI Assistant chat message",
+      mimeType: "application/json",
+      amount: USDC_MAX_PRICE_PER_MESSAGE,
+      payTo: receiverAddressForChallenge,
+      scheme: challengeScheme,
+    });
+    return create402Response(paymentRequirements);
+  }
 
+  // OpenAI chat-completions request body: { model, messages: [{ role, content }, ...] }.
+  // Streaming settles per message on the final usage, which requires the whole completion —
+  // so stream:true is rejected rather than silently buffered.
+  if (body["stream"] === true) {
+    return openAiError(
+      400,
+      "Streaming (stream: true) is not supported by this endpoint.",
+      "invalid_request_error",
+      "stream_unsupported",
+    );
+  }
+
+  const messages = body["messages"];
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return openAiError(400, "'messages' must be a non-empty array.", "invalid_request_error");
+  }
+  const validMessages = messages.every(
+    (m) =>
+      m && typeof m === "object" && typeof m.role === "string" && typeof m.content === "string",
+  );
+  if (!validMessages) {
+    return openAiError(
+      400,
+      "Each message must have a string 'role' and string 'content'.",
+      "invalid_request_error",
+    );
+  }
+  const prompt = messages as LLMMessage[];
+
+  const requestedModel = body["model"];
+  if (typeof requestedModel !== "string" || !requestedModel) {
+    return openAiError(400, "'model' is required.", "invalid_request_error");
+  }
+  const resolved = resolveModel(requestedModel);
+  if (!resolved) {
+    return openAiError(
+      404,
+      `The model '${requestedModel}' does not exist or is not served by this endpoint. Available: ${advertisedModelIds().join(", ")}.`,
+      "invalid_request_error",
+      "model_not_found",
+    );
+  }
+
+  // `useDummyData` is our vendor extension (testnet mock control), not part of OpenAI.
   // Deliberately left undefined (not defaulted to false) when absent — the testnet
   // reject check below needs to distinguish "not sent" from "explicitly false".
   let useDummyData: boolean | undefined;
-  if (data["useDummyData"] !== undefined) {
-    if (typeof data["useDummyData"] !== "boolean") {
-      return errorResponse(400, "Invalid useDummyData flag");
+  if (body["useDummyData"] !== undefined) {
+    if (typeof body["useDummyData"] !== "boolean") {
+      return openAiError(400, "Invalid useDummyData flag.", "invalid_request_error");
     }
-    useDummyData = data["useDummyData"];
+    useDummyData = body["useDummyData"] as boolean;
   }
 
   const receiverAddress = process.env.NFT_WALLET_PUBLIC_KEY;
@@ -178,20 +284,8 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     return errorResponse(500, "Server configuration error");
   }
 
-  const paymentPayload = extractPaymentPayload(event.headers) ?? body["payment"];
-
-  if (!paymentPayload) {
-    logger.info("No payment provided, returning 402");
-    const paymentRequirements = await createBatchSettlementPaymentRequirements({
-      resourceUrl: event.path ?? process.env.LLM_SERVICE_URL ?? "https://api.example.com/llm",
-      description: "AI Assistant chat message",
-      mimeType: "application/json",
-      amount: USDC_MAX_PRICE_PER_MESSAGE,
-      payTo: receiverAddress,
-      scheme,
-    });
-    return create402Response(paymentRequirements);
-  }
+  // Non-null: the unpaid case already returned the 402 challenge above, before validation.
+  const paymentPayload = paymentPayloadEarly;
 
   const clientNetwork = (paymentPayload as Record<string, unknown>)["accepted"]
     ? (((paymentPayload as Record<string, unknown>)["accepted"] as Record<string, unknown>)[
@@ -305,7 +399,16 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
       logger.info({ network: clientNetwork }, "Using mock LLM response (test mode)");
     }
     logger.debug({ prompt }, "Generating answer for prompt");
-    llmData = await callLLMAPI(prompt, useMock, LLM_PROVIDER);
+    // Route to the provider that serves the requested model. Today only mistral is
+    // advertised (resolved.provider === LLM_PROVIDER), so pricing (getSettleAmount /
+    // USDC_MAX_PRICE_PER_MESSAGE, which use LLM_PROVIDER) stays correct. When a second
+    // provider (e.g. ionos) is advertised, per-provider pricing must follow suit here.
+    // TODO: getSettleAmount() and USDC_MAX_PRICE_PER_MESSAGE (above) are hardcoded to
+    // LLM_PROVIDER = "mistral" and do NOT use resolved.provider. The moment a second model
+    // is added to advertisedModelIds(), a request routed to that provider here will still be
+    // priced/settled at Mistral's rate — fix pricing to key off resolved.provider before
+    // advertising a second model.
+    llmData = await callLLMAPI(prompt, useMock, resolved.provider);
   } catch (error) {
     logger.error({ err: error }, "Error during answer generation");
     const msg = (error as Error).message;

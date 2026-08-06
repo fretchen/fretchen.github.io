@@ -5,16 +5,29 @@
  * off-chain voucher signatures reusing the open channel.
  */
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useSyncExternalStore } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { AgentInfoPanel } from "./AgentInfoPanel";
-import * as styles from "../layouts/styles";
+import { AgentSelector } from "./AgentSelector";
+import * as chat from "./AssistantChat.styles";
 import { useLocale } from "../hooks/useLocale";
 import { useUmami } from "../hooks/useUmami";
 import { css } from "../styled-system/css";
 import { useWalletConnection } from "../hooks/useWalletConnection";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
-import { useX402Chat } from "../hooks/useX402Chat";
-import { getViemChain } from "@fretchen/chain-utils";
+import { useX402Chat, DEFAULT_LLM_AGENT_URL } from "../hooks/useX402Chat";
+import { fetchAgentCard, precheckLlmV1Agent, type AgentCard } from "../hooks/x402Discovery";
+import { getViemChain, toCAIP2 } from "@fretchen/chain-utils";
+import { useChainId } from "wagmi";
+import { ChainBadge, getChainName } from "./ChainBadge";
+import { button } from "../styled-system/recipes";
+import { PageHeader } from "./PageHeader";
+
+// The custom-URL escape hatch (AgentSelector) lets the chat pay any llm/v1 agent. It is also
+// the only ready-made batch-settlement client there is, so it doubles as the end-to-end test
+// for anyone following the build guide at /agent-onboarding. A curated picker (rather than a
+// URL box) waits until there are enough compatible agents to be worth listing.
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -22,8 +35,46 @@ interface ChatMessage {
   timestamp: number;
 }
 
-// Production: Base Mainnet only. Real USDC, real Mistral responses.
-const CHAT_NETWORKS = ["eip155:8453"] as const;
+// Production mainnets. Real USDC, real Mistral responses. Optimism is first, so it is the
+// default for a wallet that is on neither; a wallet already on Base keeps paying on Base
+// (useAutoNetwork honours the connected chain whenever it is in this list).
+const CHAT_NETWORKS = ["eip155:10", "eip155:8453"] as const;
+
+// localStorage key for the user's explicit network choice. Worth persisting rather than
+// re-deriving from the wallet each visit: a channel is per (network, receiver) and each one
+// escrows MINIMUM_DEPOSIT_ATOMIC ($0.50, see useX402Chat). If the paid network drifted with
+// whatever chain the wallet happened to be on, a user would silently open a second channel
+// and lock a second $0.50 that only comes back via a refund or the 24h withdrawDelay.
+const NETWORK_PREFERENCE_KEY = "x402-chat-network";
+
+/**
+ * The preference as an external store, read via `useSyncExternalStore`. localStorage is
+ * client-only, so a plain `useState` initialiser would disagree with the server-rendered
+ * markup; the explicit server snapshot below (always null → the Optimism default) makes
+ * that impossible. Subscribing to `storage` also keeps two open tabs in agreement.
+ */
+const networkListeners = new Set<() => void>();
+
+function readStoredNetwork(): string | null {
+  const stored = window.localStorage.getItem(NETWORK_PREFERENCE_KEY);
+  // Ignore a network the site no longer pays on (an old testnet, a dropped chain).
+  return stored && (CHAT_NETWORKS as readonly string[]).includes(stored) ? stored : null;
+}
+
+function subscribeToStoredNetwork(onChange: () => void): () => void {
+  networkListeners.add(onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    networkListeners.delete(onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+function storeNetwork(network: string): void {
+  window.localStorage.setItem(NETWORK_PREFERENCE_KEY, network);
+  // `storage` only fires in *other* tabs, so notify this one explicitly.
+  networkListeners.forEach((listener) => listener());
+}
 
 /** Build a block-explorer tx link for the given CAIP-2 network via its viem chain config. */
 function explorerTxUrl(network: string, txHash: string): string | null {
@@ -55,12 +106,14 @@ export function AssistantChat() {
   const typingLabel = useLocale({ label: "assistent.typing" });
   const actionsLabel = useLocale({ label: "assistent.actions" });
   const clearChatLabel = useLocale({ label: "assistent.clearChat" });
-  const mobileTitleLabel = useLocale({ label: "assistent.mobileTitle" });
+  const titleLabel = useLocale({ label: "assistent.title" });
   const emptyStateLabel = useLocale({ label: "assistent.emptyState" });
   const youLabel = useLocale({ label: "assistent.you" });
   const assistantLabel = useLocale({ label: "assistent.assistant" });
   const placeholderLabel = useLocale({ label: "assistent.placeholder" });
   const viewPaymentLabel = useLocale({ label: "assistent.viewPayment" });
+  const networkLabel = useLocale({ label: "assistent.network" });
+  const networkFallbackLabel = useLocale({ label: "assistent.networkFallback" });
 
   // Mobile detection
   React.useEffect(() => {
@@ -71,8 +124,72 @@ export function AssistantChat() {
   }, []);
 
   const { isConnected, connectWallet } = useWalletConnection();
-  const { network, switchIfNeeded, switchError } = useAutoNetwork(CHAT_NETWORKS);
-  const { sendMessage: payAndSend, paymentReceipt } = useX402Chat(network);
+
+  // The user's explicit network choice, if they made one.
+  const preferredNetwork = useSyncExternalStore(subscribeToStoredNetwork, readStoredNetwork, () => null);
+
+  // Precedence: explicit choice → the wallet's own chain if we support it → Optimism.
+  const walletNetwork = toCAIP2(useChainId());
+  const desiredNetwork =
+    preferredNetwork ??
+    ((CHAT_NETWORKS as readonly string[]).includes(walletNetwork) ? walletNetwork : CHAT_NETWORKS[0]);
+
+  // A custom agent, once one has been pre-checked and accepted. Null = the default agent.
+  const [customUrl, setCustomUrl] = useState<string | null>(null);
+  const [customCard, setCustomCard] = useState<AgentCard | null>(null);
+  const [customUrlInput, setCustomUrlInput] = useState("");
+  const [checkState, setCheckState] = useState<"idle" | "checking" | "error">("idle");
+  const [checkError, setCheckError] = useState<string | null>(null);
+
+  const agentUrl = customUrl ?? DEFAULT_LLM_AGENT_URL;
+  // The hook may negotiate away from `desiredNetwork` when the agent doesn't offer it (e.g. a
+  // Base-only third-party agent while the user prefers Optimism), so the wallet must be
+  // switched to what will actually be paid — `paymentNetwork`, not the preference.
+  const { sendMessage: payAndSend, paymentReceipt, paymentNetwork } = useX402Chat(desiredNetwork, agentUrl);
+  const { network, switchIfNeeded, switchError } = useAutoNetwork([paymentNetwork]);
+
+  // Provenance of the agent actually serving this chat (operator + payTo + origin), read
+  // live from its own /openapi.json + 402 so the sidebar can honestly show who the user pays.
+  const [agentCard, setAgentCard] = useState<AgentCard | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void fetchAgentCard(DEFAULT_LLM_AGENT_URL).then((card) => {
+      if (!cancelled) setAgentCard(card);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // The card shown (and paid) is the custom agent's whenever one is selected.
+  const activeCard = customCard ?? agentCard;
+
+  const tryCustomAgent = async () => {
+    const url = customUrlInput.trim();
+    if (!url) return;
+    setCheckState("checking");
+    setCheckError(null);
+    const result = await precheckLlmV1Agent(url);
+    if (!result.ok) {
+      setCheckState("error");
+      setCheckError(result.reason ?? "This agent is not compatible.");
+      return;
+    }
+    setCheckState("idle");
+    setCustomUrl(url);
+    setCustomCard(result.card ?? null);
+    setMessages([]);
+    trackEvent("assistant-v2-custom-agent-selected");
+  };
+
+  const useDefaultAgent = () => {
+    setCustomUrl(null);
+    setCustomCard(null);
+    setCustomUrlInput("");
+    setCheckState("idle");
+    setCheckError(null);
+    setMessages([]);
+  };
 
   const buttonState = useMemo(() => {
     if (!isConnected) return "connect";
@@ -119,7 +236,7 @@ export function AssistantChat() {
         throw new Error(switchError ?? `Please switch your wallet to ${getViemChain(network).name}`);
       }
 
-      // Full conversation history, matching sc_llm_x402's { data: { prompt: [...] } } contract.
+      // Full conversation history, as the OpenAI `messages[]` array sc_llm_x402 expects.
       const promptArray = [
         { role: "system", content: systemPromptMessage },
         ...messages.map((msg) => ({ role: msg.role, content: msg.content })),
@@ -130,7 +247,7 @@ export function AssistantChat() {
 
       const assistantMsg: ChatMessage = {
         role: "assistant",
-        content: data.content ?? noResponseMessage,
+        content: data.choices?.[0]?.message?.content ?? noResponseMessage,
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, assistantMsg]);
@@ -168,70 +285,127 @@ export function AssistantChat() {
   const receiptUrl = paymentReceipt ? explorerTxUrl(paymentReceipt.network, paymentReceipt.transaction) : null;
 
   return (
-    <div className={styles.assistantPageContainer}>
-      <div className={`${styles.assistantGrid} ${isMobile ? styles.assistantGridMobile : styles.assistantGridDesktop}`}>
+    <div className={chat.pageContainer}>
+      <div className={`${chat.grid} ${isMobile ? chat.gridMobile : chat.gridDesktop}`}>
         {/* Sidebar - desktop only */}
         {!isMobile && (
-          <div className={styles.sidebar}>
+          <div className={chat.sidebar}>
             {/* Actions Section */}
-            <div className={styles.sidebarSection}>
-              <h4 className={styles.sidebarHeading}>{actionsLabel}</h4>
-              <div className={styles.actionsContainer}>
-                <button onClick={clearChat} className={`${styles.actionButton} ${styles.actionButtonSecondary}`}>
+            <div className={chat.sidebarSection}>
+              <h4 className={chat.sidebarHeading}>{actionsLabel}</h4>
+              <div className={chat.actionsContainer}>
+                <button onClick={clearChat} className={button({ visual: "ghost", size: "sm" })}>
                   {clearChatLabel}
                 </button>
               </div>
             </div>
 
+            {/* Network Section */}
+            <div className={chat.sidebarSection}>
+              <h4 className={chat.sidebarHeading}>{networkLabel}</h4>
+              <div className={chat.networkOptions}>
+                {CHAT_NETWORKS.map((option) => {
+                  const selected = paymentNetwork === option;
+                  return (
+                    <button
+                      key={option}
+                      onClick={() => storeNetwork(option)}
+                      aria-pressed={selected}
+                      aria-label={getChainName(option)}
+                      className={button({ visual: "secondary", size: "sm", active: selected })}
+                    >
+                      <span className={selected ? undefined : chat.networkOptionMuted}>
+                        <ChainBadge network={option} size="sm" position="inline" />
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Only surfaced when the agent forced our hand — otherwise the buttons speak
+                  for themselves and a permanent caption would just be noise. */}
+              {paymentNetwork !== desiredNetwork && (
+                <p className={chat.networkNote}>
+                  {networkFallbackLabel} <ChainBadge network={paymentNetwork} size="sm" position="inline" />.
+                </p>
+              )}
+            </div>
+
             {/* Agent Info Section */}
-            <div className={styles.sidebarSection}>
-              <h4 className={styles.sidebarHeading}>Agent</h4>
-              <AgentInfoPanel service="llm" variant="sidebar" />
+            <div className={chat.sidebarSection}>
+              <h4 className={chat.sidebarHeading}>Agent</h4>
+              <AgentInfoPanel service="llm" variant="sidebar" agentCard={activeCard} />
+              <AgentSelector
+                customUrlInput={customUrlInput}
+                onCustomUrlInputChange={setCustomUrlInput}
+                customCard={customCard}
+                checkState={checkState}
+                checkError={checkError}
+                onTryCustomAgent={() => void tryCustomAgent()}
+                onUseDefaultAgent={useDefaultAgent}
+              />
             </div>
           </div>
         )}
 
         {/* Chat Area */}
-        <div className={styles.chatArea}>
-          {/* Mobile Header */}
-          {isMobile && (
-            <div className={styles.mobileHeader}>
-              <h2 className={styles.mobileTitle}>{mobileTitleLabel}</h2>
-              <div className={styles.mobileActions}>
-                <button onClick={clearChat} className={styles.mobileActionButton} title="Clear Chat">
+        <div className={chat.chatArea}>
+          {/* Page heading. /assistent is `explore` territory (utils/territory.ts) but never
+              showed it — the rule under the title is how every other section announces where
+              you are (see pages/x402/+Page.tsx). Rendered once for both viewports so the page
+              never carries two competing headings; on mobile it keeps the clear-chat button
+              beside it, which is what the old mobile-only header existed for. */}
+          <div className={chat.titleRow}>
+            <div>
+              <PageHeader title={titleLabel} territory="explore" />
+            </div>
+            {isMobile && (
+              <div className={chat.mobileActions}>
+                <button onClick={clearChat} className={button({ visual: "secondary", size: "sm" })} title="Clear Chat">
                   🗑️
                 </button>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Messages Container */}
-          <div className={styles.messagesContainer}>
+          <div className={chat.messagesContainer}>
             {messages.length === 0 ? (
-              <div className={styles.emptyState}>{emptyStateLabel}</div>
+              <div className={chat.emptyState}>{emptyStateLabel}</div>
             ) : (
               messages.map((message, index) => (
                 <div
                   key={index}
-                  className={`${styles.messageContainer} ${
-                    message.role === "user" ? styles.messageContainerUser : styles.messageContainerAssistant
+                  className={`${chat.messageContainer} ${
+                    message.role === "user" ? chat.messageContainerUser : chat.messageContainerAssistant
                   }`}
                 >
                   <div
-                    className={`${styles.messageBubble} ${
-                      message.role === "user" ? styles.messageBubbleUser : styles.messageBubbleAssistant
+                    className={`${chat.messageBubble} ${
+                      message.role === "user" ? chat.messageBubbleUser : chat.messageBubbleAssistant
                     }`}
                   >
-                    <div className={styles.messageRole}>{message.role === "user" ? youLabel : assistantLabel}</div>
-                    <div className={styles.messageContent}>{message.content}</div>
+                    <div className={chat.messageRole}>{message.role === "user" ? youLabel : assistantLabel}</div>
+                    {/* The assistant's reply is prose, so it takes the serif; your own message
+                        is input to a tool and stays in the sans. See IDENTITY.md. */}
+                    <div
+                      className={`${chat.messageContent} ${
+                        message.role === "assistant" ? chat.messageContentReading : ""
+                      }`}
+                    >
+                      {message.role === "assistant" ? (
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+                      ) : (
+                        <div className={chat.messageContentPlain}>{message.content}</div>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))
             )}
 
             {isLoading && (
-              <div className={styles.loadingMessage}>
-                <div className={styles.loadingBubble}>{typingLabel}</div>
+              <div className={chat.loadingMessage}>
+                <div className={chat.loadingBubble}>{typingLabel}</div>
               </div>
             )}
           </div>
@@ -246,14 +420,14 @@ export function AssistantChat() {
           )}
 
           {/* Input Area */}
-          <div className={styles.inputArea}>
+          <div className={chat.inputArea}>
             <textarea
               value={currentInput}
               onChange={(e) => setCurrentInput(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder={placeholderLabel}
               disabled={isLoading}
-              className={styles.messageInput}
+              className={chat.messageInput}
             />
             <button
               onClick={handleSendClick}
@@ -263,14 +437,27 @@ export function AssistantChat() {
                 }
               }}
               disabled={isLoading || (!isConnected ? false : !currentInput.trim())}
-              className={styles.primaryButton}
+              className={button()}
             >
               {getButtonText(buttonState)}
             </button>
           </div>
 
           {/* Agent Info - Mobile Footer */}
-          {isMobile && <AgentInfoPanel service="llm" variant="sidebar" />}
+          {isMobile && (
+            <>
+              <AgentInfoPanel service="llm" variant="sidebar" agentCard={activeCard} />
+              <AgentSelector
+                customUrlInput={customUrlInput}
+                onCustomUrlInputChange={setCustomUrlInput}
+                customCard={customCard}
+                checkState={checkState}
+                checkError={checkError}
+                onTryCustomAgent={() => void tryCustomAgent()}
+                onUseDefaultAgent={useDefaultAgent}
+              />
+            </>
+          )}
         </div>
       </div>
     </div>

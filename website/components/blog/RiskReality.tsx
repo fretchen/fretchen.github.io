@@ -151,19 +151,19 @@ function getMessage(paidOff: boolean, staying: boolean, hasMortgage: boolean): s
 
 const inputCss = css({
   width: "100%",
-  padding: "0.5rem",
-  borderRadius: "6px",
+  padding: "2",
+  borderRadius: "md",
   border: "1px solid #d1d5db",
-  fontSize: "0.9rem",
-  _focus: { outline: "none", borderColor: "#7b3fa0" },
+  fontSize: "md",
+  _focus: { outline: "none", borderColor: "explore" },
 });
 
 const labelCss = css({
   display: "block",
-  fontSize: "0.8rem",
-  color: "#374151",
-  fontWeight: "600",
-  marginBottom: "0.3rem",
+  fontSize: "sm",
+  color: "gray.700",
+  fontWeight: "semibold",
+  marginBottom: "1",
 });
 
 const fmtEuro = (n: number) =>
@@ -197,7 +197,7 @@ function StackedBar({
           {seg.share > 0.1 && (
             <span
               className={css({
-                fontSize: "0.7rem",
+                fontSize: "xs",
                 color: "white",
                 fontWeight: "bold",
                 whiteSpace: "nowrap",
@@ -216,11 +216,11 @@ function StackedBar({
 /* ── Legend row ── */
 function Legend({ segments }: { segments: { label: string; emoji: string; share: number; color: string }[] }) {
   return (
-    <div className={css({ display: "flex", flexWrap: "wrap", gap: "0.75rem", marginTop: "0.4rem" })}>
+    <div className={css({ display: "flex", flexWrap: "wrap", gap: "3", marginTop: "1.5" })}>
       {segments.map((seg) => (
-        <div key={seg.label} className={css({ display: "flex", alignItems: "center", gap: "0.3rem" })}>
+        <div key={seg.label} className={css({ display: "flex", alignItems: "center", gap: "1" })}>
           <div style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: seg.color }} />
-          <span className={css({ fontSize: "0.75rem", color: "#6b7280" })}>
+          <span className={css({ fontSize: "xs", color: "gray.500" })}>
             {seg.emoji} {seg.label} ({Math.round(seg.share * 100)}%)
           </span>
         </div>
@@ -283,20 +283,20 @@ export default function RiskReality() {
   return (
     <div
       className={css({
-        margin: "2rem 0",
-        padding: "1.5rem",
+        margin: "32px 0",
+        padding: "6",
         backgroundColor: "rgba(78, 121, 167, 0.04)",
-        borderRadius: "8px",
+        borderRadius: "lg",
         border: "1px solid rgba(78, 121, 167, 0.15)",
       })}
     >
       {/* Header */}
       <p
         className={css({
-          fontSize: "1.1rem",
+          fontSize: "lg",
           fontWeight: "bold",
-          color: "#1f2937",
-          marginBottom: "0.25rem",
+          color: "gray.800",
+          marginBottom: "1",
           marginTop: 0,
         })}
       >
@@ -304,9 +304,9 @@ export default function RiskReality() {
       </p>
       <p
         className={css({
-          fontSize: "0.85rem",
-          color: "#6b7280",
-          marginBottom: "1.25rem",
+          fontSize: "sm",
+          color: "gray.500",
+          marginBottom: "5",
           marginTop: 0,
         })}
       >
@@ -318,15 +318,15 @@ export default function RiskReality() {
         className={css({
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
-          gap: "0.75rem",
-          marginBottom: "1.25rem",
+          gap: "3",
+          marginBottom: "5",
           "@media (max-width: 480px)": { gridTemplateColumns: "1fr" },
         })}
       >
         <div>
           <label className={labelCss}>{"\u{1F3E0}"} Home value</label>
-          <div className={css({ display: "flex", alignItems: "center", gap: "0.3rem" })}>
-            <span className={css({ fontSize: "0.85rem", color: "#6b7280" })}>&euro;</span>
+          <div className={css({ display: "flex", alignItems: "center", gap: "1" })}>
+            <span className={css({ fontSize: "sm", color: "gray.500" })}>&euro;</span>
             <input
               type="number"
               min={50000}
@@ -340,8 +340,8 @@ export default function RiskReality() {
         </div>
         <div>
           <label className={labelCss}>{"\u{1F3E6}"} Mortgage remaining</label>
-          <div className={css({ display: "flex", alignItems: "center", gap: "0.3rem" })}>
-            <span className={css({ fontSize: "0.85rem", color: "#6b7280" })}>&euro;</span>
+          <div className={css({ display: "flex", alignItems: "center", gap: "1" })}>
+            <span className={css({ fontSize: "sm", color: "gray.500" })}>&euro;</span>
             <input
               type="number"
               min={0}
@@ -355,8 +355,8 @@ export default function RiskReality() {
         </div>
         <div>
           <label className={labelCss}>{"\u{1F4B5}"} Cash savings</label>
-          <div className={css({ display: "flex", alignItems: "center", gap: "0.3rem" })}>
-            <span className={css({ fontSize: "0.85rem", color: "#6b7280" })}>&euro;</span>
+          <div className={css({ display: "flex", alignItems: "center", gap: "1" })}>
+            <span className={css({ fontSize: "sm", color: "gray.500" })}>&euro;</span>
             <input
               type="number"
               min={0}
@@ -370,8 +370,8 @@ export default function RiskReality() {
         </div>
         <div>
           <label className={labelCss}>{"\u{1F4C8}"} Investments (ETFs etc.)</label>
-          <div className={css({ display: "flex", alignItems: "center", gap: "0.3rem" })}>
-            <span className={css({ fontSize: "0.85rem", color: "#6b7280" })}>&euro;</span>
+          <div className={css({ display: "flex", alignItems: "center", gap: "1" })}>
+            <span className={css({ fontSize: "sm", color: "gray.500" })}>&euro;</span>
             <input
               type="number"
               min={0}
@@ -386,14 +386,14 @@ export default function RiskReality() {
       </div>
 
       {/* Toggles — above visualization so user sets controls first, sees result below */}
-      <div className={css({ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.25rem" })}>
+      <div className={css({ display: "flex", flexDirection: "column", gap: "3", marginBottom: "5" })}>
         {/* Toggle 1: Pay off mortgage */}
         <div
           className={css({
-            padding: "0.75rem",
-            borderRadius: "6px",
+            padding: "3",
+            borderRadius: "md",
             border: "1px solid",
-            transition: "all 0.15s",
+            transition: "all {durations.normal} ease",
           })}
           style={{
             borderColor: !hasMortgage ? "#e5e7eb" : mortgagePaidOff ? "#f97316" : "#d1d5db",
@@ -404,7 +404,7 @@ export default function RiskReality() {
           onClick={() => hasMortgage && setMortgagePaidOff((v) => !v)}
         >
           <label
-            className={css({ display: "flex", alignItems: "center", gap: "0.5rem" })}
+            className={css({ display: "flex", alignItems: "center", gap: "2" })}
             style={{ cursor: hasMortgage ? "pointer" : "default" }}
           >
             <input
@@ -412,20 +412,20 @@ export default function RiskReality() {
               checked={mortgagePaidOff}
               disabled={!hasMortgage}
               onChange={(e) => setMortgagePaidOff(e.target.checked)}
-              className={css({ width: "16px", height: "16px", accentColor: "#f97316" })}
+              className={css({ width: "16px", height: "16px", accentColor: "orange.500" })}
             />
-            <span className={css({ fontSize: "0.9rem", fontWeight: "600", color: "#374151" })}>
+            <span className={css({ fontSize: "md", fontWeight: "semibold", color: "gray.700" })}>
               What if I pay off the mortgage?
             </span>
           </label>
           {!hasMortgage && (
             <p
               className={css({
-                fontSize: "0.8rem",
-                color: "#9ca3af",
-                marginTop: "0.4rem",
+                fontSize: "sm",
+                color: "gray.400",
+                marginTop: "1.5",
                 marginBottom: 0,
-                paddingLeft: "1.75rem",
+                paddingLeft: "7",
               })}
             >
               Your mortgage is already at &euro;0.
@@ -434,11 +434,11 @@ export default function RiskReality() {
           {mortgagePaidOff && hasMortgage && (
             <p
               className={css({
-                fontSize: "0.8rem",
-                color: "#9a3412",
-                marginTop: "0.4rem",
+                fontSize: "sm",
+                color: "orange.800",
+                marginTop: "1.5",
                 marginBottom: 0,
-                paddingLeft: "1.75rem",
+                paddingLeft: "7",
               })}
             >
               The mortgage disappeared from your wealth &mdash; but the risk bar didn&apos;t change. The mortgage was
@@ -450,10 +450,10 @@ export default function RiskReality() {
         {/* Toggle 2: I'm staying */}
         <div
           className={css({
-            padding: "0.75rem",
-            borderRadius: "6px",
+            padding: "3",
+            borderRadius: "md",
             border: "1px solid",
-            transition: "all 0.15s",
+            transition: "all {durations.normal} ease",
             cursor: "pointer",
           })}
           style={{
@@ -462,25 +462,25 @@ export default function RiskReality() {
           }}
           onClick={() => setStaying((v) => !v)}
         >
-          <label className={css({ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" })}>
+          <label className={css({ display: "flex", alignItems: "center", gap: "2", cursor: "pointer" })}>
             <input
               type="checkbox"
               checked={staying}
               onChange={(e) => setStaying(e.target.checked)}
-              className={css({ width: "16px", height: "16px", accentColor: "#22c55e" })}
+              className={css({ width: "16px", height: "16px", accentColor: "green.500" })}
             />
-            <span className={css({ fontSize: "0.9rem", fontWeight: "600", color: "#374151" })}>
+            <span className={css({ fontSize: "md", fontWeight: "semibold", color: "gray.700" })}>
               I&apos;m staying &mdash; price swings don&apos;t affect my costs
             </span>
           </label>
           {staying && (
             <p
               className={css({
-                fontSize: "0.8rem",
-                color: "#166534",
-                marginTop: "0.4rem",
+                fontSize: "sm",
+                color: "green.800",
+                marginTop: "1.5",
                 marginBottom: 0,
-                paddingLeft: "1.75rem",
+                paddingLeft: "7",
               })}
             >
               The risk bar got shorter. If house prices drop 20%, your mortgage payment stays the same. If rents rise
@@ -494,23 +494,23 @@ export default function RiskReality() {
       {/* Visualization card */}
       <div
         className={css({
-          padding: "1rem",
-          borderRadius: "8px",
+          padding: "4",
+          borderRadius: "lg",
           backgroundColor: "white",
           border: "1px solid #e5e7eb",
-          marginBottom: "1rem",
+          marginBottom: "4",
         })}
       >
         {/* Bar 1: Wealth allocation */}
         <p
           className={css({
-            fontSize: "0.8rem",
-            fontWeight: "700",
-            color: "#6b7280",
+            fontSize: "sm",
+            fontWeight: "bold",
+            color: "gray.500",
             textTransform: "uppercase",
             letterSpacing: "0.05em",
             marginTop: 0,
-            marginBottom: "0.4rem",
+            marginBottom: "1.5",
           })}
         >
           How your wealth is split
@@ -521,19 +521,19 @@ export default function RiskReality() {
         {/* Bar 2: Wobble (risk) — before/after when toggle active */}
         <p
           className={css({
-            fontSize: "0.8rem",
-            fontWeight: "700",
-            color: "#6b7280",
+            fontSize: "sm",
+            fontWeight: "bold",
+            color: "gray.500",
             textTransform: "uppercase",
             letterSpacing: "0.05em",
-            marginTop: "1.25rem",
-            marginBottom: "0.4rem",
+            marginTop: "5",
+            marginBottom: "1.5",
           })}
         >
           How the risk is split
           {staying && pctChange !== 0 && (
             <span
-              className={css({ fontWeight: "600", textTransform: "none", letterSpacing: "0" })}
+              className={css({ fontWeight: "semibold", textTransform: "none", letterSpacing: "0" })}
               style={{ color: pctChange > 0 ? "#16a34a" : "#dc2626" }}
             >
               {" "}
@@ -547,10 +547,10 @@ export default function RiskReality() {
           <>
             <p
               className={css({
-                fontSize: "0.7rem",
-                color: "#9ca3af",
+                fontSize: "xs",
+                color: "gray.400",
                 marginTop: 0,
-                marginBottom: "0.25rem",
+                marginBottom: "1",
               })}
             >
               Before
@@ -560,11 +560,11 @@ export default function RiskReality() {
             </div>
             <p
               className={css({
-                fontSize: "0.7rem",
-                color: "#374151",
-                fontWeight: "600",
-                marginTop: "0.4rem",
-                marginBottom: "0.25rem",
+                fontSize: "xs",
+                color: "gray.700",
+                fontWeight: "semibold",
+                marginTop: "1.5",
+                marginBottom: "1",
               })}
             >
               After
@@ -583,8 +583,8 @@ export default function RiskReality() {
         <table
           className={css({
             width: "100%",
-            marginTop: "0.75rem",
-            fontSize: "0.8rem",
+            marginTop: "3",
+            fontSize: "sm",
             borderCollapse: "collapse",
           })}
         >
@@ -593,9 +593,9 @@ export default function RiskReality() {
               <th
                 className={css({
                   textAlign: "left",
-                  color: "#6b7280",
-                  fontWeight: "600",
-                  paddingBottom: "0.3rem",
+                  color: "gray.500",
+                  fontWeight: "semibold",
+                  paddingBottom: "1",
                   borderBottom: "1px solid #e5e7eb",
                 })}
               >
@@ -604,9 +604,9 @@ export default function RiskReality() {
               <th
                 className={css({
                   textAlign: "right",
-                  color: "#6b7280",
-                  fontWeight: "600",
-                  paddingBottom: "0.3rem",
+                  color: "gray.500",
+                  fontWeight: "semibold",
+                  paddingBottom: "1",
                   borderBottom: "1px solid #e5e7eb",
                 })}
               >
@@ -615,9 +615,9 @@ export default function RiskReality() {
               <th
                 className={css({
                   textAlign: "right",
-                  color: "#6b7280",
-                  fontWeight: "600",
-                  paddingBottom: "0.3rem",
+                  color: "gray.500",
+                  fontWeight: "semibold",
+                  paddingBottom: "1",
                   borderBottom: "1px solid #e5e7eb",
                 })}
               >
@@ -626,9 +626,9 @@ export default function RiskReality() {
               <th
                 className={css({
                   textAlign: "right",
-                  color: "#6b7280",
-                  fontWeight: "600",
-                  paddingBottom: "0.3rem",
+                  color: "gray.500",
+                  fontWeight: "semibold",
+                  paddingBottom: "1",
                   borderBottom: "1px solid #e5e7eb",
                 })}
               >
@@ -655,19 +655,19 @@ export default function RiskReality() {
               },
             ].map((row) => (
               <tr key={row.label}>
-                <td className={css({ padding: "0.3rem 0", color: "#374151" })}>
+                <td className={css({ padding: "4px 0", color: "gray.700" })}>
                   <span style={{ color: row.color }}>{"\u25CF"}</span> {row.emoji} {row.label}
                 </td>
-                <td className={css({ textAlign: "right", color: "#374151", padding: "0.3rem 0" })}>
+                <td className={css({ textAlign: "right", color: "gray.700", padding: "4px 0" })}>
                   {fmtEuro(row.value)}
                 </td>
                 <td
-                  className={css({ textAlign: "right", padding: "0.3rem 0" })}
+                  className={css({ textAlign: "right", padding: "4px 0" })}
                   style={{ color: row.euroVol > 1000 ? "#dc2626" : "#374151" }}
                 >
                   &plusmn;{fmtEuro(row.euroVol)}
                 </td>
-                <td className={css({ textAlign: "right", color: "#374151", padding: "0.3rem 0" })}>
+                <td className={css({ textAlign: "right", color: "gray.700", padding: "4px 0" })}>
                   {row.euroVol > 0 ? `${Math.round(row.share * 100)}%` : "0%"}
                 </td>
               </tr>
@@ -675,14 +675,14 @@ export default function RiskReality() {
             {/* Mortgage row */}
             {!mortgagePaidOff && mortgage > 0 && (
               <tr>
-                <td className={css({ padding: "0.3rem 0", color: "#9ca3af" })}>
+                <td className={css({ padding: "4px 0", color: "gray.400" })}>
                   <span style={{ color: "#9ca3af" }}>{"\u25CF"}</span> {"\u{1F3E6}"} Mortgage
                 </td>
-                <td className={css({ textAlign: "right", color: "#9ca3af", padding: "0.3rem 0" })}>
+                <td className={css({ textAlign: "right", color: "gray.400", padding: "4px 0" })}>
                   {fmtEuro(-mortgage)}
                 </td>
-                <td className={css({ textAlign: "right", color: "#9ca3af", padding: "0.3rem 0" })}>&plusmn;&euro;0</td>
-                <td className={css({ textAlign: "right", color: "#9ca3af", padding: "0.3rem 0" })}>0%</td>
+                <td className={css({ textAlign: "right", color: "gray.400", padding: "4px 0" })}>&plusmn;&euro;0</td>
+                <td className={css({ textAlign: "right", color: "gray.400", padding: "4px 0" })}>0%</td>
               </tr>
             )}
           </tbody>
@@ -691,9 +691,9 @@ export default function RiskReality() {
               <td
                 colSpan={2}
                 className={css({
-                  padding: "0.4rem 0 0.2rem",
-                  fontWeight: "700",
-                  color: "#374151",
+                  padding: "6px 0 4px",
+                  fontWeight: "bold",
+                  color: "gray.700",
                   borderTop: "1px solid #e5e7eb",
                 })}
               >
@@ -702,8 +702,8 @@ export default function RiskReality() {
               <td
                 className={css({
                   textAlign: "right",
-                  padding: "0.4rem 0 0.2rem",
-                  fontWeight: "700",
+                  padding: "6px 0 4px",
+                  fontWeight: "bold",
                   borderTop: "1px solid #e5e7eb",
                 })}
                 style={{ color: "#dc2626" }}
@@ -713,9 +713,9 @@ export default function RiskReality() {
               <td
                 className={css({
                   textAlign: "right",
-                  padding: "0.4rem 0 0.2rem",
-                  fontWeight: "700",
-                  color: "#374151",
+                  padding: "6px 0 4px",
+                  fontWeight: "bold",
+                  color: "gray.700",
                   borderTop: "1px solid #e5e7eb",
                 })}
               >
@@ -726,10 +726,10 @@ export default function RiskReality() {
         </table>
         <p
           className={css({
-            fontSize: "0.7rem",
-            color: "#9ca3af",
-            marginTop: "0.25rem",
-            marginBottom: "0.5rem",
+            fontSize: "xs",
+            color: "gray.400",
+            marginTop: "1",
+            marginBottom: "2",
             fontStyle: "italic",
           })}
         >
@@ -739,12 +739,12 @@ export default function RiskReality() {
         {/* Message */}
         <p
           className={css({
-            fontSize: "0.85rem",
-            marginTop: "0.75rem",
+            fontSize: "sm",
+            marginTop: "3",
             marginBottom: 0,
-            color: "#374151",
+            color: "gray.700",
             fontStyle: "italic",
-            lineHeight: "1.5",
+            lineHeight: "normal",
           })}
         >
           {message}
@@ -755,15 +755,15 @@ export default function RiskReality() {
       {anyToggle && (
         <p
           className={css({
-            fontSize: "0.85rem",
-            color: "#374151",
-            marginTop: "1rem",
+            fontSize: "sm",
+            color: "gray.700",
+            marginTop: "4",
             marginBottom: 0,
-            padding: "0.75rem",
+            padding: "3",
             backgroundColor: "rgba(34, 197, 94, 0.06)",
-            borderRadius: "6px",
+            borderRadius: "md",
             border: "1px solid rgba(34, 197, 94, 0.2)",
-            lineHeight: "1.5",
+            lineHeight: "normal",
           })}
         >
           <strong>So what does this mean?</strong> Your home will always dominate the risk &mdash; it&apos;s your

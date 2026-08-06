@@ -11,16 +11,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useWalletClient, useAccount } from "wagmi";
-import { useX402Chat, WebStorageClientChannelStorage } from "./useX402Chat";
+import { useX402Chat, WebStorageClientChannelStorage } from "../hooks/useX402Chat";
 import type { X402ChatMessage } from "../types/x402";
+import { buildAccountData, buildWalletClientData } from "./setup";
 
 const mockRegister = vi.fn();
 const mockGetPaymentSettleResponse = vi.fn();
 const mockBatchSettlementEvmScheme = vi.fn();
-const mockToClientEvmSigner = vi.fn((signer: unknown) => signer);
+const mockToClientEvmSigner = vi.fn((...args: unknown[]) => args[0]);
 
 vi.mock("../hooks/useConfiguredPublicClient", () => ({
   useConfiguredPublicClient: vi.fn(() => ({ readContract: vi.fn() })),
+  // The hook resolves the client after negotiating, so it uses the plain function form.
+  getConfiguredPublicClient: vi.fn(() => ({ readContract: vi.fn() })),
 }));
 
 vi.mock("@x402/fetch", () => ({
@@ -63,8 +66,8 @@ describe("useX402Chat", () => {
 
   describe("Initial State", () => {
     it("should not be ready when wallet not connected", () => {
-      vi.mocked(useWalletClient).mockReturnValue({ data: undefined } as ReturnType<typeof useWalletClient>);
-      vi.mocked(useAccount).mockReturnValue({ isConnected: false } as ReturnType<typeof useAccount>);
+      vi.mocked(useWalletClient).mockReturnValue(buildWalletClientData());
+      vi.mocked(useAccount).mockReturnValue(buildAccountData({ isConnected: false }));
 
       const { result } = renderHook(() => useX402Chat(NETWORK));
 
@@ -73,8 +76,8 @@ describe("useX402Chat", () => {
     });
 
     it("should be ready when wallet is connected", () => {
-      vi.mocked(useWalletClient).mockReturnValue({ data: mockWalletClient } as ReturnType<typeof useWalletClient>);
-      vi.mocked(useAccount).mockReturnValue({ isConnected: true } as ReturnType<typeof useAccount>);
+      vi.mocked(useWalletClient).mockReturnValue(buildWalletClientData({ data: mockWalletClient }));
+      vi.mocked(useAccount).mockReturnValue(buildAccountData({ isConnected: true }));
 
       const { result } = renderHook(() => useX402Chat(NETWORK));
 
@@ -84,8 +87,8 @@ describe("useX402Chat", () => {
 
   describe("Error Handling", () => {
     it("should throw when sendMessage called without a wallet", async () => {
-      vi.mocked(useWalletClient).mockReturnValue({ data: undefined } as ReturnType<typeof useWalletClient>);
-      vi.mocked(useAccount).mockReturnValue({ isConnected: false } as ReturnType<typeof useAccount>);
+      vi.mocked(useWalletClient).mockReturnValue(buildWalletClientData());
+      vi.mocked(useAccount).mockReturnValue(buildAccountData({ isConnected: false }));
 
       const { result } = renderHook(() => useX402Chat(NETWORK));
       const prompt: X402ChatMessage[] = [{ role: "user", content: "Hi" }];
@@ -96,8 +99,8 @@ describe("useX402Chat", () => {
 
   describe("Paid request (mocked SDK)", () => {
     beforeEach(() => {
-      vi.mocked(useWalletClient).mockReturnValue({ data: mockWalletClient } as ReturnType<typeof useWalletClient>);
-      vi.mocked(useAccount).mockReturnValue({ isConnected: true } as ReturnType<typeof useAccount>);
+      vi.mocked(useWalletClient).mockReturnValue(buildWalletClientData({ data: mockWalletClient }));
+      vi.mocked(useAccount).mockReturnValue(buildAccountData({ isConnected: true }));
     });
 
     it("registers the batch-settlement scheme on the requested network", async () => {
@@ -179,21 +182,24 @@ describe("useX402Chat", () => {
     it("returns the parsed response and sets status through success", async () => {
       vi.stubGlobal(
         "fetch",
-        vi
-          .fn()
-          .mockResolvedValue(
-            new Response(JSON.stringify({ content: "Paris is the capital of France." }), { status: 200 }),
+        vi.fn().mockResolvedValue(
+          new Response(
+            JSON.stringify({
+              choices: [{ message: { role: "assistant", content: "Paris is the capital of France." } }],
+            }),
+            { status: 200 },
           ),
+        ),
       );
 
       const { result } = renderHook(() => useX402Chat(NETWORK));
 
-      let response: { content: string } | undefined;
+      let response: Awaited<ReturnType<typeof result.current.sendMessage>> | undefined;
       await act(async () => {
         response = await result.current.sendMessage([{ role: "user", content: "Capital of France?" }]);
       });
 
-      expect(response?.content).toBe("Paris is the capital of France.");
+      expect(response?.choices[0].message.content).toBe("Paris is the capital of France.");
       expect(result.current.status).toBe("success");
       expect(result.current.error).toBeNull();
     });
@@ -297,10 +303,151 @@ describe("useX402Chat", () => {
     });
   });
 
+  describe("Agent URL targeting (open-agent-platform)", () => {
+    beforeEach(() => {
+      vi.mocked(useWalletClient).mockReturnValue(buildWalletClientData({ data: mockWalletClient }));
+      vi.mocked(useAccount).mockReturnValue(buildAccountData({ isConnected: true }));
+    });
+
+    it("POSTs to the provided agentUrl", async () => {
+      const fetchSpy = vi.fn().mockResolvedValue(new Response(JSON.stringify({ content: "hi" }), { status: 200 }));
+      vi.stubGlobal("fetch", fetchSpy);
+      const agentUrl = "https://someone-elses-agent.example";
+
+      const { result } = renderHook(() => useX402Chat(NETWORK, agentUrl));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+      });
+
+      expect(fetchSpy).toHaveBeenCalledWith(agentUrl, expect.objectContaining({ method: "POST" }));
+    });
+
+    it("falls back to the default fretchen endpoint when no agentUrl is given", async () => {
+      const fetchSpy = vi.fn().mockResolvedValue(new Response(JSON.stringify({ content: "hi" }), { status: 200 }));
+      vi.stubGlobal("fetch", fetchSpy);
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+      });
+
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "https://llm-agent.fretchen.eu",
+        expect.objectContaining({ method: "POST" }),
+      );
+    });
+  });
+
+  /**
+   * Network negotiation. With two payable chains, "the agent doesn't offer my chain" is a
+   * routine case (a Base-only third-party agent, an Optimism wallet) rather than a
+   * misconfiguration — so the hook resolves it instead of dead-ending.
+   */
+  describe("Network negotiation", () => {
+    const OPTIMISM = "eip155:10";
+    const BASE = "eip155:8453";
+
+    /**
+     * Identify the discovery probe by its placeholder model rather than by an exact body
+     * string — the probe body is an implementation detail of x402Discovery and matching it
+     * literally makes these tests break whenever it changes.
+     */
+    function isProbeRequest(init?: RequestInit): boolean {
+      if (typeof init?.body !== "string") return false;
+      try {
+        return (JSON.parse(init.body) as { model?: string }).model === "probe";
+      } catch {
+        return false;
+      }
+    }
+
+    /** A fetch that answers the unpaid probe with a 402 offering `networks`, then succeeds. */
+    function stubAgentOffering(networks: string[]) {
+      const accepts = networks.map((network) => ({ scheme: "batch-settlement", network, payTo: "0xabc" }));
+      const header = btoa(JSON.stringify({ accepts }));
+      const fetchSpy = vi.fn((_input: string, init?: RequestInit) =>
+        Promise.resolve(
+          isProbeRequest(init)
+            ? new Response("{}", { status: 402, headers: { "Payment-Required": header } })
+            : new Response(JSON.stringify({ content: "hi" }), { status: 200 }),
+        ),
+      );
+      vi.stubGlobal("fetch", fetchSpy);
+      return fetchSpy;
+    }
+
+    beforeEach(() => {
+      vi.mocked(useWalletClient).mockReturnValue(buildWalletClientData({ data: mockWalletClient }));
+      vi.mocked(useAccount).mockReturnValue(buildAccountData({ isConnected: true }));
+    });
+
+    it("pays on the preferred network when the agent offers it", async () => {
+      stubAgentOffering([OPTIMISM, BASE]);
+
+      const { result } = renderHook(() => useX402Chat(OPTIMISM));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+      });
+
+      expect(mockRegister).toHaveBeenCalledWith(OPTIMISM, expect.anything());
+      expect(result.current.paymentNetwork).toBe(OPTIMISM);
+    });
+
+    it("negotiates down to the network the agent does offer instead of failing", async () => {
+      stubAgentOffering([BASE]);
+
+      const { result } = renderHook(() => useX402Chat(OPTIMISM));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+      });
+
+      expect(mockRegister).toHaveBeenCalledWith(BASE, expect.anything());
+      expect(result.current.paymentNetwork).toBe(BASE);
+    });
+
+    it("throws with both sides listed when the agent offers nothing payable", async () => {
+      stubAgentOffering(["eip155:42161"]);
+
+      const { result } = renderHook(() => useX402Chat(OPTIMISM));
+
+      let thrown: Error | undefined;
+      await act(async () => {
+        try {
+          await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+        } catch (err) {
+          thrown = err as Error;
+        }
+      });
+
+      expect(thrown?.message).toContain("eip155:42161");
+      expect(thrown?.message).toContain(OPTIMISM);
+      expect(mockRegister).not.toHaveBeenCalled();
+    });
+
+    it("proceeds on the preferred network when the agent can't be read (CORS/offline)", async () => {
+      // A probe that throws must not block payment — the real 402 is the judge.
+      vi.stubGlobal(
+        "fetch",
+        vi.fn((_input: string, init?: RequestInit) => {
+          return isProbeRequest(init)
+            ? Promise.reject(new TypeError("Failed to fetch"))
+            : Promise.resolve(new Response(JSON.stringify({ content: "hi" }), { status: 200 }));
+        }),
+      );
+
+      const { result } = renderHook(() => useX402Chat(OPTIMISM));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+      });
+
+      expect(mockRegister).toHaveBeenCalledWith(OPTIMISM, expect.anything());
+    });
+  });
+
   describe("Reset Functionality", () => {
     it("should reset state to initial values", () => {
-      vi.mocked(useWalletClient).mockReturnValue({ data: mockWalletClient } as ReturnType<typeof useWalletClient>);
-      vi.mocked(useAccount).mockReturnValue({ isConnected: true } as ReturnType<typeof useAccount>);
+      vi.mocked(useWalletClient).mockReturnValue(buildWalletClientData({ data: mockWalletClient }));
+      vi.mocked(useAccount).mockReturnValue(buildAccountData({ isConnected: true }));
 
       const { result } = renderHook(() => useX402Chat(NETWORK));
 

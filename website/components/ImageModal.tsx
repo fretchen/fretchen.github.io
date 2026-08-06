@@ -1,27 +1,16 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { ImageModalProps } from "../types/components";
 import { useToast } from "./Toast";
 import { ChainInfoDisplay } from "./ChainBadge";
-import * as styles from "../layouts/styles";
+import { Modal } from "./Modal";
+import * as styles from "../layouts/shared";
+import { nftCard } from "./nft/styles";
+import { button } from "../styled-system/recipes";
 
 // Bildvergrößerungs-Modal Komponente
 export function ImageModal({ image, onClose }: ImageModalProps) {
   // Use the new toast hook
   const { showToast, ToastComponent } = useToast();
-
-  // Cleanup timeout on unmount (removed as useToast handles cleanup)
-
-  // Schließen bei Escape-Taste
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    };
-
-    document.addEventListener("keydown", handleEscape);
-    return () => document.removeEventListener("keydown", handleEscape);
-  }, [onClose]);
 
   const handleDownload = async () => {
     try {
@@ -42,28 +31,26 @@ export function ImageModal({ image, onClose }: ImageModalProps) {
   };
 
   return (
-    <div className={styles.nftCard.modalOverlay} onClick={onClose}>
-      <div className={styles.nftCard.modalContent} onClick={(e) => e.stopPropagation()}>
-        <button className={styles.nftCard.modalClose} onClick={onClose}>
-          ✕
-        </button>
-        <img src={image.src} alt={image.alt} className={styles.nftCard.modalImage} decoding="async" />
+    <>
+      {/* padded={false}: the image is full-bleed; modalInfo provides its own padding */}
+      <Modal onClose={onClose} title={image.title} padded={false}>
+        <img src={image.src} alt={image.alt} className={styles.modal.image} decoding="async" />
         {(image.title || image.description || image.network) && (
-          <div className={styles.nftCard.modalInfo}>
-            {image.title && <h3 className={styles.nftCard.modalTitle}>{image.title}</h3>}
-            {image.description && <p className={styles.nftCard.modalDescription}>{image.description}</p>}
+          <div className={styles.modal.imageInfo}>
+            {image.title && <h3 className={styles.modal.imageTitle}>{image.title}</h3>}
+            {image.description && <p className={styles.modal.imageDescription}>{image.description}</p>}
             {image.network && <ChainInfoDisplay network={image.network} tokenId={image.tokenId} />}
-            <div className={styles.nftCard.actions} style={{ justifyContent: "center", marginTop: "12px" }}>
-              <button onClick={handleDownload} className={`${styles.nftCard.actionButton} ${styles.primaryButton}`}>
+            <div className={nftCard.actions} style={{ justifyContent: "center", marginTop: "12px" }}>
+              <button onClick={handleDownload} className={button()}>
                 ⬇️ Download Full Size
               </button>
             </div>
           </div>
         )}
-      </div>
+      </Modal>
 
       {/* Toast Component */}
       {ToastComponent}
-    </div>
+    </>
   );
 }

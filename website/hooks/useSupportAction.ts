@@ -3,12 +3,18 @@ import {
   useAccount,
   useWriteContract,
   useWaitForTransactionReceipt,
-  useSimulateContract,
   useSwitchChain,
   useChainId,
   useReadContracts,
 } from "wagmi";
-import { parseEther } from "viem";
+import { getWalletClient } from "wagmi/actions";
+import {
+  getUSDCConfig,
+  toCAIP2,
+  buildTransferWithAuthorizationTypedData,
+  randomAuthorizationNonce,
+  splitAuthorizationSignature,
+} from "@fretchen/chain-utils";
 import {
   getSupportV2Config,
   isSupportV2Chain,
@@ -16,25 +22,45 @@ import {
   SUPPORT_RECIPIENT_ADDRESS,
   SUPPORT_V2_CHAINS,
 } from "../utils/getChain";
+import { config } from "../wagmi.config";
 import { trackEvent } from "../utils/analytics";
+import { useLocale } from "./useLocale";
+
+// Fixed donation amount: 0.50 USDC (6 decimals)
+const DONATION_AMOUNT_USDC = 500000n;
 
 /**
  * Custom hook for SupportV2 with multi-chain support
  * - Reads likes from BOTH chains in current mode (mainnet or testnet) and aggregates them
  * - Mode controlled by VITE_USE_TESTNET env variable
- * - Automatic chain switch when user clicks "Support"
+ * - Donates in USDC via EIP-3009 transferWithAuthorization (donateToken) — no ETH needed for
+ *   the donation itself, only for gas. Donates on whichever supported chain the wallet is
+ *   already on. Never auto-switches: an unsupported chain (e.g. Ethereum mainnet) surfaces
+ *   as `isOnSupportedChain: false` for the UI to explain, with `switchToSupportedChain` as
+ *   an explicit opt-in action — a blind switch would likely just move the user to a chain
+ *   they have no USDC on, turning one confusing failure into another.
  */
 export function useSupportAction(url: string) {
-  // errorMessage tracks chain-switch failures and config errors from handleSupport
+  // errorMessage tracks chain-switch/signing failures and config errors from handleSupport
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   // Captures the chain used at write time so the analytics effect reads a stable value
   const txChainIdRef = React.useRef<number | undefined>(undefined);
 
+  // Localized error strings
+  const errorUrlRequired = useLocale({ label: "metadataLine.errorUrlRequired" });
+  const errorWalletNotConnected = useLocale({ label: "metadataLine.errorWalletNotConnected" });
+  const errorChainSwitchFailed = useLocale({ label: "metadataLine.errorChainSwitchFailed" });
+  const errorConfig = useLocale({ label: "metadataLine.errorConfig" });
+  const errorUsdcUnavailable = useLocale({ label: "metadataLine.errorUsdcUnavailable" });
+  const errorSignatureRejected = useLocale({ label: "metadataLine.errorSignatureRejected" });
+  const errorDonationFailed = useLocale({ label: "metadataLine.errorDonationFailed" });
+  const errorDonationCancelled = useLocale({ label: "metadataLine.errorDonationCancelled" });
+  const modalBody = useLocale({ label: "metadataLine.modalBody" });
+
   // Wagmi hooks
-  const { isConnected, chainId: accountChainId } = useAccount();
+  const { isConnected, chainId: accountChainId, address } = useAccount();
   const wagmiChainId = useChainId();
   const { switchChainAsync } = useSwitchChain();
-  const donationAmount = parseEther("0.0002");
   const { writeContract, isPending, data: hash, error: writeError } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
@@ -77,21 +103,6 @@ export function useSupportAction(url: string) {
     query: { enabled: !!fullUrl },
   });
 
-  // Derive which chain to donate on based on current wallet chain
-  const activeConfig = React.useMemo(() => {
-    const currentlySupported = chainId ? isSupportV2Chain(chainId) : false;
-    const targetChainId = currentlySupported ? chainId : DEFAULT_SUPPORT_CHAIN.id;
-    return targetChainId ? getSupportV2Config(targetChainId) : null;
-  }, [chainId]);
-
-  const { data: simulateDonateData } = useSimulateContract({
-    ...(activeConfig ?? {}),
-    functionName: "donate",
-    args: fullUrl ? [fullUrl, SUPPORT_RECIPIENT_ADDRESS] : undefined,
-    value: donationAmount,
-    query: { enabled: !!fullUrl && !!activeConfig && isConnected },
-  });
-
   // Aggregate counts from all chains
   const aggregatedCount = chainResults
     ? chainResults.reduce((sum, result) => {
@@ -102,46 +113,137 @@ export function useSupportAction(url: string) {
       }, 0n)
     : 0n;
 
-  // Handle support action with automatic chain switch
+  // Whether the wallet is currently on a chain SupportV2 is deployed on (Optimism/Base).
+  // Exposed so the UI can show guidance BEFORE any wallet action is attempted, instead of
+  // silently firing a chain-switch popup for a chain the user has no USDC on.
+  const isOnSupportedChain = chainId ? isSupportV2Chain(chainId) : false;
+
+  // Explicit, opt-in chain switch — never called automatically. The user should understand
+  // why they're switching (via the UI guidance) before the wallet prompt appears.
+  const switchToSupportedChain = React.useCallback(async () => {
+    setErrorMessage(null);
+    try {
+      await switchChainAsync({ chainId: DEFAULT_SUPPORT_CHAIN.id });
+    } catch {
+      setErrorMessage(errorChainSwitchFailed.replace("{chain}", DEFAULT_SUPPORT_CHAIN.name));
+    }
+  }, [switchChainAsync, errorChainSwitchFailed]);
+
+  // Handle support action: sign an EIP-3009 USDC authorization, then submit donateToken.
+  // Donates on whichever supported chain the wallet is already on. Does NOT auto-switch —
+  // an unsupported chain is a UI-guidance case (see isOnSupportedChain / switchToSupportedChain),
+  // not something to silently work around, since the user's USDC may not even be on the
+  // target chain and a blind switch would likely just lead to a confusing failed donation.
   const handleSupport = React.useCallback(async () => {
     setErrorMessage(null);
     if (!fullUrl) {
-      setErrorMessage("URL ist erforderlich");
+      setErrorMessage(errorUrlRequired);
+      return;
+    }
+    if (!address) {
+      setErrorMessage(errorWalletNotConnected);
       return;
     }
 
-    // Determine which chain to use for the transaction
-    // Check support status directly (not from closure) to avoid stale state
-    const currentlySupported = chainId ? isSupportV2Chain(chainId) : false;
-    let targetChainId = chainId ?? DEFAULT_SUPPORT_CHAIN.id;
-
-    // Automatic chain switch only if not on a supported chain
-    if (!currentlySupported) {
-      try {
-        await switchChainAsync({ chainId: DEFAULT_SUPPORT_CHAIN.id });
-        targetChainId = DEFAULT_SUPPORT_CHAIN.id;
-      } catch {
-        setErrorMessage(`Chain-Wechsel zu ${DEFAULT_SUPPORT_CHAIN.name} fehlgeschlagen`);
-        return;
-      }
+    // Check support status directly (not from closure) to avoid stale state.
+    // Normally the caller (MetadataLine) checks isOnSupportedChain and shows the guided
+    // modal BEFORE calling handleSupport, so this is a defensive fallback (e.g. chain
+    // changed between render and click) — reuse the modal's own plain-language copy
+    // rather than a separate message.
+    if (!isSupportV2Chain(chainId)) {
+      setErrorMessage(modalBody);
+      return;
     }
+    const targetChainId = chainId;
 
     const resolvedConfig = getSupportV2Config(targetChainId);
     if (!resolvedConfig) {
-      setErrorMessage("Konfigurationsfehler");
+      setErrorMessage(errorConfig);
       return;
     }
 
-    if (!simulateDonateData) {
-      // Simulation still loading (e.g. after chain switch) — bail silently
+    let usdcConfig;
+    try {
+      usdcConfig = getUSDCConfig(toCAIP2(targetChainId));
+    } catch {
+      setErrorMessage(errorUsdcUnavailable);
       return;
     }
+
+    // Fetch the wallet client on-demand for the target chain rather than reading the reactive
+    // useWalletClient() value. Right after a chain switch (the retry-after-switch path in
+    // MetadataLine), the reactive client is transiently undefined while wagmi re-resolves it
+    // for the new chain — reading it here instead gets the correct, ready signer and avoids a
+    // spurious "wallet not connected" error.
+    // getWalletClient can either resolve falsy OR throw (e.g. ConnectorNotConnectedError);
+    // route both to the same friendly message instead of an unhandled rejection.
+    let walletClient;
+    try {
+      walletClient = await getWalletClient(config, { chainId: targetChainId });
+    } catch {
+      walletClient = null;
+    }
+    if (!walletClient) {
+      setErrorMessage(errorWalletNotConnected);
+      return;
+    }
+
+    // Build and sign the EIP-3009 authorization (donor -> recipient, single-use nonce)
+    const nonce = randomAuthorizationNonce();
+    const validAfter = 0n;
+    const validBefore = BigInt(Math.floor(Date.now() / 1000) + 3600); // 1 hour window
+
+    const typedData = buildTransferWithAuthorizationTypedData(usdcConfig, {
+      from: address,
+      to: SUPPORT_RECIPIENT_ADDRESS,
+      value: DONATION_AMOUNT_USDC,
+      validAfter,
+      validBefore,
+      nonce,
+    });
+
+    let signature: `0x${string}`;
+    try {
+      signature = await walletClient.signTypedData({ account: address, ...typedData });
+    } catch {
+      setErrorMessage(errorSignatureRejected);
+      return;
+    }
+
+    const { v, r, s } = splitAuthorizationSignature(signature);
 
     // Capture chain at write time; read in the effect to avoid chainId dep causing re-fires
     txChainIdRef.current = targetChainId;
 
-    writeContract(simulateDonateData.request);
-  }, [fullUrl, chainId, switchChainAsync, writeContract, simulateDonateData]);
+    writeContract({
+      ...resolvedConfig,
+      functionName: "donateToken",
+      args: [
+        fullUrl,
+        SUPPORT_RECIPIENT_ADDRESS,
+        usdcConfig.address,
+        DONATION_AMOUNT_USDC,
+        validAfter,
+        validBefore,
+        nonce,
+        v,
+        r,
+        s,
+      ],
+      chainId: targetChainId,
+    });
+  }, [
+    fullUrl,
+    address,
+    chainId,
+    writeContract,
+    errorUrlRequired,
+    errorWalletNotConnected,
+    modalBody,
+    errorConfig,
+    errorUsdcUnavailable,
+    errorSignatureRejected,
+  ]);
 
   // Side effects after transaction: analytics + refetch
   React.useEffect(() => {
@@ -151,16 +253,35 @@ export function useSupportAction(url: string) {
     }
   }, [isSuccess, writeError, refetch, fullUrl]);
 
+  // Classify a raw wagmi write error. We deliberately do NOT parse on-chain revert reasons
+  // (fragile — USDC's exact string can vary), with one cheap exception: an explicit user
+  // rejection of the tx has a stable name/message and should read as "cancelled", not "no
+  // USDC". Everything else is treated as the likely insufficient-balance case, which also
+  // drives the modal's "Get USDC" state (isInsufficientFunds).
+  const isUserRejection =
+    writeError instanceof Error &&
+    (writeError.name.includes("UserRejectedRequestError") ||
+      /user rejected|user denied|rejected the request/i.test(writeError.message));
+  const isInsufficientFunds = !!writeError && !isUserRejection;
+  const writeErrorMessage = writeError ? (isUserRejection ? errorDonationCancelled : errorDonationFailed) : null;
+
   return {
     // State - aggregated count from both chains in current mode
     supportCount: aggregatedCount.toString(),
     isLoading: isPending || isConfirming,
     isSuccess,
-    errorMessage: errorMessage ?? writeError?.message ?? null,
+    // writeError is wagmi's raw on-chain revert error — never shown verbatim (contract
+    // addresses, ABI decode attempts, hex data). Mapped to friendly copy above.
+    errorMessage: errorMessage ?? writeErrorMessage,
     isConnected,
     isReadPending,
     readError,
+    isOnSupportedChain,
+    // True only for a genuine (non-cancel) write failure — most likely no USDC on this chain.
+    // The UI uses this to show the "Get USDC" guidance, so a user cancel doesn't trigger it.
+    isInsufficientFunds,
     // Actions
     handleSupport,
+    switchToSupportedChain,
   };
 }

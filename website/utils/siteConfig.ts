@@ -10,6 +10,7 @@
 export const SITE_CONFIG = {
   name: "fretchen",
   url: "https://www.fretchen.eu",
-  description: "Physicist, researcher, and developer sharing thoughts on quantum physics, AI, and technology.",
-  tagline: "Exploring Web3, Quantum Mechanics & Decentralized Technologies",
+  description:
+    "Notes, essays and things I built while working topics out — quantum physics, game theory and economics, and building on the web.",
+  tagline: "Notes, essays and things I built while working topics out.",
 } as const;

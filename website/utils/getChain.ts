@@ -1,5 +1,5 @@
 import { optimism, optimismSepolia, base, baseSepolia } from "wagmi/chains";
-import SupportV2ABI from "../../eth/abi/contracts/SupportV2.json";
+import { SupportV2ABI } from "../../eth/abi/contracts/SupportV2";
 
 // ═══════════════════════════════════════════════════════════════
 // Chain utilities are now in @fretchen/chain-utils

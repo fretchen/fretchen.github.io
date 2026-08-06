@@ -41,19 +41,29 @@ export type X402GenerationStatus = "idle" | "awaiting-signature" | "processing" 
  * off-chain voucher signatures. See hooks/useX402Chat.ts.
  */
 
-/** A single chat turn, matching the `data.prompt[]` contract of sc_llm_x402.ts. */
+/** A single chat turn, matching the OpenAI `messages[]` contract of sc_llm_x402.ts. */
 export interface X402ChatMessage {
   role: string;
   content: string;
 }
 
-/** Response body from sc_llm_x402.ts on a settled request. */
+/**
+ * OpenAI chat.completion response from sc_llm_x402.ts on a settled request. The reply text is
+ * `choices[0].message.content`; `usage` is what the endpoint settled the charge from.
+ */
 export interface X402ChatResponse {
-  content: string;
+  id?: string;
+  object?: string;
+  created?: number;
+  model?: string;
+  choices: Array<{
+    index?: number;
+    message: { role: string; content: string };
+    finish_reason?: string | null;
+  }>;
   usage?: {
     prompt_tokens: number;
     completion_tokens: number;
     total_tokens: number;
   };
-  model?: string;
 }

@@ -38,6 +38,7 @@ vi.mock("viem/chains", () => ({
 
 vi.mock("../wagmi.config", () => ({
   config: {},
+  asConfiguredChainId: (id: number) => id,
 }));
 
 // No need to mock getChain - it's just reading env vars and returning constants
@@ -53,7 +54,7 @@ vi.mock("../components/SimpleCollectButton", () => ({
   SimpleCollectButton: vi.fn(() => <button data-testid="collect-button">Collect</button>),
 }));
 
-vi.mock("../layouts/styles", () => ({
+vi.mock("../layouts/shared", () => ({
   nftCard: {
     container: "nft-card-container",
     highlighted: "nft-card-highlighted",
@@ -73,20 +74,10 @@ vi.mock("../layouts/styles", () => ({
     checkboxLabel: "checkbox-label",
     checkbox: "nft-checkbox",
     actions: "nft-actions",
-    actionButton: "action-button",
-    compactSecondaryButton: "compact-secondary-button",
     actionsOverlay: "actions-overlay",
     ownerBadge: "owner-badge",
-    modalOverlay: "modal-overlay",
-    modalContent: "modal-content",
-    modalClose: "modal-close",
-    modalImage: "modal-image",
-    modalInfo: "modal-info",
-    modalTitle: "modal-title",
-    modalDescription: "modal-description",
   },
   spinner: "spinner",
-  primaryButton: "primary-button",
   secondaryButton: "secondary-button",
   errorStatus: "error-status",
 }));
@@ -130,6 +121,7 @@ global.fetch = vi.fn();
 describe("NFTCard Component", () => {
   const mockProps: NFTCardProps = {
     tokenId: BigInt(1),
+    network: "eip155:10",
     onImageClick: vi.fn(),
     onNftBurned: vi.fn(),
     isHighlighted: false,
@@ -254,6 +246,7 @@ describe("NFTCard Component", () => {
   it("should handle missing optional callbacks", () => {
     const minimalProps = {
       tokenId: BigInt(1),
+      network: "eip155:10",
       onImageClick: vi.fn(),
       onNftBurned: vi.fn(),
     };

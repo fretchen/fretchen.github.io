@@ -2,6 +2,7 @@ import vikeReact from "vike-react/config";
 import vikeReactQuery from "vike-react-query/config";
 import type { Config } from "vike/types";
 import Layout from "../layouts/LayoutDefault.js";
+import { SITE_CONFIG } from "../utils/siteConfig.js";
 
 // Default config (can be overridden by pages)
 // https://vike.dev/config
@@ -12,7 +13,9 @@ export default {
 
   // https://vike.dev/head-tags
   title: "Notes and Thoughts | fretchen.eu",
-  description: "Blog, notepad, whatever you want to call it.",
+  description: SITE_CONFIG.description,
+  // <html lang> is set per-locale in +lang.ts — Vike requires a separate file for
+  // function-valued configs, since +config.ts values are serialised to JSON.
   prerender: true,
   extends: [vikeReact, vikeReactQuery],
 

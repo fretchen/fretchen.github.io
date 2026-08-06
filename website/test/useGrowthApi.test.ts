@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { useAccount, useSignMessage } from "wagmi";
 import { useGrowthApi, clearAuthCacheForTesting } from "../hooks/useGrowthApi";
+import { buildAccountData } from "./setup";
 
 const OWNER_ADDRESS = "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C";
 
@@ -13,10 +14,7 @@ describe("useGrowthApi", () => {
     clearAuthCacheForTesting(); // isolate module-level cache between tests
     globalThis.fetch = vi.fn();
 
-    vi.mocked(useAccount).mockReturnValue({
-      address: OWNER_ADDRESS,
-      isConnected: true,
-    } as ReturnType<typeof useAccount>);
+    vi.mocked(useAccount).mockReturnValue(buildAccountData({ address: OWNER_ADDRESS, isConnected: true }));
 
     vi.mocked(useSignMessage).mockReturnValue({
       signMessageAsync: mockSignMessageAsync,
@@ -148,10 +146,7 @@ describe("useGrowthApi", () => {
   });
 
   it("throws when wallet not connected", async () => {
-    vi.mocked(useAccount).mockReturnValue({
-      address: undefined,
-      isConnected: false,
-    } as ReturnType<typeof useAccount>);
+    vi.mocked(useAccount).mockReturnValue(buildAccountData({ address: undefined, isConnected: false }));
 
     const { result } = renderHook(() => useGrowthApi());
     await expect(result.current.fetchDrafts()).rejects.toThrow("Wallet not connected");
@@ -218,10 +213,9 @@ describe("useGrowthApi", () => {
       expect(mockSignMessageAsync).toHaveBeenCalledTimes(1);
 
       // Switch wallet address
-      vi.mocked(useAccount).mockReturnValue({
-        address: "0x1111111111111111111111111111111111111111",
-        isConnected: true,
-      } as ReturnType<typeof useAccount>);
+      vi.mocked(useAccount).mockReturnValue(
+        buildAccountData({ address: "0x1111111111111111111111111111111111111111", isConnected: true }),
+      );
       rerender();
 
       await result.current.fetchDrafts();

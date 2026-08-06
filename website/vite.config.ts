@@ -6,6 +6,7 @@ import remarkFrontmatter from "remark-frontmatter";
 import remarkMdxFrontmatter from "remark-mdx-frontmatter";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
+import rehypeMdxImportMedia from "rehype-mdx-import-media";
 
 export default defineConfig({
   plugins: [
@@ -20,6 +21,10 @@ export default defineConfig({
         remarkGfm,
         remarkMath, // Protects $$...$$ from Markdown transformations
       ],
+      // Rewrites bare `<img src="./x.png">` (from notebook-style `![alt](./x.png)` markdown)
+      // into an import, so Vite's asset pipeline hashes/copies the file instead of leaving a
+      // relative string that 404s once the page is served from a different URL.
+      rehypePlugins: [rehypeMdxImportMedia],
     }),
     react({}),
   ],

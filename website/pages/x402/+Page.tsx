@@ -2,9 +2,10 @@ import React, { useEffect, useState } from "react";
 import { css } from "../../styled-system/css";
 import MermaidDiagram from "../../components/MermaidDiagram";
 import { FacilitatorApproval } from "../../components/FacilitatorApproval";
-import { titleBar } from "../../layouts/styles";
-import * as styles from "../../layouts/styles";
+import { CodeBlock } from "../../components/CodeBlock";
+import * as styles from "../../layouts/shared";
 import { Link } from "../../components/Link";
+import { PageHeader } from "../../components/PageHeader";
 
 // ─── Mermaid diagram definitions ─────────────────────────────────────────────
 
@@ -98,61 +99,14 @@ function SupportedStatus() {
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
-const prose = css({
-  "& h2": {
-    fontSize: "xl",
-    fontWeight: "semibold",
-    marginTop: "10",
-    marginBottom: "4",
-    paddingBottom: "2",
-    borderBottom: "1px solid token(colors.border)",
-  },
-  "& h3": {
-    fontSize: "lg",
-    fontWeight: "semibold",
-    marginTop: "6",
-    marginBottom: "3",
-  },
-  "& p": {
-    marginBottom: "4",
-    lineHeight: "1.7",
-  },
-  "& ul, & ol": {
-    paddingLeft: "2em",
-    marginBottom: "4",
-  },
-  "& li": {
-    marginBottom: "2",
-    lineHeight: "1.6",
-  },
-  "& a": {
-    color: "token(colors.link)",
-    textDecoration: "underline",
-    _hover: { color: "token(colors.linkHover)" },
-  },
-  "& code": {
-    fontSize: "sm",
-    backgroundColor: "token(colors.codeBg, #f3f4f6)",
-    padding: "1px 4px",
-    borderRadius: "3px",
-    fontFamily: "monospace",
-  },
-  "& pre": {
-    backgroundColor: "#1e1e1e",
-    color: "#d4d4d4",
-    padding: "16px",
-    borderRadius: "8px",
-    overflowX: "auto",
-    marginBottom: "4",
-    fontSize: "sm",
-    lineHeight: "1.5",
-    "& code": {
-      backgroundColor: "transparent",
-      padding: "0",
-      color: "inherit",
-    },
-  },
-});
+// The reading surface. This page is documentation, not a tool, so it reads in the serif like
+// an article body — see IDENTITY.md on prose vs things you operate.
+//
+// Nothing else is declared here on purpose. Paragraphs, lists, links and tables come from
+// @layer base; headings from the one scale in panda.config.ts globalCss; code from CodeBlock,
+// which carries its own dark surface. The local prose block that used to sit here restated
+// all of that, so the page could drift from every article without anyone noticing.
+const prose = css({ textStyle: "prose", maxWidth: "measure" });
 
 const table = css({
   width: "100%",
@@ -166,7 +120,7 @@ const table = css({
   },
   "& th": {
     fontWeight: "semibold",
-    backgroundColor: "token(colors.codeBg, #f9fafb)",
+    backgroundColor: "codeBg",
   },
   "& tr:last-child td": {
     borderBottom: "none",
@@ -176,38 +130,38 @@ const table = css({
 const statusBadge = css({
   display: "inline-block",
   padding: "2px 10px",
-  borderRadius: "9999px",
+  borderRadius: "full",
   fontSize: "sm",
-  fontWeight: "medium",
-  backgroundColor: "#f3f4f6",
-  color: "#6b7280",
+  fontWeight: "semibold",
+  backgroundColor: "gray.100",
+  color: "gray.500",
 });
 
 const statusBadgeOk = css({
   display: "inline-block",
   padding: "2px 10px",
-  borderRadius: "9999px",
+  borderRadius: "full",
   fontSize: "sm",
-  fontWeight: "medium",
-  backgroundColor: "#dcfce7",
-  color: "#166534",
+  fontWeight: "semibold",
+  backgroundColor: "green.100",
+  color: "green.800",
 });
 
 const statusBadgeError = css({
   display: "inline-block",
   padding: "2px 10px",
-  borderRadius: "9999px",
+  borderRadius: "full",
   fontSize: "sm",
-  fontWeight: "medium",
-  backgroundColor: "#fee2e2",
-  color: "#991b1b",
+  fontWeight: "semibold",
+  backgroundColor: "red.100",
+  color: "red.800",
 });
 
 const endpointBox = css({
-  backgroundColor: "token(colors.codeBg, #f9fafb)",
+  backgroundColor: "codeBg",
   border: "1px solid token(colors.border, #e5e7eb)",
-  borderRadius: "8px",
-  padding: "16px",
+  borderRadius: "lg",
+  padding: "4",
   marginBottom: "4",
 });
 
@@ -218,14 +172,14 @@ const valuePropList = css({
   marginBottom: "6",
   "& li": {
     padding: "6px 0",
-    paddingLeft: "1.5em",
+    paddingLeft: "6",
     position: "relative",
     marginBottom: "1",
     "&::before": {
       content: '"✓"',
       position: "absolute",
       left: "0",
-      color: "#16a34a",
+      color: "green.600",
       fontWeight: "bold",
     },
   },
@@ -237,21 +191,21 @@ const stepNumber = css({
   justifyContent: "center",
   width: "28px",
   height: "28px",
-  borderRadius: "9999px",
-  backgroundColor: "#2563eb",
+  borderRadius: "full",
+  backgroundColor: "blue.600",
   color: "white",
   fontSize: "sm",
   fontWeight: "bold",
-  marginRight: "8px",
+  marginRight: "2",
   flexShrink: 0,
 });
 
 const stepContainer = css({
   border: "1px solid token(colors.border, #e5e7eb)",
-  borderRadius: "8px",
-  padding: "20px",
+  borderRadius: "lg",
+  padding: "5",
   marginBottom: "4",
-  backgroundColor: "token(colors.codeBg, #f9fafb)",
+  backgroundColor: "codeBg",
 });
 
 const feeComparisonTable = css({
@@ -269,7 +223,7 @@ const feeComparisonTable = css({
   },
   "& th": {
     fontWeight: "semibold",
-    backgroundColor: "token(colors.codeBg, #f9fafb)",
+    backgroundColor: "codeBg",
   },
   "& tr:last-child td": {
     borderBottom: "none",
@@ -281,7 +235,8 @@ const feeComparisonTable = css({
 export default function Page() {
   return (
     <div className={styles.container}>
-      <h1 className={titleBar.title}>x402 Facilitator</h1>
+      {/* No intro here: this page's lead paragraph belongs to the prose surface below. */}
+      <PageHeader title="x402 Facilitator" territory="explore" />
 
       <div className={prose}>
         {/* ── 1. Hero ──────────────────────────────────────────────────── */}
@@ -327,8 +282,7 @@ export default function Page() {
             Replace <code>0xYourMerchantAddress</code> with your wallet address and set <code>amount</code> to your
             price in USDC (6 decimals — <code>100000</code> = $0.10).
           </p>
-          <pre>
-            <code>{`// HTTP 402 response body:
+          <CodeBlock lang="json">{`// HTTP 402 response body:
 {
   "x402Version": 2,
   "accepts": [{
@@ -341,8 +295,7 @@ export default function Page() {
     "extra": { "name": "USD Coin", "version": "2" }
   }],
   "facilitatorUrl": "https://facilitator.fretchen.eu"
-}`}</code>
-          </pre>
+}`}</CodeBlock>
         </div>
 
         <div className={stepContainer}>
@@ -364,8 +317,7 @@ export default function Page() {
             When a client sends a request with a <code>PAYMENT-SIGNATURE</code> header, verify the payment before
             delivering the resource, then settle it on-chain:
           </p>
-          <pre>
-            <code>{`// 1. Verify payment (before delivering resource)
+          <CodeBlock lang="javascript">{`// 1. Verify payment (before delivering resource)
 const verifyRes = await fetch("https://facilitator.fretchen.eu/verify", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
@@ -386,8 +338,7 @@ await fetch("https://facilitator.fretchen.eu/settle", {
     network: "eip155:10", payload, details })
 });
 
-return new Response(JSON.stringify(result), { status: 200 });`}</code>
-          </pre>
+return new Response(JSON.stringify(result), { status: 200 });`}</CodeBlock>
           <p>
             That&apos;s it — your service now accepts crypto payments. See the{" "}
             <Link href="/agent-onboarding">agent onboarding guide</Link> for a complete walkthrough.
@@ -500,8 +451,7 @@ return new Response(JSON.stringify(result), { status: 200 });`}</code>
             Validates a signed payment off-chain. Checks signature validity, sufficient balance, correct recipient, and
             expiration. Call this <strong>before</strong> delivering your resource.
           </p>
-          <pre>
-            <code>{`curl -X POST https://facilitator.fretchen.eu/verify \\
+          <CodeBlock lang="bash">{`curl -X POST https://facilitator.fretchen.eu/verify \\
   -H "Content-Type: application/json" \\
   -d '{
     "x402Version": 2,
@@ -515,8 +465,7 @@ return new Response(JSON.stringify(result), { status: 200 });`}</code>
       "asset": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
       "payTo": "0xYourMerchantAddress"
     }
-  }'`}</code>
-          </pre>
+  }'`}</CodeBlock>
           <p>
             Response: <code>{`{ "valid": true }`}</code> or <code>{`{ "valid": false, "invalidReason": "..." }`}</code>
           </p>
@@ -528,8 +477,7 @@ return new Response(JSON.stringify(result), { status: 200 });`}</code>
             Executes the payment on-chain via EIP-3009 <code>transferWithAuthorization</code>. Call this{" "}
             <strong>after</strong> successful verification and resource delivery.
           </p>
-          <pre>
-            <code>{`curl -X POST https://facilitator.fretchen.eu/settle \\
+          <CodeBlock lang="bash">{`curl -X POST https://facilitator.fretchen.eu/settle \\
   -H "Content-Type: application/json" \\
   -d '{
     "x402Version": 2,
@@ -543,8 +491,7 @@ return new Response(JSON.stringify(result), { status: 200 });`}</code>
       "asset": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
       "payTo": "0xYourMerchantAddress"
     }
-  }'`}</code>
-          </pre>
+  }'`}</CodeBlock>
           <p>
             Response: <code>{`{ "success": true, "txHash": "0x..." }`}</code>
           </p>
@@ -553,9 +500,7 @@ return new Response(JSON.stringify(result), { status: 200 });`}</code>
         <h3>GET /supported</h3>
         <div className={endpointBox}>
           <p>Returns supported networks, payment schemes, and fee configuration.</p>
-          <pre>
-            <code>{`curl https://facilitator.fretchen.eu/supported`}</code>
-          </pre>
+          <CodeBlock lang="bash">{`curl https://facilitator.fretchen.eu/supported`}</CodeBlock>
           <p>
             Returns a JSON object with <code>kinds</code> (supported network/scheme pairs), <code>extensions</code>{" "}
             (advertised extension keys), <code>signers</code> (facilitator addresses per network), and{" "}
@@ -579,8 +524,7 @@ return new Response(JSON.stringify(result), { status: 200 });`}</code>
         <p>
           Using the official <code>@x402/fetch</code> SDK, a client can pay for any x402 resource automatically:
         </p>
-        <pre>
-          <code>{`import { x402Client, wrapFetchWithPayment } from "@x402/fetch";
+        <CodeBlock lang="typescript">{`import { x402Client, wrapFetchWithPayment } from "@x402/fetch";
 import { registerExactEvmScheme } from "@x402/evm/exact/client";
 import { privateKeyToAccount } from "viem/accounts";
 
@@ -602,13 +546,11 @@ const response = await fetchWithPayment(
 
 const result = await response.json();
 console.log("Image:", result.imageUrl);
-console.log("NFT:", result.tokenId);`}</code>
-        </pre>
+console.log("NFT:", result.tokenId);`}</CodeBlock>
 
         <h3>Your server (resource server)</h3>
         <p>Full example of a Node.js endpoint protected by x402. Adapt the resource generation to your use case:</p>
-        <pre>
-          <code>{`// Express / Node.js example
+        <CodeBlock lang="javascript">{`// Express / Node.js example
 app.post("/api/resource", async (req, res) => {
   const paymentHeader = req.headers["payment-signature"];
 
@@ -658,8 +600,7 @@ app.post("/api/resource", async (req, res) => {
   });
 
   return res.json(result);
-});`}</code>
-        </pre>
+});`}</CodeBlock>
 
         {/* ── 7. Supported networks ────────────────────────────────────── */}
 

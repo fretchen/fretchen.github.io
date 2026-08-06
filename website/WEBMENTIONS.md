@@ -148,6 +148,15 @@ SEND_WEBMENTIONS=true npm run send-webmentions
 4. **Verifiziert Target-URLs** (die versteckten Links im HTML)
 5. **Postet auf Social Media** (Mastodon, Bluesky, GitHub)
 
+> **Hinweis zu `e-content`:** Der Artikeltext wird über einen dynamischen Import erst im
+> Browser geladen, steht also im vorgerenderten HTML — genau dem, was Bridgy crawlt — noch
+> nicht zur Verfügung. `e-content` sitzt deshalb am gerenderten Artikel selbst
+> (`ReactPostRenderer` in `components/Post.tsx`) und **nicht** am umgebenden Wrapper: sonst
+> beschriebe die Klasse den Ladeplatzhalter, und Bridgy syndizierte
+> „🔄 Lade interaktive Komponente…" als Beitragstext. Bis die Beiträge serverseitig gerendert
+> werden, hat ein gecrawlter Permalink kein `content` — Konsumenten fallen auf `summary`
+> zurück, das aus dem Frontmatter stammt und korrekt ist.
+
 ## Troubleshooting
 
 ### "No posts to process"

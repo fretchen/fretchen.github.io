@@ -12,10 +12,11 @@
  * `scw_js/notebooks/sc_llm_x402_buyer.ipynb`.
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useWalletClient, useAccount } from "wagmi";
 import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
-import { useConfiguredPublicClient } from "./useConfiguredPublicClient";
+import { getConfiguredPublicClient } from "./useConfiguredPublicClient";
+import { probeAccepts, negotiateNetwork, LLM_V1_FLOOR } from "./x402Discovery";
 import type { X402ChatMessage, X402ChatResponse, X402PaymentReceipt, X402GenerationStatus } from "../types/x402";
 // Type-only import — erased at compile time, so no @x402 runtime is pulled into SSR.
 import type {
@@ -24,11 +25,17 @@ import type {
   BatchSettlementDepositStrategyContext,
 } from "@x402/evm/batch-settlement/client";
 
-// Endpoint of the batch-settlement chat function (override for local dev with
-// PUBLIC_ENV__LLM_X402_ENDPOINT=http://localhost:8085).
-const X402_LLM_URL =
-  (import.meta.env.PUBLIC_ENV__LLM_X402_ENDPOINT as string | undefined) ??
-  "https://mypersonaljscloudivnad9dy-llmx402.functions.fnc.fr-par.scw.cloud";
+// Default batch-settlement chat agent — fretchen's own llm/v1 endpoint (the origin
+// advertised in scw_js/openapi.llm.json). Override for local dev with
+// PUBLIC_ENV__LLM_X402_ENDPOINT=http://localhost:8085. Callers may also pass an explicit
+// agentUrl to useX402Chat to target any other llm/v1 agent (see the open-agent-platform
+// work) — this constant is only the fallback when none is given.
+export const DEFAULT_LLM_AGENT_URL =
+  (import.meta.env.PUBLIC_ENV__LLM_X402_ENDPOINT as string | undefined) ?? "https://llm-agent.fretchen.eu";
+
+// The model id sent in the OpenAI-shaped request. Must match an id the target agent
+// advertises in its openapi.json (the default fretchen agent serves mistral-large-latest).
+const LLM_MODEL = (import.meta.env.PUBLIC_ENV__LLM_MODEL as string | undefined) ?? "mistral-large-latest";
 
 /**
  * Client-side `ClientChannelStorage` backed by the Web Storage API. Persists channel
@@ -135,33 +142,83 @@ export interface UseX402ChatResult {
   paymentReceipt: X402PaymentReceipt | null;
   reset: () => void;
   isReady: boolean;
+  /**
+   * The network this hook will actually pay on: the caller's preferred `network` when the
+   * agent offers it, otherwise whichever floor network it does offer (see
+   * `negotiateNetwork`). Equals `network` until the agent has been probed. Callers must
+   * switch the wallet to THIS network, not to their preferred one.
+   */
+  paymentNetwork: string;
 }
 
 /**
- * @param network - CAIP-2 network the channel operates on (e.g. "eip155:84532").
- *   Determines the public client used for on-chain channel reads and the scheme
- *   registration network.
+ * @param network - Preferred CAIP-2 network for the channel (e.g. "eip155:10"). Used when the
+ *   agent offers it; otherwise the hook negotiates down to a network the agent does offer and
+ *   reports it as `paymentNetwork`.
+ * @param agentUrl - The llm/v1 agent endpoint to pay and call. Defaults to fretchen's
+ *   own endpoint (`DEFAULT_LLM_AGENT_URL`); pass any other llm/v1 agent to target it.
+ *   Channel state in localStorage is keyed per-origin, so switching agents is isolated.
  */
-export function useX402Chat(network: string): UseX402ChatResult {
+export function useX402Chat(network: string, agentUrl: string = DEFAULT_LLM_AGENT_URL): UseX402ChatResult {
   const { data: walletClient } = useWalletClient();
   const { isConnected } = useAccount();
-  // A readContract-capable client is required: batch-settlement's corrective-402
-  // recovery reads channel state on-chain, unlike the exact scheme.
-  const publicClient = useConfiguredPublicClient(network);
 
   const [status, setStatus] = useState<X402GenerationStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [paymentReceipt, setPaymentReceipt] = useState<X402PaymentReceipt | null>(null);
+  // The negotiated result, tagged with the inputs it was computed from. Tagging lets
+  // `paymentNetwork` be derived during render, so switching agent or preference falls back
+  // to the new preferred network immediately rather than briefly reporting a stale one.
+  const [negotiated, setNegotiated] = useState<{ agentUrl: string; preferred: string; network: string } | null>(null);
+  const paymentNetwork =
+    negotiated?.agentUrl === agentUrl && negotiated?.preferred === network ? negotiated.network : network;
 
-  const isReady = isConnected && !!walletClient && !!publicClient;
+  // Probe the agent up front so the UI (and the caller's chain switch) knows which network
+  // will be paid before the user hits send. Leaves the preferred network in place when the
+  // agent can't be read — sendMessage negotiates again for real and reports any mismatch.
+  useEffect(() => {
+    let cancelled = false;
+    void probeAccepts(agentUrl).then((accepts) => {
+      if (cancelled) return;
+      const result = negotiateNetwork(accepts, network);
+      if (result) setNegotiated({ agentUrl, preferred: network, network: result });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [agentUrl, network]);
+
+  const isReady = isConnected && !!walletClient;
 
   const sendMessage = useCallback(
     async (prompt: X402ChatMessage[]): Promise<X402ChatResponse> => {
       if (!walletClient) {
         throw new Error("Wallet not connected");
       }
+
+      // Re-negotiate at send time rather than trusting the effect's result: it may not have
+      // resolved yet, and the agent's offer can change between page load and sending.
+      const accepts = await probeAccepts(agentUrl);
+      const resolved = negotiateNetwork(accepts, network);
+      if (accepts && !resolved) {
+        const offered = accepts.map((a) => a.network).filter(Boolean) as string[];
+        throw new Error(
+          `Agent ${agentUrl} does not offer a network this site can pay on. ` +
+            `It offers: ${offered.join(", ") || "nothing readable"}; this site pays on ` +
+            `${LLM_V1_FLOOR.networks.join(", ")} via ${LLM_V1_FLOOR.scheme}. Choose a different agent.`,
+        );
+      }
+      // `accepts === null` means the agent wasn't readable (CORS, offline). Don't block on
+      // that — proceed on the preferred network and let the real 402 be the judge.
+      const payNetwork = resolved ?? network;
+      setNegotiated({ agentUrl, preferred: network, network: payNetwork });
+
+      // A readContract-capable client is required: batch-settlement's corrective-402
+      // recovery reads channel state on-chain, unlike the exact scheme. Resolved here, not
+      // via the hook, because the network is only known after negotiating.
+      const publicClient = getConfiguredPublicClient(payNetwork);
       if (!publicClient) {
-        throw new Error(`No public client for network ${network}`);
+        throw new Error(`No public client for network ${payNetwork}`);
       }
 
       setStatus("awaiting-signature");
@@ -197,45 +254,21 @@ export function useX402Chat(network: string): UseX402ChatResult {
         const scheme = new BatchSettlementEvmScheme(signer, { storage, voucherSigner, depositStrategy });
 
         const client = new x402Client();
-        client.register(network, scheme);
+        // `payNetwork` is a CAIP-2 id (e.g. "eip155:10"); register's type wants the literal
+        // `${string}:${string}` shape, which every CAIP-2 value satisfies.
+        client.register(payNetwork as `${string}:${string}`, scheme);
 
-        // === Validating fetch: reject before signing if the server doesn't offer our network ===
-        const validatingFetch: typeof fetch = async (input, init) => {
-          const response = await fetch(input, init);
-          if (response.status === 402) {
-            const paymentRequiredHeader = response.headers.get("Payment-Required");
-            if (paymentRequiredHeader) {
-              try {
-                const decoded = JSON.parse(atob(paymentRequiredHeader)) as {
-                  accepts?: Array<{ network?: string }>;
-                };
-                const offered = decoded.accepts?.map((a) => a.network).filter(Boolean) as string[] | undefined;
-                if (offered && offered.length > 0 && !offered.includes(network)) {
-                  throw new Error(
-                    `Server does not offer ${network}. Offered: ${offered.join(", ")}. ` +
-                      `This could indicate a backend configuration error.`,
-                  );
-                }
-              } catch (parseError) {
-                if (parseError instanceof Error && parseError.message.includes("does not offer")) {
-                  throw parseError;
-                }
-                // Silently continue if header parsing fails — the request will proceed
-              }
-            }
-          }
-          return response;
-        };
-
-        const fetchWithPayment = wrapFetchWithPayment(validatingFetch, client);
+        const fetchWithPayment = wrapFetchWithPayment(fetch, client);
 
         // First bare request → 402 → SDK opens channel (deposit) or signs a voucher → retries.
         // Wrapped in try/catch as defense-in-depth (see notebook: a client-side crash could
         // once mask a successful settlement; the underlying facilitator bug is fixed).
-        const response = await fetchWithPayment(X402_LLM_URL, {
+        const response = await fetchWithPayment(agentUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ data: { prompt } }),
+          // OpenAI chat-completions body. `model` must be one the agent advertises in its
+          // openapi.json (mistral-large-latest for fretchen's default agent).
+          body: JSON.stringify({ model: LLM_MODEL, messages: prompt }),
         });
 
         setStatus("processing");
@@ -267,7 +300,7 @@ export function useX402Chat(network: string): UseX402ChatResult {
         throw err;
       }
     },
-    [walletClient, publicClient, network],
+    [walletClient, network, agentUrl],
   );
 
   const reset = useCallback(() => {
@@ -276,7 +309,7 @@ export function useX402Chat(network: string): UseX402ChatResult {
     setPaymentReceipt(null);
   }, []);
 
-  return { sendMessage, status, error, paymentReceipt, reset, isReady };
+  return { sendMessage, status, error, paymentReceipt, reset, isReady, paymentNetwork };
 }
 
 export default useX402Chat;

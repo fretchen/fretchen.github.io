@@ -17,26 +17,30 @@ import { screen, fireEvent } from "@testing-library/react";
 import { renderWithQuery } from "./testUtils";
 import { ImageGenerator } from "../components/ImageGenerator";
 import { useAccount, useWalletClient } from "wagmi";
+import { buildAccountData, buildWalletClientData } from "./setup";
 
 // Override wagmi mock for this file to force connected state for all tests
 beforeAll(() => {
-  vi.mocked(useAccount).mockReturnValue({
-    address: "0x1234567890123456789012345678901234567890" as `0x${string}`,
-    isConnected: true,
-    status: "connected",
-    isConnecting: false,
-    isDisconnected: false,
-    isReconnecting: false,
-  } as ReturnType<typeof useAccount>);
+  vi.mocked(useAccount).mockReturnValue(
+    buildAccountData({
+      address: "0x1234567890123456789012345678901234567890" as `0x${string}`,
+      isConnected: true,
+      status: "connected",
+      isConnecting: false,
+      isDisconnected: false,
+      isReconnecting: false,
+    }),
+  );
 
   // Mock wallet client for x402 hook
-
-  vi.mocked(useWalletClient).mockReturnValue({
-    data: {
-      account: { address: "0x1234567890123456789012345678901234567890" },
-      signTypedData: vi.fn(),
-    },
-  } as ReturnType<typeof useWalletClient>);
+  vi.mocked(useWalletClient).mockReturnValue(
+    buildWalletClientData({
+      data: {
+        account: { address: "0x1234567890123456789012345678901234567890" },
+        signTypedData: vi.fn(),
+      },
+    }),
+  );
 });
 
 describe("ImageGenerator Reference Image Integration", () => {
@@ -93,7 +97,7 @@ describe("ImageGenerator Reference Image Integration", () => {
     it("sollte JPEG Dateien akzeptieren", () => {
       renderWithQuery(<ImageGenerator />);
 
-      const fileInput = screen.getByTestId("reference-image-input");
+      const fileInput = screen.getByTestId<HTMLInputElement>("reference-image-input");
 
       // Simuliere JPEG File Upload
       const jpegFile = new File(["jpeg content"], "test.jpg", { type: "image/jpeg" });
@@ -108,7 +112,7 @@ describe("ImageGenerator Reference Image Integration", () => {
     it("sollte PNG Dateien akzeptieren", () => {
       renderWithQuery(<ImageGenerator />);
 
-      const fileInput = screen.getByTestId("reference-image-input");
+      const fileInput = screen.getByTestId<HTMLInputElement>("reference-image-input");
 
       // Simuliere PNG File Upload
       const pngFile = new File(["png content"], "test.png", { type: "image/png" });

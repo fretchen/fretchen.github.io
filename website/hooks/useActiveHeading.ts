@@ -51,9 +51,12 @@ export function useActiveHeading(headingIds: string[]): {
         }
       },
       {
-        // Root margin: negative top means "below the header"
-        // Negative bottom means "top 20% of viewport triggers intersection"
-        rootMargin: "-80px 0px -80% 0px",
+        // Negative top pulls the observation line down from the viewport top; negative
+        // bottom means "only the top 20% of the viewport counts as in view".
+        // The top value is coupled to TableOfContents.tsx's headerOffset, which must stay
+        // larger than this magnitude — a clicked heading lands headerOffset px down, and if
+        // that is above this line the scroll-spy marks the previous heading active.
+        rootMargin: "-16px 0px -80% 0px",
         threshold: 0,
       },
     );

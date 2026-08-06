@@ -303,18 +303,18 @@ const FishingScenarioSelector: React.FC<{
   return (
     <div
       className={css({
-        marginBottom: "20px",
+        marginBottom: "5",
         textAlign: "center",
         border: "1px solid #e5e7eb",
-        borderRadius: "8px",
-        padding: "16px",
-        background: "#fafafa",
+        borderRadius: "lg",
+        padding: "4",
+        background: "zinc.50",
       })}
     >
-      <div className={css({ fontSize: "16px", fontWeight: "600", marginBottom: "8px" })}>
+      <div className={css({ fontSize: "md", fontWeight: "semibold", marginBottom: "2" })}>
         🌏 Neighboring Islands Culture
       </div>
-      <div className={css({ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" })}>
+      <div className={css({ display: "flex", gap: "3", justifyContent: "center", flexWrap: "wrap" })}>
         {Object.entries(scenarios).map(([key, info]) => {
           const isSelected = scenario === key;
           const isDisabled = gameStarted;
@@ -331,12 +331,12 @@ const FishingScenarioSelector: React.FC<{
               className={css({
                 padding: "12px 16px",
                 border: isSelected ? "2px solid #3b82f6" : "1px solid #d1d5db",
-                borderRadius: "8px",
-                background: isDisabled ? "#f3f4f6" : isSelected ? "#eff6ff" : "#fff",
+                borderRadius: "lg",
+                background: isDisabled ? "gray.100" : isSelected ? "blue.50" : "white",
                 cursor: isDisabled ? "not-allowed" : "pointer",
                 textAlign: "left",
                 maxWidth: "200px",
-                fontSize: "14px",
+                fontSize: "sm",
                 opacity: isDisabled ? 0.6 : 1,
                 position: "relative",
               })}
@@ -348,8 +348,8 @@ const FishingScenarioSelector: React.FC<{
                     position: "absolute",
                     top: "4px",
                     right: "6px",
-                    fontSize: "12px",
-                    color: "#6b7280",
+                    fontSize: "xs",
+                    color: "gray.500",
                   })}
                 >
                   🔒
@@ -357,18 +357,18 @@ const FishingScenarioSelector: React.FC<{
               )}
               <div
                 className={css({
-                  fontWeight: "600",
-                  marginBottom: "4px",
-                  color: isDisabled ? "#9ca3af" : "#111827",
+                  fontWeight: "semibold",
+                  marginBottom: "1",
+                  color: isDisabled ? "gray.400" : "gray.900",
                 })}
               >
                 {info.name}
               </div>
               <div
                 className={css({
-                  color: isDisabled ? "#9ca3af" : "#64748b",
-                  fontSize: "12px",
-                  lineHeight: "1.3",
+                  color: isDisabled ? "gray.400" : "slate.500",
+                  fontSize: "xs",
+                  lineHeight: "tight",
                 })}
               >
                 {info.description}
@@ -377,13 +377,13 @@ const FishingScenarioSelector: React.FC<{
           );
         })}
       </div>
-      <div className={css({ marginTop: "16px" })}>
+      <div className={css({ marginTop: "4" })}>
         <div
           className={css({
-            fontSize: "14px",
-            color: "#64748b",
-            marginBottom: "8px",
-            fontWeight: "500",
+            fontSize: "sm",
+            color: "slate.500",
+            marginBottom: "2",
+            fontWeight: "semibold",
           })}
         >
           Active Scenario: {scenarios[scenario].name}
@@ -391,15 +391,15 @@ const FishingScenarioSelector: React.FC<{
         {gameStarted ? (
           <div
             className={css({
-              fontSize: "13px",
-              color: "#9ca3af",
+              fontSize: "sm",
+              color: "gray.400",
               fontStyle: "italic",
             })}
           >
             Scenario is locked during the game. Use &quot;Play again&quot; to change scenarios.
           </div>
         ) : (
-          <div className={css({ fontSize: "14px", color: "#64748b" })}>
+          <div className={css({ fontSize: "sm", color: "slate.500" })}>
             As Moana, you can choose to send {OPTIMAL_BOATS.low_fishing},{" "}
             {Math.floor((OPTIMAL_BOATS.low_fishing + OPTIMAL_BOATS.intensive_fishing) / 2)}, or{" "}
             {OPTIMAL_BOATS.intensive_fishing} boats. What&apos;s your strategy?
@@ -426,26 +426,26 @@ const FishingActionBar: React.FC<{
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: "12px",
-        marginBottom: "16px",
+        gap: "3",
+        marginBottom: "4",
       })}
     >
       {/* Progress Indicator */}
-      <div className={css({ display: "flex", gap: "8px", marginBottom: "8px" })}>
+      <div className={css({ display: "flex", gap: "2", marginBottom: "2" })}>
         {[1, 2, 3].map((roundNum) => (
           <div
             key={roundNum}
             className={css({
               width: "32px",
               height: "32px",
-              borderRadius: "50%",
+              borderRadius: "full",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: "14px",
-              fontWeight: "600",
-              background: roundNum < round ? "#10b981" : roundNum === round ? "#3b82f6" : "#e5e7eb",
-              color: roundNum < round || roundNum === round ? "#fff" : "#9ca3af",
+              fontSize: "sm",
+              fontWeight: "semibold",
+              background: roundNum < round ? "emerald.500" : roundNum === round ? "blue.500" : "gray.200",
+              color: roundNum < round || roundNum === round ? "white" : "gray.400",
             })}
           >
             {roundNum < round ? "✓" : roundNum}
@@ -454,27 +454,27 @@ const FishingActionBar: React.FC<{
       </div>
 
       {/* Status */}
-      <div className={css({ fontSize: "16px", textAlign: "center", marginBottom: "8px" })}>
-        <div className={css({ fontWeight: "600", marginBottom: "4px" })}>
+      <div className={css({ fontSize: "md", textAlign: "center", marginBottom: "2" })}>
+        <div className={css({ fontWeight: "semibold", marginBottom: "1" })}>
           Round {round} of 3 • Fish Stock: {round === 1 ? MODEL_PARAMS.s_init : history[round - 2].fishAfter} 🐟
         </div>
-        <div className={css({ color: "#64748b", fontSize: "14px" })}>How many boats should Moana send out today?</div>
+        <div className={css({ color: "slate.500", fontSize: "sm" })}>How many boats should Moana send out today?</div>
       </div>
 
       {/* Boat Choice Buttons */}
       {!gameOver && !hasChosenBoats && (
-        <div className={css({ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center" })}>
+        <div className={css({ display: "flex", gap: "3", flexWrap: "wrap", justifyContent: "center" })}>
           <button
             onClick={() => onBoatChoice(OPTIMAL_BOATS.low_fishing)}
             className={css({
               padding: "10px 16px",
               border: "1px solid #10b981",
-              borderRadius: "6px",
-              background: "#fff",
+              borderRadius: "md",
+              background: "white",
               color: "#222",
               cursor: "pointer",
-              fontWeight: "500",
-              fontSize: "14px",
+              fontWeight: "semibold",
+              fontSize: "sm",
             })}
           >
             🌊 {OPTIMAL_BOATS.low_fishing} Boats (Sustainable)
@@ -484,12 +484,12 @@ const FishingActionBar: React.FC<{
             className={css({
               padding: "10px 16px",
               border: "1px solid #f59e0b",
-              borderRadius: "6px",
-              background: "#fff",
+              borderRadius: "md",
+              background: "white",
               color: "#222",
               cursor: "pointer",
-              fontWeight: "500",
-              fontSize: "14px",
+              fontWeight: "semibold",
+              fontSize: "sm",
             })}
           >
             ⚖️ {Math.floor((OPTIMAL_BOATS.low_fishing + OPTIMAL_BOATS.intensive_fishing) / 2)} Boats (Moderate)
@@ -499,12 +499,12 @@ const FishingActionBar: React.FC<{
             className={css({
               padding: "10px 16px",
               border: "1px solid #ef4444",
-              borderRadius: "6px",
-              background: "#fff",
+              borderRadius: "md",
+              background: "white",
               color: "#222",
               cursor: "pointer",
-              fontWeight: "500",
-              fontSize: "14px",
+              fontWeight: "semibold",
+              fontSize: "sm",
             })}
           >
             ⚡ {OPTIMAL_BOATS.intensive_fishing} Boats (Intensive)
@@ -516,26 +516,26 @@ const FishingActionBar: React.FC<{
       {!gameOver && hasChosenBoats && (
         <div
           className={css({
-            fontSize: "14px",
-            color: "#64748b",
+            fontSize: "sm",
+            color: "slate.500",
             textAlign: "center",
-            marginTop: "4px",
+            marginTop: "1",
           })}
         >
-          <div className={css({ marginBottom: "4px" })}>
+          <div className={css({ marginBottom: "1" })}>
             <strong>Moana:</strong> {currentRoundHistory.moanaBoats} boats → {currentRoundHistory.moanaFish} fish
           </div>
-          <div className={css({ marginBottom: "4px" })}>
+          <div className={css({ marginBottom: "1" })}>
             <strong>Other Chiefs:</strong>{" "}
             {currentRoundHistory.otherBoats
               ?.map((boats, i) => `${otherChiefs[i]}: ${boats} boats (${currentRoundHistory.otherFish?.[i]} fish)`)
               .join(", ")}
           </div>
-          <div className={css({ marginBottom: "4px" })}>
+          <div className={css({ marginBottom: "1" })}>
             <strong>Total:</strong> {currentRoundHistory.totalBoats} boats caught {currentRoundHistory.totalCatch} fish
           </div>
           {currentRoundHistory.regeneration && currentRoundHistory.regeneration > 0 && (
-            <div className={css({ color: "#10b981" })}>
+            <div className={css({ color: "emerald.500" })}>
               🌱 Ocean regenerated: +{currentRoundHistory.regeneration} fish
             </div>
           )}
@@ -585,16 +585,16 @@ const FishingResultsTable: React.FC<{ history: RoundHistory[] }> = ({ history })
         <table
           className={css({
             borderCollapse: "collapse",
-            fontSize: "14px",
+            fontSize: "sm",
             minWidth: "480px",
           })}
         >
           <thead>
-            <tr className={css({ background: "#bae6fd" })}>
+            <tr className={css({ background: "sky.200" })}>
               <th className={css({ padding: "6px 8px" })}>Round</th>
               <th className={css({ padding: "6px 8px" })}>Moana</th>
               {otherChiefs.map((chief) => (
-                <th key={chief} className={css({ padding: "6px 8px", fontSize: "12px" })}>
+                <th key={chief} className={css({ padding: "6px 8px", fontSize: "xs" })}>
                   {chief.replace("Chief ", "")}
                 </th>
               ))}
@@ -746,18 +746,18 @@ const CommunityScenarioSelector: React.FC<{
   return (
     <div
       className={css({
-        marginBottom: "20px",
+        marginBottom: "5",
         textAlign: "center",
         border: "1px solid #e5e7eb",
-        borderRadius: "8px",
-        padding: "16px",
-        background: "#fafafa",
+        borderRadius: "lg",
+        padding: "4",
+        background: "zinc.50",
       })}
     >
-      <div className={css({ fontSize: "16px", fontWeight: "600", marginBottom: "8px" })}>
+      <div className={css({ fontSize: "md", fontWeight: "semibold", marginBottom: "2" })}>
         🏛️ Community Governance System
       </div>
-      <div className={css({ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" })}>
+      <div className={css({ display: "flex", gap: "3", justifyContent: "center", flexWrap: "wrap" })}>
         {Object.entries(scenarios).map(([key, info]) => {
           const isSelected = scenario === key;
 
@@ -815,18 +815,18 @@ const IslandEfficiencyScenarioSelector: React.FC<{
   return (
     <div
       className={css({
-        marginBottom: "20px",
+        marginBottom: "5",
         textAlign: "center",
         border: "1px solid #e5e7eb",
-        borderRadius: "8px",
-        padding: "16px",
-        background: "#fafafa",
+        borderRadius: "lg",
+        padding: "4",
+        background: "zinc.50",
       })}
     >
-      <div className={css({ fontSize: "16px", fontWeight: "600", marginBottom: "8px" })}>
+      <div className={css({ fontSize: "md", fontWeight: "semibold", marginBottom: "2" })}>
         🌏 Fishing Management System
       </div>
-      <div className={css({ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" })}>
+      <div className={css({ display: "flex", gap: "3", justifyContent: "center", flexWrap: "wrap" })}>
         {Object.entries(scenarios).map(([key, info]) => {
           const isSelected = scenario === key;
 
@@ -1468,10 +1468,10 @@ const FishingGameSimulator: React.FC = () => {
     <div
       className={css({
         border: "1px solid #bae6fd",
-        borderRadius: "8px",
-        padding: "18px",
+        borderRadius: "lg",
+        padding: "4.5",
         margin: "18px 0",
-        background: "#f8fafc",
+        background: "slate.50",
       })}
     >
       <FishingScenarioSelector scenario={scenario} setScenario={setScenario} history={history} />
@@ -1584,10 +1584,10 @@ const IslandEfficiencyDemonstratorWithRounds: React.FC = () => {
     <div
       className={css({
         border: "1px solid #bae6fd",
-        borderRadius: "8px",
-        padding: "18px",
+        borderRadius: "lg",
+        padding: "4.5",
         margin: "18px 0",
-        background: "#f8fafc",
+        background: "slate.50",
       })}
     >
       <IslandEfficiencyScenarioSelector scenario={scenario} setScenario={setScenario} />
@@ -1839,10 +1839,10 @@ const CommunityGovernanceSimulator: React.FC = () => {
     <div
       className={css({
         border: "1px solid #bae6fd",
-        borderRadius: "8px",
-        padding: "18px",
+        borderRadius: "lg",
+        padding: "4.5",
         margin: "18px 0",
-        background: "#f8fafc",
+        background: "slate.50",
       })}
     >
       <CommunityScenarioSelector scenario={scenario} setScenario={setScenario} />

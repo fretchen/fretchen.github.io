@@ -2,17 +2,23 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { useAccount, useConnect } from "wagmi";
 import { useWalletConnection } from "../hooks/useWalletConnection";
+import { buildAccountData, buildConnectData, type AccountDataOverrides } from "./setup";
 
 const injectedConnector = { uid: "mm", name: "MetaMask", type: "injected" };
 const wcConnector = { uid: "wc", name: "WalletConnect", type: "walletConnect" };
 
 function mockConnect(connectors: unknown[], connect = vi.fn()) {
-  vi.mocked(useConnect).mockReturnValue({ connectors, connect } as unknown as ReturnType<typeof useConnect>);
+  vi.mocked(useConnect).mockReturnValue(buildConnectData({ connectors, connect }));
   return connect;
 }
 
 function mockAccount(status: string, address?: string) {
-  vi.mocked(useAccount).mockReturnValue({ status, address } as unknown as ReturnType<typeof useAccount>);
+  vi.mocked(useAccount).mockReturnValue(
+    buildAccountData({
+      status: status as AccountDataOverrides["status"],
+      address: address as AccountDataOverrides["address"],
+    }),
+  );
 }
 
 describe("useWalletConnection", () => {

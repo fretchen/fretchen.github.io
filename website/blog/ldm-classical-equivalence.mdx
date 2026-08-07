@@ -1,105 +1,203 @@
 ---
 publishing_date: 2026-08-06
-title: Continuous variable quantum games
+title: The quantum commons is a co-liability rule
 category: "quantum"
-description: Working notes on continuous variable games...
+secondaryCategory: "others"
+description: The Li–Du–Massar entangler, applied to a fishery, is exactly a harbourmaster's clearing rule — and it still cannot save the fish.
 ---
 
-_Derivation:_ The Li–Du–Massar Quantum Cournot Duopoly is Strategically Equivalent to Classical Cournot with Partial Profit Internalization
+import LDMCircuit from "../components/blog/LDMCircuit";
 
-## 1. Setup and notation
+In an [earlier post](/blog/31/) I ended on a question I could not answer: the quantum prisoner's dilemma hands you a
+ready-made institution, so is quantum game theory a way to _generate_ institutions for cooperation problems where we do
+not already know the answer? The obvious next target was the tragedy of the commons.
 
-The Li–Du–Massar (LDM) protocol [Li, Du, Massar, *Phys. Lett. A* 306 (2002) 73] defines, for each squeezing parameter $\gamma \ge 0$, a two-player game $Q_\gamma$:
+There is a protocol for exactly that. Li, Du and Massar quantised the Cournot duopoly with squeezed light, and
+Grau-Climent et al. carried their scheme over to a common-pool resource game. This post works out what that protocol
+does, and the answer is disappointing in an interesting way. The entangler _is_ an institution — a clearing rule a
+harbourmaster could run with a rulebook and a ledger. But it is the wrong institution for a commons, and no amount of
+squeezing makes it the right one.
 
-**Strategy sets.** Each firm $j \in \{1,2\}$ chooses $x_j \in S_j = [0,\infty)$ (the displacement amplitude of the unitary $\hat D_j(x_j) = \exp(-i x_j \hat P_j)$).
+## 1. The fishery, run through the LDM protocol
 
-**Measured quantities.** The homodyne measurement after disentangling yields (LDM Eq. 11)
+Two islands fish a shared ground. The Li–Du–Massar (LDM) protocol [Li, Du, Massar, _Phys. Lett. A_ 306 (2002) 73]
+defines, for each squeezing parameter $\gamma \ge 0$, a two-player game $Q_\gamma$ built on two harmonic oscillators.
+
+<LDMCircuit />
+
+**Strategy sets.** Island $j \in \{1,2\}$ declares a fleet $b_j \in S_j = [0,\infty)$ — the displacement amplitude of
+the unitary $\hat D_j(b_j) = \exp(-i b_j \hat P_j)$.
+
+**The clearing rule.** The expectation values at the end of the protocol are (LDM Eq. 11, Grau-Climent Eq. 5)
 
 $$
-q_1 = x_1 \cosh\gamma + x_2 \sinh\gamma, \qquad q_2 = x_2 \cosh\gamma + x_1 \sinh\gamma .
+b_1^{c} = b_1 \cosh\gamma + b_2 \sinh\gamma, \qquad b_2^{c} = b_2 \cosh\gamma + b_1 \sinh\gamma .
 $$
 
-**Payoffs.** With inverse demand $P(Q) = k - Q$ (net of constant marginal cost, $k = a - c$) and total quantity $Q = q_1 + q_2 = e^{\gamma}(x_1 + x_2)$,
+Call $b_j^{c}$ the **licensed fleet** — the number of boats island $j$ is actually credited with. The total licensed
+fleet is
 
 $$
-u_j^{Q}(x_1, x_2) = \left( x_j \cosh\gamma + x_{-j}\sinh\gamma \right)\left[ k - e^{\gamma}(x_1 + x_2) \right]. \tag{LDM 12}
+B^{c} = b_1^{c} + b_2^{c} = e^{\gamma}\,(b_1 + b_2).
 $$
 
-**Preliminary observation.** $Q_\gamma$ is, at the level of its normal form, a _classical_ strategic game: deterministic strategy sets and deterministic payoff functions $\mathbb{R}_+^2 \to \mathbb{R}$. The quantum apparatus (vacuum states, $\hat J(\gamma)$, homodyne detection) is solely a physical _evaluation device_ for the map $(x_1, x_2) \mapsto (u_1^Q, u_2^Q)$. Two strategic games with identical strategy sets and payoff functions are the same game, whatever machinery computes the payoffs. The question "what is the classical equivalent?" is therefore well-posed and purely algebraic.
+**Payoffs.** Let $v(B)$ be the value of a boat-trip when $B$ boats are on the water — decreasing in $B$, because boats
+crowd each other out — and let $c$ be the cost of sending out one boat. Island $j$'s profit is
+
+$$
+u_j^{Q}(b_1, b_2) = b_j^{c}\,\big(v(B^{c}) - c\big).
+$$
+
+Read that carefully: $b_j^{c}$ multiplies the cost as well as the revenue (Grau-Climent Eq. 7). You are licensed on the
+cleared number of boats, and you are billed on it too.
+
+**Notation.** The dictionary against the fishery model in
+[`common_pool.ipynb`](https://github.com/fretchen/fretchen.github.io/blob/main/notebooks/common_pool.ipynb), which the
+[Moana fishing post](/blog/14/) is built on:
+
+| here            | `common_pool.ipynb` | meaning                                   |
+| --------------- | ------------------- | ----------------------------------------- |
+| $b_j$           | `b_t[j]`            | boats island $j$ sends out — the decision |
+| $B = b_1 + b_2$ | `total_boats_t`     | total fleet                               |
+| $v(B)$          | $y(B)/B$            | value per boat                            |
+| $b_j\,v(B)$     | `catch_players[j]`  | your catch, in money                      |
+| $c\,b_j$        | `c_t = c0*b`        | cost of your fleet                        |
+| $u_j$           | catch − cost        | profit                                    |
+
+The one entry with no counterpart runs the other way: there is no fish **stock** anywhere in LDM. The crowding in $v(B)$
+is all within a single round. Hold on to that; it is what §6 turns on.
+
+**Preliminary observation.** $Q_\gamma$ is, at the level of its normal form, a _classical_ strategic game: deterministic
+strategy sets and deterministic payoff functions $\mathbb{R}_+^2 \to \mathbb{R}$. The quantum apparatus (vacuum states,
+$\hat J(\gamma)$, homodyne detection) is solely a physical _evaluation device_ for the map
+$(b_1, b_2) \mapsto (u_1^Q, u_2^Q)$. Two strategic games with identical strategy sets and payoff functions are the same
+game, whatever machinery computes the payoffs. The question "what is the classical equivalent?" is therefore well-posed
+and purely algebraic.
 
 ## 2. Equivalence notions
 
 We use two standard notions, in decreasing strength:
 
-**Definition 1 (Strategic isomorphism up to positive scaling).** Games $G = (S_1, S_2; f_1, f_2)$ and $G' = (S_1', S_2'; g_1, g_2)$ are _strategically isomorphic up to positive scaling_ if there exist bijections $\varphi_j : S_j \to S_j'$ and constants $c_j > 0$ such that
+**Definition 1 (Strategic isomorphism up to positive scaling).** Games $G = (S_1, S_2; f_1, f_2)$ and
+$G' = (S_1', S_2'; g_1, g_2)$ are strategically isomorphic up to positive scaling if there exist bijections
+$\varphi_j : S_j \to S_j'$ and constants $\kappa_j > 0$ such that
 
 $$
-f_j(s_1, s_2) = c_j \, g_j\big(\varphi_1(s_1), \varphi_2(s_2)\big) \quad \text{for all profiles } (s_1,s_2).
+f_j(s_1, s_2) = \kappa_j \, g_j\big(\varphi_1(s_1), \varphi_2(s_2)\big) \quad \text{for all profiles } (s_1,s_2).
 $$
 
-Since expected-utility preferences are invariant under positive affine transformations, isomorphic games have identical best-reply correspondences (under $\varphi$), identical Nash sets, identical correlated-equilibrium sets, and equilibrium payoffs related by the constants $c_j$.
+Since expected-utility preferences are invariant under positive affine transformations, isomorphic games have identical
+best-reply correspondences (under $\varphi$), identical Nash sets, identical correlated-equilibrium sets, and
+equilibrium payoffs related by the constants $\kappa_j$.
 
-**Definition 2 (Best-reply equivalence).** $G$ and $G'$ with common strategy sets are _best-reply equivalent_ if $\mathrm{BR}_j^{G} = \mathrm{BR}_j^{G'}$ for all $j$. This preserves Nash sets but not payoff levels.
+**Definition 2 (Best-reply equivalence).** $G$ and $G'$ with common strategy sets are best-reply equivalent if
+$\mathrm{BR}_j^{G} = \mathrm{BR}_j^{G'}$ for all $j$. This preserves Nash sets but not payoff levels.
 
 ## 3. Main result
 
-Define the **classical internalization game** $C_\lambda$ for $\lambda \in [0,1)$: strategy sets $[0,\infty)$, classical Cournot profits $u_j(q_1, q_2) = q_j\,(k - q_1 - q_2)$, and objectives
+Define the **co-liability fishery $C_\lambda$** for $\lambda \in [0,1)$: strategy sets $[0,\infty)$, ordinary profits
+$u_j(b_1, b_2) = b_j\,\big(v(B) - c\big)$, and objectives
 
 $$
-V_j(q_1, q_2) = u_j(q_1, q_2) + \lambda\, u_{-j}(q_1, q_2).
+V_j(b_1, b_2) = u_j(b_1, b_2) + \lambda\, u_{-j}(b_1, b_2).
 $$
 
-This is the _coefficient-of-cooperation_ family (Cyert & DeGroot 1973): $\lambda = 0$ is Cournot, $\lambda \to 1$ is joint profit maximization.
+Each island maximises its own profit plus a fraction $\lambda$ of its neighbour's. This is the
+_coefficient-of-cooperation_ family (Cyert & DeGroot 1973): $\lambda = 0$ is every island for itself, $\lambda \to 1$ is
+joint profit maximisation.
 
-**Proposition 1.** For every $\gamma \ge 0$, $Q_\gamma$ is strategically isomorphic up to positive scaling to $C_\lambda$ with
+**Proposition 1.** For every $\gamma \ge 0$ and every decreasing $v$, $Q_\gamma$ is strategically isomorphic up to
+positive scaling to $C_\lambda$ with
 
 $$
 \boxed{\;\lambda = \tanh\gamma\;}
 $$
 
-via the relabeling $\varphi(x) = e^{\gamma} x$ (a bijection of $[0,\infty)$ onto itself) and the common constant $c(\gamma) = e^{-\gamma}\cosh\gamma = \tfrac{1}{2}\left(1 + e^{-2\gamma}\right) > 0$. Explicitly,
+via the relabeling $\varphi(b) = e^{\gamma} b$ (a bijection of $[0,\infty)$ onto itself) and the common constant
+$\kappa(\gamma) = e^{-\gamma}\cosh\gamma = \tfrac{1}{2}\left(1 + e^{-2\gamma}\right) > 0$. Explicitly,
 
 $$
-u_j^{Q}(x_1, x_2) = c(\gamma)\, V_j\!\left(e^{\gamma}x_1,\; e^{\gamma}x_2\right) \quad \text{for all } x_1, x_2 \ge 0.
+u_j^{Q}(b_1, b_2) = \kappa(\gamma)\, V_j\!\left(e^{\gamma}b_1,\; e^{\gamma}b_2\right) \quad \text{for all } b_1, b_2 \ge 0.
 $$
 
-**Proof.** Write $t = \tanh\gamma$ and $\tilde q_j = e^{\gamma} x_j$. Then
+**Proof.** Write $t = \tanh\gamma$ and $\tilde b_j = e^{\gamma} b_j$. Then
 
 $$
-x_j \cosh\gamma + x_{-j}\sinh\gamma \;=\; \cosh\gamma\,\big(x_j + t\, x_{-j}\big) \;=\; e^{-\gamma}\cosh\gamma\,\big(\tilde q_j + t\,\tilde q_{-j}\big),
+b_j^{c} \;=\; \cosh\gamma\,\big(b_j + t\, b_{-j}\big) \;=\; e^{-\gamma}\cosh\gamma\,\big(\tilde b_j + t\,\tilde b_{-j}\big),
 $$
 
-and $k - e^{\gamma}(x_1 + x_2) = k - \tilde q_1 - \tilde q_2$. Hence
+and $B^{c} = e^{\gamma}(b_1 + b_2) = \tilde b_1 + \tilde b_2 = \tilde B$. Hence
 
 $$
 \begin{aligned}
-u_j^{Q} &= e^{-\gamma}\cosh\gamma \,\big(\tilde q_j + t\,\tilde q_{-j}\big)\big(k - \tilde q_1 - \tilde q_2\big) \\
-&= c(\gamma)\,\Big[\, \tilde q_j\,(k - \tilde Q) \;+\; t\,\tilde q_{-j}\,(k - \tilde Q) \,\Big] \\
-&= c(\gamma)\,\Big[\, u_j(\tilde q) + t\, u_{-j}(\tilde q) \,\Big] \;=\; c(\gamma)\, V_j(\tilde q_1, \tilde q_2). \qquad \blacksquare
+u_j^{Q} &= e^{-\gamma}\cosh\gamma \,\big(\tilde b_j + t\,\tilde b_{-j}\big)\big(v(\tilde B) - c\big) \\
+&= \kappa(\gamma)\,\Big[\, \tilde b_j\big(v(\tilde B) - c\big) \;+\; t\,\tilde b_{-j}\big(v(\tilde B) - c\big) \,\Big] \\
+&= \kappa(\gamma)\,\Big[\, u_j(\tilde b) + t\, u_{-j}(\tilde b) \,\Big] \;=\; \kappa(\gamma)\, V_j(\tilde b_1, \tilde b_2). \qquad \blacksquare
 \end{aligned}
 $$
 
-Note this is an _exact identity of payoff functions_, not merely a first-order-condition match: every strategic property of $Q_\gamma$ (best replies, equilibrium sets of every kind, comparative statics, even off-equilibrium dynamics such as best-response adjustment) transfers verbatim.
+The proof never touches the shape of $v$. It works because the value term $v(B^c) - c$ is a _common factor_: both
+islands face the same crowding, so it survives the factorisation untouched. That is the whole trick, and it is worth
+noticing how little the quantum machinery contributes to it.
 
-**Verification against LDM's stated results.** The unique equilibrium of $C_\lambda$ solves $k - 2q_j - (1+\lambda)\,q_{-j} = 0$, giving $q^* = \dfrac{k}{3+\lambda}$. Mapping back, $x^* = e^{-\gamma}\dfrac{k}{3 + \tanh\gamma}$. Using $3\cosh\gamma + \sinh\gamma = e^{-\gamma}\left(1 + 2e^{2\gamma}\right)$:
+Note also that this is an exact identity of payoff functions, not merely a first-order-condition match: every strategic
+property of $Q_\gamma$ — best replies, equilibrium sets of every kind, comparative statics, even off-equilibrium
+dynamics such as best-response adjustment — transfers verbatim.
+
+**Verification against LDM's published results.** Specialise to linear value $v(B) = a - B$ and write $k = a - c$. Then
+$u_j = b_j(k - B)$, and $C_\lambda$ is the Cournot duopoly with partial profit internalisation — this special case is
+LDM's original model, and it is the only place in this post where the fishery is a firm. Its unique equilibrium solves
+$k - 2b_j - (1+\lambda)\,b_{-j} = 0$, giving $b^{*} = \dfrac{k}{3+\lambda}$. Mapping back through $\varphi$, the
+declared fleet is $e^{-\gamma}k/(3 + \tanh\gamma)$, and using
+$3\cosh\gamma + \sinh\gamma = e^{-\gamma}\left(1 + 2e^{2\gamma}\right)$:
 
 $$
-x^* = \frac{k \cosh\gamma}{1 + 2e^{2\gamma}},
+b^{*}_{\text{declared}} = \frac{k \cosh\gamma}{1 + 2e^{2\gamma}},
 $$
 
-which is LDM Eq. (13). Equilibrium payoff: $V^* = q^*(1+\lambda)\big(k - 2q^*\big) = \dfrac{k^2 (1+\lambda)^2}{(3+\lambda)^2}$, so
+which is LDM Eq. (13). The equilibrium objective is
+$V^{*} = b^{*}(1+\lambda)\big(k - 2b^{*}\big) = \dfrac{k^2 (1+\lambda)^2}{(3+\lambda)^2}$, so
 
 $$
-u^{Q*} = c(\gamma)\, V^* = \frac{k^2\, e^{\gamma} \cosh\gamma}{\left(3\cosh\gamma + \sinh\gamma\right)^2},
+u^{Q*} = \kappa(\gamma)\, V^{*} = \frac{k^2\, e^{\gamma} \cosh\gamma}{\left(3\cosh\gamma + \sinh\gamma\right)^2},
 $$
 
-which is LDM Eq. (14), with the limits $k^2/9$ ($\gamma = 0$, $\lambda = 0$: Cournot) and $k^2/8$ ($\gamma \to \infty$, $\lambda \to 1$: cartel/monopoly output split equally). The entire profit curve in LDM Fig. 2 is the classical interpolation between own-profit and joint-profit maximization, reparametrized by $\lambda = \tanh\gamma$.
+which is LDM Eq. (14), with the limits $k^2/9$ at $\gamma = 0$ ($\lambda = 0$: no cooperation) and $k^2/8$ as
+$\gamma \to \infty$ ($\lambda \to 1$: the two islands act as one). The entire profit curve in LDM Fig. 2 is the
+classical interpolation between own-profit and joint-profit maximisation, reparametrised by $\lambda = \tanh\gamma$.
 
-## 4. The resulting object: three classical readings of $\lambda = \tanh\gamma$
+## 4. What the mechanism is, classically
 
-### (a) Reciprocal cross-shareholding — exact, payoff-level
+Proposition 1 says the protocol implements $\lambda = \tanh\gamma$. It does not say what that _is_. Here are four
+classical objects it could be, in decreasing order of how exactly they match.
 
-Let each firm hold a silent (non-controlling in operations, but counted in the objective) equity stake $s$ in the other. Shareholder value satisfies the fixed point $\pi_j = u_j + s\,\pi_{-j}$, whose solution is
+### (a) The harbourmaster's clearing rule
+
+Factorise the clearing rule the way the proof does:
+
+$$
+b_j^{c} \;=\; \cosh\gamma\,\big(b_j + \tanh\gamma\; b_{-j}\big).
+$$
+
+Strip the common $\cosh\gamma$ — a change of units, applied identically to both islands — and what remains is a rule any
+harbourmaster could publish and enforce:
+
+> Your licensed fleet is your own declared boats, plus a fraction $\tanh\gamma$ of your neighbour's. You are billed and
+> paid on that number.
+
+No entanglement, no measurement, no light. Draw the protocol again with those labels and the picture does not change at
+all:
+
+<LDMCircuit variant="classical" />
+
+Same two lines, same brackets, same read-out, same formula. This is the exact converse of the move in the
+[prisoner's-dilemma post](/blog/31/), where a lawyer's filing cabinet turned out to be a quantum circuit. Here a quantum
+circuit turns out to be a filing cabinet.
+
+### (b) Mutual stakes in each other's fleet — exact, payoff-level
+
+Let each island hold a silent stake $s$ in the other's catch: non-controlling in operations, but counted in the
+objective. Island value satisfies the fixed point $\pi_j = u_j + s\,\pi_{-j}$, whose solution is
 
 $$
 \pi_j = \frac{u_j + s\, u_{-j}}{1 - s^2} = \cosh^2\!\gamma \,\big(u_j + s\, u_{-j}\big) \qquad \text{for } s = \tanh\gamma,
@@ -108,78 +206,185 @@ $$
 using $\dfrac{1}{1-\tanh^2\gamma} = \cosh^2\gamma$. Combining with Proposition 1:
 
 $$
-u_j^{Q}(x) = \frac{e^{-\gamma}}{\cosh\gamma}\; \pi_j\!\left(e^{\gamma} x\right).
+u_j^{Q}(b) = \frac{e^{-\gamma}}{\cosh\gamma}\; \pi_j\!\left(e^{\gamma} b\right).
 $$
 
-So the realized LDM "quantum profit" is _proportional_ to shareholder value in a classical duopoly with reciprocal cross-ownership $s = \tanh\gamma$ (Reynolds & Snapp, _Int. J. Ind. Org._ 1986). Maximal entanglement $=$ full mutual ownership $=$ merger. The measurement rule $q_j = x_j\cosh\gamma + x_{-j}\sinh\gamma$ acquires a direct meaning: a claim on output that partially consists of the rival's decision — which is what equity stakes do to profit claims.
+So the realised "quantum profit" is proportional to island value in a classical fishery with reciprocal cross-ownership
+$s = \tanh\gamma$ (Reynolds & Snapp, _Int. J. Ind. Org._ 1986). Maximal entanglement is full mutual ownership: the two
+islands have merged.
 
-### (b) Pigouvian spillover tax — best-reply equivalent
+### (c) An appropriation tax — best-reply equivalent
 
-Let a regulator levy on firm $j$ a per-unit tax at rate $\tau_j = \lambda\, q_{-j}$ (each firm taxed in proportion to the _other's_ output — the marginal price externality it imposes — with revenue disposed lump-sum). Firm $j$'s objective becomes
-
-$$
-W_j = q_j\,(k - Q) - \lambda\, q_j\, q_{-j}.
-$$
-
-As a function of $q_j$, the difference $V_j - W_j = \lambda\, q_{-j}\,(k - q_{-j})$ is independent of $q_j$, hence
+Let a regulator levy on island $j$ a per-boat tax at rate $\tau_j = \lambda\, b_{-j}$ — each island taxed in proportion
+to the _other's_ fleet, which is the crowding externality it imposes — with revenue disposed lump-sum. Island $j$'s
+objective becomes
 
 $$
-\frac{\partial W_j}{\partial q_j} = \frac{\partial V_j}{\partial q_j}
+W_j = b_j\,\big(v(B) - c\big) - \lambda\, b_j\, b_{-j}.
 $$
 
-everywhere. So $C_\lambda$ and the taxed game are best-reply equivalent (Definition 2), with identical Nash sets. This formalizes the "spillover tax" intuition: the entangler implements internalization of the appropriation externality at fraction $\tanh\gamma$ — in common-pool-resource terms, a regulator dialed continuously from absent ($\gamma = 0$) to fully internalizing ($\gamma \to \infty$). Note the hierarchy: reading (a) matches payoffs up to a positive constant; reading (b) matches only best replies (realized profits differ by the tax burden).
-
-### (c) Conjectural variations
-
-The first-order condition $k - 2q_j - (1+\lambda)\,q_{-j} = 0$ is also that of a Cournot firm holding the conjecture $\dfrac{dq_{-j}}{dq_j} = \lambda$. This is the textbook one-parameter bridge between competitive ($\lambda = -1$), Cournot ($\lambda = 0$) and collusive ($\lambda = 1$) conduct; $\lambda$ is the "conduct parameter" of the empirical IO literature. The LDM protocol with $\gamma \ge 0$ reaches exactly the sub-interval $\lambda \in [0,1)$: cooperative conduct up to, but never beyond, the cartel. (The "relative profit maximization" variants studied in the quantum-duopoly follow-up literature are the $\lambda < 0$ branch of the same family.)
-
-## 5. Robustness and scope of the equivalence
-
-**General demand.** Proposition 1 uses linearity of $P$ only through the fact that the price term is a common factor. For _arbitrary_ inverse demand $P(Q)$ and common constant marginal cost $c$, with $u_j(q) = q_j\big(P(Q) - c\big)$:
+For linear $v$, the difference $V_j - W_j = \lambda\, b_{-j}\,\big(v(b_{-j}) - c\big)$ does not depend on $b_j$, hence
 
 $$
-u_j^{Q}(x) = q_j^{\mathrm{meas}}\,\big(P(\tilde Q) - c\big) = c(\gamma)\,\big(\tilde q_j + t\,\tilde q_{-j}\big)\big(P(\tilde Q) - c\big) = c(\gamma)\,\big[\, u_j(\tilde q) + t\, u_{-j}(\tilde q)\,\big].
+\frac{\partial W_j}{\partial b_j} = \frac{\partial V_j}{\partial b_j}
 $$
 
-The isomorphism holds unchanged. This immediately explains, without any quantum computation, Frąckiewicz's result (_Int. J. Theor. Phys._ 2018) that for a large class of Cournot-type games the LDM equilibrium converges to the symmetric Pareto-optimal profile as $\gamma \to \infty$: joint profit maximization is Pareto-optimal in the symmetric class, full stop.
+everywhere, so $C_\lambda$ and the taxed fishery are best-reply equivalent (Definition 2), with identical Nash sets.
+This is the Pigouvian reading: the entangler internalises the crowding externality at fraction $\tanh\gamma$, a
+regulator dialled continuously from absent ($\gamma = 0$) to fully internalising ($\gamma \to \infty$). Note the
+hierarchy — reading (b) matches payoffs up to a positive constant, reading (c) matches only best replies, since realised
+profits differ by the tax burden.
 
-**Asymmetric costs.** With $c_1 \ne c_2$ the factorization breaks by a linear term:
+### (d) Conjectural variations
+
+The first-order condition $k - 2b_j - (1+\lambda)\,b_{-j} = 0$ is also that of an island holding the conjecture
+$\mathrm{d}b_{-j}/\mathrm{d}b_j = \lambda$: "if I send one more boat, my neighbour sends $\lambda$ more". This is the
+textbook one-parameter bridge between competitive ($\lambda = -1$), Nash ($\lambda = 0$) and fully collusive
+($\lambda = 1$) conduct; $\lambda$ is the conduct parameter of the empirical industrial-organisation literature. The LDM
+protocol with $\gamma \ge 0$ reaches exactly the sub-interval $\lambda \in [0,1)$.
+
+## 5. Robustness and scope
+
+**Islands with different costs.** The four islands in the [Moana post](/blog/14/) have different costs per boat
+(`c_islands` in the model). With $c_1 \ne c_2$ the factorisation breaks by a linear term:
 
 $$
-u_j^{Q}(x) = c(\gamma)\,\Big[\, u_j(\tilde q) + t\, u_{-j}(\tilde q) + t\,\big(c_{-j} - c_j\big)\,\tilde q_{-j} \,\Big].
+u_j^{Q}(b) = \kappa(\gamma)\,\Big[\, u_j(\tilde b) + t\, u_{-j}(\tilde b) + t\,\big(c_{-j} - c_j\big)\,\tilde b_{-j} \,\Big].
 $$
 
-Still an exact classical game — internalization plus a strategic per-unit transfer indexed to the rival's output — but no longer pure cross-shareholding. This is consistent with (and demystifies) the more intricate "existence region" phenomenology reported in the asymmetric-cost quantum-duopoly literature.
+Still an exact classical game — co-liability plus a per-boat transfer indexed to the neighbour's fleet — but no longer
+pure cross-ownership. This demystifies the intricate "existence region" phenomenology reported in the asymmetric-cost
+quantum-duopoly literature.
 
-**$N$ players.** With the symmetric multimode entangler
+**$N$ islands.** With the symmetric multimode entangler
 
 $$
 \hat J(\gamma) = \exp\Big\{-\gamma \sum_{i<j} \big(\hat a_i^{\dagger}\hat a_j^{\dagger} - \hat a_i \hat a_j\big)\Big\}
 $$
 
-the same computation (diagonalizing on the symmetric collective mode) yields measured quantities affine in all $x_i$ and, by the identical factorization argument, objectives of the form
+the same computation (diagonalising on the symmetric collective mode) yields licensed fleets affine in all $b_i$ and, by
+the identical factorisation argument, objectives of the form
 
 $$
 V_j = u_j + \lambda(\gamma, N) \sum_{i \ne j} u_i
 $$
 
-— the $N$-firm coefficient-of-cooperation oligopoly, converging to the $N$-firm cartel in the maximal-entanglement limit.
+— the $N$-island co-liability fishery, converging to the $N$-island cartel in the maximal-entanglement limit.
 
-**Boundary of validity (van Enk–Pike caveat).** The equivalence is a statement about the game _as defined by LDM_, i.e., with strategy sets restricted to displacements $S_j = \{\exp(-i x_j \hat P_j)\}$. If players are granted larger sets of local operations (e.g., local squeezing before displacement, or displacements along $\hat X_j$), the induced normal form changes and Proposition 1 no longer describes it — but then LDM's own equilibrium analysis fails as well. Within the "minimal extension" that constitutes the paper's model, the equivalence is exact and total.
+**Boundary of validity (the van Enk–Pike caveat).** The equivalence is a statement about the game as LDM define it, with
+strategy sets restricted to displacements $S_j = \{\exp(-i b_j \hat P_j)\}$. If players are granted larger sets of
+local operations — local squeezing before displacement, say, or displacements along $\hat X_j$ — the induced normal form
+changes and Proposition 1 no longer describes it. But then LDM's own equilibrium analysis fails as well. Within the
+minimal extension that constitutes the paper's model, the equivalence is exact and total.
 
-## 6. Interpretation
+## 6. Does it save the fishery?
 
-**1. No quantum advantage in the game-theoretic sense.** Every solution-concept statement about $Q_\gamma$ is a statement about the classical game $C_{\tanh\gamma}$. In particular the cartel outcome at $\gamma \to \infty$ is not a correlated equilibrium of classical Cournot being reached by quantum means; it is the Nash equilibrium of a _different_ classical game in which the externality has been internalized by construction. (This is the continuous-variable instance of the general Zhang-style no-go: honest pre-play protocols cannot escape the correlated-equilibrium polytope of the underlying game; anything beyond it requires changing the game.)
+Everything so far is a restatement. Now the question that motivated the whole exercise: put this institution on a real
+fishery and does it stop the overfishing?
 
-**2. Where the institution went.** The classical implementations of $\lambda$ — equity stakes, taxes, CPR appropriation rules — all presuppose an enforcement institution. In LDM the referee who prepares $\hat J(\gamma)\lvert \mathrm{vac}\rangle\lvert \mathrm{vac}\rangle$, applies $\hat J(\gamma)^{\dagger}$, and measures _is_ that institution: the internalization coefficient $\tanh\gamma$ is hardwired into his payoff-evaluation procedure. The entangler does not eliminate the regulator; it compiles the regulator into the physics of the payoff channel. The physically interesting residue is thus not game-theoretic but _implementation-theoretic_: entanglement provides a tamper-evident physical carrier for a commitment device, with the commitment strength set by a physical parameter (squeezing) rather than by contract.
+Take the model from [`common_pool.ipynb`](https://github.com/fretchen/fretchen.github.io/blob/main/notebooks/common_pool.ipynb),
+which follows Leach's textbook treatment. A fleet of $B$ boats on a stock $s$ lands a total catch $y(B) = y_0\,s\sqrt{B}$,
+shared in proportion to boats. So the value of a boat-trip is the average product,
 
-**3. The $\tanh$ compactification.** $\gamma \in [0,\infty)$ maps onto $\lambda \in [0,1)$: physically realizable squeezing buys conduct strictly between Cournot and cartel, approaching but never attaining full collusion — and, since experimental squeezing is bounded (finite dB), a laboratory implementation corresponds to a definite, modest $\lambda$. E.g., $10\,\mathrm{dB}$ of squeezing ($\gamma \approx 1.15$) gives $\lambda \approx 0.82$.
+$$
+v(B) = \frac{y(B)}{B} = \frac{A}{\sqrt{B}}, \qquad A = y_0\,s,
+$$
 
-## 7. Cited literature for the classical objects
+with a cost $c_0$ per boat. This is decreasing in $B$, so Proposition 1 applies with no quantum computation at all.
+Maximising $V_j = (b_j + \lambda b_{-j})\big(A/\sqrt{B} - c_0\big)$ and imposing symmetry gives a closed form for the
+total fleet:
 
-- Cyert, R. & DeGroot, M. (1973), "An analysis of cooperation and learning in a duopoly context," _Am. Econ. Rev._ 63(1) — coefficient of cooperation.
-- Reynolds, R. & Snapp, B. (1986), "The competitive effects of partial equity interests and joint ventures," _Int. J. Ind. Org._ 4 — cross-shareholding softens competition; fixed-point valuation.
-- Bowley, A. (1924) / conduct-parameter literature (e.g., Bresnahan 1989, _Handbook of IO_) — conjectural variations reading.
-- Li, H., Du, J., Massar, S. (2002), "Continuous-variable quantum games," _Phys. Lett. A_ 306, 73 — the quantum protocol.
-- van Enk, S. & Pike, R. (2002), "Classical rules in quantum games," _Phys. Rev. A_ 66, 024306 — generic classical-equivalence critique (does not work out the Cournot/IO mapping).
-- Frąckiewicz, P. (2018), "Quantum approach to Cournot-type competition," _Int. J. Theor. Phys._ 57, 353 — LDM equilibrium $\to$ Pareto-optimal profile for general Cournot-type games (explained by §5).
+$$
+B(\lambda) = \left(\frac{A}{c_0}\right)^{2}\left(\frac{3-\lambda}{4}\right)^{2}.
+$$
+
+At the notebook's parameters — `y0=0.01`, `s=100`, `c0=0.125`, so $A/c_0 = 8$ — that gives:
+
+|                                                                   | total boats |
+| ----------------------------------------------------------------- | ----------- |
+| open access (fishing until profits vanish)                        | 64.0        |
+| $\gamma = 0$, $\lambda = 0$ — no cooperation                      | 36.0        |
+| $\gamma = 1.15$, $\lambda = 9/11$ — 10 dB of squeezing            | 19.0        |
+| $\gamma \to \infty$, $\lambda \to 1$ — the islands merge          | 16.0        |
+| **sustainable fleet** (`b_sust`, where catch equals regeneration) | **7.29**    |
+
+The entangler works, in its own terms. Dialling $\gamma$ from zero to infinity cuts the fleet from 36 boats to 16 — a
+56% reduction, achieved with no regulator, no quota and no negotiation.
+
+And it is not nearly enough. The sustainable fleet is 7.29 boats. Full entanglement overshoots it by more than a factor
+of two.
+
+Worse, this is not a near miss that a better protocol might close. Invert $B(\lambda)$ at the sustainable fleet:
+
+$$
+\lambda_{\text{needed}} \;=\; 3 - \frac{4\sqrt{B_{\text{sust}}}}{A/c_0} \;=\; 1.65 .
+$$
+
+LDM caps at $\lambda \to 1$. Sustainability here requires $\lambda = 1.65$ — the islands would have to weight their
+neighbour's profit _more heavily than their own_, well past the point of merging into a single fishery.
+**No amount of squeezing reaches it.** The ceiling is structural, not technological.
+
+The reason is the missing row in the notation table of §1. The coefficient $\tanh\gamma$ internalises the externality
+the two islands impose on _each other, within the round_ — crowding. It does nothing about the externality they jointly
+impose on the _stock, across rounds_ — depletion. A cartel of two fishers still overfishes a commons; it simply
+collects the rent instead of dissipating it. And a cartel is the very best this protocol can do.
+
+This section goes beyond both LDM and Grau-Climent et al., neither of whom test the protocol against a regenerating
+stock. I have not found it in the literature, but I have not finished looking — the open reading list is in my
+[literature notes](/blog/32/).
+
+## 7. What to make of it
+
+**No quantum advantage in the game-theoretic sense.** Every solution-concept statement about $Q_\gamma$ is a statement
+about the classical fishery $C_{\tanh\gamma}$. The cooperative outcome at $\gamma \to \infty$ is not a correlated
+equilibrium of the original game being reached by quantum means; it is the Nash equilibrium of a _different_ classical
+game, in which the externality was internalised by construction before anyone moved. This is the continuous-variable
+instance of the general no-go: honest pre-play protocols cannot escape the correlated-equilibrium polytope of the
+underlying game, and anything beyond it requires changing the game.
+
+**The institution did not come for free.** In the prisoner's dilemma the entangler handed us Saul Goodman's filing
+cabinet, and that felt like a gift. Here we can see the price. The referee who prepares
+$\hat J(\gamma)\lvert 0\rangle\lvert 0\rangle$, applies $\hat J(\gamma)^{\dagger}$ and reads out the result _is_ the
+harbourmaster: the coefficient $\tanh\gamma$ is hardwired into his procedure, and somebody has to run it, honestly, in
+the middle of the game. Entanglement does not eliminate the regulator. It compiles the regulator into the physics of the
+payoff channel. What is genuinely interesting about that is not game-theoretic but implementation-theoretic:
+entanglement gives a tamper-evident physical carrier for a commitment device, with commitment strength set by a
+laboratory parameter rather than by contract.
+
+**So: can quantum game theory generate institutions?** For this problem, it generated one — and the honest verdict is
+that it generated the wrong one. The mechanism the formalism happens to produce is co-liability, because that is what a
+two-mode squeezer does to a pair of quadratures. What a commons actually needs is a cap tied to the stock. The
+formalism had no way to know that, and no way to express it. Getting a mechanism out of the physics for free is only
+useful if the physics is free to produce the mechanism you need.
+
+**A footnote on how much squeezing you would need anyway.** Since $\lambda = \tanh\gamma$ and squeezing of $S$ decibels
+means $e^{2\gamma} = 10^{S/10}$,
+
+$$
+\lambda(S) = \frac{10^{S/10}-1}{10^{S/10}+1},
+$$
+
+so 10 dB — around the state of the art for a stable optical setup — gives exactly $\lambda = 9/11 \approx 0.82$, and
+even 20 dB only reaches $0.98$. The map $\gamma \mapsto \lambda$ compactifies $[0,\infty)$ onto $[0,1)$: realisable
+squeezing buys conduct strictly between competition and merger, approaching but never attaining either end.
+
+## 8. References
+
+- Li, H., Du, J., Massar, S. (2002), "Continuous-variable quantum games," _Phys. Lett. A_ 306, 73 — the protocol.
+- Grau-Climent, J., García-Pérez, L., Alonso-Sanz, R., Losada, J.C. (2023), "Dynamics of a Quantum Common-Pool Resource
+  Game with Homogeneous Players' Expectations," _Entropy_ 25, 1585 — LDM applied to a common-pool resource.
+- van Enk, S. & Pike, R. (2002), "Classical rules in quantum games," _Phys. Rev. A_ 66, 024306 — the generic
+  classical-equivalence critique, which does not work out this mapping.
+- Frąckiewicz, P. (2018), "Quantum approach to Cournot-type competition," _Int. J. Theor. Phys._ 57, 353 — LDM
+  equilibrium converges to the symmetric Pareto-optimal profile for general Cournot-type games. Proposition 1 explains
+  this in one line: joint profit maximisation is Pareto-optimal in the symmetric class.
+- Cyert, R. & DeGroot, M. (1973), "An analysis of cooperation and learning in a duopoly context," _Am. Econ. Rev._ 63(1)
+  — the coefficient of cooperation.
+- Reynolds, R. & Snapp, B. (1986), "The competitive effects of partial equity interests and joint ventures," _Int. J.
+  Ind. Org._ 4 — cross-ownership softens competition; the fixed-point valuation used in §4(b).
+- Bowley, A. (1924), and the conduct-parameter literature (e.g. Bresnahan 1989, _Handbook of IO_) — conjectural
+  variations.
+- Gordon, H.S. (1954), "The economic theory of a common-property resource: the fishery," _J. Polit. Econ._ 62 — open
+  access and rent dissipation.
+- Hardin, G. (1968), "The tragedy of the commons," _Science_ 162; Ostrom, E. (1990), _Governing the Commons_ — the
+  problem, and the catalogue of institutions that actually solve it.

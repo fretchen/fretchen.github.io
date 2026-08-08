@@ -65,7 +65,7 @@ cleared number of boats, and you are billed on it too.
 | $u_j$           | catch − cost        | profit                                    |
 
 The one entry with no counterpart runs the other way: there is no fish **stock** anywhere in LDM. The crowding in $v(B)$
-is all within a single round. Hold on to that; it is what §6 turns on.
+is all within a single round. Hold on to that; it is what §4 and §5 turn on.
 
 **Preliminary observation.** $Q_\gamma$ is, at the level of its normal form, a _classical_ strategic game: deterministic
 strategy sets and deterministic payoff functions $\mathbb{R}_+^2 \to \mathbb{R}$. The quantum apparatus (vacuum states,
@@ -74,26 +74,7 @@ $(b_1, b_2) \mapsto (u_1^Q, u_2^Q)$. Two strategic games with identical strategy
 game, whatever machinery computes the payoffs. The question "what is the classical equivalent?" is therefore well-posed
 and purely algebraic.
 
-## 2. Equivalence notions
-
-We use two standard notions, in decreasing strength:
-
-**Definition 1 (Strategic isomorphism up to positive scaling).** Games $G = (S_1, S_2; f_1, f_2)$ and
-$G' = (S_1', S_2'; g_1, g_2)$ are strategically isomorphic up to positive scaling if there exist bijections
-$\varphi_j : S_j \to S_j'$ and constants $\kappa_j > 0$ such that
-
-$$
-f_j(s_1, s_2) = \kappa_j \, g_j\big(\varphi_1(s_1), \varphi_2(s_2)\big) \quad \text{for all profiles } (s_1,s_2).
-$$
-
-Since expected-utility preferences are invariant under positive affine transformations, isomorphic games have identical
-best-reply correspondences (under $\varphi$), identical Nash sets, identical correlated-equilibrium sets, and
-equilibrium payoffs related by the constants $\kappa_j$.
-
-**Definition 2 (Best-reply equivalence).** $G$ and $G'$ with common strategy sets are best-reply equivalent if
-$\mathrm{BR}_j^{G} = \mathrm{BR}_j^{G'}$ for all $j$. This preserves Nash sets but not payoff levels.
-
-## 3. Main result
+## 2. Main result
 
 Define the **co-liability fishery $C_\lambda$** for $\lambda \in [0,1)$: strategy sets $[0,\infty)$, ordinary profits
 $u_j(b_1, b_2) = b_j\,\big(v(B) - c\big)$, and objectives
@@ -106,15 +87,15 @@ Each island maximises its own profit plus a fraction $\lambda$ of its neighbour'
 _coefficient-of-cooperation_ family (Cyert & DeGroot 1973): $\lambda = 0$ is every island for itself, $\lambda \to 1$ is
 joint profit maximisation.
 
-**Proposition 1.** For every $\gamma \ge 0$ and every decreasing $v$, $Q_\gamma$ is strategically isomorphic up to
-positive scaling to $C_\lambda$ with
+**Proposition 1.** For every $\gamma \ge 0$ and every decreasing $v$, the LDM fishery $Q_\gamma$ and the co-liability
+fishery $C_\lambda$ have the _same payoff functions_, with
 
 $$
 \boxed{\;\lambda = \tanh\gamma\;}
 $$
 
-via the relabeling $\varphi(b) = e^{\gamma} b$ (a bijection of $[0,\infty)$ onto itself) and the common constant
-$\kappa(\gamma) = e^{-\gamma}\cosh\gamma = \tfrac{1}{2}\left(1 + e^{-2\gamma}\right) > 0$. Explicitly,
+once declared boats are relabelled by $b \mapsto e^{\gamma} b$ (a bijection of $[0,\infty)$ onto itself) and an overall
+positive constant $\kappa(\gamma) = e^{-\gamma}\cosh\gamma = \tfrac{1}{2}\left(1 + e^{-2\gamma}\right)$ is applied:
 
 $$
 u_j^{Q}(b_1, b_2) = \kappa(\gamma)\, V_j\!\left(e^{\gamma}b_1,\; e^{\gamma}b_2\right) \quad \text{for all } b_1, b_2 \ge 0.
@@ -140,9 +121,10 @@ The proof never touches the shape of $v$. It works because the value term $v(B^c
 islands face the same crowding, so it survives the factorisation untouched. That is the whole trick, and it is worth
 noticing how little the quantum machinery contributes to it.
 
-Note also that this is an exact identity of payoff functions, not merely a first-order-condition match: every strategic
-property of $Q_\gamma$ — best replies, equilibrium sets of every kind, comparative statics, even off-equilibrium
-dynamics such as best-response adjustment — transfers verbatim.
+Note also that this is an exact identity of payoff functions, not merely a first-order-condition match. A relabelling of
+the strategies plus an overall positive constant changes nothing anyone optimises: the two games have the same best
+replies, the same Nash equilibria, the same comparative statics, even the same off-equilibrium adjustment dynamics, and
+their payoffs differ only by the known factor $\kappa(\gamma)$. Every strategic property transfers verbatim.
 
 **Verification against LDM's published results.** Specialise to linear value $v(B) = a - B$ and write $k = a - c$. Then
 $u_j = b_j(k - B)$, and $C_\lambda$ is the Cournot duopoly with partial profit internalisation — this special case is
@@ -166,14 +148,10 @@ which is LDM Eq. (14), with the limits $k^2/9$ at $\gamma = 0$ ($\lambda = 0$: n
 $\gamma \to \infty$ ($\lambda \to 1$: the two islands act as one). The entire profit curve in LDM Fig. 2 is the
 classical interpolation between own-profit and joint-profit maximisation, reparametrised by $\lambda = \tanh\gamma$.
 
-## 4. What the mechanism is, classically
+## 3. The mechanism, classically: a harbourmaster's clearing rule
 
-Proposition 1 says the protocol implements $\lambda = \tanh\gamma$. It does not say what that _is_. Here are four
-classical objects it could be, in decreasing order of how exactly they match.
-
-### (a) The harbourmaster's clearing rule
-
-Factorise the clearing rule the way the proof does:
+Proposition 1 says the protocol implements $\lambda = \tanh\gamma$. It does not say what that _is_. Factorise the
+clearing rule the way the proof does:
 
 $$
 b_j^{c} \;=\; \cosh\gamma\,\big(b_j + \tanh\gamma\; b_{-j}\big).
@@ -194,90 +172,7 @@ Same two lines, same brackets, same read-out, same formula. This is the exact co
 [prisoner's-dilemma post](/blog/31/), where a lawyer's filing cabinet turned out to be a quantum circuit. Here a quantum
 circuit turns out to be a filing cabinet.
 
-### (b) Mutual stakes in each other's fleet — exact, payoff-level
-
-Let each island hold a silent stake $s$ in the other's catch: non-controlling in operations, but counted in the
-objective. Island value satisfies the fixed point $\pi_j = u_j + s\,\pi_{-j}$, whose solution is
-
-$$
-\pi_j = \frac{u_j + s\, u_{-j}}{1 - s^2} = \cosh^2\!\gamma \,\big(u_j + s\, u_{-j}\big) \qquad \text{for } s = \tanh\gamma,
-$$
-
-using $\dfrac{1}{1-\tanh^2\gamma} = \cosh^2\gamma$. Combining with Proposition 1:
-
-$$
-u_j^{Q}(b) = \frac{e^{-\gamma}}{\cosh\gamma}\; \pi_j\!\left(e^{\gamma} b\right).
-$$
-
-So the realised "quantum profit" is proportional to island value in a classical fishery with reciprocal cross-ownership
-$s = \tanh\gamma$ (Reynolds & Snapp, _Int. J. Ind. Org._ 1986). Maximal entanglement is full mutual ownership: the two
-islands have merged.
-
-### (c) An appropriation tax — best-reply equivalent
-
-Let a regulator levy on island $j$ a per-boat tax at rate $\tau_j = \lambda\, b_{-j}$ — each island taxed in proportion
-to the _other's_ fleet, which is the crowding externality it imposes — with revenue disposed lump-sum. Island $j$'s
-objective becomes
-
-$$
-W_j = b_j\,\big(v(B) - c\big) - \lambda\, b_j\, b_{-j}.
-$$
-
-For linear $v$, the difference $V_j - W_j = \lambda\, b_{-j}\,\big(v(b_{-j}) - c\big)$ does not depend on $b_j$, hence
-
-$$
-\frac{\partial W_j}{\partial b_j} = \frac{\partial V_j}{\partial b_j}
-$$
-
-everywhere, so $C_\lambda$ and the taxed fishery are best-reply equivalent (Definition 2), with identical Nash sets.
-This is the Pigouvian reading: the entangler internalises the crowding externality at fraction $\tanh\gamma$, a
-regulator dialled continuously from absent ($\gamma = 0$) to fully internalising ($\gamma \to \infty$). Note the
-hierarchy — reading (b) matches payoffs up to a positive constant, reading (c) matches only best replies, since realised
-profits differ by the tax burden.
-
-### (d) Conjectural variations
-
-The first-order condition $k - 2b_j - (1+\lambda)\,b_{-j} = 0$ is also that of an island holding the conjecture
-$\mathrm{d}b_{-j}/\mathrm{d}b_j = \lambda$: "if I send one more boat, my neighbour sends $\lambda$ more". This is the
-textbook one-parameter bridge between competitive ($\lambda = -1$), Nash ($\lambda = 0$) and fully collusive
-($\lambda = 1$) conduct; $\lambda$ is the conduct parameter of the empirical industrial-organisation literature. The LDM
-protocol with $\gamma \ge 0$ reaches exactly the sub-interval $\lambda \in [0,1)$.
-
-## 5. Robustness and scope
-
-**Islands with different costs.** The four islands in the [Moana post](/blog/14/) have different costs per boat
-(`c_islands` in the model). With $c_1 \ne c_2$ the factorisation breaks by a linear term:
-
-$$
-u_j^{Q}(b) = \kappa(\gamma)\,\Big[\, u_j(\tilde b) + t\, u_{-j}(\tilde b) + t\,\big(c_{-j} - c_j\big)\,\tilde b_{-j} \,\Big].
-$$
-
-Still an exact classical game — co-liability plus a per-boat transfer indexed to the neighbour's fleet — but no longer
-pure cross-ownership. This demystifies the intricate "existence region" phenomenology reported in the asymmetric-cost
-quantum-duopoly literature.
-
-**$N$ islands.** With the symmetric multimode entangler
-
-$$
-\hat J(\gamma) = \exp\Big\{-\gamma \sum_{i<j} \big(\hat a_i^{\dagger}\hat a_j^{\dagger} - \hat a_i \hat a_j\big)\Big\}
-$$
-
-the same computation (diagonalising on the symmetric collective mode) yields licensed fleets affine in all $b_i$ and, by
-the identical factorisation argument, objectives of the form
-
-$$
-V_j = u_j + \lambda(\gamma, N) \sum_{i \ne j} u_i
-$$
-
-— the $N$-island co-liability fishery, converging to the $N$-island cartel in the maximal-entanglement limit.
-
-**Boundary of validity (the van Enk–Pike caveat).** The equivalence is a statement about the game as LDM define it, with
-strategy sets restricted to displacements $S_j = \{\exp(-i b_j \hat P_j)\}$. If players are granted larger sets of
-local operations — local squeezing before displacement, say, or displacements along $\hat X_j$ — the induced normal form
-changes and Proposition 1 no longer describes it. But then LDM's own equilibrium analysis fails as well. Within the
-minimal extension that constitutes the paper's model, the equivalence is exact and total.
-
-## 6. Does it save the fishery?
+## 4. Does it save the fishery?
 
 Everything so far is a restatement. Now the question that motivated the whole exercise: put this institution on a real
 fishery and does it stop the overfishing?
@@ -324,103 +219,67 @@ actually about.
 So the question "is 16 boats too many?" cannot be asked, let alone answered, inside this model. There is no next year in
 it. Supplying one takes a second idea, and it is the subject of the next section.
 
-## 7. The knob the protocol cannot reach
+## 5. What a commons actually needs
 
-Everything the protocol computes is an expectation value of a **single round** — that is what the read-out at the right
-of the circuit is. Economics has a standard object for a situation that repeats, and it is the one piece of new
-machinery this post needs. If island $j$ earns $u_j(t)$ in year $t$, its **discounted payoff** is
+Economics has one standard object for a situation that repeats. If island $j$ earns $u_j(t)$ in year $t$, its
+**discounted payoff** is
 
 $$
 U_j \;=\; \sum_{t=0}^{\infty} \beta^{t}\, u_j(t).
 $$
 
-The number $\beta \in (0,1)$ is called the **discount factor**, and for a physicist it needs no explanation at all: it
-is a geometric weight in time, exactly like a damping factor. All the economics in it is the interpretation. $\beta$ is
-how much a euro next year is worth to you today, so $1/\beta - 1$ is an interest rate. An island with $\beta$ near 1 is
-**patient**; one with $\beta = 0$ is **myopic** — next year does not exist for it.
+The **discount factor** $\beta \in (0,1)$ is a geometric weight in time, exactly like a damping factor; the economics is
+all in the reading of it. It is what a euro next year is worth today, so $1/\beta - 1$ is an interest rate. An island
+with $\beta$ near 1 is **patient**, one with $\beta = 0$ is **myopic**.
 
-The LDM protocol sits at $\beta = 0$. It is one round: entangle, declare, clear, read out, done. There is no next year
-anywhere in it, and no way to put one in — the entangler acts _inside_ a round.
+The LDM protocol sits at $\beta = 0$: entangle, declare, clear, read out, done. So $\gamma$ and $\beta$ turn different
+things. $\lambda = \tanh\gamma$ sets how much your neighbour counts _this_ round; $\beta$ sets how much _next_ round
+counts. The entangler sweeps the first from 0 to 1 and cannot touch the second.
 
-**So there are two independent knobs, and the protocol only has a hand on one of them.**
+**The myopic tragedy.** That is why merging the islands is not the victory it looks like. At $\lambda \to 1$ there is
+one owner and nobody to free-ride on — but a myopic one, and a myopic owner still strips the fishery: 16 boats from §4,
+earning a rent of 2 per year.
 
-- $\lambda = \tanh\gamma$ — how much your payoff counts your **neighbour's**, this round. The entangler sweeps this from
-  0 to 1.
-- $\beta$ — how much this round counts **next round**. The entangler cannot touch it.
+**The patient owner succeeds.** Ask instead what an owner with $\beta$ near 1 does: let the stock rebuild, then fish
+only the regrowth, at the stock level that makes the regrowth most profitable. That optimum sits at $s^{*} \approx 518$,
+five times the starting stock, with a fleet of $B^{*} = 2.09$ boats earning a rent of $7.23$ per year — almost eight
+times fewer boats than the fully entangled fishery, for three and a half times the money. Patience is not a sacrifice
+made for the fish; it pays. What it costs is catch _while_ the stock rebuilds, and pricing that is exactly what $\beta$
+does.
 
-That is why merging the islands is not the victory it looks like. At $\lambda \to 1$ the two islands become one, which
-sounds like the end of the tragedy of the commons — one owner, no free-riding, nobody to externalise onto. But it is one
-_myopic_ owner, and a myopic owner still strips the fishery. The numbers are stark. From §6, the merged island fishes
-16 boats, earning a rent of 2 per year. Now ask what a **patient** owner does with the same fishery: let the stock
-rebuild, and then fish only the regrowth, choosing the stock level that makes that regrowth most profitable. That
-optimum sits at $s^{*} \approx 518$ — five times the starting stock — with a fleet of
+**How Acemoglu solves it.** The textbook cure is not a clever within-round side-payment but repetition, and it is free:
+the islands fish the same ground every year, so let the future enforce. Cooperate while everybody cooperates, and if
+anyone cheats, everybody stops. That is a **trigger strategy**, self-enforcing once the islands are patient enough,
+because one year of overfishing is worth less than everything forfeited afterwards — in the prisoner's dilemma the
+threshold is only patience above one half. And this is precisely what the entangler cannot imitate: $\hat J(\gamma)$
+acts inside a round, so it can reshape that round's payoffs but has no way to build the memory a trigger strategy runs
+on.
 
-$$
-B^{*} = 2.09 \text{ boats}, \qquad \text{rent} = 7.23 \text{ per year}.
-$$
+The patient-owner calculation goes beyond both LDM and Grau-Climent et al., neither of whom test the protocol against a
+regenerating stock; the $\beta \to 1$ steady state itself is standard bioeconomics, where it is called the maximum
+economic yield. The open reading list is in my [literature notes](/blog/32/).
 
-Almost eight times fewer boats than the fully entangled fishery, earning three and a half times as much. Patience here
-is not a sacrifice made for the fish; it is simply more money. What it costs is catch _during_ the years the stock is
-rebuilding — and pricing that trade-off is exactly what $\beta$ does, and exactly what a protocol with only one round in
-it has no way to represent.
+## 6. What to make of it
 
-**What economists reach for instead is repetition, and it is free.** The standard cure for a commons is not a clever
-within-round side-payment. It is to notice that the islands fish the same ground every year, and to let the future do
-the enforcing: cooperate as long as everybody cooperates, and if anyone ever cheats, everybody stops. That is a
-**trigger strategy**, and if the islands are patient enough it makes cooperation self-enforcing — the one-year gain from
-overfishing is smaller than the discounted value of everything you lose afterwards. In the prisoner's dilemma the
-threshold is famously mild: patience above one half is enough (Acemoglu, Example 3.1). No squeezed light, no optical
-bench, no referee.
-
-There is a clean formal reason the entangler cannot reproduce this, and it is worth stating because it is a corollary of
-Proposition 1 rather than a hunch. Economists distinguish two kinds of equilibrium in a repeated game. A **Markov
-perfect** equilibrium uses _memoryless_ strategies: your move may depend on the current state — this year's stock — but
-not on anything that happened before. A **subgame perfect** equilibrium allows strategies that depend on the whole
-history, which is what a trigger strategy needs; it must remember that somebody cheated in 2031. Now: $\hat J(\gamma)$
-acts within a round, before anyone has a history, so all it can ever do is change the payoffs of the one-round game —
-the **stage game**. And there is a standard result that if a stage game has a unique equilibrium, repeating it has
-exactly one memoryless equilibrium, namely that same equilibrium played every period (Acemoglu, Theorem 3.8).
-
-So iterating the LDM protocol season after season never leaves the memoryless class. It changes _which_ memoryless
-equilibrium you land in — that is what Proposition 1 computes — but cooperation on a commons lives in the class that
-remembers, and no amount of squeezing gets you there. The entangler is a within-round instrument. The commons is a
-between-round problem.
-
-The patient-owner calculation above, like §6, goes beyond both LDM and Grau-Climent et al., neither of whom test the
-protocol against a regenerating stock; the $\beta \to 1$ steady state itself is standard bioeconomics, where it is
-called the maximum economic yield. I have not found the comparison in the quantum-games literature, but I have not
-finished looking — the open reading list is in my [literature notes](/blog/32/).
-
-## 8. What to make of it
-
-**No quantum advantage in the game-theoretic sense.** Every solution-concept statement about $Q_\gamma$ is a statement
-about the classical fishery $C_{\tanh\gamma}$. The cooperative outcome at $\gamma \to \infty$ is not a correlated
-equilibrium of the original game being reached by quantum means; it is the Nash equilibrium of a _different_ classical
-game, in which the externality was internalised by construction before anyone moved. This is the continuous-variable
-instance of the general no-go: honest pre-play protocols cannot escape the correlated-equilibrium polytope of the
-underlying game, and anything beyond it requires changing the game.
+**No quantum advantage in the game-theoretic sense.** Every equilibrium statement about $Q_\gamma$ is a statement about
+the classical fishery $C_{\tanh\gamma}$. The cooperative outcome at $\gamma \to \infty$ is not the original game being
+solved by quantum means; it is the Nash equilibrium of a _different_ classical game, one in which the externality was
+internalised by construction before anyone moved.
 
 **The institution did not come for free.** In the prisoner's dilemma the entangler handed us Saul Goodman's filing
-cabinet, and that felt like a gift. Here we can see the price. The referee who prepares
+cabinet, and that felt like a gift. Here the price is visible: the referee who prepares
 $\hat J(\gamma)\lvert 0\rangle\lvert 0\rangle$, applies $\hat J(\gamma)^{\dagger}$ and reads out the result _is_ the
-harbourmaster: the coefficient $\tanh\gamma$ is hardwired into his procedure, and somebody has to run it, honestly, in
-the middle of the game. Entanglement does not eliminate the regulator. It compiles the regulator into the physics of the
-payoff channel. What is genuinely interesting about that is not game-theoretic but implementation-theoretic:
-entanglement gives a tamper-evident physical carrier for a commitment device, with commitment strength set by a
-laboratory parameter rather than by contract.
+harbourmaster, and somebody has to run him honestly in the middle of the game. Entanglement does not remove the
+regulator; it compiles the regulator into the physics of the payoff channel. That is interesting, but it is an
+implementation-theoretic result, not a game-theoretic one.
 
-**So: can quantum game theory generate institutions?** For this problem, it generated one — and the honest verdict is
-that it generated the wrong one. The mechanism the formalism happens to produce is co-liability, because that is what a
-two-mode squeezer does to a pair of quadratures. What a commons actually needs is memory and patience: a rule that
-remembers who overfished last year, and players who care about next year enough for that memory to bite. A squeezer has
-no way to express either. Getting a mechanism out of the physics for free is only useful if the physics is free to
-produce the mechanism you need — and here it is not.
-
-That is also the pattern across both of these posts, now that there are two data points. The prisoner's-dilemma
-entangler and the fishery entangler both produce _within-round_ institutions, because an entangling operation is a
-within-round object. In both cases the classical literature's answer to the same problem is repetition. For the
-prisoner's dilemma that does not matter much — the one-shot institution genuinely solves the one-shot game. For a
-commons it matters completely, because the commons was never a one-shot problem.
+**So: can quantum game theory generate institutions?** It generated one here, and it is the wrong one. The formalism
+produces co-liability because that is what a two-mode squeezer does to a pair of quadratures, whereas a commons needs
+memory and patience — a rule that remembers who overfished last year, and players who care about next year enough for
+that memory to bite. With two data points the pattern is visible: entangling operations are within-round objects, so
+they yield within-round institutions, while the classical answer to both problems is repetition. For the prisoner's
+dilemma that costs little, since a one-shot institution does solve a one-shot game. For a commons it is fatal, because
+the commons was never a one-shot problem.
 
 **A footnote on how much squeezing you would need anyway.** Since $\lambda = \tanh\gamma$ and squeezing of $S$ decibels
 means $e^{2\gamma} = 10^{S/10}$,
@@ -433,7 +292,7 @@ so 10 dB — around the state of the art for a stable optical setup — gives ex
 even 20 dB only reaches $0.98$. The map $\gamma \mapsto \lambda$ compactifies $[0,\infty)$ onto $[0,1)$: realisable
 squeezing buys conduct strictly between competition and merger, approaching but never attaining either end.
 
-## 9. References
+## 7. References
 
 - Li, H., Du, J., Massar, S. (2002), "Continuous-variable quantum games," _Phys. Lett. A_ 306, 73 — the protocol.
 - Grau-Climent, J., García-Pérez, L., Alonso-Sanz, R., Losada, J.C. (2023), "Dynamics of a Quantum Common-Pool Resource
@@ -445,16 +304,11 @@ squeezing buys conduct strictly between competition and merger, approaching but 
   this in one line: joint profit maximisation is Pareto-optimal in the symmetric class.
 - Cyert, R. & DeGroot, M. (1973), "An analysis of cooperation and learning in a duopoly context," _Am. Econ. Rev._ 63(1)
   — the coefficient of cooperation.
-- Reynolds, R. & Snapp, B. (1986), "The competitive effects of partial equity interests and joint ventures," _Int. J.
-  Ind. Org._ 4 — cross-ownership softens competition; the fixed-point valuation used in §4(b).
-- Bowley, A. (1924), and the conduct-parameter literature (e.g. Bresnahan 1989, _Handbook of IO_) — conjectural
-  variations.
 - Gordon, H.S. (1954), "The economic theory of a common-property resource: the fishery," _J. Polit. Econ._ 62 — open
   access and rent dissipation.
 - Acemoglu, D., _Political Economy Lecture Notes_ (MIT 14.773), §3.4 "Common Pool Games" — the dynamic treatment used in
-  §7: the discounted-payoff setup, the memoryless (Markov perfect) equilibrium and how it worsens with the number of
-  players, the trigger-strategy result, and Theorem 3.8.
-- Clark, C.W. (1990), _Mathematical Bioeconomics_ — the discounted fishery; the $\beta \to 1$ steady state of §7 is its
+  §5: the discounted-payoff setup, how the tragedy worsens with the number of players, and the trigger-strategy result.
+- Clark, C.W. (1990), _Mathematical Bioeconomics_ — the discounted fishery; the $\beta \to 1$ steady state of §5 is its
   maximum economic yield.
 - Hardin, G. (1968), "The tragedy of the commons," _Science_ 162; Ostrom, E. (1990), _Governing the Commons_ — the
   problem, and the catalogue of institutions that actually solve it.

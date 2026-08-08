@@ -306,34 +306,92 @@ At the notebook's parameters — `y0=0.01`, `s=100`, `c0=0.125`, so $A/c_0 = 8$ 
 | $\gamma = 0$, $\lambda = 0$ — no cooperation                      | 36.0        |
 | $\gamma = 1.15$, $\lambda = 9/11$ — 10 dB of squeezing            | 19.0        |
 | $\gamma \to \infty$, $\lambda \to 1$ — the islands merge          | 16.0        |
-| **sustainable fleet** (`b_sust`, where catch equals regeneration) | **7.29**    |
+| the fleet that merely holds the stock where it started (`b_sust`) | 7.29        |
 
 The entangler works, in its own terms. Dialling $\gamma$ from zero to infinity cuts the fleet from 36 boats to 16 — a
 56% reduction, achieved with no regulator, no quota and no negotiation.
 
-And it is not nearly enough. The sustainable fleet is 7.29 boats. Full entanglement overshoots it by more than a factor
-of two.
+Is 16 boats few enough? The honest answer is that this calculation cannot tell you, and it is worth being clear about
+why. The last row of the table is not a target anybody would choose — it is simply the fleet at which this year's catch
+happens to equal this year's regrowth, so the stock neither grows nor shrinks. It is a reference point, not an optimum.
+Every other row in the table _is_ an optimum, but an optimum of a single round with the stock frozen at $s = 100$.
 
-Worse, this is not a near miss that a better protocol might close. Invert $B(\lambda)$ at the sustainable fleet:
+That is the missing row of the notation table in §1 coming back. The coefficient $\tanh\gamma$ internalises the
+externality the two islands impose on _each other, within the round_ — crowding. It says nothing about the externality
+they jointly impose on the _stock, across rounds_ — depletion, which is the externality the tragedy of the commons is
+actually about.
+
+So the question "is 16 boats too many?" cannot be asked, let alone answered, inside this model. There is no next year in
+it. Supplying one takes a second idea, and it is the subject of the next section.
+
+## 7. The knob the protocol cannot reach
+
+Everything the protocol computes is an expectation value of a **single round** — that is what the read-out at the right
+of the circuit is. Economics has a standard object for a situation that repeats, and it is the one piece of new
+machinery this post needs. If island $j$ earns $u_j(t)$ in year $t$, its **discounted payoff** is
 
 $$
-\lambda_{\text{needed}} \;=\; 3 - \frac{4\sqrt{B_{\text{sust}}}}{A/c_0} \;=\; 1.65 .
+U_j \;=\; \sum_{t=0}^{\infty} \beta^{t}\, u_j(t).
 $$
 
-LDM caps at $\lambda \to 1$. Sustainability here requires $\lambda = 1.65$ — the islands would have to weight their
-neighbour's profit _more heavily than their own_, well past the point of merging into a single fishery.
-**No amount of squeezing reaches it.** The ceiling is structural, not technological.
+The number $\beta \in (0,1)$ is called the **discount factor**, and for a physicist it needs no explanation at all: it
+is a geometric weight in time, exactly like a damping factor. All the economics in it is the interpretation. $\beta$ is
+how much a euro next year is worth to you today, so $1/\beta - 1$ is an interest rate. An island with $\beta$ near 1 is
+**patient**; one with $\beta = 0$ is **myopic** — next year does not exist for it.
 
-The reason is the missing row in the notation table of §1. The coefficient $\tanh\gamma$ internalises the externality
-the two islands impose on _each other, within the round_ — crowding. It does nothing about the externality they jointly
-impose on the _stock, across rounds_ — depletion. A cartel of two fishers still overfishes a commons; it simply
-collects the rent instead of dissipating it. And a cartel is the very best this protocol can do.
+The LDM protocol sits at $\beta = 0$. It is one round: entangle, declare, clear, read out, done. There is no next year
+anywhere in it, and no way to put one in — the entangler acts _inside_ a round.
 
-This section goes beyond both LDM and Grau-Climent et al., neither of whom test the protocol against a regenerating
-stock. I have not found it in the literature, but I have not finished looking — the open reading list is in my
-[literature notes](/blog/32/).
+**So there are two independent knobs, and the protocol only has a hand on one of them.**
 
-## 7. What to make of it
+- $\lambda = \tanh\gamma$ — how much your payoff counts your **neighbour's**, this round. The entangler sweeps this from
+  0 to 1.
+- $\beta$ — how much this round counts **next round**. The entangler cannot touch it.
+
+That is why merging the islands is not the victory it looks like. At $\lambda \to 1$ the two islands become one, which
+sounds like the end of the tragedy of the commons — one owner, no free-riding, nobody to externalise onto. But it is one
+_myopic_ owner, and a myopic owner still strips the fishery. The numbers are stark. From §6, the merged island fishes
+16 boats, earning a rent of 2 per year. Now ask what a **patient** owner does with the same fishery: let the stock
+rebuild, and then fish only the regrowth, choosing the stock level that makes that regrowth most profitable. That
+optimum sits at $s^{*} \approx 518$ — five times the starting stock — with a fleet of
+
+$$
+B^{*} = 2.09 \text{ boats}, \qquad \text{rent} = 7.23 \text{ per year}.
+$$
+
+Almost eight times fewer boats than the fully entangled fishery, earning three and a half times as much. Patience here
+is not a sacrifice made for the fish; it is simply more money. What it costs is catch _during_ the years the stock is
+rebuilding — and pricing that trade-off is exactly what $\beta$ does, and exactly what a protocol with only one round in
+it has no way to represent.
+
+**What economists reach for instead is repetition, and it is free.** The standard cure for a commons is not a clever
+within-round side-payment. It is to notice that the islands fish the same ground every year, and to let the future do
+the enforcing: cooperate as long as everybody cooperates, and if anyone ever cheats, everybody stops. That is a
+**trigger strategy**, and if the islands are patient enough it makes cooperation self-enforcing — the one-year gain from
+overfishing is smaller than the discounted value of everything you lose afterwards. In the prisoner's dilemma the
+threshold is famously mild: patience above one half is enough (Acemoglu, Example 3.1). No squeezed light, no optical
+bench, no referee.
+
+There is a clean formal reason the entangler cannot reproduce this, and it is worth stating because it is a corollary of
+Proposition 1 rather than a hunch. Economists distinguish two kinds of equilibrium in a repeated game. A **Markov
+perfect** equilibrium uses _memoryless_ strategies: your move may depend on the current state — this year's stock — but
+not on anything that happened before. A **subgame perfect** equilibrium allows strategies that depend on the whole
+history, which is what a trigger strategy needs; it must remember that somebody cheated in 2031. Now: $\hat J(\gamma)$
+acts within a round, before anyone has a history, so all it can ever do is change the payoffs of the one-round game —
+the **stage game**. And there is a standard result that if a stage game has a unique equilibrium, repeating it has
+exactly one memoryless equilibrium, namely that same equilibrium played every period (Acemoglu, Theorem 3.8).
+
+So iterating the LDM protocol season after season never leaves the memoryless class. It changes _which_ memoryless
+equilibrium you land in — that is what Proposition 1 computes — but cooperation on a commons lives in the class that
+remembers, and no amount of squeezing gets you there. The entangler is a within-round instrument. The commons is a
+between-round problem.
+
+The patient-owner calculation above, like §6, goes beyond both LDM and Grau-Climent et al., neither of whom test the
+protocol against a regenerating stock; the $\beta \to 1$ steady state itself is standard bioeconomics, where it is
+called the maximum economic yield. I have not found the comparison in the quantum-games literature, but I have not
+finished looking — the open reading list is in my [literature notes](/blog/32/).
+
+## 8. What to make of it
 
 **No quantum advantage in the game-theoretic sense.** Every solution-concept statement about $Q_\gamma$ is a statement
 about the classical fishery $C_{\tanh\gamma}$. The cooperative outcome at $\gamma \to \infty$ is not a correlated
@@ -353,9 +411,16 @@ laboratory parameter rather than by contract.
 
 **So: can quantum game theory generate institutions?** For this problem, it generated one — and the honest verdict is
 that it generated the wrong one. The mechanism the formalism happens to produce is co-liability, because that is what a
-two-mode squeezer does to a pair of quadratures. What a commons actually needs is a cap tied to the stock. The
-formalism had no way to know that, and no way to express it. Getting a mechanism out of the physics for free is only
-useful if the physics is free to produce the mechanism you need.
+two-mode squeezer does to a pair of quadratures. What a commons actually needs is memory and patience: a rule that
+remembers who overfished last year, and players who care about next year enough for that memory to bite. A squeezer has
+no way to express either. Getting a mechanism out of the physics for free is only useful if the physics is free to
+produce the mechanism you need — and here it is not.
+
+That is also the pattern across both of these posts, now that there are two data points. The prisoner's-dilemma
+entangler and the fishery entangler both produce _within-round_ institutions, because an entangling operation is a
+within-round object. In both cases the classical literature's answer to the same problem is repetition. For the
+prisoner's dilemma that does not matter much — the one-shot institution genuinely solves the one-shot game. For a
+commons it matters completely, because the commons was never a one-shot problem.
 
 **A footnote on how much squeezing you would need anyway.** Since $\lambda = \tanh\gamma$ and squeezing of $S$ decibels
 means $e^{2\gamma} = 10^{S/10}$,
@@ -368,7 +433,7 @@ so 10 dB — around the state of the art for a stable optical setup — gives ex
 even 20 dB only reaches $0.98$. The map $\gamma \mapsto \lambda$ compactifies $[0,\infty)$ onto $[0,1)$: realisable
 squeezing buys conduct strictly between competition and merger, approaching but never attaining either end.
 
-## 8. References
+## 9. References
 
 - Li, H., Du, J., Massar, S. (2002), "Continuous-variable quantum games," _Phys. Lett. A_ 306, 73 — the protocol.
 - Grau-Climent, J., García-Pérez, L., Alonso-Sanz, R., Losada, J.C. (2023), "Dynamics of a Quantum Common-Pool Resource
@@ -386,5 +451,10 @@ squeezing buys conduct strictly between competition and merger, approaching but 
   variations.
 - Gordon, H.S. (1954), "The economic theory of a common-property resource: the fishery," _J. Polit. Econ._ 62 — open
   access and rent dissipation.
+- Acemoglu, D., _Political Economy Lecture Notes_ (MIT 14.773), §3.4 "Common Pool Games" — the dynamic treatment used in
+  §7: the discounted-payoff setup, the memoryless (Markov perfect) equilibrium and how it worsens with the number of
+  players, the trigger-strategy result, and Theorem 3.8.
+- Clark, C.W. (1990), _Mathematical Bioeconomics_ — the discounted fishery; the $\beta \to 1$ steady state of §7 is its
+  maximum economic yield.
 - Hardin, G. (1968), "The tragedy of the commons," _Science_ 162; Ostrom, E. (1990), _Governing the Commons_ — the
   problem, and the catalogue of institutions that actually solve it.

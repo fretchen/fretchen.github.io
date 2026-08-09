@@ -13,6 +13,7 @@ Monorepo for a blockchain-based AI service platform. Each subdirectory is an ind
 | `scw_js/` | Serverless backend (Scaleway Functions, AI image gen + LLM) |
 | `x402_facilitator/` | EIP-3009 USDC payment facilitator (Scaleway Functions) |
 | `comment_service/` | Blog comment backend (Scaleway Functions) |
+| `analytics/` | Serverless pageview counter (Scaleway Functions, S3-backed) |
 | `growth-agent/` | AI growth agent cron container |
 | `shared/chain-utils/` | Shared blockchain utility library (Viem peer dep) |
 | `notebooks/` | Python Jupyter notebooks for analysis |
@@ -46,7 +47,7 @@ NETWORK=optsepolia npx hardhat run scripts/deploy-genimg-v4.ts --network optsepo
 PROXY_ADDRESS=0x... npx hardhat run scripts/upgrade-genimg-v4.ts --network optimisticEthereum
 ```
 
-### scw_js/ / x402_facilitator/ / comment_service/
+### scw_js/ / x402_facilitator/ / comment_service/ / analytics/
 ```bash
 npm install
 npm test

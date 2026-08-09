@@ -1,0 +1,32 @@
+service: analytics-service
+
+useDotenv: true
+
+configValidationMode: off
+provider:
+  name: scaleway
+  runtime: node22
+  env:
+    NODE_ENV: production
+  secret:
+    SCW_SECRET_KEY: ${env:SCW_SECRET_KEY}
+    SCW_ACCESS_KEY: ${env:SCW_ACCESS_KEY}
+
+plugins:
+  - serverless-scaleway-functions
+
+package:
+  patterns:
+    - "dist/**"
+    - "!.gitignore"
+    - "!.git/**"
+    - "!test/**"
+    - "!coverage/**"
+    - "!.prettierrc"
+
+functions:
+  hit:
+    handler: dist/hit.handle
+    description: "Pageview hit counter - anonymous, stored in S3"
+    custom_domains:
+      - analytics.fretchen.eu

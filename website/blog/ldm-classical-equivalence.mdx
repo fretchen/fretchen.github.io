@@ -3,7 +3,7 @@ publishing_date: 2026-08-06
 title: The quantum commons is a co-liability rule
 category: "quantum"
 secondaryCategory: "others"
-description: The Li–Du–Massar entangler, applied to a fishery, is exactly a harbourmaster's clearing rule — and it still cannot save the fish.
+description: The Li–Du–Massar entangler, applied to a fishery, is exactly a harbourmaster's clearing rule — and if the islands are patient, it reaches the sustainable optimum.
 ---
 
 import LDMCircuit from "../components/blog/LDMCircuit";
@@ -14,9 +14,9 @@ not already know the answer? The obvious next target was the tragedy of the comm
 
 There is a protocol for exactly that. Li, Du and Massar quantised the Cournot duopoly with squeezed light, and
 Grau-Climent et al. carried their scheme over to a common-pool resource game. This post works out what that protocol
-does, and the answer is disappointing in an interesting way. The entangler _is_ an institution — a clearing rule a
-harbourmaster could run with a rulebook and a ledger. But it is the wrong institution for a commons, and no amount of
-squeezing makes it the right one.
+does. The entangler _is_ an institution — a clearing rule a harbourmaster could run with a rulebook and a ledger. And
+whether that institution saves the fishery turns out to hinge entirely on something the protocol itself never mentions:
+whether the islands care about next year.
 
 ## 1. The fishery, run through the LDM protocol
 
@@ -129,7 +129,7 @@ their payoffs differ only by the known factor $\kappa(\gamma)$. Every strategic 
 **Verification against LDM's published results.** Specialise to linear value $v(B) = a - B$ and write $k = a - c$. Then
 $u_j = b_j(k - B)$, and $C_\lambda$ is the Cournot duopoly with partial profit internalisation — this special case is
 LDM's original model, and it is the only place in this post where the fishery is a firm. Its unique equilibrium solves
-$k - 2b_j - (1+\lambda)\,b_{-j} = 0$, giving $b^{*} = \dfrac{k}{3+\lambda}$. Mapping back through $\varphi$, the
+$k - 2b_j - (1+\lambda)\,b_{-j} = 0$, giving $b^{*} = \dfrac{k}{3+\lambda}$. Undoing the relabelling, the
 declared fleet is $e^{-\gamma}k/(3 + \tanh\gamma)$, and using
 $3\cosh\gamma + \sinh\gamma = e^{-\gamma}\left(1 + 2e^{2\gamma}\right)$:
 
@@ -172,6 +172,22 @@ Same two lines, same brackets, same read-out, same formula. This is the exact co
 [prisoner's-dilemma post](/blog/31/), where a lawyer's filing cabinet turned out to be a quantum circuit. Here a quantum
 circuit turns out to be a filing cabinet.
 
+**What the rule does to Moana.** Put two of the islanders from the [fishing post](/blog/14/) on the two lines — Moana on
+one, Chief Kai on the other — and watch one decision. Moana is wondering whether to send out one more boat. The boat
+brings in a catch, and it also crowds the ground, so every trip that season is worth a little less. Without the rule she
+weighs the catch against the crowding **on her own boats only**. What the extra crowding costs Kai is not her problem.
+That gap is the tragedy of the commons, in one sentence.
+
+The harbourmaster closes it by making her a part-owner of Kai's catch. She is licensed and billed on her own boats plus
+a share $\lambda$ of his, so she is paid on a slice of whatever he lands. Now her extra boat costs her twice: once
+through the crowding on her own catch, and once through the crowding on the slice of Kai's she owns. At
+$\lambda \to 1$ she feels the whole of the damage her boat does, and the fleet she picks is the fleet a single owner of
+the entire fishery would pick.
+
+Notice what is absent. There is no agreement between Moana and Kai, nothing either of them promised, nobody watching to
+see whether they keep their word. This is not cooperation and it needs no enforcement beyond the harbourmaster doing his
+arithmetic. Moana is being exactly as selfish as before; the sum in front of her has simply changed.
+
 ## 4. Does it save the fishery?
 
 Everything so far is a restatement. Now the question that motivated the whole exercise: put this institution on a real
@@ -185,44 +201,35 @@ $$
 v(B) = \frac{y(B)}{B} = \frac{A}{\sqrt{B}}, \qquad A = y_0\,s,
 $$
 
-with a cost $c_0$ per boat. This is decreasing in $B$, so Proposition 1 applies with no quantum computation at all.
-Maximising $V_j = (b_j + \lambda b_{-j})\big(A/\sqrt{B} - c_0\big)$ and imposing symmetry gives a closed form for the
-total fleet:
+with a cost $c_0$ per boat. This is decreasing in $B$, so Proposition 1 applies with no quantum computation at all: the
+entangled fishery is the co-liability fishery, and we can just ask what happens to the fish. Let the islands fish year
+after year, each season picking the fleet that is best for them at that season's stock, and let the stock rise or fall
+by the difference between regrowth and catch. Where does it settle?
 
-$$
-B(\lambda) = \left(\frac{A}{c_0}\right)^{2}\left(\frac{3-\lambda}{4}\right)^{2}.
-$$
+|                            | stock | income per year |
+| -------------------------- | ----- | --------------- |
+| no rule, myopic islands    | 48    | 0.34            |
+| entangled, myopic islands  | 70    | 0.97            |
 
-At the notebook's parameters — `y0=0.01`, `s=100`, `c0=0.125`, so $A/c_0 = 8$ — that gives:
+The rule helps, and the help is real: nearly three times the income, with no regulator, no quota and no negotiation.
+But the fishery is still a wreck. The stock settles at a small fraction of what the ground could carry, and the islands
+are poor on it.
 
-|                                                                   | total boats |
-| ----------------------------------------------------------------- | ----------- |
-| open access (fishing until profits vanish)                        | 64.0        |
-| $\gamma = 0$, $\lambda = 0$ — no cooperation                      | 36.0        |
-| $\gamma = 1.15$, $\lambda = 9/11$ — 10 dB of squeezing            | 19.0        |
-| $\gamma \to \infty$, $\lambda \to 1$ — the islands merge          | 16.0        |
-| the fleet that merely holds the stock where it started (`b_sust`) | 7.29        |
+The reason is the missing row of the notation table in §1 coming back. Moana now feels what her extra boat costs Kai
+this year. She still does not feel what it costs her own island next year.
 
-The entangler works, in its own terms. Dialling $\gamma$ from zero to infinity cuts the fleet from 36 boats to 16 — a
-56% reduction, achieved with no regulator, no quota and no negotiation.
+So on its own the protocol does not save the fishery. But "on its own" is doing more work in that sentence than it
+looks, and the next section is about what happens when you relax it.
 
-Is 16 boats few enough? The honest answer is that this calculation cannot tell you, and it is worth being clear about
-why. The last row of the table is not a target anybody would choose — it is simply the fleet at which this year's catch
-happens to equal this year's regrowth, so the stock neither grows nor shrinks. It is a reference point, not an optimum.
-Every other row in the table _is_ an optimum, but an optimum of a single round with the stock frozen at $s = 100$.
+## 5. With patient islands, yes
 
-That is the missing row of the notation table in §1 coming back. The coefficient $\tanh\gamma$ internalises the
-externality the two islands impose on _each other, within the round_ — crowding. It says nothing about the externality
-they jointly impose on the _stock, across rounds_ — depletion, which is the externality the tragedy of the commons is
-actually about.
+It is worth being precise about what went wrong in §4, because the tragedy of the commons is really two problems wearing
+one name. There is the externality **between people** — Moana's boats spoil Kai's catch — and the externality **between
+times** — Moana's boats this year spoil Moana's catch next year. The harbourmaster's rule closes the first one
+completely. It cannot touch the second, because it only ever couples two islands within a single season.
 
-So the question "is 16 boats too many?" cannot be asked, let alone answered, inside this model. There is no next year in
-it. Supplying one takes a second idea, and it is the subject of the next section.
-
-## 5. What a commons actually needs
-
-Economics has one standard object for a situation that repeats. If island $j$ earns $u_j(t)$ in year $t$, its
-**discounted payoff** is
+Everything in §4 assumed the islands care only about this year's catch. Economics has one standard object for dropping
+that assumption. If island $j$ earns $u_j(t)$ in year $t$, its **discounted payoff** is
 
 $$
 U_j \;=\; \sum_{t=0}^{\infty} \beta^{t}\, u_j(t).
@@ -232,32 +239,61 @@ The **discount factor** $\beta \in (0,1)$ is a geometric weight in time, exactly
 all in the reading of it. It is what a euro next year is worth today, so $1/\beta - 1$ is an interest rate. An island
 with $\beta$ near 1 is **patient**, one with $\beta = 0$ is **myopic**.
 
-The LDM protocol sits at $\beta = 0$: entangle, declare, clear, read out, done. So $\gamma$ and $\beta$ turn different
-things. $\lambda = \tanh\gamma$ sets how much your neighbour counts _this_ round; $\beta$ sets how much _next_ round
-counts. The entangler sweeps the first from 0 to 1 and cannot touch the second.
+Now run the harbourmaster's clearing rule every season, on islands that are patient. Here is the point that decides
+everything, and it is one line of algebra. Discounting is linear in the yearly payoffs, and so is co-liability, so the
+two commute:
 
-**The myopic tragedy.** That is why merging the islands is not the victory it looks like. At $\lambda \to 1$ there is
-one owner and nobody to free-ride on — but a myopic one, and a myopic owner still strips the fishery: 16 boats from §4,
-earning a rent of 2 per year.
+$$
+\sum_{t} \beta^{t}\Big(u_j(t) + \lambda\, u_{-j}(t)\Big) \;=\; U_j + \lambda\, U_{-j}.
+$$
 
-**The patient owner succeeds.** Ask instead what an owner with $\beta$ near 1 does: let the stock rebuild, then fish
-only the regrowth, at the stock level that makes the regrowth most profitable. That optimum sits at $s^{*} \approx 518$,
-five times the starting stock, with a fleet of $B^{*} = 2.09$ boats earning a rent of $7.23$ per year — almost eight
-times fewer boats than the fully entangled fishery, for three and a half times the money. Patience is not a sacrifice
-made for the fish; it pays. What it costs is catch _while_ the stock rebuilds, and pricing that is exactly what $\beta$
-does.
+The co-liability does not stay trapped inside a single year. It passes straight through the discounting and lands on the
+**lifetime** payoffs. Each island ends up maximising its own discounted stream plus a fraction $\lambda$ of its
+neighbour's — and at $\lambda \to 1$ that is $U_1 + U_2$, which is exactly the objective a single owner of the whole
+fishery would have. The equilibrium is that owner's plan: let the stock recover, then take only the regrowth. The
+sustainable optimum, reached by two selfish islands.
 
-**How Acemoglu solves it.** The textbook cure is not a clever within-round side-payment but repetition, and it is free:
-the islands fish the same ground every year, so let the future enforce. Cooperate while everybody cooperates, and if
-anyone cheats, everybody stops. That is a **trigger strategy**, self-enforcing once the islands are patient enough,
-because one year of overfishing is worth less than everything forfeited afterwards — in the prisoner's dilemma the
-threshold is only patience above one half. And this is precisely what the entangler cannot imitate: $\hat J(\gamma)$
-acts inside a round, so it can reshape that round's payoffs but has no way to build the memory a trigger strategy runs
-on.
+So the entangler was never the wrong instrument. It was one of two that are needed:
 
-The patient-owner calculation goes beyond both LDM and Grau-Climent et al., neither of whom test the protocol against a
-regenerating stock; the $\beta \to 1$ steady state itself is standard bioeconomics, where it is called the maximum
-economic yield. The open reading list is in my [literature notes](/blog/32/).
+|                                             | myopic islands ($\beta = 0$)                         | patient islands ($\beta \to 1$)                                     |
+| ------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------- |
+| **no entangler** ($\gamma = 0$)             | open access — the tragedy                            | still overfished; each island ignores what its boats cost the other |
+| **full entanglement** ($\gamma \to \infty$) | one owner, but a myopic one — still strips the stock | **the owner's optimum — sustainable**                               |
+
+Neither knob alone gets there. Patience without entanglement leaves the islands free-riding on each other; entanglement
+without patience merges them into a single owner who strips the fishery anyway. Turn both and they land exactly on the
+optimum.
+
+Two things about that bottom-right corner are worth noticing. First, no memory is required. The islands are not
+punishing each other for past behaviour, and nobody needs to remember who overfished when — each island's plan depends
+only on this year's stock. Second, and more interesting: **nobody computes a quota.** A regulator capping the fleet
+would need the biology, the costs and the islands' patience, and would have to solve the whole dynamic problem to find
+the number. The harbourmaster publishes $\gamma$ and nothing else. The islands work out the optimum themselves, because
+their objectives have been aligned rather than their actions constrained.
+
+**Both of them have to be patient.** The alignment is between Moana and Kai, not between either of them and the future.
+If Kai discounts next year steeply and Moana does not, then even at $\lambda \to 1$ they are no longer maximising the
+same thing — Kai's objective weights the years differently from hers — and his impatience drags the outcome toward his
+preferred fleet. The rule can make two islands agree with each other. It cannot make either of them agree with the
+future.
+
+**Does it collapse if they are not patient enough?** You might expect a cliff. In repeated games it is the standard
+shape: cooperation holds together while players are patient enough for the threat of retaliation to bite, and collapses
+once they are not. There is no cliff here, because nothing is being held up by a threat. Moana is not resisting a
+temptation, so there is no point at which resisting stops being worth it. Patience does not decide whether the
+arrangement survives — it decides how many fish get left in the water, and it does so smoothly. A patience of $0.93$
+holds the stock around 100, $0.98$ holds it near 300, and only near-perfect patience reaches the 518 of the fully
+patient owner.
+
+And at the bottom end nothing catastrophic happens either. Even islands that care nothing at all for next year settle
+at a stock of about 70 rather than fishing the ground empty, because catching gets expensive as fish get scarce — below
+a stock of roughly 30 it is not worth putting a boat in the water. The fish always have that refuge. What impatience
+costs is not the fishery's existence but its value: a stock of 70 and an income under 1 per year, against 518 and 7.2
+for the patient pair. Same rule, same islands, same physics — seven times poorer.
+
+This goes beyond both LDM and Grau-Climent et al., neither of whom test the protocol against a regenerating stock; the
+patient owner's plan is itself standard bioeconomics, where its steady state is called the maximum economic yield. The
+open reading list is in my [literature notes](/blog/32/).
 
 ## 6. What to make of it
 
@@ -270,19 +306,21 @@ internalised by construction before anyone moved.
 cabinet, and that felt like a gift. Here the price is visible: the referee who prepares
 $\hat J(\gamma)\lvert 0\rangle\lvert 0\rangle$, applies $\hat J(\gamma)^{\dagger}$ and reads out the result _is_ the
 harbourmaster, and somebody has to run him honestly in the middle of the game. Entanglement does not remove the
-regulator; it compiles the regulator into the physics of the payoff channel. That is interesting, but it is an
-implementation-theoretic result, not a game-theoretic one.
+regulator; it compiles the regulator into the physics of the payoff channel. What it removes is not the institution but
+its _burden of knowledge_ — the harbourmaster still has to exist, he just no longer has to know anything about fish.
 
-**So: can quantum game theory generate institutions?** It generated one here, and it is the wrong one. The formalism
-produces co-liability because that is what a two-mode squeezer does to a pair of quadratures, whereas a commons needs
-memory and patience — a rule that remembers who overfished last year, and players who care about next year enough for
-that memory to bite. With two data points the pattern is visible: entangling operations are within-round objects, so
-they yield within-round institutions, while the classical answer to both problems is repetition. For the prisoner's
-dilemma that costs little, since a one-shot institution does solve a one-shot game. For a commons it is fatal, because
-the commons was never a one-shot problem.
+**So: can quantum game theory generate institutions?** Here it generated one that works, and it is worth being exact
+about which half of the problem it works on. The tragedy of the commons is two externalities under one name: between
+people, and between times. The entangler closes the first completely — that is what a two-mode squeezer does to a pair
+of quadratures, and it is the half Hardin was writing about. It does nothing whatever about the second. Put the two
+together and the fishery is saved, with nobody setting a quota and nobody policing an agreement; supply only the first
+and you get islands that are considerate of each other and still strip the ground. The physics delivered half of an
+institution, and it happens to be the half that is hard to arrange by hand.
 
-**A footnote on how much squeezing you would need anyway.** Since $\lambda = \tanh\gamma$ and squeezing of $S$ decibels
-means $e^{2\gamma} = 10^{S/10}$,
+Three limits, since the result is easy to overstate:
+
+**The optimum is approached, never attained.** Since $\lambda = \tanh\gamma$ and squeezing of $S$ decibels means
+$e^{2\gamma} = 10^{S/10}$,
 
 $$
 \lambda(S) = \frac{10^{S/10}-1}{10^{S/10}+1},
@@ -290,7 +328,15 @@ $$
 
 so 10 dB — around the state of the art for a stable optical setup — gives exactly $\lambda = 9/11 \approx 0.82$, and
 even 20 dB only reaches $0.98$. The map $\gamma \mapsto \lambda$ compactifies $[0,\infty)$ onto $[0,1)$: realisable
-squeezing buys conduct strictly between competition and merger, approaching but never attaining either end.
+squeezing buys conduct strictly between competition and full merger. A residual sliver of free-riding always survives.
+
+**Patience has to come from somewhere else.** The protocol supplies $\lambda$ and takes $\beta$ as given. Islands that
+discount the future steeply are beyond its reach no matter how much light you squeeze, and nothing in the apparatus can
+change how much they care about next year.
+
+**Only the limits are worked out here.** I have checked the two corners of the table — myopic and fully patient — not
+the whole dynamic game in between. Partial patience with partial entanglement is a harder problem, because each island's
+fishing moves the stock and therefore moves what its neighbour does next year. That is a notebook, not a paragraph.
 
 ## 7. References
 
@@ -306,8 +352,8 @@ squeezing buys conduct strictly between competition and merger, approaching but 
   — the coefficient of cooperation.
 - Gordon, H.S. (1954), "The economic theory of a common-property resource: the fishery," _J. Polit. Econ._ 62 — open
   access and rent dissipation.
-- Acemoglu, D., _Political Economy Lecture Notes_ (MIT 14.773), §3.4 "Common Pool Games" — the dynamic treatment used in
-  §5: the discounted-payoff setup, how the tragedy worsens with the number of players, and the trigger-strategy result.
+- Acemoglu, D., _Political Economy Lecture Notes_ (MIT 14.773), §3.4 "Common Pool Games" — the dynamic treatment behind
+  §5: the discounted-payoff setup, and how the tragedy worsens as the number of players grows.
 - Clark, C.W. (1990), _Mathematical Bioeconomics_ — the discounted fishery; the $\beta \to 1$ steady state of §5 is its
   maximum economic yield.
 - Hardin, G. (1968), "The tragedy of the commons," _Science_ 162; Ostrom, E. (1990), _Governing the Commons_ — the

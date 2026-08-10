@@ -143,7 +143,7 @@ export function trackHit(path: string) {
 ```
 
 The fallback is the Scaleway auto-generated URL, not a custom domain (see
-above) — and it matters that this is the *fallback*, not just a local-dev
+above) — and it matters that this is the _fallback_, not just a local-dev
 default: `.github/workflows/pages.yml` (the site's only build/deploy
 workflow) never sets any `PUBLIC_ENV__*` variable, so whatever ships here is
 unconditionally what production uses. `PUBLIC_ENV__ANALYTICS_URL` is a
@@ -187,7 +187,7 @@ its own before any frontend change. ✅ Done, deployed:
    confirm `counts/fretchen.eu/<hour>.json` appears/increments in the bucket,
    including a second write in the same hour (exercises the `ifMatch` path,
    not just `ifNoneMatch`).
-5. *(added after the initial build)* Fix the two build/deploy bugs above
+5. _(added after the initial build)_ Fix the two build/deploy bugs above
    (bundle size, deploy zip size); add `storage.ts` + `npm run dev`/
    `dev:live` for local testing without live credentials; add
    `analytics/notebooks/` (Python, `requests`-based smoke test + a readout

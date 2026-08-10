@@ -1,8 +1,8 @@
 /**
  * Anonymous pageview hit counter — one JSON object per site per UTC hour,
- * incremented via a conditional-write compare-and-swap loop against S3.
+ * incremented via a conditional-write compare-and-swap loop against storage.
  */
-import { getS3ObjectWithMeta, putS3ObjectConditional } from "@fretchen/s3-utils";
+import { type HitStorage, S3HitStorage, FileHitStorage } from "./storage.js";
 
 export interface ScalewayEvent {
   httpMethod: string;
@@ -22,6 +22,11 @@ const MAX_PAGES_PER_BUCKET = 200; // caps distinct paths tracked per hour bucket
 const MAX_CAS_ATTEMPTS = 3;
 
 const ALLOWED_ORIGINS = ["https://www.fretchen.eu", "http://localhost:3000"];
+
+// Local dev/sandbox (`npm run dev`) uses a file store with no credentials;
+// production and `npm test` (both leave ANALYTICS_STORAGE unset) use real S3.
+const storage: HitStorage =
+  process.env.ANALYTICS_STORAGE === "file" ? new FileHitStorage() : new S3HitStorage();
 
 /**
  * Note: this whitelist is a consistency/defence-in-depth measure, not a spam
@@ -68,11 +73,11 @@ function hourKey(site: string, now: Date = new Date()): string {
  * read on a CAS conflict; after MAX_CAS_ATTEMPTS gives up silently — a lost
  * count is fine, never worth failing the request over.
  */
-async function incrementHit(site: string, path: string): Promise<void> {
+async function incrementHit(store: HitStorage, site: string, path: string): Promise<void> {
   const key = hourKey(site);
 
   for (let attempt = 1; attempt <= MAX_CAS_ATTEMPTS; attempt++) {
-    const existing = await getS3ObjectWithMeta(key);
+    const existing = await store.getWithMeta(key);
     const bucket: HourBucket = existing ? (JSON.parse(existing.body) as HourBucket) : { hits: 0, pages: {} };
 
     bucket.hits += 1;
@@ -80,8 +85,7 @@ async function incrementHit(site: string, path: string): Promise<void> {
       bucket.pages[path] = (bucket.pages[path] ?? 0) + 1;
     }
 
-    const result = await putS3ObjectConditional(key, JSON.stringify(bucket), {
-      contentType: "application/json",
+    const result = await store.putConditional(key, JSON.stringify(bucket), {
       ...(existing ? { ifMatch: existing.etag } : { ifNoneMatch: "*" }),
     });
     if (result.ok) {
@@ -135,7 +139,22 @@ export async function handle(event: ScalewayEvent, _context: unknown): Promise<H
     };
   }
 
-  await incrementHit(ALLOWED_SITE, path);
+  await incrementHit(storage, ALLOWED_SITE, path);
 
   return { statusCode: 204, headers: corsHeaders, body: "" };
+}
+
+/* Local dev server — only when run directly: npm run dev / npm run dev:live */
+const isEntrypoint =
+  typeof process.argv[1] === "string" &&
+  import.meta.url.endsWith(process.argv[1].replace(/.*\//, ""));
+
+if (isEntrypoint && process.env.NODE_ENV === "test") {
+  (async () => {
+    const dotenvModule = await import("dotenv");
+    dotenvModule.config();
+
+    const scw = await import("@scaleway/serverless-functions");
+    scw.serveHandler(handle, 8085);
+  })().catch((err) => console.error("Error starting local server", err));
 }

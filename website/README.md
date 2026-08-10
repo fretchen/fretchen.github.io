@@ -25,7 +25,9 @@ npm run prepare      # Panda codegen — required before the first dev/build
 npm run dev
 npm run build        # → build/
 npm run typecheck
-npm test             # Vitest
+npm run lint         # ESLint (npm run lint:fix to autofix)
+npm test             # Vitest (test:watch, test:ui, test:coverage)
+npm run send-webmentions
 ```
 
 ## Layout
@@ -179,14 +181,9 @@ Shadows are neutral — no coloured glows. Focus is a real `outline`, never a bo
 
 Panda compiles `css({})` **statically**, so several ways of writing a style silently emit no CSS
 at all — typecheck passes, tests pass, the styling is simply gone. The five that have bitten
-this codebase are documented in [`../CLAUDE.md`](../CLAUDE.md) and enforced by
-`test/styleConventions.test.ts`. The one worth repeating here: `"token(colors.x)"` is a
-*build-time* string, so it belongs inside `css({})` only. In a JSX `style={{}}` it never
-reaches Panda — use the imported `token("colors.x")` call there.
-
-**Verifying a bulk style change:** typecheck cannot see a wrong colour. Build before and after,
-resolve `var(--…)` back to literals, and diff the emitted declarations — for a pure rename the
-set must be identical.
+this codebase are written out in [`CLAUDE.md`](./CLAUDE.md) and enforced by
+`test/styleConventions.test.ts`. That file is also where the recipe for verifying a bulk style
+change lives, since typecheck cannot see a wrong colour.
 
 ## Known looseness
 

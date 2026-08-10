@@ -153,6 +153,10 @@ if (isEntrypoint && process.env.NODE_ENV === "test") {
     dotenvModule.config();
 
     const scw = await import("@scaleway/serverless-functions");
-    scw.serveHandler(handle, 8085);
+    // ScalewayEvent's stricter headers type (Record<string, string>) isn't
+    // structurally assignable to the package's own looser Event type — same
+    // cast scw_js/llm_x402_cron.ts uses for the identical mismatch.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
+    scw.serveHandler(handle as any, 8085);
   })().catch((err) => console.error("Error starting local server", err));
 }

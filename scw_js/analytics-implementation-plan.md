@@ -67,12 +67,35 @@ Scaffold copied from `comment_service/` (closest existing analog: anonymous,
 unauthenticated, S3-backed POST endpoint, own folder, one function):
 
 - `package.json` — only dependency: `@fretchen/s3-utils` (`file:../shared/s3-utils`).
-- `serverless.yml` — one function, `custom_domains: analytics.fretchen.eu`,
-  `secret:` block with just `SCW_ACCESS_KEY`/`SCW_SECRET_KEY`.
+- `serverless.yml` — one function, `secret:` block with just
+  `SCW_ACCESS_KEY`/`SCW_SECRET_KEY`. **No custom domain for now** — deploys
+  to Scaleway's auto-generated function URL
+  (`https://analyticsserviceebp8thpt-hit.functions.fnc.fr-par.scw.cloud`);
+  `custom_domains: [analytics.fretchen.eu]` can be added back once DNS/cert
+  is set up (see the comment in `serverless.yml`).
 - `tsup.config.js`, `vitest.config.js`, `eslint.config.js`, `tsconfig.json` —
-  copy from `comment_service/`.
+  copy from `comment_service/`. `tsup.config.js` needed a follow-up fix:
+  `noExternal: [/.*/]` bundled the local-dev-only `dotenv`/
+  `@scaleway/serverless-functions` (and its Fastify dependency) into the
+  production output — 1.77MB for a 10.91KB function. Fixed by narrowing
+  `noExternal` to just `["@fretchen/s3-utils"]` and adding the two dev-only
+  packages to `external` explicitly. `serverless.yml`'s `package.patterns`
+  needed the same fix `scw_js/serverless.yml` already required: without a
+  leading `"!**"` it isn't a real allowlist, so once `analytics/notebooks/`
+  existed (its own 280MB+ `.venv/`) the deploy zip ballooned to ~137MB.
 - `README.md` — one paragraph, matching `comment_service/README.md`'s
   shape. Add a row for `analytics/` to the root `CLAUDE.md` directory table.
+- `storage.ts` — a `HitStorage` interface behind `hit.ts`'s calls, not
+  `@fretchen/s3-utils` called directly. `S3HitStorage` (production) wraps
+  `getS3ObjectWithMeta`/`putS3ObjectConditional`; `FileHitStorage` (local
+  dev, `ANALYTICS_STORAGE=file`) is a JSON-file store with an MD5-based
+  ETag, sharing `analytics/notebooks/`'s `state/` directory with the Python
+  `LocalStorage` class there. This exists to support `npm run dev`/
+  `npm run dev:live` — a local server (`@scaleway/serverless-functions`'
+  `serveHandler`, port `8086`, same pattern as `scw_js/growth_api.ts`'s dev
+  bootstrap) added after the initial PR1 build, so the endpoint can be
+  exercised without live credentials. See `analytics/README.md`'s "Local
+  server" section.
 
 `hit.ts` handler — request/response shape and CORS modeled on
 `comment_service/comments.ts` (`ScalewayEvent`, `HandlerResponse`,
@@ -110,12 +133,23 @@ malformed body, invalid/oversized `path` rejection, and the `pages` cap.
 
 ```ts
 // website/utils/hitTracker.ts
-const ANALYTICS_URL = import.meta.env.PUBLIC_ENV__ANALYTICS_URL ?? "https://analytics.fretchen.eu";
+const ANALYTICS_URL =
+  import.meta.env.PUBLIC_ENV__ANALYTICS_URL ??
+  "https://analyticsserviceebp8thpt-hit.functions.fnc.fr-par.scw.cloud";
 
 export function trackHit(path: string) {
   navigator.sendBeacon(`${ANALYTICS_URL}/hit`, JSON.stringify({ site: "fretchen.eu", path }));
 }
 ```
+
+The fallback is the Scaleway auto-generated URL, not a custom domain (see
+above) — and it matters that this is the _fallback_, not just a local-dev
+default: `.github/workflows/pages.yml` (the site's only build/deploy
+workflow) never sets any `PUBLIC_ENV__*` variable, so whatever ships here is
+unconditionally what production uses. `PUBLIC_ENV__ANALYTICS_URL` is a
+local-dev-only override (e.g. pointing at `npm run dev`'s `localhost:8086`).
+When `analytics.fretchen.eu` is reattached, this fallback string needs a
+follow-up edit — there's no CI mechanism to swap it automatically.
 
 ### 3. Wiring
 
@@ -143,7 +177,7 @@ events, when added, are read through that same endpoint.
 ## PRs: two
 
 **PR 1 — `analytics/` package.** Backend only, deployable and testable on
-its own before any frontend change:
+its own before any frontend change. ✅ Done, deployed:
 
 1. Scaffold `analytics/` from `comment_service/`; write `hit.ts` using the
    CAS loop from `scw_js/x402_channel_storage.ts` as a template.
@@ -153,12 +187,17 @@ its own before any frontend change:
    confirm `counts/fretchen.eu/<hour>.json` appears/increments in the bucket,
    including a second write in the same hour (exercises the `ifMatch` path,
    not just `ifNoneMatch`).
+5. _(added after the initial build)_ Fix the two build/deploy bugs above
+   (bundle size, deploy zip size); add `storage.ts` + `npm run dev`/
+   `dev:live` for local testing without live credentials; add
+   `analytics/notebooks/` (Python, `requests`-based smoke test + a readout
+   prototype) for manual verification.
 
 **PR 2 — `website/` wiring.** Umami stays untouched and running in parallel:
 
 1. Add `website/utils/hitTracker.ts` and wire it into `LayoutDefault.tsx`.
-2. Verify in the browser (Network tab): a `sendBeacon` fires to
-   `analytics.fretchen.eu/hit` on load and again on client-side navigation.
+2. Verify in the browser (Network tab): a `sendBeacon` fires to the
+   deployed analytics URL on load and again on client-side navigation.
 3. Leave Umami running unchanged — remove it in a later, separate change
    once a few days of real counts look sane.
 

@@ -26,7 +26,7 @@ wrote, no extra wiring.
 in another terminal:
 
 ```bash
-cd .. && npm run dev   # localhost:8085, file storage, no credentials
+cd .. && npm run dev   # localhost:8086, file storage, no credentials
 ```
 
 ## Setup

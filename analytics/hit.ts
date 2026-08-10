@@ -21,7 +21,7 @@ const MAX_PATH_LENGTH = 200;
 const MAX_PAGES_PER_BUCKET = 200; // caps distinct paths tracked per hour bucket
 const MAX_CAS_ATTEMPTS = 3;
 
-const ALLOWED_ORIGINS = ["https://www.fretchen.eu", "http://localhost:3000"];
+const ALLOWED_ORIGINS = ["https://www.fretchen.eu", "http://localhost:5173"];
 
 // Local dev/sandbox (`npm run dev`) uses a file store with no credentials;
 // production and `npm test` (both leave ANALYTICS_STORAGE unset) use real S3.
@@ -157,6 +157,6 @@ if (isEntrypoint && process.env.NODE_ENV === "test") {
     // structurally assignable to the package's own looser Event type — same
     // cast scw_js/llm_x402_cron.ts uses for the identical mismatch.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
-    scw.serveHandler(handle as any, 8085);
+    scw.serveHandler(handle as any, 8086);
   })().catch((err) => console.error("Error starting local server", err));
 }

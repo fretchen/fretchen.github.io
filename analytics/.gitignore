@@ -6,3 +6,8 @@ dist/
 *.log
 .DS_Store
 .serverless/
+
+# Analytics exports (Umami dumps carry session ids, geo and device columns —
+# never commit them; see notebooks/umami_backfill.py)
+*.zip
+*.csv

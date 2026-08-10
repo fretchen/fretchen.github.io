@@ -39,20 +39,55 @@ bounded by path validation and the 200-entry `pages` cap instead.
 
 ## Data model
 
+Two layers. The endpoint only ever writes the first.
+
+**Write layer — one object per UTC hour:**
+
 ```
 counts/{site}/{YYYY-MM-DDTHH}.json
+{ "hits": 42, "pages": { "/": 30, "/blog/foo/": 12 } }
 ```
 
-```json
-{ "hits": 42, "pages": { "/": 30, "/blog/foo": 12 } }
+**Read layer — one object per month, a per-day rollup:**
+
 ```
+rollup/{site}/{YYYY-MM}.json
+{ "site": "fretchen.eu", "month": "2026-03", "days": {
+    "2026-03-04": { "hits": 18, "pages": { "/": 9 }, "source": "umami" } } }
+```
+
+The rollup layer exists because reads can't use the hourly one. `listObjects`
+(`shared/s3-utils`) issues a single un-paginated ListObjectsV2 — max 1000 keys,
+silently truncated — and hourly objects accrue at 8760/year; a 30-day window
+would also mean 720 sequential GETs. Rollup keys are **computed** from a date
+range rather than listed, so there is no ceiling and a month costs one GET.
+Nothing rolls up the live hourly data yet — see *Reading the data*.
+
+`source` is per day, not per month, because the changeover month holds both
+kinds and they are not the same measurement: Umami filtered bots and
+sessionised, the beacon counts every hydration and client-side navigation.
+
+**Path form.** `pageContext.urlPathname` is what the beacon sends, and Vike
+derives it from `urlLogical` — set by `website/pages/+onBeforeRoute.ts`. So
+recorded paths are in canonical `sitemap.xml` form: locale prefix stripped,
+trailing slash on every non-root path, no query, no fragment. One consequence:
+German pages are indistinguishable from their English counterparts, since the
+beacon never sees the locale.
 
 ## Reading the data
 
 Counters are **private** — no public-read ACL is set, so they are not
-fetchable from the bucket URL without credentials. A future authorized
-`GET /stats` endpoint (owner wallet signature, as in `scw_js/growth_api.ts`)
-will serve reads.
+fetchable from the bucket URL without credentials. Reads currently happen in
+`notebooks/02_readout.ipynb` (rollups for whole days, hourly buckets for
+today).
+
+A future authorized `GET /stats` endpoint (owner wallet signature, as in
+`scw_js/growth_api.ts`) will serve them. It is also the natural home for the
+rollup write: fold any complete day not yet in its month object on read, so
+there is no second deploy unit and no cron to fail silently.
+
+Jan–Aug 2026 predates the counter and was backfilled from the Umami export —
+see `notebooks/03_umami_backfill.ipynb`.
 
 ## Development
 

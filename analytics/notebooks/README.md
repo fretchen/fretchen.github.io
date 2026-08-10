@@ -9,7 +9,16 @@ service, kept here rather than in the repo's general-purpose root
 | Notebook              | What it does                                                                                                                                                                                                                                 |
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `01_smoke_test.ipynb` | POSTs real hits to `/hit` (valid and invalid), then reads the resulting object back to confirm the write landed. `LOCAL` toggle at the top switches between `npm run dev` (file storage, no credentials) and the deployed service (real S3). |
-| `02_readout.ipynb`    | Aggregates one day's hourly buckets (sum `hits`, merge `pages`) — first against a local fixture to validate the logic, then against real data. Prototype only; not wired into any endpoint.                                                  |
+| `02_readout.ipynb`    | Aggregates one day's hourly buckets (sum `hits`, merge `pages`), then reads a date range out of the monthly rollups — each half validated against a local fixture first. Prototype for the eventual `GET /stats`; not wired into any endpoint.  |
+| `03_umami_backfill.ipynb` | One-off: folds the cloud.umami.is data export into monthly rollups, so the ~7 months predating the hit counter aren't lost. Dry-runs to `state/` by default; `WRITE_TO_S3` flips it to the real write.                                     |
+
+`umami_backfill.py` holds that import's logic — CSV parsing, path
+normalisation, monthly grouping, and an idempotent merge where days already
+stored always win. It projects the export down to (day, path) → count and
+drops `session_id`/geo/device entirely, so the rollups carry no more than the
+live counter would have recorded. Delete the export when you're done;
+`analytics/.gitignore` covers `*.zip`/`*.csv` so it can't be committed by
+accident.
 
 `storage.py` provides `LocalStorage` (JSON files on disk — fixture-driven,
 no credentials needed) and `S3Storage` (real Scaleway Object Storage via

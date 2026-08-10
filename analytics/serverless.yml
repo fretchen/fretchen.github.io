@@ -17,12 +17,16 @@ plugins:
 
 package:
   patterns:
+    # Exclude everything by default, then re-include only what the deployed
+    # function actually needs. The previous allowlist-shaped patterns below
+    # (without a leading "!**") did NOT act as an allowlist — Scaleway's
+    # serverless plugin still zips the whole service directory by default,
+    # which silently dragged in notebooks/ (a 280MB+ local Python/Jupyter dev
+    # environment with its own .venv) into the deploy package, producing a
+    # 130MB+ zip for a 10KB function. Same bug, same fix, as scw_js/serverless.yml.
+    - "!**"
     - "dist/**"
-    - "!.gitignore"
-    - "!.git/**"
-    - "!test/**"
-    - "!coverage/**"
-    - "!.prettierrc"
+    - "!dist/**/*.map"
 
 functions:
   hit:

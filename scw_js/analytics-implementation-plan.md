@@ -36,6 +36,7 @@ One JSON object per site per hour, with a per-page breakdown:
 ```
 counts/{site}/{YYYY-MM-DDTHH}.json
 ```
+
 ```json
 { "hits": 42, "pages": { "/": 30, "/blog/foo": 12 } }
 ```
@@ -49,7 +50,7 @@ Reuse `@fretchen/s3-utils` as a real dependency — it's the one piece of this
 that's already a formal shared package, built for exactly this (SigV4
 signing, conditional PUT). Do **not** import `comment_service`'s own module
 code (its `ScalewayEvent`/`HandlerResponse` types, `getCorsHeaders`,
-`sanitizePage`) — copy that *shape* into `analytics/`, don't share the
+`sanitizePage`) — copy that _shape_ into `analytics/`, don't share the
 module. This matches the repo's existing convention: CORS headers are
 already independently reimplemented in `comment_service`, `growth_api.ts`,
 and `x402_facilitator.ts`, with real differences each time (comment_service
@@ -88,7 +89,7 @@ gate writes. Write abuse is bounded by path validation and the `pages` cap:
 - Cap the `pages` map at a fixed size per hour bucket (e.g. 200 distinct
   paths): once the cap is hit, still increment `hits` but stop adding new
   keys to `pages`. Path validation alone doesn't stop an attacker from
-  generating many distinct *valid-looking* paths — the cap is what actually
+  generating many distinct _valid-looking_ paths — the cap is what actually
   bounds the object size.
 - Hour bucket key uses UTC explicitly (`new Date().toISOString()`, sliced to
   the hour) — don't rely on server-local time.
@@ -109,8 +110,7 @@ malformed body, invalid/oversized `path` rejection, and the `pages` cap.
 
 ```ts
 // website/utils/hitTracker.ts
-const ANALYTICS_URL =
-  import.meta.env.PUBLIC_ENV__ANALYTICS_URL ?? "https://analytics.fretchen.eu";
+const ANALYTICS_URL = import.meta.env.PUBLIC_ENV__ANALYTICS_URL ?? "https://analytics.fretchen.eu";
 
 export function trackHit(path: string) {
   navigator.sendBeacon(`${ANALYTICS_URL}/hit`, JSON.stringify({ site: "fretchen.eu", path }));

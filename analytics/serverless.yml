@@ -28,5 +28,6 @@ functions:
   hit:
     handler: dist/hit.handle
     description: "Pageview hit counter - anonymous, stored in S3"
-    custom_domains:
-      - analytics.fretchen.eu
+    # No custom domain for now — deploys to Scaleway's auto-generated function
+    # URL. Add `custom_domains: [analytics.fretchen.eu]` back once DNS/cert
+    # is set up.

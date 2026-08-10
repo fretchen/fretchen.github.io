@@ -10,8 +10,8 @@ yarn.lock
 .vscode/
 .env
 *.log
-# Python envs under notebooks/ (e.g. analytics/notebooks/.venv) — not JS, and huge.
-.venv/
-.ruff_cache/
-__pycache__/
-*.ipynb
+# The whole notebooks/ package: Python, not JS — .venv/ is huge, and state/
+# (LocalStorage/FileHitStorage fixture output) isn't JS either. Matches the
+# blanket exclusion in eslint.config.js rather than listing subpaths one by
+# one (state/ was missed that way once already).
+notebooks/

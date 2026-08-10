@@ -25,8 +25,7 @@ const ALLOWED_ORIGINS = ["https://www.fretchen.eu", "http://localhost:3000"];
 
 // Local dev/sandbox (`npm run dev`) uses a file store with no credentials;
 // production and `npm test` (both leave ANALYTICS_STORAGE unset) use real S3.
-const storage: HitStorage =
-  process.env.ANALYTICS_STORAGE === "file" ? new FileHitStorage() : new S3HitStorage();
+const storage: HitStorage = process.env.ANALYTICS_STORAGE === "file" ? new FileHitStorage() : new S3HitStorage();
 
 /**
  * Note: this whitelist is a consistency/defence-in-depth measure, not a spam
@@ -146,8 +145,7 @@ export async function handle(event: ScalewayEvent, _context: unknown): Promise<H
 
 /* Local dev server — only when run directly: npm run dev / npm run dev:live */
 const isEntrypoint =
-  typeof process.argv[1] === "string" &&
-  import.meta.url.endsWith(process.argv[1].replace(/.*\//, ""));
+  typeof process.argv[1] === "string" && import.meta.url.endsWith(process.argv[1].replace(/.*\//, ""));
 
 if (isEntrypoint && process.env.NODE_ENV === "test") {
   (async () => {

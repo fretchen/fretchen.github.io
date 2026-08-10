@@ -2,7 +2,20 @@ import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["node_modules/", "coverage/", "dist/", "build/", ".serverless/"] },
+  {
+    ignores: [
+      "node_modules/",
+      "coverage/",
+      "dist/",
+      "build/",
+      ".serverless/",
+      // Not part of analytics's own TS codebase: a Python testing/readout
+      // notebooks package with its own .venv/ (bundled jupyterlab JS assets)
+      // that eslint:recommended would otherwise sweep in as plain .js — same
+      // issue documented in scw_js/eslint.config.js.
+      "notebooks/",
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
   {

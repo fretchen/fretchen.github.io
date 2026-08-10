@@ -6,14 +6,14 @@ as JSON objects in Scaleway S3. No sessions, no visitor IDs, no PII.
 
 ## Features
 
-| Feature                | Details                                                                  |
-| ---------------------- | ------------------------------------------------------------------------ |
-| **Aggregate counters** | One JSON object per site per UTC hour — no per-event rows                |
-| **Per-page breakdown** | Hourly object also tracks a `pages` map, capped at 200 distinct paths    |
-| **Anonymous writes**   | `POST /hit` is unauthenticated and increment-only                        |
-| **Private counters**   | Stored objects carry no public-read ACL; reads are authorized separately |
+| Feature                | Details                                                                                                                                                      |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Aggregate counters** | One JSON object per site per UTC hour — no per-event rows                                                                                                    |
+| **Per-page breakdown** | Hourly object also tracks a `pages` map, capped at 200 distinct paths                                                                                        |
+| **Anonymous writes**   | `POST /hit` is unauthenticated and increment-only                                                                                                            |
+| **Private counters**   | Stored objects carry no public-read ACL; reads are authorized separately                                                                                     |
 | **Conditional writes** | Compare-and-swap via `storage.ts`'s `HitStorage`, retried up to 3x on conflict — real S3 (`@fretchen/s3-utils`) in production, local files for `npm run dev` |
-| **Input sanitisation** | `path` must start with `/`, safe URL-path characters only, max 200 chars |
+| **Input sanitisation** | `path` must start with `/`, safe URL-path characters only, max 200 chars                                                                                     |
 
 ## API
 

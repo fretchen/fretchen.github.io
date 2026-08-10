@@ -6,15 +6,15 @@ service, kept here rather than in the repo's general-purpose root
 (`growth-agent/notebooks/`, `x402_facilitator/notebooks/`,
 `scw_js/notebooks/`).
 
-| Notebook               | What it does                                                                                                             |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `01_smoke_test.ipynb`  | POSTs real hits to `/hit` (valid and invalid), then reads the resulting object back to confirm the write landed. `LOCAL` toggle at the top switches between `npm run dev` (file storage, no credentials) and the deployed service (real S3). |
-| `02_readout.ipynb`     | Aggregates one day's hourly buckets (sum `hits`, merge `pages`) — first against a local fixture to validate the logic, then against real data. Prototype only; not wired into any endpoint. |
+| Notebook              | What it does                                                                                                                                                                                                                                 |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `01_smoke_test.ipynb` | POSTs real hits to `/hit` (valid and invalid), then reads the resulting object back to confirm the write landed. `LOCAL` toggle at the top switches between `npm run dev` (file storage, no credentials) and the deployed service (real S3). |
+| `02_readout.ipynb`    | Aggregates one day's hourly buckets (sum `hits`, merge `pages`) — first against a local fixture to validate the logic, then against real data. Prototype only; not wired into any endpoint.                                                  |
 
 `storage.py` provides `LocalStorage` (JSON files on disk — fixture-driven,
 no credentials needed) and `S3Storage` (real Scaleway Object Storage via
 `boto3`), mirroring `growth-agent/agent/storage.py`'s shape.
-`LocalStorage()`'s default `state/` directory is the *same* one
+`LocalStorage()`'s default `state/` directory is the _same_ one
 `../storage.ts`'s `FileHitStorage` writes to when `npm run dev` is running
 (run from `analytics/`, relative path `notebooks/state`) — so
 `01_smoke_test.ipynb` in local mode reads exactly what the local server just

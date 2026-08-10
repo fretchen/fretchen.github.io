@@ -42,10 +42,10 @@ describe("hit handler", () => {
 
   it("echoes back a whitelisted origin", async () => {
     const res = await handle(
-      makeEvent({ httpMethod: "OPTIONS", body: undefined, headers: { origin: "http://localhost:3000" } }),
+      makeEvent({ httpMethod: "OPTIONS", body: undefined, headers: { origin: "http://localhost:5173" } }),
       {},
     );
-    expect(res.headers["Access-Control-Allow-Origin"]).toBe("http://localhost:3000");
+    expect(res.headers["Access-Control-Allow-Origin"]).toBe("http://localhost:5173");
   });
 
   it("falls back to the canonical origin for an unknown origin", async () => {

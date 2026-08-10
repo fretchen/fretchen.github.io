@@ -67,8 +67,8 @@ npm run build         # tsup → dist/
 ### Local server
 
 ```bash
-npm run dev      # localhost:8085, file storage (notebooks/state/) — no credentials needed
-npm run dev:live # localhost:8085, real S3 (needs analytics/.env) — pre-deploy sanity check
+npm run dev      # localhost:8086, file storage (notebooks/state/) — no credentials needed
+npm run dev:live # localhost:8086, real S3 (needs analytics/.env) — pre-deploy sanity check
 ```
 
 `npm run dev` writes counters to `notebooks/state/` instead of S3

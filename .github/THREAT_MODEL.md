@@ -84,8 +84,7 @@ This is the attack-**surface** map: each arrow marks where data crosses from a l
 │  fetch ───────────────────────────────► comment_service     │
 │                                          (origin whitelist) │
 │  sendBeacon ───────────────────────────► analytics service  │
-│                                          (★ no auth, open  │
-│                                           CORS)             │
+│                                          (origin whitelist) │
 └─────────────────────────────────────────────────────────────┘
 
 x402_facilitator
@@ -105,7 +104,7 @@ Owner EOA ───────────────────────�
 
 ★ The x402 facilitator is an intentionally open public service (any merchant on Base or Optimism). `Access-Control-Allow-Origin: *` is required by the open-protocol design. The blast radius of a cross-origin attack is bounded by EIP-712/EIP-3009 cryptography: a malicious page can trigger settlement requests but cannot redirect funds (the signature binds recipient, amount, and nonce) or forge signatures. The residual risk (gas drain via `/settle` spam) is accepted: garbage requests fail before any on-chain transaction is attempted, L2 gas per settlement is negligible (~$0.001), and no realistic threat actor has financial incentive to drain a facilitator wallet whose ETH goes to miners, not the attacker.
 
-★ The analytics service accepts anonymous, unauthenticated `POST /hit` requests with `Access-Control-Allow-Origin: *` — more open than `comment_service`'s origin whitelist, by design (the counters it writes are meant to be public-read anyway). The residual risk is accepted: the worst case reachable from this surface is an inflated or corrupted pageview counter (`path` is validated — leading slash, safe characters, max length — and the per-hour `pages` map is capped at 200 distinct entries, so cardinality abuse is bounded); there is no PII, no funds, and no privileged action reachable through it. Unrestricted request *volume* (as opposed to `pages` cardinality) is not separately rate-limited — see §5, API4.
+The analytics service accepts anonymous, unauthenticated `POST /hit` writes behind the same origin whitelist as `comment_service`. Note that the whitelist is defence-in-depth, **not** a write control here: CORS is browser-enforced only (any script or `curl` ignores it), and the pageview beacon is a `sendBeacon` simple request (`text/plain`), so no preflight occurs and a cross-origin write would land regardless of the header. Write abuse is bounded instead by path validation and the 200-entry `pages` cap (§5, API4). The counters themselves are written **private** (no public-read ACL) and the read path is authorized — see §6.
 
 ---
 
@@ -134,7 +133,7 @@ This is the **HOW** that complements §3 (WHO) and §4 (WHERE): the concrete cla
 |---|---|---|---|
 | Broken authentication (API2) | EIP-712/EIP-3009 sig verify (facilitator); agent-wallet whitelist (scw_js); `useWalletAuth` owner-sig bearer (growth); origin whitelist (comment_service) | Mitigated | §4; §7 |
 | Broken function-level authz (API5) | x402 `Access-Control-Allow-Origin: *`; bounded by EIP-3009 crypto | Accepted (intentional open protocol) | §4 ★; §7 |
-| Unrestricted resource consumption (API4) | `/settle` spam gas drain; serverless cold starts (accepted); LLM pre-charge balance gate (batch-settlement stall; Open, medium); analytics `/hit` request volume (uncapped — accepted, no cost/security consequence beyond a wrong counter and CAS retry contention at blog-scale traffic); analytics `pages` map cardinality abuse (mitigated via path validation + a 200-entry cap) | Mixed — gas drain and `/hit` volume accepted; balance-gate open; `pages` cardinality mitigated | §4; scw_js/SECURITY.md |
+| Unrestricted resource consumption (API4) | `/settle` spam gas drain; serverless cold starts (accepted); LLM pre-charge balance gate (batch-settlement stall; Open, medium); analytics `/hit` request volume (not rate-limited, and **CORS is not the control** — browser-only, and `sendBeacon` sends a simple request with no preflight; accepted, since the consequence is a skewed counter, not cost or exposure); analytics `pages` map cardinality abuse (mitigated via path validation + a 200-entry cap) | Mixed — gas drain and `/hit` volume accepted; balance-gate open; `pages` cardinality mitigated | §4; scw_js/SECURITY.md |
 | Unrestricted access to sensitive business flows (API6) | Deliver-before-payment in the LLM and genimg flows | Open (medium) | scw_js/SECURITY.md |
 | Security misconfiguration / secret exposure (API8) | comment_service sends `SCW_SECRET_KEY` as the `X-Auth-Token` header to the Scaleway transactional-email API | Open (medium) | §7 |
 | Unsafe client trust (API10) | Client-side-only image validation | Open (low) | §7 |
@@ -152,7 +151,7 @@ For blockchain systems, **Integrity** dominates. Confidentiality is generally lo
 | scw_js | Low | **High** — agent wallet controls on-chain writes | Medium | API key compromise has no on-chain reach |
 | website frontend | Low | Medium — client-side only; no server state | Low — static hosting | Wallet auth is the integrity boundary |
 | comment_service | Medium — stores anonymous user names/text in S3 | Low — comment content and like counts | Low | Low-value, but holds `SCW_SECRET_KEY` (email) — not zero-secret |
-| analytics service | Low — aggregate counts only, no PII | Low — worst case is an inflated/corrupted counter; nothing downstream trusts it for a financial or security decision | Low — same serverless cold-start profile as other functions | No auth by design; `SCW_SECRET_KEY` scoped to the `counts/` prefix in the same bucket other services already write to |
+| analytics service | Low — aggregate counts only, no PII; objects are written **private** (no public-read ACL) and the read path is planned as owner-signature-gated, like the Growth API | Low — writes are unauthenticated, so counts are **advisory**: fine for traffic insight, never to be trusted for a security or financial decision | Low — same serverless cold-start profile as other functions | Private-by-omission: the bucket also serves public-read images, so "private" rests on the handler omitting an ACL — locked by a test |
 
 ---
 

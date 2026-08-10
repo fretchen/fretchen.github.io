@@ -21,12 +21,24 @@ const MAX_PATH_LENGTH = 200;
 const MAX_PAGES_PER_BUCKET = 200; // caps distinct paths tracked per hour bucket
 const MAX_CAS_ATTEMPTS = 3;
 
-const CORS_HEADERS: Record<string, string> = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Content-Type": "application/json",
-};
+const ALLOWED_ORIGINS = ["https://www.fretchen.eu", "http://localhost:3000"];
+
+/**
+ * Note: this whitelist is a consistency/defence-in-depth measure, not a spam
+ * control. CORS is browser-enforced only, and the pageview beacon is a
+ * `sendBeacon` simple request (text/plain, no preflight), so a cross-origin
+ * write is not actually blocked by it. Write abuse is bounded by path
+ * validation and MAX_PAGES_PER_BUCKET instead.
+ */
+function getCorsHeaders(origin?: string): Record<string, string> {
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin ?? "") ? origin! : "https://www.fretchen.eu";
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Content-Type": "application/json",
+  };
+}
 
 interface HourBucket {
   hits: number;
@@ -80,14 +92,17 @@ async function incrementHit(site: string, path: string): Promise<void> {
 }
 
 export async function handle(event: ScalewayEvent, _context: unknown): Promise<HandlerResponse> {
+  const origin = event.headers?.origin ?? event.headers?.Origin;
+  const corsHeaders = getCorsHeaders(origin);
+
   if (event.httpMethod === "OPTIONS") {
-    return { statusCode: 200, headers: CORS_HEADERS, body: "" };
+    return { statusCode: 200, headers: corsHeaders, body: "" };
   }
 
   if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
-      headers: CORS_HEADERS,
+      headers: corsHeaders,
       body: JSON.stringify({ error: "Method not allowed" }),
     };
   }
@@ -95,7 +110,7 @@ export async function handle(event: ScalewayEvent, _context: unknown): Promise<H
   if (!event.body) {
     return {
       statusCode: 400,
-      headers: CORS_HEADERS,
+      headers: corsHeaders,
       body: JSON.stringify({ error: "Missing request body" }),
     };
   }
@@ -106,7 +121,7 @@ export async function handle(event: ScalewayEvent, _context: unknown): Promise<H
   } catch {
     return {
       statusCode: 400,
-      headers: CORS_HEADERS,
+      headers: corsHeaders,
       body: JSON.stringify({ error: "Invalid JSON in request body" }),
     };
   }
@@ -115,12 +130,12 @@ export async function handle(event: ScalewayEvent, _context: unknown): Promise<H
   if (parsed.site !== ALLOWED_SITE || !path) {
     return {
       statusCode: 400,
-      headers: CORS_HEADERS,
+      headers: corsHeaders,
       body: JSON.stringify({ error: "Missing or invalid site/path" }),
     };
   }
 
   await incrementHit(ALLOWED_SITE, path);
 
-  return { statusCode: 204, headers: CORS_HEADERS, body: "" };
+  return { statusCode: 204, headers: corsHeaders, body: "" };
 }

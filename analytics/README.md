@@ -10,7 +10,8 @@ as JSON objects in Scaleway S3. No sessions, no visitor IDs, no PII.
 | ---------------------- | ------------------------------------------------------------------------ |
 | **Aggregate counters** | One JSON object per site per UTC hour — no per-event rows                |
 | **Per-page breakdown** | Hourly object also tracks a `pages` map, capped at 200 distinct paths    |
-| **Anonymous, no auth** | Increment-only writes; low-value to attack                               |
+| **Anonymous writes**   | `POST /hit` is unauthenticated and increment-only                        |
+| **Private counters**   | Stored objects carry no public-read ACL; reads are authorized separately |
 | **Conditional writes** | Compare-and-swap via `@fretchen/s3-utils`, retried up to 3x on conflict  |
 | **Input sanitisation** | `path` must start with `/`, safe URL-path characters only, max 200 chars |
 
@@ -29,7 +30,12 @@ invalid `site`/`path`, `405` on any method other than `POST`/`OPTIONS`.
 
 ### `OPTIONS /hit`
 
-CORS preflight (`Access-Control-Allow-Origin: *`).
+CORS preflight. Origin whitelist (`https://www.fretchen.eu`,
+`http://localhost:3000`), falling back to the canonical origin — matching
+`comment_service`. Note this is consistency/defence-in-depth, not a spam
+control: CORS is browser-enforced only, and the pageview beacon is a
+`sendBeacon` simple request that triggers no preflight at all. Write abuse is
+bounded by path validation and the 200-entry `pages` cap instead.
 
 ## Data model
 
@@ -40,6 +46,13 @@ counts/{site}/{YYYY-MM-DDTHH}.json
 ```json
 { "hits": 42, "pages": { "/": 30, "/blog/foo": 12 } }
 ```
+
+## Reading the data
+
+Counters are **private** — no public-read ACL is set, so they are not
+fetchable from the bucket URL without credentials. A future authorized
+`GET /stats` endpoint (owner wallet signature, as in `scw_js/growth_api.ts`)
+will serve reads.
 
 ## Development
 

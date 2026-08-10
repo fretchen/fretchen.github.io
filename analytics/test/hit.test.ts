@@ -36,9 +36,24 @@ describe("hit handler", () => {
   it("responds to OPTIONS with CORS headers and no body", async () => {
     const res = await handle(makeEvent({ httpMethod: "OPTIONS", body: undefined }), {});
     expect(res.statusCode).toBe(200);
-    expect(res.headers["Access-Control-Allow-Origin"]).toBe("*");
     expect(res.body).toBe("");
     expect(mockGetS3ObjectWithMeta).not.toHaveBeenCalled();
+  });
+
+  it("echoes back a whitelisted origin", async () => {
+    const res = await handle(
+      makeEvent({ httpMethod: "OPTIONS", body: undefined, headers: { origin: "http://localhost:3000" } }),
+      {},
+    );
+    expect(res.headers["Access-Control-Allow-Origin"]).toBe("http://localhost:3000");
+  });
+
+  it("falls back to the canonical origin for an unknown origin", async () => {
+    const res = await handle(
+      makeEvent({ httpMethod: "OPTIONS", body: undefined, headers: { origin: "https://evil.com" } }),
+      {},
+    );
+    expect(res.headers["Access-Control-Allow-Origin"]).toBe("https://www.fretchen.eu");
   });
 
   it("rejects non-POST/OPTIONS methods with 405", async () => {
@@ -100,6 +115,19 @@ describe("hit handler", () => {
     expect(JSON.parse(body)).toEqual({ hits: 1, pages: { "/blog/foo": 1 } });
     expect(opts.ifNoneMatch).toBe("*");
     expect(opts.ifMatch).toBeUndefined();
+  });
+
+  it("never writes counters with a public-read ACL", async () => {
+    // The read path is authorized (owner wallet signature), and this bucket also
+    // serves public-read image objects — so "private" depends entirely on this
+    // call omitting an ACL. Guard it so a future edit can't silently expose traffic data.
+    mockGetS3ObjectWithMeta.mockResolvedValue(null);
+    mockPutS3ObjectConditional.mockResolvedValue({ ok: true, etag: '"new-etag"' });
+
+    await handle(makeEvent(), {});
+
+    const [, , opts] = mockPutS3ObjectConditional.mock.calls[0];
+    expect(opts).not.toHaveProperty("acl");
   });
 
   it("increments an existing hour bucket with If-Match on its current etag", async () => {

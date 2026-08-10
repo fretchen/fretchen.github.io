@@ -74,11 +74,12 @@ unauthenticated, S3-backed POST endpoint, own folder, one function):
   shape. Add a row for `analytics/` to the root `CLAUDE.md` directory table.
 
 `hit.ts` handler — request/response shape and CORS modeled on
-`comment_service/comments.ts` (`ScalewayEvent`, `HandlerResponse`, explicit
-`OPTIONS` branch), but `Access-Control-Allow-Origin: *` (not an origin
-allowlist) — there's nothing sensitive in the response to protect, `pages/*`
-objects are already meant to be public-read, and `*` is this repo's default
-per `CLAUDE.md`:
+`comment_service/comments.ts` (`ScalewayEvent`, `HandlerResponse`,
+`getCorsHeaders` with the same origin whitelist, explicit `OPTIONS` branch).
+The whitelist is for consistency and defence-in-depth, not spam control:
+CORS is browser-enforced only, and `sendBeacon` with a string body is a
+simple request (`text/plain`) that triggers no preflight, so it does not
+gate writes. Write abuse is bounded by path validation and the `pages` cap:
 
 - `POST /hit` with body `{ site: string, path: string }`.
 - Validate `path`: must start with `/`, safe URL-path characters only, max
@@ -132,10 +133,12 @@ This fires on first load and on every client-side navigation.
 
 ### 4. Reading the numbers
 
-No function needed if `counts/*.json` objects are public-read: fetch the
-JSON files directly from the bucket, or point a static dashboard at a date
-range of keys. Add a thin `GET /stats` function later only if an
-auth-gated or aggregated view is wanted.
+Counters stay **private** — no public-read ACL, so they are not fetchable
+from the bucket URL without credentials. Reads go through an authorized
+`GET /stats` endpoint added later, gated by the same EIP-191 owner-signature
+bearer auth the Growth API uses (`scw_js/auth_utils.ts`,
+`verifySignedMessage`; see `growth_api.ts` for the request shape). Click
+events, when added, are read through that same endpoint.
 
 ## PRs: two
 

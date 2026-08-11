@@ -18,7 +18,9 @@ import { privateKeyToAccount } from "viem/accounts";
 // ===== Test data =====
 
 // Anvil account #0 — a well-known test key, never used for anything real.
-const owner = privateKeyToAccount("0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80");
+const owner = privateKeyToAccount(
+  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+);
 const OWNER_ADDRESS = owner.address;
 
 const sampleQueue = {

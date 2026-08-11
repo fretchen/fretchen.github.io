@@ -1,5 +1,6 @@
 /**
- * `GET /stats` — the owner's read endpoint for the dashboard.
+ * `GET /stats` — the owner's read endpoint for the dashboard. Routed from
+ * `analytics.ts`, which owns the function entrypoint.
  *
  * Counters are private (no public-read ACL), so this is the only way to see
  * them without S3 credentials. Gated by an EIP-191 owner signature, the same
@@ -16,7 +17,7 @@
  * any recent day the weekly cron hasn't compacted yet. The second pass is what
  * decouples this endpoint from the cron's cadence.
  */
-import { type HitStorage, S3HitStorage, FileHitStorage } from "./storage.js";
+import { type HitStorage, defaultStorage } from "./storage.js";
 import { parseBearerToken, verifySignedMessage } from "@fretchen/chain-utils";
 import {
   HOURLY_FALLBACK_DAYS,
@@ -41,8 +42,6 @@ const WINDOW_DAYS = 365;
 // the browser: /stats is a preflighted GET with an Authorization header, so an
 // origin missing here fails the preflight and the dashboard shows nothing.
 const ALLOWED_ORIGINS = ["https://www.fretchen.eu", "http://localhost:3000", "http://localhost:5173"];
-
-const storage: HitStorage = process.env.ANALYTICS_STORAGE === "file" ? new FileHitStorage() : new S3HitStorage();
 
 export interface StatsEvent {
   httpMethod: string;
@@ -111,7 +110,7 @@ export async function buildStats(store: HitStorage, site: string, now: Date = ne
   return { site, from, to, days: await collectRange(store, site, from, to, now) };
 }
 
-export async function handle(
+export async function handleStats(
   event: StatsEvent,
   _context: unknown,
 ): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> {
@@ -140,28 +139,10 @@ export async function handle(
   }
 
   try {
-    const stats = await buildStats(storage, SITE);
+    const stats = await buildStats(defaultStorage, SITE);
     return { statusCode: 200, headers, body: JSON.stringify(stats) };
   } catch (err) {
     console.error("stats failed", err);
     return { statusCode: 500, headers, body: JSON.stringify({ error: "Internal server error" }) };
   }
-}
-
-/* Local dev server — only when run directly: npm run dev:stats */
-const isEntrypoint =
-  typeof process.argv[1] === "string" && import.meta.url.endsWith(process.argv[1].replace(/.*\//, ""));
-
-if (isEntrypoint && process.env.NODE_ENV === "test") {
-  (async () => {
-    const dotenvModule = await import("dotenv");
-    dotenvModule.config();
-
-    const scw = await import("@scaleway/serverless-functions");
-    // StatsEvent's stricter headers type isn't structurally assignable to the
-    // package's own looser Event type — same cast hit.ts uses for the identical
-    // mismatch.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
-    scw.serveHandler(handle as any, 8087);
-  })().catch((err) => console.error("Error starting local server", err));
 }

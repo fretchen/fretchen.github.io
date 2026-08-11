@@ -17,14 +17,22 @@ as JSON objects in Scaleway S3. No sessions, no visitor IDs, no PII.
 
 ## API
 
-Three functions, each on its own Scaleway-generated URL (there is no shared
-base URL — `npm run info` prints them):
+Two Scaleway functions. `analytics` serves both HTTP endpoints under one URL
+with path-based routing (the repo convention — see `x402_facilitator`);
+`rollup` is cron-only, because a scheduled invocation has no path to route on.
+`npm run info` prints the URLs.
 
-| Function | Trigger                 | Auth                    |
-| -------- | ----------------------- | ----------------------- |
-| `hit`    | `POST /hit`             | none — anonymous writes |
-| `stats`  | `GET /stats`            | owner wallet signature  |
-| `rollup` | cron, Mondays 00:30 UTC | n/a                     |
+| Function    | Trigger                 | Auth                    |
+| ----------- | ----------------------- | ----------------------- |
+| `analytics` | `POST /hit`             | none — anonymous writes |
+| `analytics` | `GET /stats`            | owner wallet signature  |
+| `rollup`    | cron, Mondays 00:30 UTC | n/a                     |
+
+`analytics.ts` matches routes **exactly**, unlike `x402_facilitator`'s
+`path.includes()`. That matters here because an anonymous write sits next to an
+owner-gated read: no URL shape may reach `/stats` handling without its auth
+check, and none may reach `/hit`'s unauthenticated write while looking like
+`/stats`.
 
 ### `POST /hit`
 

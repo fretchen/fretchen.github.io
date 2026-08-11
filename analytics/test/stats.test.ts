@@ -13,7 +13,7 @@ vi.mock("@fretchen/s3-utils", () => ({
   putS3ObjectConditional: mockPutS3ObjectConditional,
 }));
 
-import { buildStats, collectRange, handle, type StatsEvent, type StatsResponse } from "../stats.js";
+import { buildStats, collectRange, handleStats, type StatsEvent, type StatsResponse } from "../stats.js";
 import { rollupKey, type MonthRollup } from "../buckets.js";
 import { MemoryHitStorage, hourBucket } from "./memoryStorage.js";
 
@@ -263,7 +263,7 @@ describe("stats handler", () => {
   });
 
   it("responds to OPTIONS with CORS headers, unauthenticated", async () => {
-    const res = await handle(makeEvent({ httpMethod: "OPTIONS" }), {});
+    const res = await handleStats(makeEvent({ httpMethod: "OPTIONS" }), {});
     expect(res.statusCode).toBe(200);
     expect(res.headers["Access-Control-Allow-Headers"]).toContain("Authorization");
     expect(mockGetS3ObjectWithMeta).not.toHaveBeenCalled();
@@ -274,41 +274,41 @@ describe("stats handler", () => {
   it.each(["http://localhost:3000", "http://localhost:5173", "https://www.fretchen.eu"])(
     "passes preflight for %s",
     async (origin) => {
-      const res = await handle(makeEvent({ httpMethod: "OPTIONS", headers: { origin } }), {});
+      const res = await handleStats(makeEvent({ httpMethod: "OPTIONS", headers: { origin } }), {});
       expect(res.headers["Access-Control-Allow-Origin"]).toBe(origin);
     },
   );
 
   it("does not echo an unknown origin", async () => {
-    const res = await handle(makeEvent({ httpMethod: "OPTIONS", headers: { origin: "https://evil.com" } }), {});
+    const res = await handleStats(makeEvent({ httpMethod: "OPTIONS", headers: { origin: "https://evil.com" } }), {});
     expect(res.headers["Access-Control-Allow-Origin"]).toBe("https://www.fretchen.eu");
   });
 
   it("rejects non-GET methods with 405", async () => {
-    const res = await handle(makeEvent({ httpMethod: "POST" }), {});
+    const res = await handleStats(makeEvent({ httpMethod: "POST" }), {});
     expect(res.statusCode).toBe(405);
   });
 
   it("rejects a missing Authorization header with 401", async () => {
-    const res = await handle(makeEvent(), {});
+    const res = await handleStats(makeEvent(), {});
     expect(res.statusCode).toBe(401);
     expect(mockGetS3ObjectWithMeta).not.toHaveBeenCalled();
   });
 
   it("rejects a malformed bearer token with 401", async () => {
-    const res = await handle(makeEvent({ headers: { authorization: "Bearer not-base64-json" } }), {});
+    const res = await handleStats(makeEvent({ headers: { authorization: "Bearer not-base64-json" } }), {});
     expect(res.statusCode).toBe(401);
   });
 
   it("rejects a signature from a wallet that is not the owner", async () => {
-    const res = await handle(makeEvent({ headers: { authorization: await bearer(other) } }), {});
+    const res = await handleStats(makeEvent({ headers: { authorization: await bearer(other) } }), {});
     expect(res.statusCode).toBe(401);
     expect(JSON.parse(res.body).error).toBe("Address mismatch");
   });
 
   it("rejects a stale token, so a captured one cannot be replayed", async () => {
     const tenMinutesAgo = Math.floor(Date.now() / 1000) - 600;
-    const res = await handle(makeEvent({ headers: { authorization: await bearer(owner, tenMinutesAgo) } }), {});
+    const res = await handleStats(makeEvent({ headers: { authorization: await bearer(owner, tenMinutesAgo) } }), {});
     expect(res.statusCode).toBe(401);
     expect(JSON.parse(res.body).error).toBe("Token expired");
   });
@@ -318,20 +318,20 @@ describe("stats handler", () => {
     const signature = await owner.signMessage({ message });
     const token = Buffer.from(JSON.stringify({ address: owner.address, signature, message })).toString("base64");
 
-    const res = await handle(makeEvent({ headers: { authorization: `Bearer ${token}` } }), {});
+    const res = await handleStats(makeEvent({ headers: { authorization: `Bearer ${token}` } }), {});
 
     expect(res.statusCode).toBe(401);
   });
 
   it("refuses to serve when no owner address is configured", async () => {
     delete process.env.OWNER_ETH_ADDRESS;
-    const res = await handle(makeEvent({ headers: { authorization: await bearer(owner) } }), {});
+    const res = await handleStats(makeEvent({ headers: { authorization: await bearer(owner) } }), {});
     expect(res.statusCode).toBe(401);
     expect(JSON.parse(res.body).error).toBe("Owner address not configured");
   });
 
   it("serves the owner a year-wide envelope", async () => {
-    const res = await handle(makeEvent({ headers: { authorization: await bearer(owner) } }), {});
+    const res = await handleStats(makeEvent({ headers: { authorization: await bearer(owner) } }), {});
 
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.body) as StatsResponse;
@@ -345,9 +345,9 @@ describe("stats handler", () => {
   it("ignores query parameters — there is no window to ask for", async () => {
     const auth = await bearer(owner);
 
-    const plain = JSON.parse((await handle(makeEvent({ headers: { authorization: auth } }), {})).body) as StatsResponse;
+    const plain = JSON.parse((await handleStats(makeEvent({ headers: { authorization: auth } }), {})).body) as StatsResponse;
     const withParam = JSON.parse(
-      (await handle(makeEvent({ headers: { authorization: auth }, queryStringParameters: { days: "7" } }), {})).body,
+      (await handleStats(makeEvent({ headers: { authorization: auth }, queryStringParameters: { days: "7" } }), {})).body,
     ) as StatsResponse;
 
     expect(withParam).toEqual(plain);
@@ -356,7 +356,7 @@ describe("stats handler", () => {
   it("returns 500 without leaking the underlying error", async () => {
     mockGetS3ObjectWithMeta.mockRejectedValue(new Error("S3 exploded"));
 
-    const res = await handle(makeEvent({ headers: { authorization: await bearer(owner) } }), {});
+    const res = await handleStats(makeEvent({ headers: { authorization: await bearer(owner) } }), {});
 
     expect(res.statusCode).toBe(500);
     expect(res.body).not.toContain("S3 exploded");

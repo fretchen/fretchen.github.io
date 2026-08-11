@@ -78,3 +78,14 @@ export class FileHitStorage implements HitStorage {
     return { ok: true, etag: this.etagOf(body) };
   }
 }
+
+/**
+ * The one store the deployed function uses. `ANALYTICS_STORAGE=file` selects
+ * the local file store (no credentials); production and `npm test` both leave
+ * it unset and get real S3.
+ *
+ * Module-level, so `/hit` and `/stats` — now served by the same function —
+ * share a single instance instead of constructing one each.
+ */
+export const defaultStorage: HitStorage =
+  process.env.ANALYTICS_STORAGE === "file" ? new FileHitStorage() : new S3HitStorage();

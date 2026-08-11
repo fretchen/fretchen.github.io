@@ -1,8 +1,10 @@
 /**
- * Anonymous pageview hit counter — one JSON object per site per UTC hour,
- * incremented via a conditional-write compare-and-swap loop against storage.
+ * `POST /hit` — anonymous pageview counter. One JSON object per site per UTC
+ * hour, incremented via a conditional-write compare-and-swap loop.
+ *
+ * Routed from `analytics.ts`, which owns the function entrypoint.
  */
-import { type HitStorage, S3HitStorage, FileHitStorage } from "./storage.js";
+import { type HitStorage, defaultStorage } from "./storage.js";
 
 export interface ScalewayEvent {
   httpMethod: string;
@@ -23,10 +25,6 @@ const MAX_CAS_ATTEMPTS = 3;
 
 // `vike dev` serves on 3000; 5173 covers a plain `vite dev` fallback.
 const ALLOWED_ORIGINS = ["https://www.fretchen.eu", "http://localhost:3000", "http://localhost:5173"];
-
-// Local dev/sandbox (`npm run dev`) uses a file store with no credentials;
-// production and `npm test` (both leave ANALYTICS_STORAGE unset) use real S3.
-const storage: HitStorage = process.env.ANALYTICS_STORAGE === "file" ? new FileHitStorage() : new S3HitStorage();
 
 /**
  * Note: this whitelist is a consistency/defence-in-depth measure, not a spam
@@ -95,7 +93,7 @@ async function incrementHit(store: HitStorage, site: string, path: string): Prom
   }
 }
 
-export async function handle(event: ScalewayEvent, _context: unknown): Promise<HandlerResponse> {
+export async function handleHit(event: ScalewayEvent, _context: unknown): Promise<HandlerResponse> {
   const origin = event.headers?.origin ?? event.headers?.Origin;
   const corsHeaders = getCorsHeaders(origin);
 
@@ -139,25 +137,7 @@ export async function handle(event: ScalewayEvent, _context: unknown): Promise<H
     };
   }
 
-  await incrementHit(storage, ALLOWED_SITE, path);
+  await incrementHit(defaultStorage, ALLOWED_SITE, path);
 
   return { statusCode: 204, headers: corsHeaders, body: "" };
-}
-
-/* Local dev server — only when run directly: npm run dev / npm run dev:live */
-const isEntrypoint =
-  typeof process.argv[1] === "string" && import.meta.url.endsWith(process.argv[1].replace(/.*\//, ""));
-
-if (isEntrypoint && process.env.NODE_ENV === "test") {
-  (async () => {
-    const dotenvModule = await import("dotenv");
-    dotenvModule.config();
-
-    const scw = await import("@scaleway/serverless-functions");
-    // ScalewayEvent's stricter headers type (Record<string, string>) isn't
-    // structurally assignable to the package's own looser Event type — same
-    // cast scw_js/llm_x402_cron.ts uses for the identical mismatch.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
-    scw.serveHandler(handle as any, 8086);
-  })().catch((err) => console.error("Error starting local server", err));
 }

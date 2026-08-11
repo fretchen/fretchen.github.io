@@ -32,17 +32,13 @@ package:
     - "!dist/**/*.map"
 
 functions:
-  hit:
-    handler: dist/hit.handle
-    description: "Pageview hit counter - anonymous, stored in S3"
-    # No custom domain for now — deploys to Scaleway's auto-generated function
-    # URL. Add `custom_domains: [analytics.fretchen.eu]` back once DNS/cert
-    # is set up.
-  stats:
-    handler: dist/stats.handle
-    description: "Owner-gated pageview readout (wallet signature) for the /analytics dashboard"
-    minScale: 0
-    maxScale: 1
+  # One HTTP function, path-routed (POST /hit, GET /stats) — same shape as
+  # x402_facilitator. No custom domain for now, so it deploys to Scaleway's
+  # auto-generated URL; add `custom_domains: [analytics.fretchen.eu]` once
+  # DNS/cert is set up.
+  analytics:
+    handler: dist/analytics.handle
+    description: "Pageview counter (POST /hit) and owner-gated readout (GET /stats)"
   rollup:
     handler: dist/rollup.handle
     description: "Weekly compaction of hourly hit buckets into monthly rollups"

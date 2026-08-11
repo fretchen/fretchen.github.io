@@ -19,6 +19,11 @@
 import { handleHit } from "./hit.js";
 import { handleStats } from "./stats.js";
 
+// Same whitelist as hit.ts/stats.ts, kept local rather than shared — each handler in this
+// package owns its own CORS policy. Used only by the 404 fallback below; /hit and /stats
+// each already echo the origin themselves once a route matches.
+const ALLOWED_ORIGINS = ["https://www.fretchen.eu", "http://localhost:3000", "http://localhost:5173"];
+
 export interface AnalyticsEvent {
   httpMethod: string;
   path?: string;
@@ -60,9 +65,13 @@ export async function handle(event: AnalyticsEvent, context: unknown): Promise<H
     return handleStats(event, context);
   }
 
+  const origin = event.headers?.origin ?? event.headers?.Origin;
   return {
     statusCode: 404,
-    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "https://www.fretchen.eu" },
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": ALLOWED_ORIGINS.includes(origin ?? "") ? origin! : "https://www.fretchen.eu",
+    },
     body: JSON.stringify({ error: "Not found. Use POST /hit or GET /stats" }),
   };
 }

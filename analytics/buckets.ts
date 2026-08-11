@@ -251,8 +251,12 @@ export async function rebuildDays(
     }
     try {
       const outcome = await writeDay(store, site, day, bucket);
-      // "exists" means the cron or a backfill got there first — not a failure.
-      (outcome === "written" ? result.written : outcome === "conflict" ? result.failed : []).push(day);
+      if (outcome === "written") {
+        result.written.push(day);
+      } else if (outcome === "conflict") {
+        result.failed.push(day);
+      }
+      // outcome === "exists": the cron or a backfill got there first — not a failure.
     } catch {
       result.failed.push(day);
     }

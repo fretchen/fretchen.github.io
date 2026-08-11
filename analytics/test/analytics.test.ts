@@ -68,6 +68,17 @@ describe("analytics router", () => {
     }
   });
 
+  it("echoes a whitelisted dev origin on a 404, instead of always the production origin", async () => {
+    const res = await handle(makeEvent({ path: "/unknown", headers: { origin: "http://localhost:3000" } }), {});
+    expect(res.statusCode).toBe(404);
+    expect(res.headers["Access-Control-Allow-Origin"]).toBe("http://localhost:3000");
+  });
+
+  it("falls back to the production origin on a 404 from an unknown origin", async () => {
+    const res = await handle(makeEvent({ path: "/unknown", headers: { origin: "https://evil.com" } }), {});
+    expect(res.headers["Access-Control-Allow-Origin"]).toBe("https://www.fretchen.eu");
+  });
+
   // Scaleway passes the query separately, but a proxy that folds it into `path`
   // must not change which route matches.
   it("ignores a query string when matching", async () => {

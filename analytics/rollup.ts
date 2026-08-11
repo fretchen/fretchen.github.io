@@ -13,12 +13,10 @@
  * `ROLLUP_WINDOW_DAYS` widens the window for exactly that recovery — set it and
  * invoke the function once to pull a gap back in.
  */
-import { type HitStorage, S3HitStorage, FileHitStorage } from "./storage.js";
+import { type HitStorage, defaultStorage } from "./storage.js";
 import { HOURLY_FALLBACK_DAYS, addDays, daysInRange, readRollupDays, rebuildDays, toIsoDate } from "./buckets.js";
 
 const SITE = "fretchen.eu";
-
-const storage: HitStorage = process.env.ANALYTICS_STORAGE === "file" ? new FileHitStorage() : new S3HitStorage();
 
 /**
  * Days back to compact. Defaults to double the weekly cadence so one missed run
@@ -74,7 +72,7 @@ export async function handle(
   const headers = { "Content-Type": "application/json" };
 
   try {
-    const summary = await rollupRecentDays(storage, SITE);
+    const summary = await rollupRecentDays(defaultStorage, SITE);
     console.log("rollup complete", JSON.stringify(summary));
     return {
       statusCode: summary.failed.length > 0 ? 500 : 200,

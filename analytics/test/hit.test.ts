@@ -14,7 +14,7 @@ vi.mock("@fretchen/s3-utils", () => ({
 
 // ===== Import after mocks =====
 
-import { handle, type ScalewayEvent } from "../hit.js";
+import { handleHit, type ScalewayEvent } from "../hit.js";
 
 // ===== Helpers =====
 
@@ -34,22 +34,22 @@ describe("hit handler", () => {
   });
 
   it("responds to OPTIONS with CORS headers and no body", async () => {
-    const res = await handle(makeEvent({ httpMethod: "OPTIONS", body: undefined }), {});
+    const res = await handleHit(makeEvent({ httpMethod: "OPTIONS", body: undefined }), {});
     expect(res.statusCode).toBe(200);
     expect(res.body).toBe("");
     expect(mockGetS3ObjectWithMeta).not.toHaveBeenCalled();
   });
 
-  it("echoes back a whitelisted origin", async () => {
-    const res = await handle(
-      makeEvent({ httpMethod: "OPTIONS", body: undefined, headers: { origin: "http://localhost:5173" } }),
-      {},
-    );
-    expect(res.headers["Access-Control-Allow-Origin"]).toBe("http://localhost:5173");
-  });
+  it.each(["http://localhost:3000", "http://localhost:5173"])(
+    "echoes back the whitelisted origin %s",
+    async (origin) => {
+      const res = await handleHit(makeEvent({ httpMethod: "OPTIONS", body: undefined, headers: { origin } }), {});
+      expect(res.headers["Access-Control-Allow-Origin"]).toBe(origin);
+    },
+  );
 
   it("falls back to the canonical origin for an unknown origin", async () => {
-    const res = await handle(
+    const res = await handleHit(
       makeEvent({ httpMethod: "OPTIONS", body: undefined, headers: { origin: "https://evil.com" } }),
       {},
     );
@@ -57,23 +57,23 @@ describe("hit handler", () => {
   });
 
   it("rejects non-POST/OPTIONS methods with 405", async () => {
-    const res = await handle(makeEvent({ httpMethod: "GET" }), {});
+    const res = await handleHit(makeEvent({ httpMethod: "GET" }), {});
     expect(res.statusCode).toBe(405);
   });
 
   it("rejects a missing body with 400", async () => {
-    const res = await handle(makeEvent({ body: undefined }), {});
+    const res = await handleHit(makeEvent({ body: undefined }), {});
     expect(res.statusCode).toBe(400);
     expect(mockGetS3ObjectWithMeta).not.toHaveBeenCalled();
   });
 
   it("rejects malformed JSON with 400", async () => {
-    const res = await handle(makeEvent({ body: "{not json" }), {});
+    const res = await handleHit(makeEvent({ body: "{not json" }), {});
     expect(res.statusCode).toBe(400);
   });
 
   it("rejects a wrong or missing site with 400", async () => {
-    const res = await handle(makeEvent({ body: JSON.stringify({ site: "evil.com", path: "/x" }) }), {});
+    const res = await handleHit(makeEvent({ body: JSON.stringify({ site: "evil.com", path: "/x" }) }), {});
     expect(res.statusCode).toBe(400);
     expect(mockGetS3ObjectWithMeta).not.toHaveBeenCalled();
   });
@@ -84,7 +84,7 @@ describe("hit handler", () => {
     ["empty string", ""],
     ["not a string", 123],
   ])("rejects an invalid path (%s) with 400", async (_label, path) => {
-    const res = await handle(makeEvent({ body: JSON.stringify({ site: "fretchen.eu", path }) }), {});
+    const res = await handleHit(makeEvent({ body: JSON.stringify({ site: "fretchen.eu", path }) }), {});
     expect(res.statusCode).toBe(400);
     expect(mockGetS3ObjectWithMeta).not.toHaveBeenCalled();
   });
@@ -94,7 +94,7 @@ describe("hit handler", () => {
     mockPutS3ObjectConditional.mockResolvedValue({ ok: true, etag: '"new-etag"' });
 
     const overlong = `/${"a".repeat(300)}`;
-    const res = await handle(makeEvent({ body: JSON.stringify({ site: "fretchen.eu", path: overlong }) }), {});
+    const res = await handleHit(makeEvent({ body: JSON.stringify({ site: "fretchen.eu", path: overlong }) }), {});
 
     expect(res.statusCode).toBe(204);
     const [, body] = mockPutS3ObjectConditional.mock.calls[0];
@@ -107,7 +107,7 @@ describe("hit handler", () => {
     mockGetS3ObjectWithMeta.mockResolvedValue(null);
     mockPutS3ObjectConditional.mockResolvedValue({ ok: true, etag: '"new-etag"' });
 
-    const res = await handle(makeEvent(), {});
+    const res = await handleHit(makeEvent(), {});
 
     expect(res.statusCode).toBe(204);
     const [key, body, opts] = mockPutS3ObjectConditional.mock.calls[0];
@@ -124,7 +124,7 @@ describe("hit handler", () => {
     mockGetS3ObjectWithMeta.mockResolvedValue(null);
     mockPutS3ObjectConditional.mockResolvedValue({ ok: true, etag: '"new-etag"' });
 
-    await handle(makeEvent(), {});
+    await handleHit(makeEvent(), {});
 
     const [, , opts] = mockPutS3ObjectConditional.mock.calls[0];
     expect(opts).not.toHaveProperty("acl");
@@ -137,7 +137,7 @@ describe("hit handler", () => {
     });
     mockPutS3ObjectConditional.mockResolvedValue({ ok: true, etag: '"etag-2"' });
 
-    const res = await handle(makeEvent(), {});
+    const res = await handleHit(makeEvent(), {});
 
     expect(res.statusCode).toBe(204);
     const [, body, opts] = mockPutS3ObjectConditional.mock.calls[0];
@@ -156,7 +156,7 @@ describe("hit handler", () => {
     });
     mockPutS3ObjectConditional.mockResolvedValue({ ok: true, etag: '"etag-2"' });
 
-    const res = await handle(makeEvent({ body: JSON.stringify({ site: "fretchen.eu", path: "/new-page" }) }), {});
+    const res = await handleHit(makeEvent({ body: JSON.stringify({ site: "fretchen.eu", path: "/new-page" }) }), {});
 
     expect(res.statusCode).toBe(204);
     const [, body] = mockPutS3ObjectConditional.mock.calls[0];
@@ -177,7 +177,7 @@ describe("hit handler", () => {
     });
     mockPutS3ObjectConditional.mockResolvedValue({ ok: true, etag: '"etag-2"' });
 
-    const res = await handle(makeEvent(), {});
+    const res = await handleHit(makeEvent(), {});
 
     expect(res.statusCode).toBe(204);
     const [, body] = mockPutS3ObjectConditional.mock.calls[0];
@@ -193,7 +193,7 @@ describe("hit handler", () => {
       .mockResolvedValueOnce({ ok: false, status: 412 })
       .mockResolvedValueOnce({ ok: true, etag: '"final"' });
 
-    const res = await handle(makeEvent(), {});
+    const res = await handleHit(makeEvent(), {});
 
     expect(res.statusCode).toBe(204);
     expect(mockGetS3ObjectWithMeta).toHaveBeenCalledTimes(2);
@@ -206,7 +206,7 @@ describe("hit handler", () => {
     mockGetS3ObjectWithMeta.mockResolvedValue({ body: JSON.stringify({ hits: 1, pages: {} }), etag: '"e"' });
     mockPutS3ObjectConditional.mockResolvedValue({ ok: false, status: 412 });
 
-    const res = await handle(makeEvent(), {});
+    const res = await handleHit(makeEvent(), {});
 
     expect(res.statusCode).toBe(204);
     expect(mockGetS3ObjectWithMeta).toHaveBeenCalledTimes(3);

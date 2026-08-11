@@ -2,7 +2,7 @@ import { defineConfig } from "tsup";
 import { builtinModules } from "module";
 
 export default defineConfig({
-  entry: ["hit.ts"],
+  entry: ["analytics.ts", "rollup.ts"],
   format: ["esm"],
   platform: "node",
   target: "node22",
@@ -26,7 +26,7 @@ export default defineConfig({
   // install` on its own — not a blanket [/.*/]. noExternal wins over
   // `external` when both would match a package, so this has to be a narrow
   // allowlist, not "everything except the two entries above".
-  noExternal: ["@fretchen/s3-utils"],
+  noExternal: ["@fretchen/s3-utils", "@fretchen/chain-utils"],
   banner: {
     js: `import { createRequire } from 'module'; const require = createRequire(import.meta.url);`,
   },

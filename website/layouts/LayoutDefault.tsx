@@ -61,7 +61,7 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
               <NavItem href="/blog">Blog</NavItem>
               <NavItem href="/quantum">Quantum</NavItem>
               <NavItem href="/lab">Lab</NavItem>
-              <GrowthNavLink />
+              <OwnerNavLinks />
             </div>
             <div className={layout.scrollIndicator} ref={scrollIndicatorRef}></div>
             <div className={layout.headerControls}>
@@ -113,13 +113,21 @@ function Content({ children }: { children: React.ReactNode }) {
   );
 }
 
-function GrowthNavLink() {
+/**
+ * Nav entries only the site owner sees — one gate for all of them, not one per link.
+ *
+ * Cosmetic only: both pages check ownership themselves, and `GET /stats` verifies a wallet
+ * signature server-side. `isConnected` is reconnect-aware, so these never flash in before
+ * wagmi has finished reconnecting.
+ */
+function OwnerNavLinks() {
   const { address, isConnected } = useWalletConnection();
   const isOwner = isConnected && address?.toLowerCase() === OWNER_ADDRESS.toLowerCase();
   if (!isOwner) return null;
   return (
-    <div className={layout.navigationLink}>
-      <Link href="/growth">Growth</Link>
-    </div>
+    <>
+      <NavItem href="/growth">Growth</NavItem>
+      <NavItem href="/analytics">Analytics</NavItem>
+    </>
   );
 }

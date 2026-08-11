@@ -9,14 +9,19 @@ vi.mock("@fretchen/s3-utils", () => ({
   putS3Object: mockPutS3Object,
 }));
 
-const mockVerifyMessage = vi.fn();
-vi.mock("viem", () => ({
-  verifyMessage: mockVerifyMessage,
-}));
+// Signatures here are real, not mocked. `verifySignedMessage` now lives in
+// @fretchen/chain-utils, which resolves its own copy of viem through the
+// symlinked workspace package — a `vi.mock("viem")` in this package cannot
+// reach it. Signing for real is also the stronger test.
+import { privateKeyToAccount } from "viem/accounts";
 
 // ===== Test data =====
 
-const OWNER_ADDRESS = "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C";
+// Anvil account #0 — a well-known test key, never used for anything real.
+const owner = privateKeyToAccount(
+  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+);
+const OWNER_ADDRESS = owner.address;
 
 const sampleQueue = {
   drafts: [
@@ -85,13 +90,14 @@ const samplePerformance = {
 
 // ===== Helpers =====
 
-function makeAuthHeader(timestamp?: number): string {
+/** A freshly signed owner token, rebuilt each test so it never ages out. */
+let validAuth: string;
+
+async function makeAuthHeader(timestamp?: number): Promise<string> {
   const ts = timestamp ?? Math.floor(Date.now() / 1000);
-  const payload = {
-    address: OWNER_ADDRESS,
-    signature: "0xvalidsignature",
-    message: `growth-api:${ts}`,
-  };
+  const message = `growth-api:${ts}`;
+  const signature = await owner.signMessage({ message });
+  const payload = { address: OWNER_ADDRESS, signature, message };
   return `Bearer ${Buffer.from(JSON.stringify(payload)).toString("base64")}`;
 }
 
@@ -104,7 +110,7 @@ function makeEvent(
     auth?: string | null;
   } = {},
 ) {
-  const auth = options.auth === null ? undefined : (options.auth ?? makeAuthHeader());
+  const auth = options.auth === null ? undefined : (options.auth ?? validAuth);
   return {
     httpMethod: method,
     path: `/${path}`,
@@ -135,8 +141,7 @@ describe("growth_api", () => {
     vi.resetModules();
     mockGetS3Object.mockReset();
     mockPutS3Object.mockReset();
-    mockVerifyMessage.mockReset();
-    mockVerifyMessage.mockResolvedValue(true);
+    validAuth = await makeAuthHeader();
 
     process.env.OWNER_ETH_ADDRESS = OWNER_ADDRESS;
     process.env.SCW_ACCESS_KEY = "test-key";
@@ -163,18 +168,33 @@ describe("growth_api", () => {
     });
 
     test("returns 401 when signature is invalid", async () => {
-      mockVerifyMessage.mockResolvedValueOnce(false);
-      const event = makeEvent("GET", "drafts");
+      // Claims the owner's address but signed by someone else — the recovered
+      // signer won't match, which is the case a mocked verifier can't prove.
+      const impostor = privateKeyToAccount(
+        "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
+      );
+      const message = `growth-api:${Math.floor(Date.now() / 1000)}`;
+      const payload = {
+        address: OWNER_ADDRESS,
+        signature: await impostor.signMessage({ message }),
+        message,
+      };
+      const auth = `Bearer ${Buffer.from(JSON.stringify(payload)).toString("base64")}`;
+      const event = makeEvent("GET", "drafts", { auth });
       const res = (await handle(event, {})) as { statusCode: number; body: string };
       expect(res.statusCode).toBe(401);
       expect(JSON.parse(res.body).error).toMatch(/Invalid wallet signature/i);
     });
 
     test("returns 401 when address is not the owner", async () => {
+      const message = `growth-api:${Math.floor(Date.now() / 1000)}`;
+      const other = privateKeyToAccount(
+        "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
+      );
       const payload = {
-        address: "0x1111111111111111111111111111111111111111",
-        signature: "0xvalidsignature",
-        message: `growth-api:${Math.floor(Date.now() / 1000)}`,
+        address: other.address,
+        signature: await other.signMessage({ message }),
+        message,
       };
       const auth = `Bearer ${Buffer.from(JSON.stringify(payload)).toString("base64")}`;
       const event = makeEvent("GET", "drafts", { auth });
@@ -185,7 +205,7 @@ describe("growth_api", () => {
 
     test("returns 401 when message timestamp is expired", async () => {
       const oldTimestamp = Math.floor(Date.now() / 1000) - 600; // 10 min ago
-      const event = makeEvent("GET", "drafts", { auth: makeAuthHeader(oldTimestamp) });
+      const event = makeEvent("GET", "drafts", { auth: await makeAuthHeader(oldTimestamp) });
       const res = (await handle(event, {})) as { statusCode: number; body: string };
       expect(res.statusCode).toBe(401);
       expect(JSON.parse(res.body).error).toMatch(/expired/i);

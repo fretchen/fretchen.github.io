@@ -56,6 +56,14 @@ class S3Storage:
         except self.s3.exceptions.NoSuchKey:
             return None
 
+    def write(self, key: str, data: dict) -> None:
+        self.s3.put_object(
+            Bucket=self.bucket,
+            Key=key,
+            Body=json.dumps(data).encode(),
+            ContentType="application/json",
+        )
+
     def list_keys(self, prefix: str = "") -> list[str]:
         response = self.s3.list_objects_v2(Bucket=self.bucket, Prefix=prefix)
         return [obj["Key"] for obj in response.get("Contents", [])]

@@ -191,25 +191,25 @@ npm run build         # tsup → dist/
 ### Local servers
 
 ```bash
-npm run dev            # :8086  hit,   file storage (notebooks/state/) — no credentials
-npm run dev:live       # :8086  hit,   real S3 (needs analytics/.env)
-npm run dev:stats      # :8087  stats, file storage
-npm run dev:stats:live # :8087  stats, real S3 — serves the actual backfilled history
-npm run dev:rollup     # :8088  rollup, file storage
+npm run dev        # :8086  /hit + /stats, file storage (notebooks/state/) — no credentials
+npm run dev:live   # :8086  /hit + /stats, real S3 (needs analytics/.env)
+npm run dev:rollup # :8088  rollup, file storage
 ```
 
-The file-storage variants (`ANALYTICS_STORAGE=file` selects `FileHitStorage`
-over `S3HitStorage`) read and write `notebooks/state/` instead of S3 — safe to
+One server for both endpoints, because they are one function. The
+file-storage variants (`ANALYTICS_STORAGE=file` selects `FileHitStorage` over
+`S3HitStorage`) read and write `notebooks/state/` instead of S3 — safe to
 hammer repeatedly with no risk to production data. See
 `notebooks/01_smoke_test.ipynb` for a driver that exercises either target.
 
-**Driving the dashboard from a local `stats`.** `website/.env` sets
-`PUBLIC_ENV__ANALYTICS_STATS_URL=http://localhost:8087`; with that in place,
-`npm run dev` in `website/` (port 5173, already on the CORS whitelist) and
-`npm run dev:stats:live` here gives the real `/analytics` page over real data.
-`OWNER_ETH_ADDRESS` must be set in `analytics/.env` to the wallet you connect
-with, or every request comes back `401 Address mismatch`. Comment the variable
-out of `website/.env` to go back to the deployed function.
+**Driving the website from a local function.** `website/.env` sets
+`PUBLIC_ENV__ANALYTICS_URL=http://localhost:8086`; with that in place, `npm run
+dev` in `website/` (port 3000, already on the CORS whitelist) plus `npm run
+dev:live` here gives the real `/analytics` page over real data, and the beacon
+lands locally too. `OWNER_ETH_ADDRESS` must be set in `analytics/.env` to the
+wallet you connect with, or every `/stats` request comes back `401 Address
+mismatch`. Comment the variable out of `website/.env` to go back to the
+deployed function.
 
 Unlike `/hit`, `/stats` is genuinely gated by CORS — it is a `GET` carrying an
 `Authorization` header, so the browser preflights it and an origin missing from
@@ -225,10 +225,15 @@ npm run deploy         # serverless deploy
 npm run info           # per-function URLs
 ```
 
-After the first deploy of `stats`, paste its URL into the fallback in
-`website/hooks/useAnalyticsStats.ts`. That fallback is what production uses —
-`.github/workflows/pages.yml` sets no `PUBLIC_ENV__*` variables, so there is no
-CI mechanism to swap it. Same manual step `utils/hitTracker.ts` already needs.
+After deploying, paste the `analytics` function's URL into the fallback in
+`website/utils/analyticsApi.ts` — one string, shared by the beacon and the
+dashboard. That fallback is what production uses: `.github/workflows/pages.yml`
+sets no `PUBLIC_ENV__*` variables, so there is no CI mechanism to swap it.
+
+**Then delete the old `hit` function in the Scaleway Console.** It predates the
+merge into `analytics` and `serverless deploy` does not remove functions that
+have been dropped from the config, so it would otherwise keep running (and
+keep collecting beacons from any stale client) forever.
 
 ## Environment variables
 

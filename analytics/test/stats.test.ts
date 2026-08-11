@@ -345,9 +345,12 @@ describe("stats handler", () => {
   it("ignores query parameters — there is no window to ask for", async () => {
     const auth = await bearer(owner);
 
-    const plain = JSON.parse((await handleStats(makeEvent({ headers: { authorization: auth } }), {})).body) as StatsResponse;
+    const plain = JSON.parse(
+      (await handleStats(makeEvent({ headers: { authorization: auth } }), {})).body,
+    ) as StatsResponse;
     const withParam = JSON.parse(
-      (await handleStats(makeEvent({ headers: { authorization: auth }, queryStringParameters: { days: "7" } }), {})).body,
+      (await handleStats(makeEvent({ headers: { authorization: auth }, queryStringParameters: { days: "7" } }), {}))
+        .body,
     ) as StatsResponse;
 
     expect(withParam).toEqual(plain);

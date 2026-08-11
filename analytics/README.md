@@ -169,7 +169,8 @@ fetchable from the bucket URL without credentials. Two ways in:
 - **`/analytics` on the website** — owner-gated dashboard over `GET /stats`,
   with three views: 30 days by day, 90 days by week, one year by month.
   Switching between them re-slices the single cached response rather than
-  refetching. Not linked from any nav.
+  refetching. Linked from the nav bar alongside `/growth`, but only once the
+  owner wallet is connected (`OwnerNavLinks` in `website/layouts/LayoutDefault.tsx`).
 - **`notebooks/02_readout.ipynb`** — direct S3 reads, for anything the
   dashboard doesn't show.
 

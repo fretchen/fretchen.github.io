@@ -17,15 +17,34 @@ Cron (08:00 UTC) → handler.py → S3 state (insights, drafts, performance)
 
 State is stored as JSON files in Scaleway S3 (`my-imagestore` bucket, `growth-agent/` prefix).
 
+The run itself is a LangGraph graph. Node order:
+
+```
+START → ingest → [insights (Monday only) →] plan → drafts → publish → END
+```
+
+Export it as a picture with `uv run python scripts/run_local.py --graph` (writes `graph.png`).
+
 ## Stack
 
 | Component | Technology |
 |---|---|
 | Runtime | Python 3.11 (Scaleway Serverless Container) |
-| LLM | IONOS AI Model Hub (Llama 3.3 70B) |
+| LLM | IONOS AI Model Hub (Llama 3.3 70B) by default — see below |
 | Social | Mastodon REST API, Bluesky AT Protocol |
 | Storage | Scaleway S3 |
 | Package manager | uv |
+
+### LLM provider
+
+The provider is selected at runtime by the `LLM_PROVIDER` env var — `ionos` (default) or
+`mistral` — and each needs its matching API key. Set `LLM_MODEL` to override the provider's
+default model. Selection logic is in `agent/llm_client.py` (`LLMClient.from_env()`).
+
+| `LLM_PROVIDER` | API key env var |
+| --- | --- |
+| `ionos` (default) | `IONOS_API_TOKEN` |
+| `mistral` | `MISTRAL_API_KEY` |
 
 ## Development
 

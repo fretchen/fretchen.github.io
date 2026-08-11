@@ -71,6 +71,17 @@ This blog serves three distinct audiences. Every post targets ONE primary audien
 
 Adapt vocabulary, depth, and narrative structure to the chosen audience. When in doubt, ask the user which audience they're targeting.
 
+### Writing principles for the non-STEM audience
+
+These apply to posts aimed at academics without a STEM background — the political-economics
+posts in particular. They are what keeps that audience reading:
+
+- Natural language over notation — write `"patience"`, not `"δ"`.
+- Explain concepts inline on first use. Even a recurring character gets a one-line
+  reintroduction; do not assume the reader came from the previous post.
+- Concrete example first, then generalize.
+- Interactive widgets use plain-language labels, and state their results in plain language.
+
 ## Style Consistency
 
 Before planning a new post, **always read 2–3 existing posts** that share the same category or target audience. Use them to extract:
@@ -109,7 +120,6 @@ When implementing after an approved plan:
   ```
 - Import React components only when interactive elements are needed
 - For interactive posts, consider using `.tsx` format instead (see existing patterns like `prisoners_dilemma_interactive.tsx`)
-- Use `<details>` blocks for technical depth that would interrupt flow
 - Keep paragraphs short — the reader skims first, reads second
 
 ## Constraints

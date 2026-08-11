@@ -1,0 +1,52 @@
+service: analytics-service
+
+useDotenv: true
+
+configValidationMode: off
+provider:
+  name: scaleway
+  runtime: node22
+  env:
+    NODE_ENV: production
+    # Public address, not a secret — only ever compared against a recovered
+    # signer in stats.ts. Same value scw_js's growth API uses.
+    OWNER_ETH_ADDRESS: ${env:OWNER_ETH_ADDRESS}
+  secret:
+    SCW_SECRET_KEY: ${env:SCW_SECRET_KEY}
+    SCW_ACCESS_KEY: ${env:SCW_ACCESS_KEY}
+
+plugins:
+  - serverless-scaleway-functions
+
+package:
+  patterns:
+    # Exclude everything by default, then re-include only what the deployed
+    # function actually needs. The previous allowlist-shaped patterns below
+    # (without a leading "!**") did NOT act as an allowlist — Scaleway's
+    # serverless plugin still zips the whole service directory by default,
+    # which silently dragged in notebooks/ (a 280MB+ local Python/Jupyter dev
+    # environment with its own .venv) into the deploy package, producing a
+    # 130MB+ zip for a 10KB function. Same bug, same fix, as scw_js/serverless.yml.
+    - "!**"
+    - "dist/**"
+    - "!dist/**/*.map"
+
+functions:
+  # One HTTP function, path-routed (POST /hit, GET /stats) — same shape as
+  # x402_facilitator. No custom domain for now, so it deploys to Scaleway's
+  # auto-generated URL; add `custom_domains: [analytics.fretchen.eu]` once
+  # DNS/cert is set up.
+  analytics:
+    handler: dist/analytics.handle
+    description: "Pageview counter (POST /hit) and owner-gated readout (GET /stats)"
+  rollup:
+    handler: dist/rollup.handle
+    description: "Weekly compaction of hourly hit buckets into monthly rollups"
+    events:
+      - schedule:
+          # Scaleway's cron validator (serverless-scaleway-functions/shared/validate.js)
+          # rejects the standard */N step syntax, so keep every field literal.
+          # Mondays 00:30 UTC. Cadence is a cost choice only — stats.ts reads
+          # recent days straight from the hourly buckets, so a late or missed
+          # run never changes what the dashboard shows.
+          rate: "30 0 * * 1"

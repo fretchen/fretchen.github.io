@@ -1,6 +1,6 @@
 import { getS3Object, putS3Object } from "@fretchen/s3-utils";
 import pino from "pino";
-import { verifySignedMessage } from "./auth_utils.js";
+import { verifySignedMessage } from "@fretchen/chain-utils";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 

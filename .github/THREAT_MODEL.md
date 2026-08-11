@@ -1,6 +1,6 @@
 # Threat Model
 
-Last updated: 2026-06-20
+Last updated: 2026-08-09
 
 This is a lightweight, living threat model. It follows the OWASP four-question framework and the values of the Threat Modeling Manifesto — a maintained document over a one-time audit, design issues over checkbox compliance, action over ceremony.
 
@@ -27,7 +27,7 @@ What has monetary value, irreversibility, or trust significance in this system:
 | Owner EOA private key | Dedicated keystore account (`0x1af51D…fBB20`), separated from daily wallet since 2026-06 | Controls every upgradeable contract — the highest-value key in the system |
 | Agent wallet private key | scw_js secrets | Can trigger `requestImageUpdate()` and receive mintPrice per call |
 | Facilitator wallet private key | x402_facilitator secrets | Receives USDC fees from settlements |
-| Scaleway secrets (SCW_SECRET_KEY) | Serverless secrets | Access to S3 image bucket and transactional email |
+| Scaleway secrets (SCW_SECRET_KEY) | Serverless secrets | Access to S3 image bucket, transactional email, and analytics counters |
 | BFL / IONOS API keys | Serverless secrets | Image generation quota; no on-chain access |
 
 Notably absent: user wallet keys (never touch the server), user PII (not collected).
@@ -83,6 +83,8 @@ This is the attack-**surface** map: each arrow marks where data crosses from a l
 │                                          (owner sig only)   │
 │  fetch ───────────────────────────────► comment_service     │
 │                                          (origin whitelist) │
+│  sendBeacon ───────────────────────────► analytics service  │
+│                                          (origin whitelist) │
 └─────────────────────────────────────────────────────────────┘
 
 x402_facilitator
@@ -101,6 +103,8 @@ Owner EOA ───────────────────────�
 ```
 
 ★ The x402 facilitator is an intentionally open public service (any merchant on Base or Optimism). `Access-Control-Allow-Origin: *` is required by the open-protocol design. The blast radius of a cross-origin attack is bounded by EIP-712/EIP-3009 cryptography: a malicious page can trigger settlement requests but cannot redirect funds (the signature binds recipient, amount, and nonce) or forge signatures. The residual risk (gas drain via `/settle` spam) is accepted: garbage requests fail before any on-chain transaction is attempted, L2 gas per settlement is negligible (~$0.001), and no realistic threat actor has financial incentive to drain a facilitator wallet whose ETH goes to miners, not the attacker.
+
+The analytics service accepts anonymous, unauthenticated `POST /hit` writes behind the same origin whitelist as `comment_service`. Note that the whitelist is defence-in-depth, **not** a write control here: CORS is browser-enforced only (any script or `curl` ignores it), and the pageview beacon is a `sendBeacon` simple request (`text/plain`), so no preflight occurs and a cross-origin write would land regardless of the header. Write abuse is bounded instead by path validation and the 200-entry `pages` cap (§5, API4). The counters themselves are written **private** (no public-read ACL) and the read path is authorized — see §6.
 
 ---
 
@@ -129,7 +133,7 @@ This is the **HOW** that complements §3 (WHO) and §4 (WHERE): the concrete cla
 |---|---|---|---|
 | Broken authentication (API2) | EIP-712/EIP-3009 sig verify (facilitator); agent-wallet whitelist (scw_js); `useWalletAuth` owner-sig bearer (growth); origin whitelist (comment_service) | Mitigated | §4; §7 |
 | Broken function-level authz (API5) | x402 `Access-Control-Allow-Origin: *`; bounded by EIP-3009 crypto | Accepted (intentional open protocol) | §4 ★; §7 |
-| Unrestricted resource consumption (API4) | `/settle` spam gas drain; serverless cold starts (accepted); LLM pre-charge balance gate (batch-settlement stall; Open, medium) | Mixed — gas drain accepted; balance-gate open | §4; scw_js/SECURITY.md |
+| Unrestricted resource consumption (API4) | `/settle` spam gas drain; serverless cold starts (accepted); LLM pre-charge balance gate (batch-settlement stall; Open, medium); analytics `/hit` request volume (not rate-limited, and **CORS is not the control** — browser-only, and `sendBeacon` sends a simple request with no preflight; accepted, since the consequence is a skewed counter, not cost or exposure); analytics `pages` map cardinality abuse (mitigated via path validation + a 200-entry cap) | Mixed — gas drain and `/hit` volume accepted; balance-gate open; `pages` cardinality mitigated | §4; scw_js/SECURITY.md |
 | Unrestricted access to sensitive business flows (API6) | Deliver-before-payment in the LLM and genimg flows | Open (medium) | scw_js/SECURITY.md |
 | Security misconfiguration / secret exposure (API8) | comment_service sends `SCW_SECRET_KEY` as the `X-Auth-Token` header to the Scaleway transactional-email API | Open (medium) | §7 |
 | Unsafe client trust (API10) | Client-side-only image validation | Open (low) | §7 |
@@ -147,6 +151,7 @@ For blockchain systems, **Integrity** dominates. Confidentiality is generally lo
 | scw_js | Low | **High** — agent wallet controls on-chain writes | Medium | API key compromise has no on-chain reach |
 | website frontend | Low | Medium — client-side only; no server state | Low — static hosting | Wallet auth is the integrity boundary |
 | comment_service | Medium — stores anonymous user names/text in S3 | Low — comment content and like counts | Low | Low-value, but holds `SCW_SECRET_KEY` (email) — not zero-secret |
+| analytics service | Low — aggregate counts only, no PII; objects are written **private** (no public-read ACL) and the read path is planned as owner-signature-gated, like the Growth API | Low — writes are unauthenticated, so counts are **advisory**: fine for traffic insight, never to be trusted for a security or financial decision | Low — same serverless cold-start profile as other functions | Private-by-omission: the bucket also serves public-read images, so "private" rests on the handler omitting an ACL — locked by a test |
 
 ---
 

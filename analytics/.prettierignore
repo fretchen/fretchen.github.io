@@ -1,0 +1,17 @@
+node_modules/
+coverage/
+dist/
+build/
+*.min.js
+*.bundle.js
+package-lock.json
+yarn.lock
+.git/
+.vscode/
+.env
+*.log
+# The whole notebooks/ package: Python, not JS — .venv/ is huge, and state/
+# (LocalStorage/FileHitStorage fixture output) isn't JS either. Matches the
+# blanket exclusion in eslint.config.js rather than listing subpaths one by
+# one (state/ was missed that way once already).
+notebooks/

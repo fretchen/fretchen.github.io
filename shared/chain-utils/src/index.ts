@@ -155,4 +155,10 @@ export { loadPrivateKey, getRpcUrl } from "./env-utils";
 // Auth Protocol (isomorphic — shared by scw_js and website)
 // ═══════════════════════════════════════════════════════════════
 
-export { AUTH_TOKEN_MAX_AGE_MS, buildAuthMessage } from "./auth-protocol";
+export {
+  AUTH_TOKEN_MAX_AGE_MS,
+  buildAuthMessage,
+  parseBearerToken,
+  verifySignedMessage,
+  type BearerPayload,
+} from "./auth-protocol";

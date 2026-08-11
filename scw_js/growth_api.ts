@@ -11,7 +11,7 @@ import {
   AuthError,
   type ContentQueue,
 } from "./growth_service.js";
-import { parseBearerToken } from "./auth_utils.js";
+import { parseBearerToken } from "@fretchen/chain-utils";
 import { parseJsonBody } from "./utils.js";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });

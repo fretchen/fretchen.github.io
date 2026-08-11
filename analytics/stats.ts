@@ -17,19 +17,21 @@
  * decouples this endpoint from the cron's cadence.
  */
 import { type HitStorage, S3HitStorage, FileHitStorage } from "./storage.js";
-import { parseBearerToken, verifyOwner } from "./auth.js";
+import { parseBearerToken, verifySignedMessage } from "@fretchen/chain-utils";
 import {
   HOURLY_FALLBACK_DAYS,
   addDays,
   daysInRange,
-  readDayFromHourly,
   readRollupDays,
+  rebuildDays,
   toIsoDate,
-  writeDay,
   type DayBucket,
 } from "./buckets.js";
 
 const SITE = "fretchen.eu";
+
+/** Scopes a token to this service — one minted for the growth API won't work here. */
+const AUTH_PREFIX = "analytics-api";
 
 /** The window served, in days. One year, always. */
 const WINDOW_DAYS = 365;
@@ -78,13 +80,9 @@ function getCorsHeaders(origin?: string): Record<string, string> {
  * and a quiet week would cost 168 GETs forever. `HOURLY_FALLBACK_DAYS` still
  * caps it, for the cold-start case where the rollups are empty.
  *
- * Complete days reconstructed from hourly buckets are written back to their
- * rollup. That is a cache warm, not the caller's request: it costs 24 GETs to
- * rebuild a day, and without it every dashboard load repeats that work for
- * every day the weekly cron hasn't reached yet. `writeDay` is CAS-safe and
- * existing-day-wins, so it can't clobber a backfilled Umami day and races
- * harmlessly with the cron. Failures are swallowed — a cache that didn't warm
- * must never fail the read.
+ * Whatever it has to rebuild, it also compacts — see `rebuildDays`. Without
+ * that, every dashboard load would repeat 24 GETs per day the cron hasn't
+ * reached yet.
  */
 export async function collectRange(
   store: HitStorage,
@@ -100,25 +98,10 @@ export async function collectRange(
   const newestCompacted = Object.keys(days).sort().at(-1);
   const probeFrom = newestCompacted && newestCompacted >= windowStart ? addDays(newestCompacted, 1) : windowStart;
 
-  const missing = daysInRange(from, to).filter((day) => !days[day] && day >= probeFrom);
+  const candidates = daysInRange(from, to).filter((day) => !days[day] && day >= probeFrom);
+  const { rebuilt } = await rebuildDays(store, site, candidates, today);
 
-  const recovered = await Promise.all(missing.map((day) => readDayFromHourly(store, site, day)));
-
-  const writeBacks: Promise<unknown>[] = [];
-  missing.forEach((day, index) => {
-    const bucket = recovered[index];
-    if (!bucket) {
-      return;
-    }
-    days[day] = bucket;
-    // Today is still being written to — compacting it would freeze a partial count.
-    if (day !== today) {
-      writeBacks.push(writeDay(store, site, day, bucket).catch(() => undefined));
-    }
-  });
-  await Promise.all(writeBacks);
-
-  return days;
+  return { ...days, ...rebuilt };
 }
 
 export async function buildStats(store: HitStorage, site: string, now: Date = new Date()): Promise<StatsResponse> {
@@ -148,7 +131,10 @@ export async function handle(
     return { statusCode: 401, headers, body: JSON.stringify({ error: "Missing or invalid Authorization header" }) };
   }
 
-  const authError = await verifyOwner(token);
+  const ownerAddress = process.env.OWNER_ETH_ADDRESS;
+  const authError = ownerAddress
+    ? await verifySignedMessage(token.address, token.signature, token.message, AUTH_PREFIX, ownerAddress)
+    : "Owner address not configured";
   if (authError) {
     return { statusCode: 401, headers, body: JSON.stringify({ error: authError }) };
   }

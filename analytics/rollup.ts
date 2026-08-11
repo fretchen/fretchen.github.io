@@ -2,26 +2,32 @@
  * Weekly compaction cron: folds complete days of hourly buckets into their
  * monthly rollup.
  *
- * This is a *compaction* step, not the source of truth. `stats.ts` reads
- * recent days straight from the hourly buckets when they aren't rolled up yet,
- * so the cadence only affects read cost — a late or missed run changes what
- * the dashboard costs to render, never what it shows.
+ * This is a *compaction* step, not the source of truth. `stats.ts` reads recent
+ * days straight from the hourly buckets when they aren't rolled up yet, so the
+ * cadence only affects read cost — a late run changes what the dashboard costs
+ * to render, never what it shows.
+ *
+ * It is still load-bearing, though: `stats.ts` only looks back
+ * `HOURLY_FALLBACK_DAYS`, so days that go uncompacted for longer drop out of
+ * the dashboard even though their hourly objects are still in the bucket.
+ * `ROLLUP_WINDOW_DAYS` widens the window for exactly that recovery — set it and
+ * invoke the function once to pull a gap back in.
  */
 import { type HitStorage, S3HitStorage, FileHitStorage } from "./storage.js";
-import {
-  HOURLY_FALLBACK_DAYS,
-  addDays,
-  daysInRange,
-  readDayFromHourly,
-  readRollupDays,
-  toIsoDate,
-  writeDay,
-  type WriteDayResult,
-} from "./buckets.js";
+import { HOURLY_FALLBACK_DAYS, addDays, daysInRange, readRollupDays, rebuildDays, toIsoDate } from "./buckets.js";
 
 const SITE = "fretchen.eu";
 
 const storage: HitStorage = process.env.ANALYTICS_STORAGE === "file" ? new FileHitStorage() : new S3HitStorage();
+
+/**
+ * Days back to compact. Defaults to double the weekly cadence so one missed run
+ * self-heals on the next; raise it to recover a longer gap.
+ */
+function windowDays(): number {
+  const configured = Number.parseInt(process.env.ROLLUP_WINDOW_DAYS ?? "", 10);
+  return Number.isFinite(configured) && configured > 0 ? configured : HOURLY_FALLBACK_DAYS;
+}
 
 export interface RollupSummary {
   from: string;
@@ -29,51 +35,36 @@ export interface RollupSummary {
   written: string[];
   empty: string[];
   skipped: string[];
-  conflicts: string[];
+  failed: string[];
 }
 
 /**
- * Compacts every complete day in the trailing window that isn't in a rollup
- * yet. Today is excluded — it is still being written to.
- *
- * The window is `HOURLY_FALLBACK_DAYS` (14) rather than one week, so a single
- * missed run is repaired by the next one. Days already present cost one rollup
- * GET between them all; only genuine holes fan out to 24 hourly GETs.
+ * Compacts every complete day in the window that isn't in a rollup yet. Today
+ * is excluded — it is still being written to.
  */
 export async function rollupRecentDays(
   store: HitStorage,
   site: string,
   now: Date = new Date(),
+  days: number = windowDays(),
 ): Promise<RollupSummary> {
   const to = addDays(toIsoDate(now), -1); // yesterday: the most recent complete UTC day
-  const from = addDays(to, -(HOURLY_FALLBACK_DAYS - 1));
+  const from = addDays(to, -(days - 1));
 
-  const alreadyRolledUp = await readRollupDays(store, site, from, to);
-  const summary: RollupSummary = { from, to, written: [], empty: [], skipped: [], conflicts: [] };
+  const compacted = await readRollupDays(store, site, from, to);
+  const all = daysInRange(from, to);
+  const candidates = all.filter((day) => !compacted[day]);
 
-  for (const day of daysInRange(from, to)) {
-    if (alreadyRolledUp[day]) {
-      summary.skipped.push(day);
-      continue;
-    }
+  const { written, empty, failed } = await rebuildDays(store, site, candidates, toIsoDate(now));
 
-    const bucket = await readDayFromHourly(store, site, day);
-    if (!bucket) {
-      summary.empty.push(day); // no traffic that day — nothing to store
-      continue;
-    }
-
-    const result: WriteDayResult = await writeDay(store, site, day, bucket);
-    if (result === "written") {
-      summary.written.push(day);
-    } else if (result === "exists") {
-      summary.skipped.push(day);
-    } else {
-      summary.conflicts.push(day);
-    }
-  }
-
-  return summary;
+  return {
+    from,
+    to,
+    written,
+    empty,
+    skipped: all.filter((day) => compacted[day]),
+    failed,
+  };
 }
 
 export async function handle(
@@ -86,17 +77,13 @@ export async function handle(
     const summary = await rollupRecentDays(storage, SITE);
     console.log("rollup complete", JSON.stringify(summary));
     return {
-      statusCode: summary.conflicts.length > 0 ? 500 : 200,
+      statusCode: summary.failed.length > 0 ? 500 : 200,
       headers,
       body: JSON.stringify(summary),
     };
   } catch (err) {
     console.error("rollup failed", err);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({ error: (err as Error).message }),
-    };
+    return { statusCode: 500, headers, body: JSON.stringify({ error: (err as Error).message }) };
   }
 }
 

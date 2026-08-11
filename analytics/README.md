@@ -48,9 +48,12 @@ bounded by path validation and the 200-entry `pages` cap instead.
 
 Serves the `/analytics` dashboard. Requires `Authorization: Bearer <base64
 payload>` where the payload is `{address, signature, message}` and `message` is
-`analytics-api:<unix ts>`, signed by `OWNER_ETH_ADDRESS` — the same EIP-191
-scheme the Growth API uses, implemented in `auth.ts`. Tokens expire after five
-minutes. Anything else returns `401`.
+`analytics-api:<unix ts>`, signed by `OWNER_ETH_ADDRESS`. Tokens expire after
+five minutes; anything else returns `401`.
+
+Both halves of that scheme — building the message and verifying it — live in
+`@fretchen/chain-utils` (`auth-protocol.ts`), shared with the Growth API. The
+`analytics-api` prefix is what scopes a token to this service.
 
 ```json
 {
@@ -74,7 +77,14 @@ the daily/weekly/monthly bucketing).
 For a token from the terminal:
 
 ```bash
-OWNER_PRIVATE_KEY=0x... npx tsx scripts/mint-token.ts
+OWNER_PRIVATE_KEY=0x... node --input-type=module -e '
+import { privateKeyToAccount } from "viem/accounts";
+const a = privateKeyToAccount(process.env.OWNER_PRIVATE_KEY);
+const message = `analytics-api:${Math.floor(Date.now() / 1000)}`;
+const signature = await a.signMessage({ message });
+const payload = { address: a.address, signature, message };
+console.log("Bearer " + Buffer.from(JSON.stringify(payload)).toString("base64"));
+'
 ```
 
 ## Data model
@@ -122,6 +132,15 @@ Two things keep that fallback cheap, because rebuilding a day costs 24 GETs:
 
 In practice a warm load is **37 GETs** — 13 monthly rollups plus today's 24
 hours — regardless of which range the dashboard is showing.
+
+**Nothing deletes the hourly buckets, but they can stop being reachable.** The
+bucket has no lifecycle configuration and no code path deletes under `counts/`
+(the only S3 deletes in the repo are scoped to `channels/` and `growth-agent`),
+so the objects are permanent — ~9MB/year, never listed, so no truncation limit
+applies. What _is_ lossy is visibility: if the cron stops for longer than
+`HOURLY_FALLBACK_DAYS`, `/stats` stops probing those days and renders them as
+no-traffic while the data sits there intact. To pull such a gap back in, set
+`ROLLUP_WINDOW_DAYS` wide enough to cover it and invoke `rollup` once.
 
 `source` is per day, not per month, because the changeover month holds both
 kinds and they are not the same measurement: Umami filtered bots and
@@ -205,9 +224,10 @@ CI mechanism to swap it. Same manual step `utils/hitTracker.ts` already needs.
 
 ## Environment variables
 
-| Variable            | Scope  | Description                             |
-| ------------------- | ------ | --------------------------------------- |
-| `SCW_ACCESS_KEY`    | secret | Scaleway API / S3 credential            |
-| `SCW_SECRET_KEY`    | secret | Scaleway API / S3 credential            |
-| `OWNER_ETH_ADDRESS` | env    | Wallet allowed to read `GET /stats`     |
-| `ANALYTICS_STORAGE` | env    | `file` selects local storage (dev only) |
+| Variable             | Scope  | Description                                                 |
+| -------------------- | ------ | ----------------------------------------------------------- |
+| `SCW_ACCESS_KEY`     | secret | Scaleway API / S3 credential                                |
+| `SCW_SECRET_KEY`     | secret | Scaleway API / S3 credential                                |
+| `OWNER_ETH_ADDRESS`  | env    | Wallet allowed to read `GET /stats`                         |
+| `ANALYTICS_STORAGE`  | env    | `file` selects local storage (dev only)                     |
+| `ROLLUP_WINDOW_DAYS` | env    | Days the cron compacts (default 14); widen to recover a gap |

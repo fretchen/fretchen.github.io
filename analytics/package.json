@@ -37,6 +37,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@fretchen/chain-utils": "file:../shared/chain-utils",
     "@fretchen/s3-utils": "file:../shared/s3-utils",
     "viem": "^2.54.2"
   },

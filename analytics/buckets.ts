@@ -74,7 +74,7 @@ export function daysInRange(from: string, to: string): string[] {
 }
 
 /** Every `YYYY-MM` touched by the range, inclusive. */
-export function monthsInRange(from: string, to: string): string[] {
+function monthsInRange(from: string, to: string): string[] {
   const months: string[] = [];
   let cursor = `${from.slice(0, 7)}-01`;
   while (cursor.slice(0, 7) <= to.slice(0, 7)) {
@@ -91,7 +91,7 @@ export function rollupKey(site: string, month: string): string {
 }
 
 /** The 24 hour-bucket keys for one UTC day — computed, so no listing is needed. */
-export function hourKeys(site: string, day: string): string[] {
+function hourKeys(site: string, day: string): string[] {
   return Array.from({ length: 24 }, (_, hour) => `counts/${site}/${day}T${String(hour).padStart(2, "0")}.json`);
 }
 
@@ -104,7 +104,7 @@ function mergePages(target: Record<string, number>, source: Record<string, numbe
 }
 
 /** Sorts descending by count and truncates to `limit`. */
-export function topPages(pages: Record<string, number>, limit = MAX_PAGES_PER_DAY): Record<string, number> {
+function topPages(pages: Record<string, number>, limit = MAX_PAGES_PER_DAY): Record<string, number> {
   return Object.fromEntries(
     Object.entries(pages)
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
@@ -137,7 +137,7 @@ export async function readDayFromHourly(store: HitStorage, site: string, day: st
   return found ? { hits, pages: topPages(pages), source: "beacon" } : null;
 }
 
-export async function readRollup(store: HitStorage, site: string, month: string): Promise<MonthRollup | null> {
+async function readRollup(store: HitStorage, site: string, month: string): Promise<MonthRollup | null> {
   const existing = await store.getWithMeta(rollupKey(site, month));
   return existing ? (JSON.parse(existing.body) as MonthRollup) : null;
 }
@@ -204,4 +204,60 @@ export async function writeDay(
   }
 
   return "conflict";
+}
+
+export interface RebuildResult {
+  /** The days that had traffic, whether or not storing them succeeded. */
+  rebuilt: Record<string, DayBucket>;
+  written: string[];
+  /** Complete days with no hourly objects at all — nothing happened, nothing stored. */
+  empty: string[];
+  failed: string[];
+}
+
+/**
+ * Rebuilds each candidate day from its 24 hourly buckets and compacts the
+ * complete ones into their monthly rollup.
+ *
+ * The single implementation behind both callers: `rollup.ts` runs it over a
+ * trailing window on a schedule, `stats.ts` runs it over whatever the dashboard
+ * asked for that isn't compacted yet. They differ only in how they pick
+ * candidates.
+ *
+ * `today` is rebuilt when asked for but never stored — it is still being
+ * written to, and compacting it would freeze a partial count. Storage failures
+ * land in `failed` rather than throwing: for `stats.ts` this is a cache warm,
+ * and a cache that didn't warm must not fail the read.
+ */
+export async function rebuildDays(
+  store: HitStorage,
+  site: string,
+  candidates: string[],
+  today: string,
+): Promise<RebuildResult> {
+  const result: RebuildResult = { rebuilt: {}, written: [], empty: [], failed: [] };
+
+  const buckets = await Promise.all(candidates.map((day) => readDayFromHourly(store, site, day)));
+
+  const writes = candidates.map(async (day, index) => {
+    const bucket = buckets[index];
+    if (!bucket) {
+      result.empty.push(day);
+      return;
+    }
+    result.rebuilt[day] = bucket;
+    if (day === today) {
+      return;
+    }
+    try {
+      const outcome = await writeDay(store, site, day, bucket);
+      // "exists" means the cron or a backfill got there first — not a failure.
+      (outcome === "written" ? result.written : outcome === "conflict" ? result.failed : []).push(day);
+    } catch {
+      result.failed.push(day);
+    }
+  });
+  await Promise.all(writes);
+
+  return result;
 }

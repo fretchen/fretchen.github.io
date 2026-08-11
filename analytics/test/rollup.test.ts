@@ -112,6 +112,47 @@ describe("rollupRecentDays", () => {
 
     const summary = await rollupRecentDays(store, SITE, NOW);
 
-    expect(summary.conflicts).toEqual(["2026-08-09"]);
+    expect(summary.failed).toEqual(["2026-08-09"]);
+  });
+
+  it("widens the window from ROLLUP_WINDOW_DAYS", async () => {
+    const store = new MemoryHitStorage({
+      "counts/fretchen.eu/2026-07-15T10.json": hourBucket(8, { "/": 8 }),
+    });
+    process.env.ROLLUP_WINDOW_DAYS = "40";
+    try {
+      const summary = await rollupRecentDays(store, SITE, NOW);
+      expect(summary.from).toBe("2026-07-01");
+      expect(summary.written).toEqual(["2026-07-15"]);
+    } finally {
+      delete process.env.ROLLUP_WINDOW_DAYS;
+    }
+  });
+
+  it("ignores a nonsensical ROLLUP_WINDOW_DAYS and keeps the default", async () => {
+    const store = new MemoryHitStorage();
+    for (const bad of ["abc", "0", "-5", ""]) {
+      process.env.ROLLUP_WINDOW_DAYS = bad;
+      const summary = await rollupRecentDays(store, SITE, NOW);
+      expect(summary.from).toBe("2026-07-27"); // the default 14-day window
+    }
+    delete process.env.ROLLUP_WINDOW_DAYS;
+  });
+
+  // The recovery path for a gap that has aged past stats.ts's fallback window:
+  // the hourly objects are still there, they just stopped being reachable.
+  it("recovers a day older than the default window when given a wider one", async () => {
+    const store = new MemoryHitStorage({
+      "counts/fretchen.eu/2026-07-15T10.json": hourBucket(8, { "/": 8 }),
+    });
+
+    const ignored = await rollupRecentDays(store, SITE, NOW);
+    expect(ignored.written).toEqual([]);
+
+    const recovered = await rollupRecentDays(store, SITE, NOW, 40);
+
+    expect(recovered.from).toBe("2026-07-01");
+    expect(recovered.written).toEqual(["2026-07-15"]);
+    expect(store.read<MonthRollup>(rollupKey(SITE, "2026-07"))?.days["2026-07-15"]?.hits).toBe(8);
   });
 });

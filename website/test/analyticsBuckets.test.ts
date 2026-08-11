@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { RANGES, addDays, bucketize, daysInRange, sliceStats, topPages, totalHits } from "../utils/analyticsBuckets";
+import { RANGES, bucketize, sliceStats } from "../utils/analyticsBuckets";
 import type { DayBucket, Stats } from "../types/analytics";
 
 const TODAY = "2026-08-11"; // a Tuesday
@@ -10,14 +10,13 @@ function day(hits: number, pages: Record<string, number> = { "/": hits }, source
 
 const range = (days: number) => RANGES.find((r) => r.days === days)!;
 
-describe("date helpers", () => {
-  it("crosses month and year boundaries in UTC", () => {
-    expect(addDays("2026-01-31", 1)).toBe("2026-02-01");
-    expect(addDays("2026-01-01", -1)).toBe("2025-12-31");
-  });
-
-  it("enumerates an inclusive range", () => {
-    expect(daysInRange("2026-08-09", "2026-08-11")).toEqual(["2026-08-09", "2026-08-10", "2026-08-11"]);
+describe("date handling", () => {
+  it("walks the window in UTC across month and year boundaries", () => {
+    // 30 days back from 2026-01-05 crosses into the previous year.
+    const { buckets } = bucketize({ "2025-12-31": day(4) }, range(30), "2026-01-05");
+    expect(buckets).toHaveLength(30);
+    expect(buckets[0].key).toBe("2025-12-07");
+    expect(buckets.find((b) => b.key === "2025-12-31")?.hits).toBe(4);
   });
 });
 
@@ -107,31 +106,33 @@ describe("bucketize", () => {
   });
 });
 
-describe("totalHits and topPages", () => {
-  const days = {
-    "2026-08-09": day(5, { "/": 3, "/blog/": 2 }),
-    "2026-08-10": day(4, { "/blog/": 4 }),
-    "2026-07-01": day(99, { "/old/": 99 }),
+describe("totals and top pages", () => {
+  const stats: Stats = {
+    site: "fretchen.eu",
+    from: "2025-08-12",
+    to: TODAY,
+    days: {
+      "2026-08-09": day(5, { "/": 3, "/blog/": 2 }),
+      "2026-08-10": day(4, { "/blog/": 4 }),
+      "2026-02-01": day(99, { "/old/": 99 }),
+    },
   };
 
-  it("sums only the window", () => {
-    expect(totalHits(days, "2026-08-09", "2026-08-11")).toBe(9);
+  it("sums only the selected window", () => {
+    expect(sliceStats(stats, range(30)).totalHits).toBe(9);
+    expect(sliceStats(stats, range(365)).totalHits).toBe(108);
   });
 
   it("merges page counts across the window, most-hit first", () => {
-    expect(topPages(days, "2026-08-09", "2026-08-11")).toEqual([
+    expect(sliceStats(stats, range(30)).pages).toEqual([
       { path: "/blog/", hits: 6 },
       { path: "/", hits: 3 },
     ]);
   });
 
   it("excludes pages whose traffic falls outside the window", () => {
-    expect(topPages(days, "2026-08-09", "2026-08-11").map((p) => p.path)).not.toContain("/old/");
-  });
-
-  it("respects the limit", () => {
-    const many = { "2026-08-10": day(6, { "/a/": 3, "/b/": 2, "/c/": 1 }) };
-    expect(topPages(many, "2026-08-01", "2026-08-11", 2)).toHaveLength(2);
+    expect(sliceStats(stats, range(30)).pages.map((p) => p.path)).not.toContain("/old/");
+    expect(sliceStats(stats, range(365)).pages.map((p) => p.path)).toContain("/old/");
   });
 });
 

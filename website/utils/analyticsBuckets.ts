@@ -52,14 +52,14 @@ function toIsoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-export function addDays(day: string, delta: number): string {
+function addDays(day: string, delta: number): string {
   const date = parseDay(day);
   date.setUTCDate(date.getUTCDate() + delta);
   return toIsoDate(date);
 }
 
 /** Inclusive. */
-export function daysInRange(from: string, to: string): string[] {
+function daysInRange(from: string, to: string): string[] {
   const days: string[] = [];
   for (let day = from; day <= to; day = addDays(day, 1)) {
     days.push(day);
@@ -77,16 +77,16 @@ function weekStart(day: string): string {
 // ===== Slicing =====
 
 /** The inclusive window a range covers, ending today. */
-export function windowFor(range: Range, today: string): { from: string; to: string } {
+function windowFor(range: Range, today: string): { from: string; to: string } {
   return { from: addDays(today, -(range.days - 1)), to: today };
 }
 
-export function totalHits(days: Record<string, DayBucket>, from: string, to: string): number {
+function totalHits(days: Record<string, DayBucket>, from: string, to: string): number {
   return Object.entries(days).reduce((sum, [day, bucket]) => (day >= from && day <= to ? sum + bucket.hits : sum), 0);
 }
 
 /** Merged path counts over the window, most-hit first. Ties broken by path. */
-export function topPages(
+function topPages(
   days: Record<string, DayBucket>,
   from: string,
   to: string,

@@ -40,13 +40,13 @@ describe("hit handler", () => {
     expect(mockGetS3ObjectWithMeta).not.toHaveBeenCalled();
   });
 
-  it("echoes back a whitelisted origin", async () => {
-    const res = await handle(
-      makeEvent({ httpMethod: "OPTIONS", body: undefined, headers: { origin: "http://localhost:5173" } }),
-      {},
-    );
-    expect(res.headers["Access-Control-Allow-Origin"]).toBe("http://localhost:5173");
-  });
+  it.each(["http://localhost:3000", "http://localhost:5173"])(
+    "echoes back the whitelisted origin %s",
+    async (origin) => {
+      const res = await handle(makeEvent({ httpMethod: "OPTIONS", body: undefined, headers: { origin } }), {});
+      expect(res.headers["Access-Control-Allow-Origin"]).toBe(origin);
+    },
+  );
 
   it("falls back to the canonical origin for an unknown origin", async () => {
     const res = await handle(

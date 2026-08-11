@@ -17,10 +17,15 @@
     "check": "npm run lint && npm run format:check && npm run typecheck && npm run test:coverage",
     "dev": "NODE_ENV=test ANALYTICS_STORAGE=file npx tsx hit.ts",
     "dev:live": "NODE_ENV=test npx tsx hit.ts",
+    "dev:stats": "NODE_ENV=test ANALYTICS_STORAGE=file npx tsx stats.ts",
+    "dev:stats:live": "NODE_ENV=test npx tsx stats.ts",
+    "dev:rollup": "NODE_ENV=test ANALYTICS_STORAGE=file npx tsx rollup.ts",
     "predeploy": "npm run build",
     "deploy": "serverless deploy",
     "info": "serverless info",
     "logs": "serverless logs -f hit",
+    "logs:stats": "serverless logs -f stats",
+    "logs:rollup": "serverless logs -f rollup",
     "remove": "serverless remove"
   },
   "keywords": [
@@ -32,7 +37,8 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@fretchen/s3-utils": "file:../shared/s3-utils"
+    "@fretchen/s3-utils": "file:../shared/s3-utils",
+    "viem": "^2.54.2"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",

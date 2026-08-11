@@ -21,7 +21,8 @@ const MAX_PATH_LENGTH = 200;
 const MAX_PAGES_PER_BUCKET = 200; // caps distinct paths tracked per hour bucket
 const MAX_CAS_ATTEMPTS = 3;
 
-const ALLOWED_ORIGINS = ["https://www.fretchen.eu", "http://localhost:5173"];
+// `vike dev` serves on 3000; 5173 covers a plain `vite dev` fallback.
+const ALLOWED_ORIGINS = ["https://www.fretchen.eu", "http://localhost:3000", "http://localhost:5173"];
 
 // Local dev/sandbox (`npm run dev`) uses a file store with no credentials;
 // production and `npm test` (both leave ANALYTICS_STORAGE unset) use real S3.

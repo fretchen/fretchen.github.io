@@ -2,7 +2,7 @@ import { defineConfig } from "tsup";
 import { builtinModules } from "module";
 
 export default defineConfig({
-  entry: ["hit.ts"],
+  entry: ["hit.ts", "stats.ts", "rollup.ts"],
   format: ["esm"],
   platform: "node",
   target: "node22",

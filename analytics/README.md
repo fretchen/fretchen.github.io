@@ -44,28 +44,32 @@ control: CORS is browser-enforced only, and the pageview beacon is a
 `sendBeacon` simple request that triggers no preflight at all. Write abuse is
 bounded by path validation and the 200-entry `pages` cap instead.
 
-### `GET /stats?days=N`
+### `GET /stats`
 
-Serves the `/analytics` dashboard. `days` defaults to 30 and is clamped to
-1–90. Requires `Authorization: Bearer <base64 payload>` where the payload is
-`{address, signature, message}` and `message` is `analytics-api:<unix ts>`,
-signed by `OWNER_ETH_ADDRESS` — the same EIP-191 scheme the Growth API uses,
-implemented in `auth.ts`. Tokens expire after five minutes. Anything else
-returns `401`.
+Serves the `/analytics` dashboard. Requires `Authorization: Bearer <base64
+payload>` where the payload is `{address, signature, message}` and `message` is
+`analytics-api:<unix ts>`, signed by `OWNER_ETH_ADDRESS` — the same EIP-191
+scheme the Growth API uses, implemented in `auth.ts`. Tokens expire after five
+minutes. Anything else returns `401`.
 
 ```json
 {
   "site": "fretchen.eu",
-  "from": "2026-07-11",
-  "to": "2026-08-10",
-  "totalHits": 1247,
-  "days": [{ "date": "2026-07-11", "hits": 42, "source": "beacon" }],
-  "pages": [{ "path": "/", "hits": 512 }]
+  "from": "2025-08-12",
+  "to": "2026-08-11",
+  "days": {
+    "2026-08-10": { "hits": 240, "pages": { "/": 200 }, "source": "beacon" }
+  }
 }
 ```
 
-Days with no traffic are zero-filled and carry no `source`. `pages` is the top
-50, descending.
+**No range parameter, by design.** The endpoint always returns the trailing
+year, and `days` is sparse — a day with no traffic is absent, not a zero row.
+Measured against real data that is ~25KB, about 3KB gzipped, so windowing the
+response server-side bought nothing and cost a round trip per view. The
+dashboard fetches once and slices client-side
+(`website/utils/analyticsBuckets.ts` owns the totals, the top-pages list and
+the daily/weekly/monthly bucketing).
 
 For a token from the terminal:
 
@@ -100,9 +104,24 @@ range rather than listed, so there is no ceiling and a month costs one GET.
 
 **Hourly buckets are the source of truth and are never deleted.** The `rollup`
 cron is a compaction step, and `GET /stats` falls back to the hourly buckets
-for any day in the last 14 that isn't rolled up yet. That is what makes a
-weekly cadence safe: a late or missed run changes what a query costs, never
-what it returns.
+for recent days that aren't rolled up yet. That is what makes a weekly cadence
+safe: a late or missed run changes what a query costs, never what it returns.
+
+Two things keep that fallback cheap, because rebuilding a day costs 24 GETs:
+
+- **Only days after the newest compacted one are probed.** Compaction runs in
+  date order, so everything up to that point is settled — present means
+  traffic, absent means none. Without this, every quiet day inside the window
+  would be re-read on every load. `HOURLY_FALLBACK_DAYS` (14) still caps it for
+  a cold start.
+- **`/stats` writes back what it rebuilds.** A complete day reconstructed from
+  hourly buckets is stored via the same CAS `writeDay` the cron uses, so the
+  next load reads it as one rollup GET. Today is never written back — it is
+  still being counted. Write failures are swallowed: warming a cache must not
+  fail a read.
+
+In practice a warm load is **37 GETs** — 13 monthly rollups plus today's 24
+hours — regardless of which range the dashboard is showing.
 
 `source` is per day, not per month, because the changeover month holds both
 kinds and they are not the same measurement: Umami filtered bots and
@@ -120,8 +139,10 @@ beacon never sees the locale.
 Counters are **private** — no public-read ACL is set, so they are not
 fetchable from the bucket URL without credentials. Two ways in:
 
-- **`/analytics` on the website** — owner-gated dashboard (total, daily bars,
-  top pages) over `GET /stats`. Not linked from any nav.
+- **`/analytics` on the website** — owner-gated dashboard over `GET /stats`,
+  with three views: 30 days by day, 90 days by week, one year by month.
+  Switching between them re-slices the single cached response rather than
+  refetching. Not linked from any nav.
 - **`notebooks/02_readout.ipynb`** — direct S3 reads, for anything the
   dashboard doesn't show.
 

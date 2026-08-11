@@ -21,15 +21,23 @@ export function prewarmAnalyticsApi(): void {
   fetch(`${API_BASE}/stats`, { method: "OPTIONS" }).catch(() => {});
 }
 
-export function useAnalyticsStats(enabled: boolean, days: number) {
+/**
+ * One query for the whole year — the range selector is a display concern and
+ * never refetches.
+ *
+ * `staleTime` overrides the 60s global default in `pages/+config.ts`: a refetch
+ * would need a fresh signature once `useWalletAuth`'s 4-minute token cache has
+ * lapsed, so a short window means switching ranges could re-prompt the wallet.
+ */
+export function useAnalyticsStats(enabled: boolean) {
   const { address } = useAccount();
   const getAuth = useWalletAuth("analytics-api");
 
   return useQuery<Stats>({
-    queryKey: ["analyticsStats", address, days],
+    queryKey: ["analyticsStats", address],
     queryFn: async () => {
       const auth = await getAuth();
-      const res = await fetch(`${API_BASE}/stats?days=${days}`, {
+      const res = await fetch(`${API_BASE}/stats`, {
         headers: { Authorization: auth },
       });
       if (!res.ok) {
@@ -39,5 +47,6 @@ export function useAnalyticsStats(enabled: boolean, days: number) {
       return res.json() as Promise<Stats>;
     },
     enabled: enabled && !!address,
+    staleTime: 5 * 60_000,
   });
 }

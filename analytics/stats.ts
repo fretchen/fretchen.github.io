@@ -1,9 +1,16 @@
 /**
- * `GET /stats?days=N` — the owner's read endpoint for the dashboard.
+ * `GET /stats` — the owner's read endpoint for the dashboard.
  *
  * Counters are private (no public-read ACL), so this is the only way to see
  * them without S3 credentials. Gated by an EIP-191 owner signature, the same
  * bearer scheme the Growth API uses — see `auth.ts`.
+ *
+ * **Always serves the trailing year, unwindowed.** A full year of daily counts
+ * with per-day page maps measures ~15KB (3KB gzipped) against real data, so
+ * range parameters were never worth their complexity: the dashboard fetches
+ * once and slices client-side. Days are returned as a sparse map — the client
+ * walks a calendar anyway to build weekly/monthly buckets, so it fills the
+ * gaps itself.
  *
  * Reads in two passes: monthly rollups for the range, then hourly buckets for
  * any recent day the weekly cron hasn't compacted yet. The second pass is what
@@ -18,15 +25,14 @@ import {
   readDayFromHourly,
   readRollupDays,
   toIsoDate,
-  topPages,
+  writeDay,
   type DayBucket,
 } from "./buckets.js";
 
 const SITE = "fretchen.eu";
 
-const DEFAULT_DAYS = 30;
-const MAX_DAYS = 90;
-const TOP_PAGES = 50;
+/** The window served, in days. One year, always. */
+const WINDOW_DAYS = 365;
 
 // `vike dev` serves on 3000 (matching comment_service's list); 5173 covers a
 // plain `vite dev` fallback. Unlike hit.ts's whitelist this one actually gates
@@ -42,20 +48,12 @@ export interface StatsEvent {
   queryStringParameters?: Record<string, string>;
 }
 
-export interface StatsDay {
-  date: string;
-  hits: number;
-  /** Absent for zero-filled days — nothing measured them. */
-  source?: string;
-}
-
 export interface StatsResponse {
   site: string;
   from: string;
   to: string;
-  totalHits: number;
-  days: StatsDay[];
-  pages: { path: string; hits: number }[];
+  /** Sparse — days with no traffic are absent, not zero rows. */
+  days: Record<string, DayBucket>;
 }
 
 /** Same whitelist as `hit.ts`, plus the Authorization header this endpoint needs. */
@@ -69,19 +67,24 @@ function getCorsHeaders(origin?: string): Record<string, string> {
   };
 }
 
-function parseDays(raw: string | undefined): number {
-  const parsed = Number.parseInt(raw ?? "", 10);
-  if (!Number.isFinite(parsed)) {
-    return DEFAULT_DAYS;
-  }
-  return Math.min(Math.max(parsed, 1), MAX_DAYS);
-}
-
 /**
  * Collects the range, preferring rollups and falling back to hourly buckets
- * for days inside the fallback window. Days older than that window which are
- * missing from the rollups are genuine no-traffic days — the cron has already
- * had its chance at them.
+ * for recent days that aren't compacted yet.
+ *
+ * **Which days get probed.** Compaction runs in date order, so every day up to
+ * the newest one present in the rollups is settled: present means traffic,
+ * absent means none. Only days after that need their 24 hourly keys read —
+ * without this the fallback would re-probe every no-traffic day on every load,
+ * and a quiet week would cost 168 GETs forever. `HOURLY_FALLBACK_DAYS` still
+ * caps it, for the cold-start case where the rollups are empty.
+ *
+ * Complete days reconstructed from hourly buckets are written back to their
+ * rollup. That is a cache warm, not the caller's request: it costs 24 GETs to
+ * rebuild a day, and without it every dashboard load repeats that work for
+ * every day the weekly cron hasn't reached yet. `writeDay` is CAS-safe and
+ * existing-day-wins, so it can't clobber a backfilled Umami day and races
+ * harmlessly with the cron. Failures are swallowed — a cache that didn't warm
+ * must never fail the read.
  */
 export async function collectRange(
   store: HitStorage,
@@ -92,52 +95,37 @@ export async function collectRange(
 ): Promise<Record<string, DayBucket>> {
   const days = await readRollupDays(store, site, from, to);
 
-  const fallbackFrom = addDays(toIsoDate(now), -(HOURLY_FALLBACK_DAYS - 1));
-  const missing = daysInRange(from, to).filter((day) => !days[day] && day >= fallbackFrom);
+  const today = toIsoDate(now);
+  const windowStart = addDays(today, -(HOURLY_FALLBACK_DAYS - 1));
+  const newestCompacted = Object.keys(days).sort().at(-1);
+  const probeFrom = newestCompacted && newestCompacted >= windowStart ? addDays(newestCompacted, 1) : windowStart;
+
+  const missing = daysInRange(from, to).filter((day) => !days[day] && day >= probeFrom);
 
   const recovered = await Promise.all(missing.map((day) => readDayFromHourly(store, site, day)));
+
+  const writeBacks: Promise<unknown>[] = [];
   missing.forEach((day, index) => {
     const bucket = recovered[index];
-    if (bucket) {
-      days[day] = bucket;
+    if (!bucket) {
+      return;
+    }
+    days[day] = bucket;
+    // Today is still being written to — compacting it would freeze a partial count.
+    if (day !== today) {
+      writeBacks.push(writeDay(store, site, day, bucket).catch(() => undefined));
     }
   });
+  await Promise.all(writeBacks);
 
   return days;
 }
 
-export async function buildStats(
-  store: HitStorage,
-  site: string,
-  requestedDays: number,
-  now: Date = new Date(),
-): Promise<StatsResponse> {
+export async function buildStats(store: HitStorage, site: string, now: Date = new Date()): Promise<StatsResponse> {
   const to = toIsoDate(now);
-  const from = addDays(to, -(requestedDays - 1));
+  const from = addDays(to, -(WINDOW_DAYS - 1));
 
-  const buckets = await collectRange(store, site, from, to, now);
-
-  const pages: Record<string, number> = {};
-  for (const bucket of Object.values(buckets)) {
-    for (const [path, count] of Object.entries(bucket.pages)) {
-      pages[path] = (pages[path] ?? 0) + count;
-    }
-  }
-
-  // Zero-fill so the frontend can map days straight onto bars.
-  const days: StatsDay[] = daysInRange(from, to).map((date) => {
-    const bucket = buckets[date];
-    return bucket ? { date, hits: bucket.hits, source: bucket.source } : { date, hits: 0 };
-  });
-
-  return {
-    site,
-    from,
-    to,
-    totalHits: days.reduce((sum, day) => sum + day.hits, 0),
-    days,
-    pages: Object.entries(topPages(pages, TOP_PAGES)).map(([path, hits]) => ({ path, hits })),
-  };
+  return { site, from, to, days: await collectRange(store, site, from, to, now) };
 }
 
 export async function handle(
@@ -166,7 +154,7 @@ export async function handle(
   }
 
   try {
-    const stats = await buildStats(storage, SITE, parseDays(event.queryStringParameters?.days));
+    const stats = await buildStats(storage, SITE);
     return { statusCode: 200, headers, body: JSON.stringify(stats) };
   } catch (err) {
     console.error("stats failed", err);
@@ -184,6 +172,9 @@ if (isEntrypoint && process.env.NODE_ENV === "test") {
     dotenvModule.config();
 
     const scw = await import("@scaleway/serverless-functions");
+    // StatsEvent's stricter headers type isn't structurally assignable to the
+    // package's own looser Event type — same cast hit.ts uses for the identical
+    // mismatch.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
     scw.serveHandler(handle as any, 8087);
   })().catch((err) => console.error("Error starting local server", err));

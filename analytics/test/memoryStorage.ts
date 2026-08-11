@@ -8,8 +8,12 @@ import type { GetResult, HitStorage, PutOpts, PutResult } from "../storage.js";
  */
 export class MemoryHitStorage implements HitStorage {
   readonly objects = new Map<string, string>();
+  /** Every key read, in order — lets tests assert how much work a call did. */
+  readonly gets: string[] = [];
   /** Forces the next N `putConditional` calls to report a 412, to drive the retry path. */
   failNextPuts = 0;
+  /** Makes every `putConditional` throw, to prove a failed cache warm can't fail a read. */
+  throwOnPut = false;
 
   constructor(seed: Record<string, unknown> = {}) {
     for (const [key, value] of Object.entries(seed)) {
@@ -22,11 +26,15 @@ export class MemoryHitStorage implements HitStorage {
   }
 
   async getWithMeta(key: string): Promise<GetResult | null> {
+    this.gets.push(key);
     const body = this.objects.get(key);
     return body === undefined ? null : { body, etag: this.etagOf(body) };
   }
 
   async putConditional(key: string, body: string, opts: PutOpts): Promise<PutResult> {
+    if (this.throwOnPut) {
+      throw new Error("S3 write failed");
+    }
     if (this.failNextPuts > 0) {
       this.failNextPuts -= 1;
       return { ok: false, status: 412 };

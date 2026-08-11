@@ -14,7 +14,7 @@ vi.mock("@fretchen/s3-utils", () => ({
 }));
 
 import { buildStats, collectRange, handle, type StatsEvent, type StatsResponse } from "../stats.js";
-import { rollupKey } from "../buckets.js";
+import { rollupKey, type MonthRollup } from "../buckets.js";
 import { MemoryHitStorage, hourBucket } from "./memoryStorage.js";
 
 const SITE = "fretchen.eu";
@@ -51,11 +51,11 @@ describe("collectRange", () => {
 
     const days = await collectRange(store, SITE, "2026-08-08", "2026-08-10", NOW);
 
-    expect(Object.keys(days)).toEqual(["2026-08-08", "2026-08-09", "2026-08-10"]);
+    expect(Object.keys(days).sort()).toEqual(["2026-08-08", "2026-08-09", "2026-08-10"]);
     expect(days["2026-08-09"]).toEqual({ hits: 4, pages: { "/blog/": 4 }, source: "beacon" });
   });
 
-  it("gives identical totals whether or not the recent days have been rolled up", async () => {
+  it("returns the same days whether or not they have been rolled up", async () => {
     const hourly = {
       "counts/fretchen.eu/2026-08-09T09.json": hourBucket(4, { "/blog/": 4 }),
       "counts/fretchen.eu/2026-08-08T09.json": hourBucket(6, { "/": 6 }),
@@ -73,14 +73,14 @@ describe("collectRange", () => {
       },
     });
 
-    const before = await buildStats(uncompacted, SITE, 7, NOW);
-    const after = await buildStats(compacted, SITE, 7, NOW);
+    const before = await collectRange(uncompacted, SITE, "2026-08-04", "2026-08-10", NOW);
+    const after = await collectRange(compacted, SITE, "2026-08-04", "2026-08-10", NOW);
 
-    expect(before.totalHits).toBe(10);
+    expect(Object.values(before).reduce((sum, d) => sum + d.hits, 0)).toBe(10);
     expect(after).toEqual(before);
   });
 
-  it("does not reach past the 14-day fallback window", async () => {
+  it("does not reach past the 14-day fallback window on a cold start", async () => {
     const store = new MemoryHitStorage({
       // 15 days before "now" — the cron has already had its chance at this day.
       "counts/fretchen.eu/2026-07-27T09.json": hourBucket(50, { "/": 50 }),
@@ -92,66 +92,132 @@ describe("collectRange", () => {
     expect(days["2026-07-27"]).toBeUndefined();
     expect(days["2026-07-28"]?.hits).toBe(7);
   });
+
+  it("only probes days after the newest compacted one — quiet days are settled, not re-read", async () => {
+    const store = new MemoryHitStorage({
+      [rollupKey(SITE, "2026-08")]: {
+        site: SITE,
+        month: "2026-08",
+        days: { "2026-08-07": { hits: 1, pages: { "/": 1 }, source: "beacon" } },
+      },
+      // 08-08 and 08-09 were quiet; there is nothing to find and nothing to store.
+      "counts/fretchen.eu/2026-08-10T05.json": hourBucket(2, { "/": 2 }),
+    });
+
+    await collectRange(store, SITE, "2026-08-01", "2026-08-10", NOW);
+
+    // 08-08, 08-09, 08-10 — the three days after the newest compacted one.
+    expect(store.gets.filter((key) => key.startsWith("counts/")).length).toBe(3 * 24);
+    expect(store.gets.some((key) => key.startsWith("counts/fretchen.eu/2026-08-06"))).toBe(false);
+  });
 });
 
-describe("buildStats", () => {
-  it("zero-fills days with no traffic and leaves their source unset", async () => {
+describe("collectRange write-back", () => {
+  it("compacts a complete day it had to rebuild from hourly buckets", async () => {
+    const store = new MemoryHitStorage({
+      "counts/fretchen.eu/2026-08-09T09.json": hourBucket(4, { "/blog/": 4 }),
+    });
+
+    await collectRange(store, SITE, "2026-08-01", "2026-08-10", NOW);
+
+    expect(store.read<MonthRollup>(rollupKey(SITE, "2026-08"))?.days["2026-08-09"]).toEqual({
+      hits: 4,
+      pages: { "/blog/": 4 },
+      source: "beacon",
+    });
+  });
+
+  it("never compacts today — it is still being written to", async () => {
     const store = new MemoryHitStorage({
       "counts/fretchen.eu/2026-08-10T05.json": hourBucket(2, { "/": 2 }),
     });
 
-    const stats = await buildStats(store, SITE, 3, NOW);
+    await collectRange(store, SITE, "2026-08-01", "2026-08-10", NOW);
 
-    expect(stats.from).toBe("2026-08-08");
-    expect(stats.to).toBe("2026-08-10");
-    expect(stats.days).toEqual([
-      { date: "2026-08-08", hits: 0 },
-      { date: "2026-08-09", hits: 0 },
-      { date: "2026-08-10", hits: 2, source: "beacon" },
-    ]);
-    expect(stats.totalHits).toBe(2);
+    expect(store.read<MonthRollup>(rollupKey(SITE, "2026-08"))?.days["2026-08-10"]).toBeUndefined();
   });
 
-  it("merges pages across the range, most-hit first", async () => {
+  it("cannot clobber a backfilled Umami day", async () => {
+    const umamiDay = { hits: 42, pages: { "/": 42 }, source: "umami" };
+    const store = new MemoryHitStorage({
+      [rollupKey(SITE, "2026-08")]: { site: SITE, month: "2026-08", days: { "2026-08-09": umamiDay } },
+      "counts/fretchen.eu/2026-08-09T09.json": hourBucket(4, { "/blog/": 4 }),
+    });
+
+    const days = await collectRange(store, SITE, "2026-08-01", "2026-08-10", NOW);
+
+    expect(days["2026-08-09"]).toEqual(umamiDay);
+    expect(store.read<MonthRollup>(rollupKey(SITE, "2026-08"))?.days["2026-08-09"]).toEqual(umamiDay);
+  });
+
+  it("makes the second call cheap — rollup GETs instead of 24 hourly ones", async () => {
+    const seed = {
+      "counts/fretchen.eu/2026-08-08T09.json": hourBucket(6, { "/": 6 }),
+      "counts/fretchen.eu/2026-08-09T09.json": hourBucket(4, { "/blog/": 4 }),
+    };
+    const store = new MemoryHitStorage(seed);
+
+    await collectRange(store, SITE, "2026-08-01", "2026-08-10", NOW);
+    const firstCallGets = store.gets.length;
+    store.gets.length = 0;
+
+    const second = await collectRange(store, SITE, "2026-08-01", "2026-08-10", NOW);
+
+    // Only today still needs its 24 hourly keys; the two rebuilt days are now rollup reads.
+    expect(store.gets.filter((key) => key.startsWith("counts/")).length).toBe(24);
+    expect(store.gets.length).toBeLessThan(firstCallGets);
+    expect(second["2026-08-09"]).toEqual({ hits: 4, pages: { "/blog/": 4 }, source: "beacon" });
+  });
+
+  it("still serves the data when the write-back fails", async () => {
+    const store = new MemoryHitStorage({
+      "counts/fretchen.eu/2026-08-09T09.json": hourBucket(4, { "/blog/": 4 }),
+    });
+    store.throwOnPut = true;
+
+    const days = await collectRange(store, SITE, "2026-08-01", "2026-08-10", NOW);
+
+    expect(days["2026-08-09"]?.hits).toBe(4);
+  });
+});
+
+describe("buildStats", () => {
+  it("serves a trailing year, sparse — no zero rows", async () => {
+    const store = new MemoryHitStorage({
+      "counts/fretchen.eu/2026-08-10T05.json": hourBucket(2, { "/": 2 }),
+    });
+
+    const stats = await buildStats(store, SITE, NOW);
+
+    expect(stats.from).toBe("2025-08-11");
+    expect(stats.to).toBe("2026-08-10");
+    expect(stats.days).toEqual({ "2026-08-10": { hits: 2, pages: { "/": 2 }, source: "beacon" } });
+  });
+
+  it("carries per-day pages and source so the client can slice any range", async () => {
     const store = new MemoryHitStorage({
       [rollupKey(SITE, "2026-08")]: {
         site: SITE,
         month: "2026-08",
         days: {
-          "2026-08-01": { hits: 5, pages: { "/": 3, "/blog/": 2 }, source: "beacon" },
+          "2026-08-01": { hits: 5, pages: { "/": 3, "/blog/": 2 }, source: "umami" },
           "2026-08-02": { hits: 4, pages: { "/blog/": 4 }, source: "beacon" },
         },
       },
     });
 
-    const stats = await buildStats(store, SITE, 30, NOW);
+    const stats = await buildStats(store, SITE, NOW);
 
-    expect(stats.pages).toEqual([
-      { path: "/blog/", hits: 6 },
-      { path: "/", hits: 3 },
-    ]);
+    expect(stats.days["2026-08-01"]).toEqual({ hits: 5, pages: { "/": 3, "/blog/": 2 }, source: "umami" });
+    expect(stats.days["2026-08-02"]?.source).toBe("beacon");
   });
 
-  it("carries the umami source through so the seam can be labelled", async () => {
+  it("spans every month the year touches", async () => {
     const store = new MemoryHitStorage({
-      [rollupKey(SITE, "2026-08")]: {
+      [rollupKey(SITE, "2025-09")]: {
         site: SITE,
-        month: "2026-08",
-        days: { "2026-08-01": { hits: 5, pages: { "/": 5 }, source: "umami" } },
-      },
-    });
-
-    const stats = await buildStats(store, SITE, 30, NOW);
-
-    expect(stats.days.find((d) => d.date === "2026-08-01")?.source).toBe("umami");
-  });
-
-  it("spans months", async () => {
-    const store = new MemoryHitStorage({
-      [rollupKey(SITE, "2026-07")]: {
-        site: SITE,
-        month: "2026-07",
-        days: { "2026-07-20": { hits: 3, pages: { "/": 3 }, source: "umami" } },
+        month: "2025-09",
+        days: { "2025-09-20": { hits: 3, pages: { "/": 3 }, source: "umami" } },
       },
       [rollupKey(SITE, "2026-08")]: {
         site: SITE,
@@ -160,10 +226,27 @@ describe("buildStats", () => {
       },
     });
 
-    const stats = await buildStats(store, SITE, 30, NOW);
+    const stats = await buildStats(store, SITE, NOW);
 
-    expect(stats.totalHits).toBe(7);
-    expect(stats.days).toHaveLength(30);
+    expect(Object.keys(stats.days).sort()).toEqual(["2025-09-20", "2026-08-01"]);
+  });
+
+  it("drops days that fall outside the year", async () => {
+    const store = new MemoryHitStorage({
+      [rollupKey(SITE, "2025-08")]: {
+        site: SITE,
+        month: "2025-08",
+        days: {
+          "2025-08-10": { hits: 99, pages: { "/": 99 }, source: "umami" }, // a day too old
+          "2025-08-11": { hits: 1, pages: { "/": 1 }, source: "umami" }, // first day in range
+        },
+      },
+    });
+
+    const stats = await buildStats(store, SITE, NOW);
+
+    expect(stats.days["2025-08-10"]).toBeUndefined();
+    expect(stats.days["2025-08-11"]?.hits).toBe(1);
   });
 });
 
@@ -171,6 +254,7 @@ describe("stats handler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetS3ObjectWithMeta.mockResolvedValue(null);
+    mockPutS3ObjectConditional.mockResolvedValue({ ok: true, etag: '"e"' });
     process.env.OWNER_ETH_ADDRESS = owner.address;
   });
 
@@ -246,32 +330,27 @@ describe("stats handler", () => {
     expect(JSON.parse(res.body).error).toBe("Owner address not configured");
   });
 
-  it("serves the owner a zero-filled default window", async () => {
+  it("serves the owner a year-wide envelope", async () => {
     const res = await handle(makeEvent({ headers: { authorization: await bearer(owner) } }), {});
 
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.body) as StatsResponse;
     expect(body.site).toBe(SITE);
-    expect(body.days).toHaveLength(30);
-    expect(body.totalHits).toBe(0);
+    expect(body.days).toEqual({});
+    // 365 days inclusive of both ends.
+    const span = (Date.parse(`${body.to}T00:00:00Z`) - Date.parse(`${body.from}T00:00:00Z`)) / 86_400_000;
+    expect(span).toBe(364);
   });
 
-  it("clamps the requested range", async () => {
+  it("ignores query parameters — there is no window to ask for", async () => {
     const auth = await bearer(owner);
 
-    const tooLong = JSON.parse(
-      (await handle(makeEvent({ headers: { authorization: auth }, queryStringParameters: { days: "5000" } }), {})).body,
-    ) as StatsResponse;
-    const tooShort = JSON.parse(
-      (await handle(makeEvent({ headers: { authorization: auth }, queryStringParameters: { days: "-3" } }), {})).body,
-    ) as StatsResponse;
-    const garbage = JSON.parse(
-      (await handle(makeEvent({ headers: { authorization: auth }, queryStringParameters: { days: "abc" } }), {})).body,
+    const plain = JSON.parse((await handle(makeEvent({ headers: { authorization: auth } }), {})).body) as StatsResponse;
+    const withParam = JSON.parse(
+      (await handle(makeEvent({ headers: { authorization: auth }, queryStringParameters: { days: "7" } }), {})).body,
     ) as StatsResponse;
 
-    expect(tooLong.days).toHaveLength(90);
-    expect(tooShort.days).toHaveLength(1);
-    expect(garbage.days).toHaveLength(30);
+    expect(withParam).toEqual(plain);
   });
 
   it("returns 500 without leaking the underlying error", async () => {

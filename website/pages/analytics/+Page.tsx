@@ -7,9 +7,7 @@ import { useAnalyticsStats, prewarmAnalyticsApi } from "../../hooks/useAnalytics
 import { useWalletConnection } from "../../hooks/useWalletConnection";
 import { OWNER_ADDRESS } from "../../utils/getChain";
 import { SITE_CONFIG } from "../../utils/siteConfig";
-import type { StatsDay } from "../../types/analytics";
-
-const RANGES = [7, 30, 90] as const;
+import { RANGES, sliceStats, type Bucket } from "../../utils/analyticsBuckets";
 
 // ===== Styles =====
 
@@ -102,15 +100,15 @@ function formatDay(date: string): string {
   });
 }
 
-function barClass(day: StatsDay): string {
-  return day.source === "umami" ? barHistoric : bar;
+function barClass(bucket: Bucket): string {
+  return bucket.historic ? barHistoric : bar;
 }
 
 // ===== Page =====
 
 export default function Page() {
   const { address, hasMounted, isConnected, connectWallet } = useWalletConnection();
-  const [days, setDays] = useState<number>(30);
+  const [rangeIndex, setRangeIndex] = useState(0);
 
   useEffect(() => {
     prewarmAnalyticsApi();
@@ -120,10 +118,13 @@ export default function Page() {
   // trusts `address` before wagmi's reconnect completes.
   const isOwner = isConnected && address?.toLowerCase() === OWNER_ADDRESS.toLowerCase();
 
-  const { data: stats, isPending, error } = useAnalyticsStats(!!isOwner, days);
+  // One query for the whole year; the range selector only re-slices it, so
+  // switching is instant and never refetches.
+  const { data: stats, isPending, error } = useAnalyticsStats(!!isOwner);
 
-  const peak = useMemo(() => Math.max(1, ...(stats?.days ?? []).map((d) => d.hits)), [stats?.days]);
-  const hasHistoric = useMemo(() => (stats?.days ?? []).some((d) => d.source === "umami"), [stats?.days]);
+  const range = RANGES[rangeIndex];
+  const view = useMemo(() => (stats ? sliceStats(stats, range) : null), [stats, range]);
+  const peak = useMemo(() => Math.max(1, ...(view?.buckets ?? []).map((b) => b.hits)), [view?.buckets]);
 
   if (!hasMounted) {
     return (
@@ -163,33 +164,38 @@ export default function Page() {
       <h1 className={titleBar.title}>Analytics</h1>
 
       <div className={tabStyles.tabList}>
-        {RANGES.map((range) => (
-          <Tab key={range} label={`${range} days`} isActive={days === range} onClick={() => setDays(range)} />
+        {RANGES.map((option, index) => (
+          <Tab
+            key={option.label}
+            label={option.label}
+            isActive={rangeIndex === index}
+            onClick={() => setRangeIndex(index)}
+          />
         ))}
       </div>
 
       {error && <div className={errorBanner}>{error instanceof Error ? error.message : "Failed to load stats"}</div>}
 
-      {isPending && !stats ? (
+      {isPending && !view ? (
         <p className={infoBox}>Loading stats...</p>
-      ) : stats ? (
+      ) : view ? (
         <>
-          <div className={headline}>{stats.totalHits.toLocaleString()} views</div>
+          <div className={headline}>{view.totalHits.toLocaleString()} views</div>
           <div className={subline}>
-            across {stats.pages.length} {stats.pages.length === 1 ? "page" : "pages"} · {formatDay(stats.from)} –{" "}
-            {formatDay(stats.to)}
+            across {view.pages.length} {view.pages.length === 1 ? "page" : "pages"} · {formatDay(view.from)} –{" "}
+            {formatDay(view.to)}
           </div>
 
           <div className={chart}>
-            {stats.days.map((day) => (
-              <div key={day.date} className={barSlot} title={`${formatDay(day.date)}: ${day.hits} views`}>
-                <div className={barClass(day)} style={{ height: `${(day.hits / peak) * 100}%` }} />
+            {view.buckets.map((bucket) => (
+              <div key={bucket.key} className={barSlot} title={`${bucket.label}: ${bucket.hits} views`}>
+                <div className={barClass(bucket)} style={{ height: `${(bucket.hits / peak) * 100}%` }} />
               </div>
             ))}
           </div>
           <div className={axis}>
-            <span>{formatDay(stats.from)}</span>
-            <span>{formatDay(stats.to)}</span>
+            <span>{formatDay(view.from)}</span>
+            <span>{formatDay(view.to)}</span>
           </div>
 
           <table className={table}>
@@ -200,7 +206,7 @@ export default function Page() {
               </tr>
             </thead>
             <tbody>
-              {stats.pages.map((page) => (
+              {view.pages.map((page) => (
                 <tr key={page.path}>
                   <td className={td}>
                     <a
@@ -218,9 +224,9 @@ export default function Page() {
             </tbody>
           </table>
 
-          {stats.pages.length === 0 && <p className={infoBox}>No traffic recorded in this range.</p>}
+          {view.pages.length === 0 && <p className={infoBox}>No traffic recorded in this range.</p>}
 
-          {hasHistoric && (
+          {view.hasHistoric && (
             <p className={footnote}>
               Grey bars predate the hit counter and were backfilled from Umami, which filtered bots and counted sessions
               rather than pageviews — the two are not directly comparable.

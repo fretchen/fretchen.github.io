@@ -15,11 +15,11 @@
     "@openzeppelin/hardhat-upgrades": "^4.1.0",
     "@solidstate/hardhat-abi-exporter": "^3.0.4",
     "chai": "^6.0.0",
-    "eslint": "^10.8.0",
+    "eslint": "^10.8.1",
     "eslint-plugin-chai-expect": "^4.1.0",
     "globals": "^17.9.0",
     "hardhat": "^3.11.1",
-    "tsx": "^4.23.5",
+    "tsx": "^4.23.12",
     "typescript": "^6.0.3"
   },
   "dependencies": {
@@ -28,7 +28,7 @@
     "@openzeppelin/merkle-tree": "^1.0.8",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
-    "typescript-eslint": "^8.65.0",
+    "typescript-eslint": "^8.66.0",
     "zod": "^4.0.17"
   }
 }

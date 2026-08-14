@@ -1,0 +1,202 @@
+---
+publishing_date: 2026-08-09
+title: Can quantum physics save a fishery?
+category: "quantum"
+secondaryCategory: "others"
+description: The Li–Du–Massar protocol, run on a common-pool resource, turns out to be a clerk with a ledger — and it dissolves the part of the tragedy that happens between the players.
+---
+
+import LDMCircuit from "../components/blog/LDMCircuit";
+import FisheryDial from "../components/blog/FisheryDial";
+
+A while ago I wrote about the [quantum prisoner's dilemma](/blog/31/) and something in it that
+still surprises me. Take the Eisert–Wilkens–Lewenstein scheme, entangle two qubits, let each
+player act on their own qubit, disentangle — and mutual cooperation becomes stable. Nobody sat
+down and designed an enforcement mechanism. You write down the standard entangling operation,
+allow the natural moves, and an institution falls out of the machinery. In that post it looked
+like a crooked lawyer with a filing cabinet.
+
+That is charming, but we already knew how to fix the prisoner's dilemma. The interesting
+question is whether the trick works on a problem where we *don't* already know the answer. So:
+the tragedy of the commons.
+
+It does, and the institution that falls out is a harbour clerk with a ledger. It dissolves the
+part of the tragedy that happens between the two islands. How much fish is left at the end
+depends on something else entirely — how patient the islanders are — and the circuit has no grip
+on that at all.
+
+## The commons, and what makes it different
+
+Two islands fish the same ground. Each season each island decides how many boats to send. More
+boats means more fish for you, but the ground gets crowded and every trip is worth less — to you
+and to your neighbour. Your neighbour's losses are not your problem. That is the tragedy, in one
+sentence.
+
+I use the fishery from an [earlier post](/blog/14/). A fleet of $B$ boats on a stock $s$ lands a
+catch $y = y_0\,s\sqrt{B}$, shared out in proportion to boats; each boat costs $c_0$ to send; and
+what is left of the stock regrows logistically. Each island wants to maximise not this season's
+profit but its **discounted payoff** — this season's profit, plus next season's weighted by a
+factor $\beta$, plus the one after weighted by $\beta^2$, and so on. That $\beta$ is just how much
+next year counts compared to this one. It is a geometric weight in time, exactly like a damping
+factor, and it will matter enormously.
+
+Two things make this harder than the prisoner's dilemma.
+
+**The choice is continuous.** Not cooperate or defect, but *how many boats*. In the prisoner's
+dilemma there were three options and one of them, "flip both", was clever — it worked because
+those moves don't commute, so acting on your own qubit could reach across and undo your
+partner's. Here every move is "send this many boats", and all of those commute with each other.
+There is no hidden non-commuting option waiting to be discovered. Entanglement can only bend the
+answer, not add a new one.
+
+**The stock carries over.** The prisoner's dilemma happens once. A fishery happens every season,
+and this season's catch sets next season's starting point.
+
+## The circuit, and what it implements
+
+The continuous-variable version of EWL is due to Li, Du and Massar. Two field modes instead of
+two qubits, and instead of a discrete gate each player picks a real number.
+
+<LDMCircuit />
+
+Both modes start in vacuum. A referee applies a two-mode squeezer $\hat J(\gamma)$. Each island
+displaces **its own** mode by the number of boats it wants to send. The referee undoes the
+squeezing with $\hat J(\gamma)^\dagger$, and homodyne detection reads out each mode. The
+parameter $\gamma$ is fixed once, in advance. What comes out of the detectors is
+
+$$
+b_1^{c} = b_1 \cosh\gamma + b_2 \sinh\gamma, \qquad b_2^{c} = b_2 \cosh\gamma + b_1 \sinh\gamma .
+$$
+
+In words: the number of boats you are credited with is your own declaration mixed with your
+neighbour's. That mixed number is what you get paid on, and what you get billed for.
+
+Now pull the common factor out of that measurement:
+
+$$
+b_j^{c} = \cosh\gamma\,\big(b_j + \tanh\gamma\; b_{-j}\big).
+$$
+
+The $\cosh\gamma$ is the same for both islands, so it is a change of units and cannot affect
+anyone's decision. Feed the rest into the payoffs. Writing $t = \tanh\gamma$ and
+$\tilde b_j = e^{\gamma}b_j$, island $j$'s profit comes out as
+
+$$
+u_j^{Q} = e^{-\gamma}\cosh\gamma\,\big[\,u_j(\tilde b) + t\,u_{-j}(\tilde b)\,\big],
+$$
+
+where $u_j$ is the ordinary profit it would make with a fleet $\tilde b_j$. The prefactor is
+positive and common to both, and $\tilde b_j$ is just a relabelling of the declared fleet. So the
+quantum game and a much simpler classical game have the same payoffs — and therefore the same
+best replies and the same equilibria. That classical game is: **each island maximises its own
+profit plus a share $\lambda = \tanh\gamma$ of its neighbour's**, the share running from 0 at
+$\gamma = 0$ to 1 as the squeezing goes up.
+
+Which is a rule a harbour clerk could write on a noticeboard. Your licensed fleet is your own
+boats plus a fraction of your neighbour's; you are paid and billed on that number. Nothing in it
+needs a laser. This is the continuous-variable version of a point van Enk and Pike made about
+EWL: the quantum game has a fully classical description, and writing it down is not hard.
+
+## What the rule does
+
+Deflating as that is for the physics, look at what the clerk is doing, because it is a real
+institution and a good one.
+
+Say Moana runs one island and Chief Kai the other. Moana is wondering whether to send one more
+boat. Without the rule she weighs the extra catch against the crowding — but only the crowding on
+**her own** boats. What it costs Kai is not her problem, and that gap is the whole tragedy.
+
+The clerk closes it by making her a part-owner of Kai's catch. She is paid on a slice of whatever
+he lands, so her extra boat now costs her twice: once through the crowding on her own catch, once
+through the crowding on the slice of his that she owns. At full squeezing she feels the entire
+damage her boat does, and the fleet she picks out of pure self-interest is the fleet a single
+owner of the whole fishery would pick.
+
+There is no agreement between Moana and Kai here. Neither promised anything, nobody is watching,
+and there is nothing to enforce. This is not cooperation. Moana is exactly as selfish as before —
+the sum in front of her has changed, that is all.
+
+And notice what the clerk never needs to know. He does not work out how many fish there are, how
+fast they breed, or what the right fleet would be. He publishes one number, $\gamma$, and the
+islands find the rest themselves. Anyone setting a quota instead would need the entire model.
+
+## Turning up γ
+
+<FisheryDial />
+
+The trade is not even painful. Fewer boats means less crowding, and less crowding means each
+remaining boat is worth more. The islands end up sending under half the fleet and earning about a
+third more.
+
+## Over many seasons
+
+One season is not the interesting case, though. What happens when the stock carries over?
+
+The clerk's rule turns out to survive the passage to many seasons untouched, because discounting
+is linear and so is the rule. The two commute:
+
+$$
+\sum_{t} \beta^{t}\Big(u_j(t) + \lambda\, u_{-j}(t)\Big) \;=\; U_j + \lambda\, U_{-j}.
+$$
+
+The share does not stay trapped inside one season. It passes straight through the discounting and
+lands on the **lifetime** payoffs, so each island ends up maximising its own discounted stream
+plus a share $\lambda$ of its neighbour's. At full squeezing that is the total, which is exactly
+what a single owner of the fishery would maximise.
+
+[Solving the fishery as a proper dynamic game](https://github.com/fretchen/fretchen.github.io/blob/main/notebooks/quantum_cpr_v2.ipynb)
+confirms it: under full squeezing, two selfish islands settle on the same stock as one owner with
+the same patience, at every patience level I tested.
+
+That leaves $\beta$ doing all the remaining work, and it does a lot of it. Writing the standing
+stock as a percentage of what the ground could carry:
+
+| patience $\beta$ | 0.9 | 0.95 | 0.97 | 0.99 |
+| ---------------- | --- | ---- | ---- | ---- |
+| stock reached    | 17% | 24%  | 36%  | 73%  |
+
+An islander who discounts next year by 10% ends up at a sixth of the ceiling — and so does a
+sole owner with that patience, because at that point the binding constraint is no longer the
+externality between the islands. It is that both of them, together, would rather have the fish
+now.
+
+Both knobs have a ceiling in practice. Squeezing of $S$ decibels means $e^{2\gamma} = 10^{S/10}$,
+so 10 dB — around the state of the art for a stable optical setup — gives $\lambda = 9/11$, about
+0.82. Respectable. The patience column is the harder one to buy.
+
+So: $\gamma$ decides how well the islands coordinate, $\beta$ decides how much fish there is to
+coordinate over.
+
+## A note on Ostrom
+
+The obvious question is whether the clerk is an Ostrom institution. Elinor Ostrom won a Nobel for
+showing that communities do govern commons successfully, and she distilled eight features shared
+by the ones that survived — clear boundaries, the users making their own rules, monitoring each
+other, graduated sanctions, and so on.
+
+The honest answer is: barely. A couple of her principles are about what a rule *does*, and the
+clerk satisfies those. Most are about who makes the rule, who watches, and who may change it, and
+there the clerk scores badly — $\gamma$ is imposed from outside and nobody can argue with it. A
+rule welded into an optical bench is about as unrevisable as a rule gets, which is backwards from
+what Ostrom found makes commons work.
+
+I want to be careful here. Ostrom's principles are empirical regularities distilled from case
+studies, not a mathematical design, and half of them are not statements about payoffs at all.
+Working out which of them *could* be expressed as a mechanism is an open problem, and an
+interesting one.
+
+## Outlook
+
+Two data points now. In both, writing down a standard entangling operation produced a working
+institution that nobody designed, and in both the institution turned out to have an entirely
+classical description — a filing cabinet, a clerk with a ledger. In the second case, where the
+answer was not obvious beforehand, it genuinely solves the part of the problem it can reach.
+
+What it cannot reach is time. An entangling operation acts within a round, and a commons is a
+problem about rounds. My guess is that this boundary can be moved — by pricing fish left in the
+water rather than boats sent out — but only classically, bolted onto the ledger rather than the
+circuit.
+
+If you have thought about that, or about which of Ostrom's principles could be given a
+mathematical form, I would like to hear from you. My working notes and reading list are
+[here](/blog/32/).

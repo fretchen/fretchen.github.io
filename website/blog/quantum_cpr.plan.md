@@ -6,7 +6,7 @@
    maths fine.** The whole plan is re-registered: the Moana narrative is demoted to a naming
    convention, equations are allowed in the main text, sections state their point.
 2. **Do not assume the neighbouring posts have been read.** The prisoner's-dilemma result and
-   the fishery model are each summarised in a short paragraph. EWL *is* assumed known.
+   the fishery model are each summarised in a short paragraph. EWL _is_ assumed known.
 3. **No companion post.** `ldm-classical-equivalence.mdx` will never be published, so this post
    must carry the core technical result itself — the reduction of the LDM protocol to a
    classical co-liability rule. That is now §3, the centre of the post, rather than something
@@ -30,7 +30,7 @@ Register: first person, direct, sections that state their point — matching `qu
 (1674 words, 6 sections) and `smart_quantum.mdx` (771 words, 4 sections). Target **~1800 words**.
 
 **Assumed knowledge is not a licence for an academic voice.** Knowing EWL and squeezing means I
-*skip the background* — it does not mean writing the explanation in jargon. Everything that is
+_skip the background_ — it does not mean writing the explanation in jargon. Everything that is
 actually explained here gets explained ELI5 style: plainly, concretely, out loud. The reader
 should feel like a colleague is talking them through it at a whiteboard, not like they are
 reading a paper. Assumed knowledge buys **speed, not density**.
@@ -38,14 +38,14 @@ reading a paper. Assumed knowledge buys **speed, not density**.
 ## Core Thesis
 
 **One sentence:** The Li–Du–Massar continuous-variable protocol applied to a common-pool
-resource is *exactly* a classical co-liability rule with $\lambda = \tanh\gamma$ — it closes the
+resource is _exactly_ a classical co-liability rule with $\lambda = \tanh\gamma$ — it closes the
 externality between the players completely, interpolating from tragedy to the joint optimum as
 $\gamma$ grows, but a commons carries a second externality across time that the protocol cannot
 reach, and at realistic discount factors that second one dominates.
 
 **Why care:** EWL on the prisoner's dilemma produces an institution nobody designed. That is
 charming but the classical answer was already known. A commons is the first case where the
-answer is *not* obvious in advance — so it is the first real test of whether quantum game
+answer is _not_ obvious in advance — so it is the first real test of whether quantum game
 theory can generate institutions. The result is a qualified yes with a sharp, legible boundary,
 and the boundary is the interesting part.
 
@@ -57,7 +57,7 @@ and the boundary is the interesting part.
 
 2. **## Why a commons is harder than the prisoner's dilemma** — The two complications, both
    structural:
-   - **Continuous strategies.** Not cooperate/defect but *how many boats*. Say the EWL point in
+   - **Continuous strategies.** Not cooperate/defect but _how many boats_. Say the EWL point in
      plain words rather than group-theoretically: in the prisoner's dilemma there was a clever
      move, "flip both", and it worked because the moves don't commute. Here every move is just
      "send this many boats", and those all commute with each other. So there is no clever move
@@ -78,31 +78,30 @@ and the boundary is the interesting part.
      factor drops out of every payoff comparison, and each island ends up maximising
      $u_j + \lambda u_{-j}$ with $\boxed{\lambda = \tanh\gamma}$. State it as the result it is:
      the protocol is a classical co-liability rule, and this is the CV counterpart of what van
-     Enk–Pike showed for EWL. Full factorisation in a `<details>` block so the flow survives.
+     Enk–Pike showed for EWL. The full factorisation stays in the main text — no `<details>`.
 
-4. **## The institution** — Short. `<LDMCircuit variant="classical" />` — identical geometry,
-   physics removed: a harbourmaster who licenses and bills each island for its own boats plus a
+4. **## What the rule does** — Short. A harbourmaster who licenses and bills each island for its own boats plus a
    share $\lambda$ of its neighbour's. Then the one concrete decision that makes it click:
    island 1 weighing one more boat now loses twice, once on its own catch and once on the slice
    of its neighbour's it owns, which is exactly the externality it was ignoring. Note this is
-   *not* cooperation — no agreement, no monitoring, no enforcement; the players are exactly as
+   _not_ cooperation — no agreement, no monitoring, no enforcement; the players are exactly as
    selfish as before.
 
 5. **## Turning up γ** — The interactive. One slider, one season, fleet falling 36 → 16 boats
    while income per island rises. Tragedy at $\gamma = 0$, the joint optimum as $\gamma \to \infty$.
 
-6. **## The half it does not fix** — Introduce the discount factor $\beta$ in two sentences (a
-   geometric weight in time; a physicist needs no more). $\lambda$ and $\beta$ are different
-   knobs and the protocol only turns the first. Numbers from `quantum_cpr_v2.ipynb`: entangled
-   selfish islands reproduce a sole owner *with the same patience* — validated at every $\beta$
+6. **## Over many seasons** — $\beta$ is already introduced in §2 as part of the model, so this
+   section just reports results. The commuting identity explains *why* the rule survives many
+   seasons. Numbers from `quantum_cpr_v2.ipynb`: entangled
+   selfish islands reproduce a sole owner _with the same patience_ — validated at every $\beta$
    tested — but at $\beta = 0.9$ that is only 17% of what the ground could carry, and reaching
    the ceiling needs $\beta \approx 0.99$. So the between-players externality is closed
    completely and the between-times one is untouched, and in this fishery the second dominates.
 
 7. **## A note on Ostrom** — Deliberately light, one short section. Ostrom's eight principles are
    empirical regularities from case studies, not a mathematical design. Some concern what a rule
-   *does* — this protocol satisfies those. Most concern *who makes the rule and who may revise
-   it* — it satisfies none of those, and a rule welded into an optical bench is about as
+   _does_ — this protocol satisfies those. Most concern _who makes the rule and who may revise
+   it_ — it satisfies none of those, and a rule welded into an optical bench is about as
    unrevisable as a rule gets. Flag that drawing the line properly is an open problem, and stop.
 
 8. **## Outlook** — What two data points suggest, what would settle it, an invitation to readers
@@ -110,22 +109,24 @@ and the boundary is the interesting part.
 
 ## Interactive Elements
 
-**Reused as-is:** `components/blog/LDMCircuit.tsx`, both variants (§3 quantum, §4 classical).
-Already built, executed and rendered; its two variants share identical geometry, which *is* §4's
-argument. Labels ("Island 1/2", $b_1$, $b_j^c$) already suit this audience.
+**`components/blog/LDMCircuit.tsx` — one rendering, labelled twice over.** Operator names in the
+boxes ($\hat J(\gamma)$, $\hat D_j(b_j)$, $\hat X_j$), the plain-language reading in the caption
+row underneath ("seals the declarations", "each island declares", "clears them", "licensed
+fleet"). Showing the identity in one picture is stronger than drawing it twice, and the 54px
+boxes cannot hold a second line of text anyway. The `variant` prop and `COPY` table are gone.
 
 **New: `components/blog/FisheryDial.tsx`** — the γ control.
 
 - One slider, $\gamma \in [0, 2.5]$, showing $\lambda = \tanh\gamma$ alongside it (this audience
   wants the parameter, not a euphemism).
-- Outputs: boats per island, total fleet, income per island. Endpoints annotated *tragedy* and
-  *joint optimum*.
+- Outputs: boats per island, total fleet, income per island. Endpoints annotated _tragedy_ and
+  _joint optimum_.
 - **Closed form, no simulation:** $B(\lambda) = 64\,((3-\lambda)/4)^2$ and
   $\text{rent} = \sqrt{B} - 0.125\,B$ at the fishing post's parameters, $s = 100$.
   Verified endpoints: $\gamma=0 \to 36$ boats, 0.75 income per island; 10 dB $\to$ 19 boats,
   0.99; $\gamma\to\infty \to 16$ boats, 1.00. Fewer boats, more money — that is the teaching
   point and it is exact.
-- **One season, deliberately.** The clean interpolation *is* the one-season result and it is what
+- **One season, deliberately.** The clean interpolation _is_ the one-season result and it is what
   LDM proves. Putting dynamics in the slider would pre-empt §6, where time is supposed to arrive
   as the complication that spoils things.
 
@@ -135,7 +136,7 @@ narrated. More widget than the brief asked for.
 ## Tone & Style
 
 First person, direct, sections that state their point. **ELI5 wherever possible** — the
-technical level is set by what is *assumed*, not by how things are *said*.
+technical level is set by what is _assumed_, not by how things are _said_.
 
 **Voice rules, concretely:**
 
@@ -155,25 +156,25 @@ technical level is set by what is *assumed*, not by how things are *said*.
 
 **Phrasebook** — the plain form to use for each idea, so the register stays consistent:
 
-| Concept | How the post says it |
-| --- | --- |
-| externality | "your extra boat spoils my fishing, and you don't pay for it" |
-| the clearing rule | "your licence is your own boats plus a share of your neighbour's" |
-| $\lambda = \tanh\gamma$ | "crank the squeezer and that share runs from 0% to 100%" |
-| the reduction result | "the quantum protocol is doing arithmetic a clerk could do with a ledger" |
-| discount factor $\beta$ | "how much you care about next year" |
-| the planner / social optimum | "what one owner of the whole fishery would do" |
-| Nash equilibrium | "nobody can do better by changing their own fleet alone" |
-| Ostrom's principles | "features shared by commons that actually survived, distilled from case studies" |
+| Concept                      | How the post says it                                                             |
+| ---------------------------- | -------------------------------------------------------------------------------- |
+| externality                  | "your extra boat spoils my fishing, and you don't pay for it"                    |
+| the clearing rule            | "your licence is your own boats plus a share of your neighbour's"                |
+| $\lambda = \tanh\gamma$      | "crank the squeezer and that share runs from 0% to 100%"                         |
+| the reduction result         | "the quantum protocol is doing arithmetic a clerk could do with a ledger"        |
+| discount factor $\beta$      | "how much you care about next year"                                              |
+| the planner / social optimum | "what one owner of the whole fishery would do"                                   |
+| Nash equilibrium             | "nobody can do better by changing their own fleet alone"                         |
+| Ostrom's principles          | "features shared by commons that actually survived, distilled from case studies" |
 
 ## Sources & Research
 
-- Li, Du, Massar (2002), *Phys. Lett. A* 306, 73 — the protocol.
-- Grau-Climent et al. (2023), *Entropy* 25, 1585 — LDM applied to a CPR game. Local copy in
+- Li, Du, Massar (2002), _Phys. Lett. A_ 306, 73 — the protocol.
+- Grau-Climent et al. (2023), _Entropy_ 25, 1585 — LDM applied to a CPR game. Local copy in
   `literature/quantum_games/`.
-- van Enk & Pike (2002), *Phys. Rev. A* 66, 024306 — the classical-equivalence critique of EWL
+- van Enk & Pike (2002), _Phys. Rev. A_ 66, 024306 — the classical-equivalence critique of EWL
   that §3 is the CV counterpart of.
-- Hardin (1968), *Science* 162; Ostrom (1990), *Governing the Commons* — links already used in
+- Hardin (1968), _Science_ 162; Ostrom (1990), _Governing the Commons_ — links already used in
   the fishing post; reuse them.
 - `notebooks/quantum_cpr_v2.ipynb` — **all §6 numbers come from here**, not from the superseded
   steady-state estimates in the unpublished notes.
@@ -181,15 +182,15 @@ technical level is set by what is *assumed*, not by how things are *said*.
 
 ## Consistency Notes
 
-| Post | Route | Relationship |
-| --- | --- | --- |
-| `quantum_pd.mdx` | `/blog/31/` | Prequel; names the commons as the next target. Summarised here, not assumed. |
-| `tragedy_of_commons_fishing.tsx` | `/blog/14/` | Supplies the fishery model and vocabulary. Summarised here, not assumed. |
-| `quantum_games_literature_notes.mdx` | `/blog/32/` | Working notes; open reading list. Link from the outlook. |
-| `ldm-classical-equivalence.mdx` | — | **Never published.** Source material only. Do not link. |
+| Post                                 | Route       | Relationship                                                                 |
+| ------------------------------------ | ----------- | ---------------------------------------------------------------------------- |
+| `quantum_pd.mdx`                     | `/blog/31/` | Prequel; names the commons as the next target. Summarised here, not assumed. |
+| `tragedy_of_commons_fishing.tsx`     | `/blog/14/` | Supplies the fishery model and vocabulary. Summarised here, not assumed.     |
+| `quantum_games_literature_notes.mdx` | `/blog/32/` | Working notes; open reading list. Link from the outlook.                     |
+| `ldm-classical-equivalence.mdx`      | —           | **Never published.** Source material only. Do not link.                      |
 
-**Terminology to reuse:** *boats* (never "effort" or "uptake"), *catch*, *stock*, *fleet*;
-*harbourmaster*, *clearing rule*, *licensed fleet*; *institution*, and quantum_pd's framing that
+**Terminology to reuse:** _boats_ (never "effort" or "uptake"), _catch_, _stock_, _fleet_;
+_harbourmaster_, _clearing rule_, _licensed fleet_; _institution_, and quantum_pd's framing that
 entanglement "carries the local action onto both".
 
 **Frontmatter** (matching quantum_pd; the skill template predates the repo's actual categories):
@@ -206,10 +207,32 @@ No `tokenID` until minted. **No cross-link to the unpublished notes.**
 
 ## Open Questions for the User
 
-1. **Title.** *Can quantum physics save a fishery?* mirrors quantum_pd's question form and is
+1. **Title.** _Can quantum physics save a fishery?_ mirrors quantum_pd's question form and is
    honest about the answer being qualified. A flatter, more technical alternative:
-   *What the quantum commons game actually is*.
+   _What the quantum commons game actually is_.
 2. **Fate of `ldm-classical-equivalence.mdx`.** It has no `tokenID`, so it never routes and is
    invisible either way. Options: leave it as private working notes, or delete it once this post
    ships. It also still contains claims superseded by the notebook, so leaving it invites future
    confusion.
+
+## v3 revisions (implemented)
+
+Three author notes, all pointing at the same habit: the draft was structured as a story with a
+reveal rather than as an explanation.
+
+1. **One circuit, not two.** See Interactive Elements above.
+2. **Time is not a mystery.** $\beta$ is introduced in §2 as part of the model — the islands
+   maximise a discounted payoff — and the old dramatic section _The half it does not fix_ became
+   a plain **## Over many seasons** reporting two results and a table. Phrases like "comes back
+   to collect" and "only covers half the problem" are gone.
+3. **No `<details>`.** The payoff identity with $\kappa(\gamma)$ moved into the main text.
+
+**Content rescued from the retired notes** (`ldm-classical-equivalence.plan.md`), which were
+audited before retirement: the commuting identity
+$\sum_t \beta^t(u_j + \lambda u_{-j}) = U_j + \lambda U_{-j}$ → post §6, as the _reason_ the
+entangled pair matches a sole owner; 10 dB $\to \lambda = 9/11$ → post §6; "the clerk never needs
+to know how many fish there are" → post §4. Two derivation-flavoured items went to
+`notebooks/quantum_cpr_v2.ipynb`: the check against LDM Eq. (13)/(14), and _maximum economic
+yield_ as the name of the ceiling.
+
+Final: **7 headings, ~1870 words.**

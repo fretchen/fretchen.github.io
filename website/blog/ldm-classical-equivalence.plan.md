@@ -1,3 +1,21 @@
+<!--
+SUPERSEDED WORKING NOTES — not a post, and deliberately not published.
+
+Renamed to *.plan.md so `website/utils/globRegistry.ts` excludes it from the blog registry;
+it therefore has no /blog/<n>/ route, no sitemap entry and no index listing.
+
+The publishable content lives in `website/blog/quantum_cpr.mdx`. The numerics live in
+`notebooks/quantum_cpr_v2.ipynb`, which SUPERSEDES two claims below:
+
+  - the "lambda = 1.65, so no squeezing reaches it" argument (section 4) inverts toward a
+    benchmark that is a reference point, not an optimum;
+  - the "With patient islands, yes" headline (section 5) rests on a steady-state shortcut.
+    A proper dynamic-game solve shows entangled selfish islands match a sole owner with the
+    SAME patience -- which at beta = 0.9 is only 17% of the ceiling.
+
+Kept for the derivations only. Do not act on the conclusions.
+-->
+
 ---
 publishing_date: 2026-08-06
 title: The quantum commons is a co-liability rule

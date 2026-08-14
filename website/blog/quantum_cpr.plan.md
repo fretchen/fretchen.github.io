@@ -91,7 +91,7 @@ and the boundary is the interesting part.
    while income per island rises. Tragedy at $\gamma = 0$, the joint optimum as $\gamma \to \infty$.
 
 6. **## Over many seasons** — $\beta$ is already introduced in §2 as part of the model, so this
-   section just reports results. The commuting identity explains *why* the rule survives many
+   section just reports results. The commuting identity explains _why_ the rule survives many
    seasons. Numbers from `quantum_cpr_v2.ipynb`: entangled
    selfish islands reproduce a sole owner _with the same patience_ — validated at every $\beta$
    tested — but at $\beta = 0.9$ that is only 17% of what the ground could carry, and reaching
@@ -207,9 +207,9 @@ No `tokenID` until minted. **No cross-link to the unpublished notes.**
 
 ## Open Questions for the User
 
-1. **Title.** _Can quantum physics save a fishery?_ mirrors quantum_pd's question form and is
+1. **Title.** _Can quantum physics save a fishery?_ mirrors quantum*pd's question form and is
    honest about the answer being qualified. A flatter, more technical alternative:
-   _What the quantum commons game actually is_.
+   \_What the quantum commons game actually is*.
 2. **Fate of `ldm-classical-equivalence.mdx`.** It has no `tokenID`, so it never routes and is
    invisible either way. Options: leave it as private working notes, or delete it once this post
    ships. It also still contains claims superseded by the notebook, so leaving it invites future
@@ -236,3 +236,20 @@ to know how many fish there are" → post §4. Two derivation-flavoured items we
 yield_ as the name of the ceiling.
 
 Final: **7 headings, ~1870 words.**
+
+## v5 — notation convention (implemented)
+
+Fixed by a symbol audit, so later edits do not drift:
+
+- **`$t$` is reserved for the season index.** The old `$t = \tanh\gamma$` shorthand collided with
+  it and is gone; `$\lambda = \tanh\gamma$` is introduced at the factorisation and used from
+  there on.
+- **`$u_j(b_1,b_2)$` is the profit function; `$u_{j,t}$` its value in season `$t$`.** These were
+  previously conflated as `$u_j(t)$`.
+- **Model constants use the conventional fisheries symbols**: `$q$` catchability (was `$y_0$`,
+  which misread as "catch at t=0"), `$r$` intrinsic growth, `$K$` carrying capacity (was
+  `$1/g_1$`), `$c$` cost per boat. The notebooks keep `y0, g0, g1, c0`, inherited from
+  `common_pool.ipynb`; the appendix carries the mapping.
+- **Decorations, stated once in §1:** subscript `$t$` = season, superscript `$c$` = licensed,
+  superscript `$*$` = equilibrium, tilde = rescaled.
+- Every symbol is defined at first use, including `$-j$`, `$b_j^{c}$`, `$u_j^{Q}$` and `$B^{*}$`.

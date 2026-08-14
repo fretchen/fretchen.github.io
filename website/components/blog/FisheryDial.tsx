@@ -6,8 +6,9 @@ import { css } from "../../styled-system/css";
 // ------------------------------------------------------------
 // The Li-Du-Massar clearing rule is equivalent to each island maximising its own profit plus a
 // share lambda = tanh(gamma) of its neighbour's. For the fishery of common_pool.ipynb
-// (y0 = 0.01, c0 = 0.125, stock s = 100, so y0*s/c0 = 8) the symmetric equilibrium total fleet
-// has a closed form:
+// (catchability q = 0.01, cost c = 0.125, stock s = 100, so q*s/c = 8 -- the post writes these
+// as q and c, the notebooks as y0 and c0) the symmetric equilibrium total fleet has a closed
+// form:
 //
 //     B(lambda) = (y0*s/c0)^2 * ((3 - lambda)/4)^2 = 64 * ((3 - lambda)/4)^2
 //     rent      = sqrt(B) - c0*B                      (total, at y0*s = 1)

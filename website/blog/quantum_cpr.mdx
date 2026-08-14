@@ -9,49 +9,80 @@ description: The Li–Du–Massar protocol, run on a common-pool resource, turns
 import LDMCircuit from "../components/blog/LDMCircuit";
 import FisheryDial from "../components/blog/FisheryDial";
 
-A while ago I wrote about the [quantum prisoner's dilemma](/blog/31/) and something in it that
-still surprises me. Take the Eisert–Wilkens–Lewenstein scheme, entangle two qubits, let each
-player act on their own qubit, disentangle — and mutual cooperation becomes stable. Nobody sat
-down and designed an enforcement mechanism. You write down the standard entangling operation,
-allow the natural moves, and an institution falls out of the machinery. In that post it looked
-like a crooked lawyer with a filing cabinet.
+Two islands fish the same ground. There are two classical ways to run an arrangement like that,
+and neither is comfortable.
 
-That is charming, but we already knew how to fix the prisoner's dilemma. The interesting
-question is whether the trick works on a problem where we _don't_ already know the answer. So:
-the tragedy of the commons.
+**Let each island look after itself.** Nobody needs to know anything, nobody has to agree to
+anything, and no authority has to exist. Each island sends the fleet that is best for it, given
+what the other is doing — and because the boats crowd each other, the ground ends up depleted and
+both islands end up poorer than they needed to be. That is the tragedy of the commons.
 
-It does, and the institution that falls out is a harbour clerk with a ledger. It dissolves the
-part of the tragedy that happens between the two islands. How much fish is left at the end
-depends on something else entirely — how patient the islanders are — and the circuit has no grip
-on that at all.
+**Or appoint someone to work out the right fleet and impose it.** This does work; it is the
+benchmark everything below is measured against. But that someone has to know how fast the fish
+breed, how good the boats are, what a trip costs and how much the islanders care about next year.
+They have to redo the sum every time the stock moves. And then they have to make the quota stick,
+which means watching people and punishing them. The knowledge is scattered across the people
+being planned for, and the enforcement is coercive. These are old objections and they are not
+cheap ones.
 
-## The commons, and what makes it different
+So a good outcome exists. We just do not much like the machinery that reaches it.
 
-Two islands fish the same ground. Each season each island decides how many boats to send. More
-boats means more fish for you, but the ground gets crowded and every trip is worth less — to you
-and to your neighbour. Your neighbour's losses are not your problem. That is the tragedy, in one
-sentence.
+I got interested in a third possibility from an odd direction. A while ago I wrote about the
+[quantum prisoner's dilemma](/blog/31/), where something still surprises me: take the
+Eisert–Wilkens–Lewenstein scheme, entangle two qubits, let each player act on their own qubit,
+disentangle — and mutual cooperation becomes stable. Nobody sat down and designed an enforcement
+mechanism. You write down the standard entangling operation, allow the natural moves, and an
+institution falls out of the machinery. In that post it looked like a crooked lawyer with a
+filing cabinet.
 
-I use the fishery from an [earlier post](/blog/14/). Island $j$ sends $b_j$ boats, the fleet on
-the water is $B_t = b_1 + b_2$, and the stock is $s_t$. Three equations fix the system: the catch,
-the renewal, and what is left over for next season.
+That is charming, but we already knew how to fix the prisoner's dilemma. The interesting question
+is whether the trick works on a problem where we _don't_ already know the answer. So: the commons.
+
+It does. The institution that falls out is a harbour clerk with a ledger, it lands on exactly the
+outcome the appointed planner would have imposed, and it needs to know one number — not the fish,
+not the boats, not the costs. What it cannot do is decide how much fish is left at the end. That
+turns out to depend on something the circuit has no grip on at all.
+
+## The commons, and its two benchmarks
+
+Each season each island decides how many boats to send. More boats means more fish for you, but
+the ground gets crowded and every trip is worth less — to you and to your neighbour. Your
+neighbour's losses are not your problem. That is the tragedy in one sentence, and the rest of
+this section turns it into numbers.
+
+I use the fishery from an [earlier post](/blog/14/). Island 1 sends out $b_1$ boats and island 2
+sends $b_2$ — that is the whole decision either of them makes. The fleet on the water in season
+$t$ is $B_t = b_1 + b_2$ and the fish stock is $s_t$. Three equations close the system:
+
+- **Catch.** $y_t = q\,s_t\sqrt{B_t}$ — more boats land more fish, but with diminishing returns,
+  and a richer stock is easier to fish. The catchability $q$ says how good the gear is.
+- **Renewal.** $g(s) = r\,s\,(1 - s/K)$ — the usual logistic regrowth, with intrinsic rate $r$
+  and carrying capacity $K$. Fastest at half of $K$, zero at both ends.
+- **What is left.** $s_{t+1} = s_t + g(s_t) - y_t$ — this season's catch sets next season's
+  starting point.
+
+The catch is shared in proportion to boats and each boat costs $c$ to send, so a season's profit
+for island $j$ is
 
 $$
-y_t = y_0\,s_t\sqrt{B_t}, \qquad g(s) = g_0\,s\,(1 - g_1 s), \qquad s_{t+1} = s_t + g(s_t) - y_t
+u_j(b_1, b_2) = b_j\left(\frac{y}{B} - c\right),
 $$
 
-The catch is shared in proportion to boats and each boat costs $c_0$ to send, so island $j$ takes
-home $u_j(t) = b_j\,(y_t/B_t - c_0)$ in season $t$. What it actually wants to maximise is not that
-but the **discounted payoff** over all seasons,
+with $y/B$ the value of one boat-trip. Writing $u_{j,t}$ for what that comes to in season $t$,
+what island $j$ actually wants to maximise is its **discounted payoff** over all seasons,
 
 $$
-U_j = \sum_{t=0}^{\infty} \beta^{t}\,u_j(t).
+U_j = \sum_{t=0}^{\infty} \beta^{t}\,u_{j,t}.
 $$
 
 A geometric weight in time, exactly like a damping factor. The economics is all in reading it:
 $\beta$ is how much next year counts compared to this one, so $\beta$ near 1 is a patient
 islander and $\beta = 0$ is one who does not think about next season at all. It will matter
 enormously.
+
+Three decorations recur below and are worth fixing now: a subscript $t$ means "in season $t$", a
+superscript $c$ means "as cleared by the referee", and a tilde means "rescaled". The symbol $t$
+is always the season, never anything else.
 
 Two things make this harder than the prisoner's dilemma.
 
@@ -72,11 +103,12 @@ two qubits, and instead of a discrete gate each player picks a real number.
 
 <LDMCircuit />
 
-Both modes start in vacuum. A referee applies a two-mode squeezer $\hat J(\gamma)$. Each island
-displaces **its own** mode by the number of boats it wants to send. The referee undoes the
-squeezing with $\hat J(\gamma)^\dagger$, and homodyne detection reads out each mode. The
-parameter $\gamma$ is fixed once, in advance. What comes out of the detectors is — their Eq. (11),
-where the operator algebra is worked through in full —
+Both modes start in vacuum. A referee applies a two-mode squeezer $\hat J(\gamma)$, where the
+squeezing parameter $\gamma \ge 0$ is fixed once, in advance. Each island displaces **its own**
+mode by the number of boats it wants to send. The referee undoes the squeezing with
+$\hat J(\gamma)^\dagger$, and homodyne detection reads out each mode. What comes out of the
+detectors — their Eq. (11), where the operator algebra is worked through in full — is the
+**licensed fleet** $b_j^{c}$ that island $j$ is actually credited with:
 
 $$
 b_1^{c} = b_1 \cosh\gamma + b_2 \sinh\gamma, \qquad b_2^{c} = b_2 \cosh\gamma + b_1 \sinh\gamma .
@@ -85,26 +117,27 @@ $$
 In words: the number of boats you are credited with is your own declaration mixed with your
 neighbour's. That mixed number is what you get paid on, and what you get billed for.
 
-Now pull the common factor out of that measurement:
+Now pull the common factor out of that measurement and give the leftover share a name,
+$\lambda = \tanh\gamma$:
 
 $$
-b_j^{c} = \cosh\gamma\,\big(b_j + \tanh\gamma\; b_{-j}\big).
+b_j^{c} = \cosh\gamma\,\big(b_j + \lambda\, b_{-j}\big), \qquad \lambda = \tanh\gamma .
 $$
 
 The $\cosh\gamma$ is the same for both islands, so it is a change of units and cannot affect
-anyone's decision. Feed the rest into the payoffs. Writing $t = \tanh\gamma$ and
-$\tilde b_j = e^{\gamma}b_j$, island $j$'s profit comes out as
+anyone's decision. Feed the rest into the payoffs. Writing $\tilde b_j = e^{\gamma}b_j$ for the
+rescaled fleet, island $j$'s profit under the protocol — call it $u_j^{Q}$ — comes out as
 
 $$
-u_j^{Q} = e^{-\gamma}\cosh\gamma\,\big[\,u_j(\tilde b) + t\,u_{-j}(\tilde b)\,\big],
+u_j^{Q} = e^{-\gamma}\cosh\gamma\,\big[\,u_j(\tilde b) + \lambda\,u_{-j}(\tilde b)\,\big],
 $$
 
-where $u_j$ is the ordinary profit it would make with a fleet $\tilde b_j$. The prefactor is
-positive and common to both, and $\tilde b_j$ is just a relabelling of the declared fleet. So the
-quantum game and a much simpler classical game have the same payoffs — and therefore the same
-best replies and the same equilibria. That classical game is: **each island maximises its own
-profit plus a share $\lambda = \tanh\gamma$ of its neighbour's**, the share running from 0 at
-$\gamma = 0$ to 1 as the squeezing goes up.
+where $u_j$ is the ordinary one-season profit from §1, evaluated at the rescaled fleets. The
+prefactor is positive and common to both, and the rescaling is just a relabelling of the declared
+fleet. So the quantum game and a much simpler classical game have the same payoffs — and
+therefore the same best replies and the same equilibria. That classical game is: **each island
+maximises its own profit plus a share $\lambda$ of its neighbour's**, with $\lambda$ running from
+0 at $\gamma = 0$ to 1 as the squeezing goes up.
 
 Which is a rule a harbour clerk could write on a noticeboard. Your licensed fleet is your own
 boats plus a fraction of your neighbour's; you are paid and billed on that number. Nothing in it
@@ -143,12 +176,16 @@ The trade is not even painful. Fewer boats means less crowding, and less crowdin
 remaining boat is worth more. The islands end up sending under half the fleet and earning about a
 third more.
 
+AUTHOR: The following discussion is impossible to understand. What do you mean with the next sentence ?
+AUTHOR: What are u_{-j} and u_{j} ? They are not defined above ? Can you adapt the notation and derivation to simplify for the reader ?
+AUTHOR: No one knows what the single agent is below and why we compare to it. The whole concept of the collapse / tragedy is not introduced no ? This must be done I think.
+
 That dial holds the stock fixed, though, and the whole point of a fishery is that it does not
 stay fixed. Happily the clerk's rule survives the passage to many seasons untouched, because
 discounting is linear and so is the rule. The two commute:
 
 $$
-\sum_{t} \beta^{t}\Big(u_j(t) + \lambda\, u_{-j}(t)\Big) \;=\; U_j + \lambda\, U_{-j}.
+\sum_{t} \beta^{t}\big(u_{j,t} + \lambda\, u_{-j,t}\big) \;=\; U_j + \lambda\, U_{-j}.
 $$
 
 The share does not stay trapped inside one season. It passes straight through the discounting and
@@ -229,14 +266,16 @@ iterate the other's Bellman equation on a grid of stock levels, take the best re
 sole owner is the same calculation with one agent choosing the total fleet.
 
 One trap is worth recording, because it cost me a debugging round and it is invisible from the
-output. At full squeezing both islands maximise the _same_ function of the total fleet, so island
-1's best reply to $b_2$ is **any** $b_1$ with $b_1 + b_2 = B^{*}$. The best-reply slope is exactly
-$-1$, and undamped iteration cycles with period two forever while still returning a perfectly
-plausible-looking policy. The update has to be damped.
+output. Write $B^{*}$ for the equilibrium total fleet. At full squeezing both islands maximise the
+_same_ function of the total, so island 1's best reply to $b_2$ is **any** $b_1$ with
+$b_1 + b_2 = B^{*}$. The best-reply slope is exactly $-1$, and undamped iteration cycles with
+period two forever while still returning a perfectly plausible-looking policy. The update has to
+be damped.
 
 Two checks keep it honest. At $\beta = 0$ the solver reproduces the static Nash closed form and
 the long-run stock of 47.6 that follows from it. And for the linear (Cournot) case it reproduces
 Li–Du–Massar's own published Eq. (13) and Eq. (14) exactly, at every $\gamma$ tested — which
 checks the reduction in §3, not just the solver. The
 [notebook](https://github.com/fretchen/fretchen.github.io/blob/main/notebooks/quantum_cpr_v2.ipynb)
-runs both checks as assertions.
+runs both checks as assertions. It writes the four constants as `y0, g0, g1, c0`, which are the
+$q$, $r$, $1/K$ and $c$ used here.

@@ -22,11 +22,15 @@ export default defineConfig({
     "dotenv",
     "@scaleway/serverless-functions",
   ],
-  // Only inline the local file: dependency Scaleway's deploy zip can't `npm
-  // install` on its own — not a blanket [/.*/]. noExternal wins over
-  // `external` when both would match a package, so this has to be a narrow
-  // allowlist, not "everything except the two entries above".
-  noExternal: ["@fretchen/s3-utils", "@fretchen/chain-utils"],
+  // Scaleway's deploy zip ships dist/** only (see serverless.yml) — no
+  // package.json, no node_modules, so nothing left as `external` can be
+  // resolved at runtime. Not a blanket [/.*/] like the other packages in this
+  // repo use, because two dev-only packages below must stay external; every
+  // real dependency has to be listed here instead. `viem` is transitive (only
+  // @fretchen/chain-utils imports it directly) but tsup's noExternal doesn't
+  // bundle a package's own dependencies unless they're named too — omitting
+  // it here shipped a broken `import "viem"` straight to production.
+  noExternal: ["@fretchen/s3-utils", "@fretchen/chain-utils", "viem"],
   banner: {
     js: `import { createRequire } from 'module'; const require = createRequire(import.meta.url);`,
   },

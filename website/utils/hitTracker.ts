@@ -17,8 +17,5 @@ export function trackHit(path: string, isLanding: boolean) {
   if (navigator.webdriver) {
     return;
   }
-  navigator.sendBeacon(
-    `${ANALYTICS_URL}/hit`,
-    JSON.stringify({ site: "fretchen.eu", path, landing: isLanding }),
-  );
+  navigator.sendBeacon(`${ANALYTICS_URL}/hit`, JSON.stringify({ site: "fretchen.eu", path, landing: isLanding }));
 }

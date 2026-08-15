@@ -61,6 +61,31 @@ describe("hit handler", () => {
     expect(res.statusCode).toBe(405);
   });
 
+  it.each([
+    "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+    "Mozilla/5.0 (compatible; GPTBot/1.0; +https://openai.com/gptbot)",
+    "ClaudeBot/1.0 (+https://www.anthropic.com)",
+    "AhrefsBot/7.0 (+http://ahrefs.com/robot/)",
+  ])("rejects a known-bot User-Agent with 400, without writing", async (userAgent) => {
+    const res = await handleHit(makeEvent({ headers: { "user-agent": userAgent } }), {});
+    expect(res.statusCode).toBe(400);
+    expect(mockGetS3ObjectWithMeta).not.toHaveBeenCalled();
+    expect(mockPutS3ObjectConditional).not.toHaveBeenCalled();
+  });
+
+  it("does not flag an ordinary browser User-Agent as a bot", async () => {
+    mockGetS3ObjectWithMeta.mockResolvedValue(null);
+    mockPutS3ObjectConditional.mockResolvedValue({ ok: true, etag: '"new-etag"' });
+
+    const res = await handleHit(
+      makeEvent({ headers: { "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/120.0" } }),
+      {},
+    );
+
+    expect(res.statusCode).toBe(204);
+    expect(mockPutS3ObjectConditional).toHaveBeenCalled();
+  });
+
   it("rejects a missing body with 400", async () => {
     const res = await handleHit(makeEvent({ body: undefined }), {});
     expect(res.statusCode).toBe(400);
@@ -112,7 +137,7 @@ describe("hit handler", () => {
     expect(res.statusCode).toBe(204);
     const [key, body, opts] = mockPutS3ObjectConditional.mock.calls[0];
     expect(key).toMatch(/^counts\/fretchen\.eu\/\d{4}-\d{2}-\d{2}T\d{2}\.json$/);
-    expect(JSON.parse(body)).toEqual({ hits: 1, pages: { "/blog/foo": 1 } });
+    expect(JSON.parse(body)).toEqual({ hits: 1, landings: 0, pages: { "/blog/foo": 1 } });
     expect(opts.ifNoneMatch).toBe("*");
     expect(opts.ifMatch).toBeUndefined();
   });
@@ -141,8 +166,57 @@ describe("hit handler", () => {
 
     expect(res.statusCode).toBe(204);
     const [, body, opts] = mockPutS3ObjectConditional.mock.calls[0];
-    expect(JSON.parse(body)).toEqual({ hits: 6, pages: { "/blog/foo": 3, "/": 3 } });
+    // The stored bucket predates `landings` — this also covers the backward-compat
+    // default (0), not just the increment.
+    expect(JSON.parse(body)).toEqual({ hits: 6, landings: 0, pages: { "/blog/foo": 3, "/": 3 } });
     expect(opts.ifMatch).toBe('"etag-1"');
+  });
+
+  it("increments landings only when the request says landing: true", async () => {
+    mockGetS3ObjectWithMeta.mockResolvedValue(null);
+    mockPutS3ObjectConditional.mockResolvedValue({ ok: true, etag: '"e"' });
+
+    await handleHit(makeEvent({ body: JSON.stringify({ site: "fretchen.eu", path: "/blog/foo", landing: true }) }), {});
+
+    const [, body] = mockPutS3ObjectConditional.mock.calls[0];
+    expect(JSON.parse(body)).toMatchObject({ hits: 1, landings: 1 });
+  });
+
+  it("does not increment landings for an in-app navigation (landing: false)", async () => {
+    mockGetS3ObjectWithMeta.mockResolvedValue(null);
+    mockPutS3ObjectConditional.mockResolvedValue({ ok: true, etag: '"e"' });
+
+    await handleHit(
+      makeEvent({ body: JSON.stringify({ site: "fretchen.eu", path: "/blog/foo", landing: false }) }),
+      {},
+    );
+
+    const [, body] = mockPutS3ObjectConditional.mock.calls[0];
+    expect(JSON.parse(body)).toMatchObject({ hits: 1, landings: 0 });
+  });
+
+  it("treats a missing landing field as false rather than rejecting the request", async () => {
+    mockGetS3ObjectWithMeta.mockResolvedValue(null);
+    mockPutS3ObjectConditional.mockResolvedValue({ ok: true, etag: '"e"' });
+
+    const res = await handleHit(makeEvent(), {}); // makeEvent's default body has no `landing`
+
+    expect(res.statusCode).toBe(204);
+    const [, body] = mockPutS3ObjectConditional.mock.calls[0];
+    expect(JSON.parse(body)).toMatchObject({ landings: 0 });
+  });
+
+  it("keeps incrementing landings across repeat visits", async () => {
+    mockGetS3ObjectWithMeta.mockResolvedValue({
+      body: JSON.stringify({ hits: 4, landings: 2, pages: { "/blog/foo": 4 } }),
+      etag: '"etag-1"',
+    });
+    mockPutS3ObjectConditional.mockResolvedValue({ ok: true, etag: '"etag-2"' });
+
+    await handleHit(makeEvent({ body: JSON.stringify({ site: "fretchen.eu", path: "/blog/foo", landing: true }) }), {});
+
+    const [, body] = mockPutS3ObjectConditional.mock.calls[0];
+    expect(JSON.parse(body)).toMatchObject({ hits: 5, landings: 3 });
   });
 
   it("still increments hits but stops adding new distinct paths once the pages cap is reached", async () => {
@@ -199,7 +273,7 @@ describe("hit handler", () => {
     expect(mockGetS3ObjectWithMeta).toHaveBeenCalledTimes(2);
     expect(mockPutS3ObjectConditional).toHaveBeenCalledTimes(2);
     const [, finalBody] = mockPutS3ObjectConditional.mock.calls[1];
-    expect(JSON.parse(finalBody)).toEqual({ hits: 3, pages: { "/blog/foo": 1 } });
+    expect(JSON.parse(finalBody)).toEqual({ hits: 3, landings: 0, pages: { "/blog/foo": 1 } });
   });
 
   it("gives up silently after exceeding max CAS attempts, still returning 204", async () => {

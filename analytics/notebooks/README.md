@@ -11,6 +11,8 @@ service, kept here rather than in the repo's general-purpose root
 | `01_smoke_test.ipynb` | POSTs real hits to `/hit` (valid and invalid), then reads the resulting object back to confirm the write landed. `LOCAL` toggle at the top switches between `npm run dev` (file storage, no credentials) and the deployed service (real S3). |
 | `02_readout.ipynb`    | Aggregates one day's hourly buckets (sum `hits`, merge `pages`), then reads a date range out of the monthly rollups — each half validated against a local fixture first. Prototype for the eventual `GET /stats`; not wired into any endpoint.  |
 | `03_umami_backfill.ipynb` | One-off: folds the cloud.umami.is data export into monthly rollups, so the ~7 months predating the hit counter aren't lost. Dry-runs to `state/` by default; `WRITE_TO_S3` flips it to the real write.                                     |
+| `04_umami_vs_beacon.ipynb` | One-off: compares a fresh Umami export against what the beacon actually recorded for the same days, per-day table + chart. Reads `beacon_source` (`"beacon"` vs. `"umami"`) rather than guessing from dates, so it can't accidentally compare an old backfilled day against itself; a day with Umami traffic and zero beacon hits is flagged as a likely outage, not a quiet day. |
+| `05_traffic_bursts.ipynb` | One-off: flags statistically unusual days in the full pre-migration Umami export (`median + 3×MAD`) and, for each, computes session-ratio/fingerprint-concentration/referrer/geo/path signals to distinguish a crawl from an organic spike from the site owner's own recurring traffic. Cross-references bursts against blog `publishing_date`s. Only possible against the old export — the live beacon records no browser/referrer/session data by design, so this kind of analysis can't be repeated for beacon-only-era traffic without a schema change. |
 
 `umami_backfill.py` holds that import's logic — CSV parsing, path
 normalisation, monthly grouping, and an idempotent merge where days already
@@ -19,6 +21,9 @@ drops `session_id`/geo/device entirely, so the rollups carry no more than the
 live counter would have recorded. Delete the export when you're done;
 `analytics/.gitignore` covers `*.zip`/`*.csv` so it can't be committed by
 accident.
+
+`04_umami_vs_beacon.ipynb` is the one notebook here needing `pandas`/`matplotlib`
+(added to `pyproject.toml` for it) — the others only ever print dicts.
 
 `storage.py` provides `LocalStorage` (JSON files on disk — fixture-driven,
 no credentials needed) and `S3Storage` (real Scaleway Object Storage via

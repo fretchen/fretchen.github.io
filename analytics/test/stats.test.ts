@@ -52,7 +52,7 @@ describe("collectRange", () => {
     const days = await collectRange(store, SITE, "2026-08-08", "2026-08-10", NOW);
 
     expect(Object.keys(days).sort()).toEqual(["2026-08-08", "2026-08-09", "2026-08-10"]);
-    expect(days["2026-08-09"]).toEqual({ hits: 4, pages: { "/blog/": 4 }, source: "beacon" });
+    expect(days["2026-08-09"]).toEqual({ hits: 4, landings: 0, pages: { "/blog/": 4 }, source: "beacon" });
   });
 
   it("returns the same days whether or not they have been rolled up", async () => {
@@ -67,8 +67,8 @@ describe("collectRange", () => {
         site: SITE,
         month: "2026-08",
         days: {
-          "2026-08-08": { hits: 6, pages: { "/": 6 }, source: "beacon" },
-          "2026-08-09": { hits: 4, pages: { "/blog/": 4 }, source: "beacon" },
+          "2026-08-08": { hits: 6, landings: 0, pages: { "/": 6 }, source: "beacon" },
+          "2026-08-09": { hits: 4, landings: 0, pages: { "/blog/": 4 }, source: "beacon" },
         },
       },
     });
@@ -122,6 +122,7 @@ describe("collectRange write-back", () => {
 
     expect(store.read<MonthRollup>(rollupKey(SITE, "2026-08"))?.days["2026-08-09"]).toEqual({
       hits: 4,
+      landings: 0,
       pages: { "/blog/": 4 },
       source: "beacon",
     });
@@ -166,7 +167,7 @@ describe("collectRange write-back", () => {
     // Only today still needs its 24 hourly keys; the two rebuilt days are now rollup reads.
     expect(store.gets.filter((key) => key.startsWith("counts/")).length).toBe(24);
     expect(store.gets.length).toBeLessThan(firstCallGets);
-    expect(second["2026-08-09"]).toEqual({ hits: 4, pages: { "/blog/": 4 }, source: "beacon" });
+    expect(second["2026-08-09"]).toEqual({ hits: 4, landings: 0, pages: { "/blog/": 4 }, source: "beacon" });
   });
 
   it("still serves the data when the write-back fails", async () => {
@@ -191,7 +192,7 @@ describe("buildStats", () => {
 
     expect(stats.from).toBe("2025-08-11");
     expect(stats.to).toBe("2026-08-10");
-    expect(stats.days).toEqual({ "2026-08-10": { hits: 2, pages: { "/": 2 }, source: "beacon" } });
+    expect(stats.days).toEqual({ "2026-08-10": { hits: 2, landings: 0, pages: { "/": 2 }, source: "beacon" } });
   });
 
   it("carries per-day pages and source so the client can slice any range", async () => {

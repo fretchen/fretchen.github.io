@@ -70,22 +70,94 @@ def normalize_path(raw: str) -> str | None:
     return path
 
 
-def read_pageviews(csv_path: str | Path, hostname: str = f"www.{SITE}") -> list[tuple[str, str]]:
+# The two crawler signatures identified and validated in
+# analytics/notebooks/05_traffic_bursts.ipynb against the full export. Kept as
+# the only two rules here deliberately -- a more general bot detector would be
+# over-engineering for a one-off cleanup of a fixed, already-characterised
+# dataset.
+
+
+def is_chronic_crawler(row: dict) -> bool:
+    """The persistent Chrome/Windows/1280x1200 signature: 568 rows spread
+    across 179 of ~214 days, every one its own one-shot session, no referrer,
+    no single dominant page -- a distributed sweep disguised as the world's
+    most common desktop browser configuration. Screen resolution is the tell:
+    1280x1200 is not a resolution real Windows laptops actually ship with.
+    """
+    return (
+        row["browser"] == "chrome"
+        and row["os"] == "Windows 10"
+        and row["device"] == "laptop"
+        and row["screen"] == "1280x1200"
+    )
+
+
+def find_acute_crawler_session_ids(rows: list[dict]) -> set[str]:
+    """The two-day Aug 8-9 spike: chrome/Linux/laptop, one-shot no-referrer
+    sessions, restricted to days where that exact fingerprint spans 3+
+    countries -- something no single real device can do. Needs two passes
+    (session size, then per-day country count) over just this fingerprint's
+    own rows, mirroring notebook 05's validated logic exactly.
+    """
+    linux_rows = [
+        r
+        for r in rows
+        if r["browser"] == "chrome" and r["os"] == "Linux" and r["device"] == "laptop"
+    ]
+
+    session_sizes: dict[str, int] = defaultdict(int)
+    for r in linux_rows:
+        session_sizes[r["session_id"]] += 1
+
+    one_shot_no_referrer = [
+        r for r in linux_rows if session_sizes[r["session_id"]] == 1 and not r["referrer_domain"]
+    ]
+
+    countries_per_day: dict[str, set[str]] = defaultdict(set)
+    for r in one_shot_no_referrer:
+        countries_per_day[r["created_at"][:10]].add(r["country"])
+    crawl_days = {day for day, countries in countries_per_day.items() if len(countries) >= 3}
+
+    return {r["session_id"] for r in one_shot_no_referrer if r["created_at"][:10] in crawl_days}
+
+
+def read_pageviews(
+    csv_path: str | Path, hostname: str = f"www.{SITE}", exclude_crawlers: bool = False
+) -> list[tuple[str, str]]:
     """Extract (day, canonical_path) pairs from a Umami `website_event.csv`.
 
     Drops custom events, other hostnames (localhost dev traffic), and any path
     that fails normalisation. Returns one tuple per pageview — no dedup, no
     sessionisation, matching how the beacon counts.
+
+    `exclude_crawlers=True` (default off, so existing callers are unaffected)
+    additionally drops rows matching `is_chronic_crawler` or
+    `find_acute_crawler_session_ids` before paths are extracted -- the
+    filtering needs the full row (browser/os/device/screen/referrer/session/
+    country), which is why it happens here rather than after reduction to
+    `(day, path)`.
     """
-    pageviews: list[tuple[str, str]] = []
     with open(csv_path, newline="", encoding="utf-8") as handle:
-        for row in csv.DictReader(handle):
-            if row["event_type"] != PAGEVIEW or row["hostname"] != hostname:
-                continue
-            path = normalize_path(row["url_path"])
-            if path is None:
-                continue
-            pageviews.append((row["created_at"][:10], path))
+        rows = [
+            row
+            for row in csv.DictReader(handle)
+            if row["event_type"] == PAGEVIEW and row["hostname"] == hostname
+        ]
+
+    if exclude_crawlers:
+        acute_session_ids = find_acute_crawler_session_ids(rows)
+        rows = [
+            row
+            for row in rows
+            if not is_chronic_crawler(row) and row["session_id"] not in acute_session_ids
+        ]
+
+    pageviews: list[tuple[str, str]] = []
+    for row in rows:
+        path = normalize_path(row["url_path"])
+        if path is None:
+            continue
+        pageviews.append((row["created_at"][:10], path))
     return pageviews
 
 

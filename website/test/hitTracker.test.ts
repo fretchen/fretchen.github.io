@@ -7,11 +7,26 @@ describe("trackHit", () => {
   });
 
   it("sends a beacon to /hit with the site and path", () => {
-    trackHit("/blog/foo");
+    trackHit("/blog/foo", true);
 
     expect(navigator.sendBeacon).toHaveBeenCalledTimes(1);
     const [url, body] = vi.mocked(navigator.sendBeacon).mock.calls[0];
     expect(url).toMatch(/\/hit$/);
-    expect(JSON.parse(body as string)).toEqual({ site: "fretchen.eu", path: "/blog/foo" });
+    expect(JSON.parse(body as string)).toEqual({ site: "fretchen.eu", path: "/blog/foo", landing: true });
+  });
+
+  it("forwards isLanding=false for an in-app navigation", () => {
+    trackHit("/blog/foo", false);
+
+    const [, body] = vi.mocked(navigator.sendBeacon).mock.calls[0];
+    expect(JSON.parse(body as string)).toMatchObject({ landing: false });
+  });
+
+  it("skips the beacon entirely when navigator.webdriver is set", () => {
+    vi.stubGlobal("navigator", { sendBeacon: vi.fn(), webdriver: true });
+
+    trackHit("/blog/foo", true);
+
+    expect(navigator.sendBeacon).not.toHaveBeenCalled();
   });
 });

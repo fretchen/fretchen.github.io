@@ -61,6 +61,31 @@ describe("hit handler", () => {
     expect(res.statusCode).toBe(405);
   });
 
+  it.each([
+    "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+    "Mozilla/5.0 (compatible; GPTBot/1.0; +https://openai.com/gptbot)",
+    "ClaudeBot/1.0 (+https://www.anthropic.com)",
+    "AhrefsBot/7.0 (+http://ahrefs.com/robot/)",
+  ])("rejects a known-bot User-Agent with 400, without writing", async (userAgent) => {
+    const res = await handleHit(makeEvent({ headers: { "user-agent": userAgent } }), {});
+    expect(res.statusCode).toBe(400);
+    expect(mockGetS3ObjectWithMeta).not.toHaveBeenCalled();
+    expect(mockPutS3ObjectConditional).not.toHaveBeenCalled();
+  });
+
+  it("does not flag an ordinary browser User-Agent as a bot", async () => {
+    mockGetS3ObjectWithMeta.mockResolvedValue(null);
+    mockPutS3ObjectConditional.mockResolvedValue({ ok: true, etag: '"new-etag"' });
+
+    const res = await handleHit(
+      makeEvent({ headers: { "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/120.0" } }),
+      {},
+    );
+
+    expect(res.statusCode).toBe(204);
+    expect(mockPutS3ObjectConditional).toHaveBeenCalled();
+  });
+
   it("rejects a missing body with 400", async () => {
     const res = await handleHit(makeEvent({ body: undefined }), {});
     expect(res.statusCode).toBe(400);

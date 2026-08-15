@@ -14,4 +14,12 @@ describe("trackHit", () => {
     expect(url).toMatch(/\/hit$/);
     expect(JSON.parse(body as string)).toEqual({ site: "fretchen.eu", path: "/blog/foo" });
   });
+
+  it("skips the beacon entirely when navigator.webdriver is set", () => {
+    vi.stubGlobal("navigator", { sendBeacon: vi.fn(), webdriver: true });
+
+    trackHit("/blog/foo");
+
+    expect(navigator.sendBeacon).not.toHaveBeenCalled();
+  });
 });

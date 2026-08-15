@@ -23,6 +23,37 @@ const MAX_PATH_LENGTH = 200;
 const MAX_PAGES_PER_BUCKET = 200; // caps distinct paths tracked per hour bucket
 const MAX_CAS_ATTEMPTS = 3;
 
+/**
+ * Self-identifying crawlers only — catches honest bots, not the chronic
+ * evasive crawler found in analytics/notebooks/05_traffic_bursts.ipynb (that
+ * one never announces itself; see the notebook's "Tier 2" note on why an IP/CIDR
+ * approach was parked instead of built speculatively). Nothing is stored: the
+ * UA is inspected per-request to decide whether to write, then discarded —
+ * same privacy posture as everything else here.
+ */
+const BOT_USER_AGENTS = [
+  "googlebot",
+  "bingbot",
+  "ahrefsbot",
+  "semrushbot",
+  "mj12bot",
+  "gptbot",
+  "ccbot",
+  "claudebot",
+  "perplexitybot",
+  "yandexbot",
+  "petalbot",
+  "bytespider",
+];
+
+function isKnownBot(userAgent: string | undefined): boolean {
+  if (!userAgent) {
+    return false;
+  }
+  const lower = userAgent.toLowerCase();
+  return BOT_USER_AGENTS.some((bot) => lower.includes(bot));
+}
+
 // `vike dev` serves on 3000; 5173 covers a plain `vite dev` fallback.
 const ALLOWED_ORIGINS = ["https://www.fretchen.eu", "http://localhost:3000", "http://localhost:5173"];
 
@@ -106,6 +137,14 @@ export async function handleHit(event: ScalewayEvent, _context: unknown): Promis
       statusCode: 405,
       headers: corsHeaders,
       body: JSON.stringify({ error: "Method not allowed" }),
+    };
+  }
+
+  if (isKnownBot(event.headers?.["user-agent"] ?? event.headers?.["User-Agent"])) {
+    return {
+      statusCode: 400,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: "Not tracked" }),
     };
   }
 

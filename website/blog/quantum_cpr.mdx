@@ -12,28 +12,26 @@ import FisheryDial from "../components/blog/FisheryDial";
 Two islands fish the same ground. There are two classical ways to run an arrangement like that,
 and neither is comfortable.
 
-**Let each island look after itself.** Nobody needs to know anything, nobody has to agree to
-anything, and no authority has to exist. Each island sends the fleet that is best for it, given
-what the other is doing — and because the boats crowd each other, the ground ends up depleted and
-both islands end up poorer than they needed to be. That is the tragedy of the commons.
+**Let each island look after itself.** Nobody needs to know anything and nobody has to agree to
+anything. Each island sends the fleet that is best for it given what the other is doing — and
+because the boats crowd each other, the ground ends up depleted and both islands poorer than they
+needed to be. That is the tragedy of the commons.
 
-**Or appoint someone to work out the right fleet and impose it.** This does work; it is the
+**Or appoint someone to work out the right fleet and impose it.** This works, and it is the
 benchmark everything below is measured against. But that someone has to know how fast the fish
-breed, how good the boats are, what a trip costs and how much the islanders care about next year.
-They have to redo the sum every time the stock moves. And then they have to make the quota stick,
-which means watching people and punishing them. The knowledge is scattered across the people
-being planned for, and the enforcement is coercive. These are old objections and they are not
-cheap ones.
+breed, how good the boats are, what a trip costs and how much the islanders care about next year;
+they have to redo the sum every time the stock moves; and they have to make the quota stick,
+which means watching people and punishing them. The knowledge is scattered across the very people
+being planned for, and the enforcement is coercive. Old objections, and not cheap ones.
 
 So a good outcome exists. We just do not much like the machinery that reaches it.
 
 I got interested in a third possibility from an odd direction. A while ago I wrote about the
 [quantum prisoner's dilemma](/blog/31/), where something still surprises me: take the
 Eisert–Wilkens–Lewenstein scheme, entangle two qubits, let each player act on their own qubit,
-disentangle — and mutual cooperation becomes stable. Nobody sat down and designed an enforcement
-mechanism. You write down the standard entangling operation, allow the natural moves, and an
-institution falls out of the machinery. In that post it looked like a crooked lawyer with a
-filing cabinet.
+disentangle — and mutual cooperation becomes stable. Nobody designed an enforcement mechanism.
+You write down the standard entangling operation, allow the natural moves, and an institution
+falls out of the machinery. In that post it looked like a crooked lawyer with a filing cabinet.
 
 That is charming, but we already knew how to fix the prisoner's dilemma. The interesting question
 is whether the trick works on a problem where we _don't_ already know the answer. So: the commons.
@@ -80,9 +78,25 @@ $\beta$ is how much next year counts compared to this one, so $\beta$ near 1 is 
 islander and $\beta = 0$ is one who does not think about next season at all. It will matter
 enormously.
 
-Three decorations recur below and are worth fixing now: a subscript $t$ means "in season $t$", a
-superscript $c$ means "as cleared by the referee", and a tilde means "rescaled". The symbol $t$
-is always the season, never anything else.
+Three decorations recur below: a subscript $t$ means "in season $t$", a superscript $c$ means "as
+cleared by the referee", and a tilde means "rescaled". The symbol $t$ is always the season.
+
+Now the two benchmarks from the opening, in this model, at a stock of 100 — each island picking
+its best fleet given what the other does, against one owner picking the total that makes the most
+money overall:
+
+|                                | boats on the water | income per island |
+| ------------------------------ | ------------------ | ----------------- |
+| each island for itself         | 36                 | 0.75              |
+| one owner of the whole fishery | 16                 | 1.00              |
+
+**2.25 times the boats for three-quarters of the money.** That gap is the tragedy, and it is the
+distance any institution here has to close.
+
+Notice what the owner had to know to pick 16. They need $q$ to know how the gear performs, $r$
+and $K$ to know how the fish breed, $c$ to know what a trip costs, and $\beta$ to know how the
+future should be weighed — the entire model. That is the price of the second benchmark, and it is
+the thing to keep in mind when the clerk turns up.
 
 Two things make this harder than the prisoner's dilemma.
 
@@ -91,9 +105,8 @@ qubit constructions out: a continuous strategy needs a continuous degree of free
 which in quantum mechanics means a harmonic oscillator. It is the whole reason the protocol below
 is built out of field modes rather than spins.
 
-**The stock carries over.** The prisoner's dilemma happens once. A fishery happens every season,
-and this season's catch sets next season's starting point — which is what the third equation
-above says.
+**The stock carries over.** The prisoner's dilemma happens once; a fishery happens every season,
+and the third equation above is what couples them.
 
 ## The circuit, and what it implements
 
@@ -121,23 +134,24 @@ Now pull the common factor out of that measurement and give the leftover share a
 $\lambda = \tanh\gamma$:
 
 $$
-b_j^{c} = \cosh\gamma\,\big(b_j + \lambda\, b_{-j}\big), \qquad \lambda = \tanh\gamma .
+b_1^{c} = \cosh\gamma\,\big(b_1 + \lambda\, b_2\big), \qquad \lambda = \tanh\gamma ,
 $$
 
-The $\cosh\gamma$ is the same for both islands, so it is a change of units and cannot affect
-anyone's decision. Feed the rest into the payoffs. Writing $\tilde b_j = e^{\gamma}b_j$ for the
-rescaled fleet, island $j$'s profit under the protocol — call it $u_j^{Q}$ — comes out as
+and the same with the labels swapped. The $\cosh\gamma$ is the same for both islands, so it is a
+change of units and cannot affect anyone's decision. Feed the rest into the payoffs. Writing
+$\tilde b_j = e^{\gamma}b_j$ for the rescaled fleet, island 1's profit under the protocol — call
+it $u_1^{Q}$ — comes out as
 
 $$
-u_j^{Q} = e^{-\gamma}\cosh\gamma\,\big[\,u_j(\tilde b) + \lambda\,u_{-j}(\tilde b)\,\big],
+u_1^{Q} = e^{-\gamma}\cosh\gamma\,\big[\,u_1(\tilde b) + \lambda\,u_2(\tilde b)\,\big],
 $$
 
-where $u_j$ is the ordinary one-season profit from §1, evaluated at the rescaled fleets. The
-prefactor is positive and common to both, and the rescaling is just a relabelling of the declared
-fleet. So the quantum game and a much simpler classical game have the same payoffs — and
-therefore the same best replies and the same equilibria. That classical game is: **each island
-maximises its own profit plus a share $\lambda$ of its neighbour's**, with $\lambda$ running from
-0 at $\gamma = 0$ to 1 as the squeezing goes up.
+where $u_1$ and $u_2$ are the ordinary one-season profits from §1, evaluated at the rescaled
+fleets. The prefactor is positive and common to both, and the rescaling is just a relabelling of
+the declared fleet. So the quantum game and a much simpler classical game have the same payoffs —
+and therefore the same best replies and the same equilibria. That classical game is: **each
+island maximises its own profit plus a share $\lambda$ of the other's**, with $\lambda$ running
+from 0 at $\gamma = 0$ to 1 as the squeezing goes up.
 
 Which is a rule a harbour clerk could write on a noticeboard. Your licensed fleet is your own
 boats plus a fraction of your neighbour's; you are paid and billed on that number. Nothing in it
@@ -145,7 +159,7 @@ needs a laser. This is the continuous-variable version of a point
 [van Enk and Pike](https://doi.org/10.1103/PhysRevA.66.024306) made about EWL: the quantum game
 has a fully classical description, and writing it down is not hard.
 
-## What the rule does
+## What the clerk actually does
 
 Deflating as that is for the physics, look at what the clerk is doing, because it is a real
 institution and a good one.
@@ -157,16 +171,18 @@ boat. Without the rule she weighs the extra catch against the crowding — but o
 The clerk closes it by making her a part-owner of Kai's catch. She is paid on a slice of whatever
 he lands, so her extra boat now costs her twice: once through the crowding on her own catch, once
 through the crowding on the slice of his that she owns. At full squeezing she feels the entire
-damage her boat does, and the fleet she picks out of pure self-interest is the fleet a single
-owner of the whole fishery would pick.
+damage her boat does — and the fleet she then picks, out of nothing but self-interest, is the
+16 boats the owner of the whole fishery would have chosen. That is the second benchmark, reached
+without anybody owning anything.
 
 There is no agreement between Moana and Kai here. Neither promised anything, nobody is watching,
 and there is nothing to enforce. This is not cooperation. Moana is exactly as selfish as before —
 the sum in front of her has changed, that is all.
 
-And notice what the clerk never needs to know. He does not work out how many fish there are, how
-fast they breed, or what the right fleet would be. He publishes one number, $\gamma$, and the
-islands find the rest themselves. Anyone setting a quota instead would need the entire model.
+And now compare what the clerk had to know against the list from §1. Not $q$, not $r$ or $K$, not
+$c$, not $\beta$. He never works out how many fish there are, how fast they breed, or what the
+right fleet would be. He publishes $\gamma$, applies it to two declared numbers, and the islands
+find the 16 themselves. The planner's answer, without the planner's knowledge.
 
 ## What the rule buys
 
@@ -176,22 +192,24 @@ The trade is not even painful. Fewer boats means less crowding, and less crowdin
 remaining boat is worth more. The islands end up sending under half the fleet and earning about a
 third more.
 
-AUTHOR: The following discussion is impossible to understand. What do you mean with the next sentence ?
-AUTHOR: What are u_{-j} and u_{j} ? They are not defined above ? Can you adapt the notation and derivation to simplify for the reader ?
-AUTHOR: No one knows what the single agent is below and why we compare to it. The whole concept of the collapse / tragedy is not introduced no ? This must be done I think.
+That dial holds the stock fixed at 100. It shows the mechanism, but a fishery whose stock never
+moves is not a fishery. So the real question is whether the clerk still lands on the owner's
+answer when the stock rises and falls from one season to the next.
 
-That dial holds the stock fixed, though, and the whole point of a fishery is that it does not
-stay fixed. Happily the clerk's rule survives the passage to many seasons untouched, because
-discounting is linear and so is the rule. The two commute:
+It does, for a fairly boring reason. Adding up discounted seasons is a linear operation. So is
+"your own profit plus a share $\lambda$ of the other island's". Two linear operations can be
+applied in either order, which is all this says — with $u_{1,t}$ island 1's profit in season $t$,
+and $U_1$ its discounted lifetime total from §1:
 
 $$
-\sum_{t} \beta^{t}\big(u_{j,t} + \lambda\, u_{-j,t}\big) \;=\; U_j + \lambda\, U_{-j}.
+\sum_{t} \beta^{t}\big(u_{1,t} + \lambda\, u_{2,t}\big) \;=\; U_1 + \lambda\, U_2.
 $$
 
-The share does not stay trapped inside one season. It passes straight through the discounting and
-lands on the **lifetime** payoffs, so each island ends up maximising its own discounted stream
-plus a share $\lambda$ of its neighbour's. At full squeezing that is the total, which is exactly
-what a single owner of the fishery would maximise.
+Left to right, that is the clerk's rule applied every season and then summed; right to left, it
+is each island's lifetime earnings summed first and the clerk's rule applied to those. Same
+number. So the share does not stay trapped inside one season — it lands on the lifetime payoffs,
+and at full squeezing each island is maximising $U_1 + U_2$, the lifetime earnings of the entire
+fishery. Which is precisely what the owner in §1 was maximising.
 
 Solving the fishery as a proper dynamic game confirms it. Under full squeezing, two selfish
 islands settle on the same stock as one owner with the same patience, at every patience level I
@@ -205,10 +223,15 @@ stock as a percentage of what the ground could carry:
 | ---------------- | --- | ---- | ---- | ---- |
 | stock reached    | 17% | 24%  | 36%  | 73%  |
 
-An islander who discounts next year by 10% ends up at a sixth of the ceiling — and so does a
-sole owner with that patience, because at that point the binding constraint is no longer the
+An islander who discounts next year by 10% ends up at a sixth of the ceiling — and so does an
+owner with that patience, because at that point the binding constraint is no longer the
 externality between the islands. It is that both of them, together, would rather have the fish
 now.
+
+A word on what "tragedy" does and does not mean here. The fishery never actually dies. Catching
+gets expensive as the fish get scarce, which gives them a refuge, so even with no rule at all the
+stock settles around 48 rather than going to zero. The commons is not destroyed; it is just
+permanently poor, which is the more common way these things go wrong.
 
 Both knobs have a ceiling in practice. Squeezing of $S$ decibels means $e^{2\gamma} = 10^{S/10}$,
 so 10 dB — around the state of the art for a stable optical setup — gives $\lambda = 9/11$, about
@@ -217,36 +240,37 @@ so 10 dB — around the state of the art for a stable optical setup — gives $\
 So: $\gamma$ decides how well the islands coordinate, $\beta$ decides how much fish there is to
 coordinate over.
 
-## A note on Ostrom
+## Where this sits
 
-The obvious question is whether the clerk is an Ostrom institution. Where
+I set this up as a choice between two bad options, which is exactly the framing
+[Elinor Ostrom](https://www.actu-environnement.com/media/pdf/ostrom_1990.pdf) spent her career
+demolishing. Where
 [Hardin](https://math.uchicago.edu/~shmuel/Modeling/Hardin,%20Tragedy%20of%20the%20Commons.pdf)
-concluded that a commons ends in ruin,
-[Elinor Ostrom](https://www.actu-environnement.com/media/pdf/ostrom_1990.pdf) won a Nobel for
-showing that communities do govern them successfully, and she distilled eight features shared by
-the ones that survived — clear boundaries, the users making their own rules, monitoring each
-other, graduated sanctions, and so on.
+concluded a commons ends in ruin unless it is privatised or policed, she showed that communities
+routinely govern them without either, and distilled eight features shared by the ones that
+survived — clear boundaries, the users making their own rules, monitoring each other, graduated
+sanctions.
 
-The honest answer is: barely. A couple of her principles are about what a rule _does_, and the
-clerk satisfies those. Most are about who makes the rule, who watches, and who may change it, and
-there the clerk scores badly — $\gamma$ is imposed from outside and nobody can argue with it. A
-rule welded into an optical bench is about as unrevisable as a rule gets, which is backwards from
-what Ostrom found makes commons work.
+So there is already a third way, and the clerk is not it. A couple of Ostrom's principles are
+about what a rule _does_, and the clerk satisfies those. Most are about who makes the rule, who
+watches, and who may change it — and there the clerk is closer to the planner than to a
+community, since $\gamma$ is imposed from outside and nobody can argue with it. A rule welded
+into an optical bench is about as unrevisable as a rule gets, which is backwards from what she
+found makes commons work.
 
-I want to be careful here. Ostrom's principles are empirical regularities distilled from case
-studies, not a mathematical design, and half of them are not statements about payoffs at all.
-Working out which of them _could_ be expressed as a mechanism is an open problem, and an
-interesting one.
+Her principles are empirical regularities distilled from case studies, not a mathematical design,
+and half of them are not statements about payoffs at all. Working out which of them _could_ be
+expressed as a mechanism is an open problem, and an interesting one.
 
 ## Outlook
 
 Two data points now. In both, writing down a standard entangling operation produced a working
-institution that nobody designed, and in both the institution turned out to have an entirely
-classical description — a filing cabinet, a clerk with a ledger. In the second case, where the
-answer was not obvious beforehand, it genuinely solves the part of the problem it can reach.
+institution nobody designed, and in both that institution had an entirely classical description —
+a filing cabinet, a clerk with a ledger. Here it reaches the planner's outcome on the planner's
+own terms, and it does so knowing one number instead of five.
 
 What it cannot reach is time. An entangling operation acts within a round, and a commons is a
-problem about rounds. My guess is that this boundary can be moved — by pricing fish left in the
+problem about rounds. My guess is that the boundary can be moved — by pricing fish left in the
 water rather than boats sent out — but only classically, bolted onto the ledger rather than the
 circuit.
 

@@ -31,11 +31,20 @@ export const HOURLY_FALLBACK_DAYS = 14;
 
 export interface HourBucket {
   hits: number;
+  /** Fresh page loads only (onHydrationEnd), not in-app navigations — see hit.ts. */
+  landings: number;
   pages: Record<string, number>;
 }
 
 export interface DayBucket {
   hits: number;
+  /**
+   * Absent on any day written before this field existed — every "umami" day
+   * and any older "beacon" day. Not retrofittable (see
+   * analytics/notebooks/umami_backfill.py's scoping note); treat a missing
+   * value as unknown, not zero.
+   */
+  landings?: number;
   pages: Record<string, number>;
   /** `"beacon"` for anything this service counted; `"umami"` for backfilled history. */
   source: string;
@@ -121,6 +130,7 @@ export async function readDayFromHourly(store: HitStorage, site: string, day: st
   const results = await Promise.all(hourKeys(site, day).map((key) => store.getWithMeta(key)));
 
   let hits = 0;
+  let landings = 0;
   let found = false;
   const pages: Record<string, number> = {};
 
@@ -131,10 +141,11 @@ export async function readDayFromHourly(store: HitStorage, site: string, day: st
     found = true;
     const bucket = JSON.parse(result.body) as HourBucket;
     hits += bucket.hits ?? 0;
+    landings += bucket.landings ?? 0; // 0 for hours written before this field existed
     mergePages(pages, bucket.pages ?? {});
   }
 
-  return found ? { hits, pages: topPages(pages), source: "beacon" } : null;
+  return found ? { hits, landings, pages: topPages(pages), source: "beacon" } : null;
 }
 
 async function readRollup(store: HitStorage, site: string, month: string): Promise<MonthRollup | null> {

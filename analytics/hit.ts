@@ -76,6 +76,8 @@ function getCorsHeaders(origin?: string): Record<string, string> {
 
 interface HourBucket {
   hits: number;
+  /** Fresh page loads only (onHydrationEnd), not in-app navigations — see hitTracker.ts. */
+  landings: number;
   pages: Record<string, number>;
 }
 
@@ -102,14 +104,25 @@ function hourKey(site: string, now: Date = new Date()): string {
  * read on a CAS conflict; after MAX_CAS_ATTEMPTS gives up silently — a lost
  * count is fine, never worth failing the request over.
  */
-async function incrementHit(store: HitStorage, site: string, path: string): Promise<void> {
+async function incrementHit(store: HitStorage, site: string, path: string, landing: boolean): Promise<void> {
   const key = hourKey(site);
 
   for (let attempt = 1; attempt <= MAX_CAS_ATTEMPTS; attempt++) {
     const existing = await store.getWithMeta(key);
-    const bucket: HourBucket = existing ? (JSON.parse(existing.body) as HourBucket) : { hits: 0, pages: {} };
+    // Stored data can predate `landings` even though the type says it's
+    // always there — read it as partial and default explicitly, rather than
+    // asserting the parsed JSON matches HourBucket outright.
+    const parsed = existing ? (JSON.parse(existing.body) as Partial<HourBucket>) : null;
+    const bucket: HourBucket = {
+      hits: parsed?.hits ?? 0,
+      landings: parsed?.landings ?? 0,
+      pages: parsed?.pages ?? {},
+    };
 
     bucket.hits += 1;
+    if (landing) {
+      bucket.landings += 1;
+    }
     if (bucket.pages[path] !== undefined || Object.keys(bucket.pages).length < MAX_PAGES_PER_BUCKET) {
       bucket.pages[path] = (bucket.pages[path] ?? 0) + 1;
     }
@@ -176,7 +189,12 @@ export async function handleHit(event: ScalewayEvent, _context: unknown): Promis
     };
   }
 
-  await incrementHit(defaultStorage, ALLOWED_SITE, path);
+  // Defaults to false rather than rejecting the request: an old cached client
+  // bundle without this field should keep counting hits, just without the
+  // landing/navigation split.
+  const landing = parsed.landing === true;
+
+  await incrementHit(defaultStorage, ALLOWED_SITE, path, landing);
 
   return { statusCode: 204, headers: corsHeaders, body: "" };
 }

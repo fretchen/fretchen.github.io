@@ -8,6 +8,7 @@ import { buildAccountData, buildConnectData } from "./setup";
 // Mock the new TQ-based growth hooks
 const mockUseGrowthDrafts = vi.fn();
 const mockUseGrowthInsights = vi.fn();
+const mockUseGrowthPerformance = vi.fn();
 const mockApproveMutateAsync = vi.fn();
 const mockRejectMutateAsync = vi.fn();
 const mockUpdateMutateAsync = vi.fn();
@@ -21,7 +22,7 @@ let mockApproveError: Error | null = null;
 vi.mock("../hooks/useGrowthApi", () => ({
   useGrowthDrafts: (...args: unknown[]) => mockUseGrowthDrafts(...args),
   useGrowthInsights: (...args: unknown[]) => mockUseGrowthInsights(...args),
-  useGrowthPerformance: () => ({ data: undefined, isPending: false }),
+  useGrowthPerformance: (...args: unknown[]) => mockUseGrowthPerformance(...args),
   useApproveDraft: () => ({
     mutateAsync: mockApproveMutateAsync,
     isPending: false,
@@ -70,6 +71,7 @@ describe("Growth Page", () => {
       isPending: false,
       error: null,
     });
+    mockUseGrowthPerformance.mockReturnValue({ data: undefined, isPending: false });
     mockApproveMutateAsync.mockResolvedValue({ ...sampleQueue.drafts[0], status: "approved" });
     mockRejectMutateAsync.mockResolvedValue({ ...sampleQueue.drafts[0], status: "rejected" });
     mockUpdateMutateAsync.mockResolvedValue({ ...sampleQueue.drafts[0], content: "Updated content" });
@@ -342,6 +344,80 @@ describe("Growth Page", () => {
 
     await waitFor(() => {
       expect(screen.queryByText("Approve failed")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("published tab — page traffic badge", () => {
+    const publishedQueue = {
+      drafts: [],
+      approved: [],
+      published: [
+        {
+          id: "pub_1",
+          created: "2026-04-12T08:00:00Z",
+          channel: "mastodon",
+          language: "en",
+          content: "Check out this blog post about game theory!",
+          source_blog_post: "prisoners_dilemma",
+          hashtags: [],
+          link: "https://fretchen.eu/blog/prisoners_dilemma",
+          status: "published",
+          scheduled_at: null,
+          published_at: "2026-04-12T09:00:00Z",
+        },
+      ],
+      rejected: [],
+    };
+
+    beforeEach(() => {
+      mockUseGrowthDrafts.mockReturnValue({ data: publishedQueue, isPending: false, error: null });
+      vi.mocked(useAccount).mockReturnValue(
+        buildAccountData({ address: OWNER_ADDRESS, isConnected: true, status: "connected" }),
+      );
+    });
+
+    it("shows a 30d views badge when page_traffic has an entry for the group's path", async () => {
+      mockUseGrowthPerformance.mockReturnValue({
+        data: { posts: [], page_traffic: { "/blog/prisoners_dilemma/": 42 } },
+        isPending: false,
+      });
+
+      render(<Page />);
+
+      fireEvent.click(screen.getByText(/Published/));
+
+      await waitFor(() => {
+        expect(screen.getByText("👁 42 (30d)")).toBeInTheDocument();
+      });
+    });
+
+    it("omits the badge when page_traffic is missing the group's path", async () => {
+      mockUseGrowthPerformance.mockReturnValue({
+        data: { posts: [], page_traffic: { "/blog/some-other-post/": 99 } },
+        isPending: false,
+      });
+
+      render(<Page />);
+
+      fireEvent.click(screen.getByText(/Published/));
+
+      await waitFor(() => {
+        expect(screen.getByText("Check out this blog post about game theory!")).toBeInTheDocument();
+      });
+      expect(screen.queryByText(/👁/)).not.toBeInTheDocument();
+    });
+
+    it("omits the badge when performance data has no page_traffic at all", async () => {
+      mockUseGrowthPerformance.mockReturnValue({ data: { posts: [] }, isPending: false });
+
+      render(<Page />);
+
+      fireEvent.click(screen.getByText(/Published/));
+
+      await waitFor(() => {
+        expect(screen.getByText("Check out this blog post about game theory!")).toBeInTheDocument();
+      });
+      expect(screen.queryByText(/👁/)).not.toBeInTheDocument();
     });
   });
 });

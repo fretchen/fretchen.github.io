@@ -1,7 +1,7 @@
 """Tests for growth-agent — nodes, graph, and handler."""
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -23,7 +23,12 @@ from agent.nodes.drafts import (
     _former_posts_context,
     create_drafts,
 )
-from agent.nodes.ingest import _collect_post_metrics, ingest_analytics
+from agent.nodes.ingest import (
+    _collect_page_traffic,
+    _collect_post_metrics,
+    _sum_trailing_hits,
+    ingest_analytics,
+)
 from agent.nodes.insights import generate_insights
 from agent.nodes.plan import (
     PIPELINE_TARGET,
@@ -361,6 +366,133 @@ def test_collect_post_metrics_skips_no_published_at(mock_storage):
 
     perf = Performance.model_validate(store["performance.json"])
     assert perf.posts == []
+
+
+# ---------------------------------------------------------------------------
+# _sum_trailing_hits / _collect_page_traffic
+# ---------------------------------------------------------------------------
+
+
+def test_sum_trailing_hits_sums_within_window():
+    rollups = {
+        "2026-01": {
+            "days": {
+                "2026-01-30": {"pages": {"/blog/a/": 3, "/blog/b/": 1}},
+                "2026-01-31": {"pages": {"/blog/a/": 2}},
+            }
+        }
+    }
+    window_start = date(2026, 1, 30)
+    today = date(2026, 1, 31)
+
+    result = _sum_trailing_hits(rollups, window_start, today)
+
+    assert result == {"/blog/a/": 5, "/blog/b/": 1}
+
+
+def test_sum_trailing_hits_excludes_days_outside_window():
+    rollups = {
+        "2026-01": {
+            "days": {
+                "2026-01-01": {"pages": {"/blog/old/": 100}},
+                "2026-01-31": {"pages": {"/blog/a/": 2}},
+            }
+        }
+    }
+    window_start = date(2026, 1, 30)
+    today = date(2026, 1, 31)
+
+    result = _sum_trailing_hits(rollups, window_start, today)
+
+    assert result == {"/blog/a/": 2}
+
+
+def test_sum_trailing_hits_spans_month_boundary():
+    """The window-start/today comparison is a plain string compare, so a window
+    that straddles two monthly rollup objects must still sum both correctly."""
+    rollups = {
+        "2026-01": {"days": {"2026-01-31": {"pages": {"/blog/a/": 1}}}},
+        "2026-02": {"days": {"2026-02-01": {"pages": {"/blog/a/": 4}}}},
+    }
+    window_start = date(2026, 1, 31)
+    today = date(2026, 2, 1)
+
+    result = _sum_trailing_hits(rollups, window_start, today)
+
+    assert result == {"/blog/a/": 5}
+
+
+def test_sum_trailing_hits_empty_rollups():
+    assert _sum_trailing_hits({}, date(2026, 1, 1), date(2026, 1, 31)) == {}
+
+
+@patch("agent.nodes.ingest.S3Storage")
+def test_collect_page_traffic_merges_into_performance(MockS3Storage, mock_storage):
+    storage, store = mock_storage
+    storage.write("performance.json", Performance(posts=[]))
+
+    today = datetime.now(timezone.utc).date()
+    today_month = today.strftime("%Y-%m")
+
+    def read_for_month(key: str):
+        # Only the current month's rollup contains today's data — the other
+        # requested month (if the trailing window spans a boundary) must come
+        # back empty, or the same day would be double-counted across months.
+        if today_month in key:
+            return {"days": {today.isoformat(): {"pages": {"/blog/a/": 7}}}}
+        return {"days": {}}
+
+    analytics_instance = MagicMock()
+    analytics_instance.read.side_effect = read_for_month
+    MockS3Storage.return_value = analytics_instance
+
+    _collect_page_traffic(storage)
+
+    perf = Performance.model_validate(store["performance.json"])
+    assert perf.page_traffic == {"/blog/a/": 7}
+
+
+@patch("agent.nodes.ingest.S3Storage")
+def test_collect_page_traffic_preserves_existing_posts(MockS3Storage, mock_storage):
+    """A read-modify-write against performance.json — must not clobber posts
+    written earlier in the same ingest run by _collect_post_metrics."""
+    storage, store = mock_storage
+    storage.write(
+        "performance.json",
+        Performance(
+            posts=[
+                PostMetrics(
+                    id="p1",
+                    channel="mastodon",
+                    published_at=datetime.now(timezone.utc).isoformat(),
+                )
+            ]
+        ),
+    )
+
+    analytics_instance = MagicMock()
+    analytics_instance.read.return_value = None
+    MockS3Storage.return_value = analytics_instance
+
+    _collect_page_traffic(storage)
+
+    perf = Performance.model_validate(store["performance.json"])
+    assert len(perf.posts) == 1
+    assert perf.posts[0].id == "p1"
+    assert perf.page_traffic == {}
+
+
+@patch("agent.nodes.ingest.S3Storage")
+def test_collect_page_traffic_failure_leaves_performance_untouched(MockS3Storage, mock_storage):
+    storage, store = mock_storage
+    storage.write("performance.json", Performance(posts=[]))
+
+    MockS3Storage.side_effect = Exception("S3 unreachable")
+
+    _collect_page_traffic(storage)  # must not raise
+
+    perf = Performance.model_validate(store["performance.json"])
+    assert perf.page_traffic == {}
 
 
 # ---------------------------------------------------------------------------

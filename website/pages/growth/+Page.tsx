@@ -541,6 +541,7 @@ export default function Page() {
         totalEngagement: { favourites: number; reblogs: number; replies: number };
         lastPublished: string | null;
         channels: Set<string>;
+        pageViews30d: number | undefined;
       }
     >();
 
@@ -561,6 +562,7 @@ export default function Page() {
           totalEngagement: { favourites: 0, reblogs: 0, replies: 0 },
           lastPublished: null,
           channels: new Set(),
+          pageViews30d: performance?.page_traffic?.[path],
         });
       }
       const group = map.get(key)!;
@@ -580,7 +582,7 @@ export default function Page() {
     const totalEng = (g: { totalEngagement: { favourites: number; reblogs: number; replies: number } }) =>
       g.totalEngagement.favourites + g.totalEngagement.reblogs + g.totalEngagement.replies;
     return [...map.values()].sort((a, b) => totalEng(b) - totalEng(a));
-  }, [queue?.published, metricsByDraftId]);
+  }, [queue?.published, metricsByDraftId, performance]);
 
   const handleApprove = async (id: string, scheduledAt?: string, reviewComment?: string) => {
     await approveMutation.mutateAsync({ id, scheduledAt, reviewComment });
@@ -700,6 +702,9 @@ export default function Page() {
                         <span className={pageGroupMeta}>
                           ❤️ {eng.favourites} 🔁 {eng.reblogs} 💬 {eng.replies}
                         </span>
+                      )}
+                      {group.pageViews30d !== undefined && (
+                        <span className={pageGroupDim}>👁 {group.pageViews30d} (30d)</span>
                       )}
                     </summary>
                     <div className={pageGroupBody}>

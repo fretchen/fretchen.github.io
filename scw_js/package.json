@@ -26,11 +26,11 @@
   "devDependencies": {
     "@eslint/js": "^10.0.0",
     "@fastify/cors": "^11.3.0",
-    "@fastify/url-data": "^6.0.3",
+    "@fastify/url-data": "^6.0.4",
     "@scaleway/serverless-functions": "^1.1.2",
     "@types/node": "^26.1.0",
     "@vitest/coverage-v8": "^4.0.18",
-    "@vitest/eslint-plugin": "^1.6.26",
+    "@vitest/eslint-plugin": "^1.6.27",
     "eslint": "^10.0.0",
     "eslint-plugin-node": "^11.1.0",
     "fastify": "^5.11.3",
@@ -44,11 +44,11 @@
   "dependencies": {
     "@fretchen/chain-utils": "file:../shared/chain-utils",
     "@fretchen/s3-utils": "file:../shared/s3-utils",
-    "@x402/core": "^2.20.0",
-    "@x402/evm": "^2.20.0",
+    "@x402/core": "^2.21.0",
+    "@x402/evm": "^2.21.0",
     "dotenv": "^17.4.2",
     "pino": "^10.3.1",
-    "tsx": "^4.23.5",
+    "tsx": "^4.23.12",
     "viem": "^2.54.2"
   }
 }

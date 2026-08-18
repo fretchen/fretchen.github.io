@@ -26,6 +26,7 @@ from agent.nodes.drafts import (
 from agent.nodes.ingest import (
     _collect_page_traffic,
     _collect_post_metrics,
+    _months_between,
     _sum_trailing_hits,
     ingest_analytics,
 )
@@ -368,6 +369,22 @@ def test_collect_post_metrics_skips_no_published_at(mock_storage):
     assert perf.posts == []
 
 
+def test_collect_post_metrics_preserves_page_traffic(mock_storage):
+    """_collect_post_metrics's write is a fresh Performance(posts=...); it must
+    still carry forward any page_traffic collected by an earlier ingest step."""
+    storage, store = mock_storage
+    storage.write("content_queue.json", ContentQueue())
+    storage.write(
+        "performance.json",
+        Performance(posts=[], page_traffic={"/blog/a/": 42}),
+    )
+
+    _collect_post_metrics(storage)
+
+    perf = Performance.model_validate(store["performance.json"])
+    assert perf.page_traffic == {"/blog/a/": 42}
+
+
 # ---------------------------------------------------------------------------
 # _sum_trailing_hits / _collect_page_traffic
 # ---------------------------------------------------------------------------
@@ -424,6 +441,24 @@ def test_sum_trailing_hits_spans_month_boundary():
 
 def test_sum_trailing_hits_empty_rollups():
     assert _sum_trailing_hits({}, date(2026, 1, 1), date(2026, 1, 31)) == {}
+
+
+def test_months_between_spans_three_calendar_months():
+    """A 30-day window can fully span a short middle month (e.g. February) —
+    every touched month must be enumerated, not just the two endpoints."""
+    assert _months_between(date(2027, 1, 31), date(2027, 3, 1)) == [
+        "2027-01",
+        "2027-02",
+        "2027-03",
+    ]
+
+
+def test_months_between_single_month():
+    assert _months_between(date(2026, 8, 1), date(2026, 8, 20)) == ["2026-08"]
+
+
+def test_months_between_year_boundary():
+    assert _months_between(date(2026, 12, 15), date(2027, 1, 5)) == ["2026-12", "2027-01"]
 
 
 @patch("agent.nodes.ingest.S3Storage")

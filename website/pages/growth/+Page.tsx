@@ -582,7 +582,7 @@ export default function Page() {
     const totalEng = (g: { totalEngagement: { favourites: number; reblogs: number; replies: number } }) =>
       g.totalEngagement.favourites + g.totalEngagement.reblogs + g.totalEngagement.replies;
     return [...map.values()].sort((a, b) => totalEng(b) - totalEng(a));
-  }, [queue?.published, metricsByDraftId, performance]);
+  }, [queue?.published, metricsByDraftId, performance?.page_traffic]);
 
   const handleApprove = async (id: string, scheduledAt?: string, reviewComment?: string) => {
     await approveMutation.mutateAsync({ id, scheduledAt, reviewComment });

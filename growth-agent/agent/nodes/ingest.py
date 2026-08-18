@@ -66,9 +66,10 @@ def ingest_analytics(storage) -> Insights:
     # Per-post engagement metrics
     _collect_post_metrics(storage)
 
-    # Page traffic (last 30 days) — after _collect_post_metrics, not before: that
-    # function's write is a fresh Performance(posts=...), not a merge, so it would
-    # clobber page_traffic straight back to {} if this ran first.
+    # Page traffic (last 30 days). _collect_post_metrics's write now carries its
+    # own page_traffic forward, so this ordering is defense-in-depth rather than
+    # load-bearing — but keeping it after post metrics still means this always
+    # merges onto the freshest performance.json.
     _collect_page_traffic(storage)
 
     return insights
@@ -161,7 +162,10 @@ def _collect_post_metrics(storage) -> None:
                 logger.exception("Bluesky per-post metrics failed")
 
         refreshed = len(recent_mastodon) + len(recent_bluesky)
-        storage.write("performance.json", Performance(posts=list(updated.values())))
+        storage.write(
+            "performance.json",
+            Performance(posts=list(updated.values()), page_traffic=existing.page_traffic),
+        )
         logger.info("Per-post metrics: %d total, %d refreshed", len(updated), refreshed)
     except Exception:
         logger.exception("Per-post metrics collection failed")
@@ -169,6 +173,18 @@ def _collect_post_metrics(storage) -> None:
 
 PAGE_TRAFFIC_WINDOW_DAYS = 30  # matches _METRICS_REFRESH_DAYS's existing precedent
 ANALYTICS_SITE = "fretchen.eu"  # matches analytics/hit.ts's own hardcoded SITE
+
+
+def _months_between(start: date, end: date) -> list[str]:
+    """Every YYYY-MM the [start, end] range touches, inclusive."""
+    months = []
+    y, m = start.year, start.month
+    while (y, m) <= (end.year, end.month):
+        months.append(f"{y:04d}-{m:02d}")
+        m += 1
+        if m > 12:
+            m, y = 1, y + 1
+    return months
 
 
 def _sum_trailing_hits(rollups: dict[str, dict], window_start: date, today: date) -> dict[str, int]:
@@ -205,7 +221,7 @@ def _collect_page_traffic(storage) -> None:
         )
         today = datetime.now(timezone.utc).date()
         window_start = today - timedelta(days=PAGE_TRAFFIC_WINDOW_DAYS - 1)
-        months = sorted({window_start.strftime("%Y-%m"), today.strftime("%Y-%m")})
+        months = _months_between(window_start, today)
         rollups: dict[str, dict] = {}
         for month in months:
             data = analytics_storage.read(f"rollup/{ANALYTICS_SITE}/{month}.json")

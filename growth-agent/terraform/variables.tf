@@ -44,6 +44,10 @@ variable "mistral_api_key" {
 # --- Non-sensitive configuration ---
 
 variable "s3_bucket" {
+  # The separate `analytics` service hardcodes this same bucket name with no
+  # override (growth-agent's _collect_page_traffic reads its rollup data from
+  # there) — if this variable is ever changed, that hardcoded value must be
+  # updated to match, or page traffic collection will silently go empty.
   description = "S3 bucket name for state storage"
   type        = string
   default     = "my-imagestore"

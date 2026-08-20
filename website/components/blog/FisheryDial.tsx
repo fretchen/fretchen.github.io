@@ -46,7 +46,7 @@ export default function FisheryDial() {
     gamma < 0.1
       ? "No coupling. Each island ignores what its boats cost the other — the tragedy."
       : lambda > 0.95
-        ? "Almost full coupling. The two islands behave as a single owner of the whole fishery."
+        ? "Almost full coupling. The two islands behave exactly as the planner would have told them to."
         : `Each island is paid on ${Math.round(lambda * 100)}% of its neighbour's catch, so it feels most of the crowding it causes.`;
 
   return (

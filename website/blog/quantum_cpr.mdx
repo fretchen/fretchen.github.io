@@ -121,33 +121,60 @@ stock in between. This is Leach's problem exactly — his §8.2 writes the same 
 $(1+r)^{-t}$ in place of $\beta^t$ — and his verdict is worth quoting: _complicated, but well
 defined and solvable_.
 
-Solving it means giving up on the sequence and looking for a rule instead. Nothing carries
-between seasons except the stock, so the best fleet can only depend on today's stock and not on
-the date or on history. Write $V(s)$ for the best discounted profit obtainable from today on,
-starting from a stock $s$, and the whole infinite problem folds into a single equation:
+Rather than solve that in general — the appendix does — it is worth expanding in $\beta$, because
+the first two orders already show what patience does.
+
+**No patience at all.** At $\beta = 0$ only the first term of the sum survives and the planner
+maximises this season's profit, $q s\sqrt{B} - cB$. Setting the derivative to zero gives
+$v/2 = c$, so
 
 $$
-V(s) = \max_{B}\Big[\,q\,s\sqrt{B} - c\,B \;+\; \beta\,V\big(s + g(s) - q\,s\sqrt{B}\big)\Big]
+B_0(s) = \left(\frac{q\,s}{2c}\right)^2, \qquad V_0(s) = \frac{q^2 s^2}{4c} .
 $$
 
-— this season's profit, plus the discounted value of whatever stock is left behind.
-Differentiating in $B$ and writing $s'$ for next season's stock, the planner's fleet satisfies
+At $s_0 = 100$ that is **16 boats**, earning $V_0 = 2.00$ between them — the number already in the
+table, now as a function of the stock.
+
+It is worth asking whether that fleet is sustainable, and it is not. Those 16 boats take
+$y_0 = q^2 s^2 / 2c = 4.00$ out of the water, while the ground grows back by only
+$g(s) = 2.70$ — a catch half again as large as the growth. So the stock falls, and it keeps
+falling until the two finally balance at $q^2 s / 2c = r(1 - s/K)$:
 
 $$
-\frac{v}{2}\Big(1 - \beta\,V'(s')\Big) = c .
+s^{*} = \frac{r}{\dfrac{q^{2}}{2c} + \dfrac{r}{K}} \approx 69.8
 $$
 
-That is the one-season rule with a single factor added, and the factor is the whole of the
-dynamics. $V'(s')$ is the **shadow price of a fish left in the water**: what one more fish in next
-season's stock is worth in discounted future profit. The extra boat still lands $v/2$ of marginal
-catch, but every fish in that catch would have been worth $\beta V'(s')$ had it been left alone.
-The net gain is smaller, so a planner who values the future stops sooner.
+by which point the fleet is down to 7.8 boats. An impatient manager runs the ground down by thirty
+percent _with both islands doing exactly as they are told_. Coordination alone does not save a
+fishery; the manager also has to care about next year.
 
-For $\beta > 0$ this is implicit and there is no closed form — $V'$ depends on the path, which
-depends on the policy, which depends on $V'$ — so it is solved numerically in the
-[notebook](https://github.com/fretchen/fretchen.github.io/blob/main/notebooks/quantum_cpr_v2.ipynb).
-But at $\beta = 0$ the shadow price drops out and one line is enough: $v/2 = c$, so
-$\sqrt{B} = q s_0/2c = 4$ — **16 boats**, earning 2.00 between them.
+**A little patience.** Turn $\beta$ up slightly. The planner now cares what next season starts
+with, and to first order the worth of next season is still $V_0$. So a fish left in the water has
+a price, $V_0'(s) = q^2 s / 2c$, and the fleet picks up a correction linear in $\beta$:
+
+$$
+B(s;\beta) = B_0(s) + \beta\,B_1(s) + O(\beta^2), \qquad B_1 = -2\,V_0'(s')\,B_0
+$$
+
+with $s' = s + g(s) - y_0$ the stock the impatient policy leaves behind. Writing that out gives
+the coefficient in full, and it is worth seeing what it is made of:
+
+$$
+\frac{B_1}{B_0} = -\frac{q^2}{c}\Big(\underbrace{s}_{\text{still there}} \;+\; \underbrace{g(s)}_{\text{they bred}} \;-\; \underbrace{y_0}_{\text{you caught}}\Big)
+$$
+
+Read the correction: the extra boat still lands $v/2$ of marginal catch, but every fish in that
+catch would have been worth $\beta V_0'(s')$ had it been left alone. The fleet shrinks. **Patience
+is a price on fish in the water**, and the size of the price is the stock you are handing to next
+season — the three terms in the bracket being what is left, what it breeds, and what you took.
+
+And there is the growth rate, back in the problem. It was missing from the open-access condition
+entirely — nobody deciding whether to sail cared how fast the fish breed — and here it sits in the
+middle term, so a quicker-breeding ground draws a deeper cut. Honesty compels a caveat: at this
+fishery's $r = 0.03$ that middle term is only about 3% against the leading $1$. To first order,
+most of what a fish left behind is worth is simply that it is still there next season.
+
+All of which holds for $\beta \ll 1$. The patient case is the appendix's problem.
 
 |                       | boats on the water | profit |
 | --------------------- | ------------------ | ------ |
@@ -349,10 +376,31 @@ The one-season figures behind the dial are a closed form, and the arithmetic sit
 [component itself](https://github.com/fretchen/fretchen.github.io/blob/main/website/components/blog/FisheryDial.tsx).
 The multi-season ones need more work, so here is what was actually solved.
 
-Each island's fleet is a function of the current stock — a policy, not a number — and the two
-policies have to be a mutual best reply. I find them by iterating: fix one island's policy, value-
-iterate the other's Bellman equation on a grid of stock levels, take the best reply, repeat. The
-planner is the same calculation with one agent choosing the total fleet.
+Beyond small $\beta$ the expansion in §1 is no use, and the sequence has to be given up on
+altogether in favour of a rule. Nothing carries between seasons except the stock, so the best
+fleet can depend only on today's stock — not on the date, not on history. Writing $V(s)$ for the
+best discounted profit obtainable from today on, the whole infinite problem folds into one
+equation,
+
+$$
+V(s) = \max_{B}\Big[\,q\,s\sqrt{B} - c\,B \;+\; \beta\,V\big(s + g(s) - q\,s\sqrt{B}\big)\Big]
+$$
+
+— this season's profit plus the discounted value of the stock left behind. Differentiating in $B$,
+and writing $s'$ for next season's stock, the planner's fleet satisfies
+
+$$
+\frac{v}{2}\Big(1 - \beta\,V'(s')\Big) = c .
+$$
+
+This is §1's rule with the exact shadow price $V'(s')$ in place of the first-order $V_0'(s')$, and
+it is implicit: $V'$ depends on the path, which depends on the policy, which depends on $V'$.
+Hence the numerics.
+
+Each island's fleet is therefore a function of the current stock — a policy, not a number — and
+the two policies have to be a mutual best reply. I find them by iterating: fix one island's
+policy, value-iterate the other's equation above on a grid of stock levels, take the best reply,
+repeat. The planner is the same calculation with one agent choosing the total fleet.
 
 One trap is worth recording, because it cost me a debugging round and it is invisible from the
 output. Write $B^{*}$ for the equilibrium total fleet. At full squeezing both islands maximise the

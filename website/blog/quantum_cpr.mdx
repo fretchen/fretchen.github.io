@@ -248,8 +248,18 @@ $$
 Putting it all together we have:
 
 $$
-U^{(2)} =\left[  \left(\frac{q s_0}{2\sqrt{B^{(0)}_0}} \left[B^{(2)}_0 \frac{ B_{(1),0}^2}{4 B^{(0)}_0}\right]\right) - c B^{(2)}_0\right]+ \left(q s_2 \sqrt{B^{(0)}_2} - c B^{(0)}_2\right)
+U^{(2)} =\underbrace{\left[  \left(\frac{q s_0}{2\sqrt{B^{(0)}_0}} \left[B^{(2)}_0- \frac{ \left(B^{(1)}_0\right)^2}{4 B^{(0)}_0}\right]\right) - c B^{(2)}_0\right]}_{t=0}+ \underbrace{q s_1^{(1)} \sqrt{B^{(0)}_1}}_{t=1}+ \underbrace{\left(q s_2 \sqrt{B^{(0)}_2} - c B^{(0)}_2\right)}_{t=2}
 $$
+
+The $t=1$ term is the only place $B^{(1)}_0$ survives, and it enters through the stock it leaves
+behind. Differentiating the constraint $s_1 = s_0 + g(s_0) - q s_0 \sqrt{B_0}$ gives
+
+$$
+s_1^{(1)} = -\frac{q s_0}{2\sqrt{B^{(0)}_0}}\,B^{(1)}_0
+$$
+
+so fewer boats in season 0 mean a richer season 1. This is the return on patience, and it is what
+makes $\partial U^{(2)} / \partial B^{(1)}_0 = 0$ a condition with content.
 
 There is one constraint per season, and they are the only thing tying the
 seasons together — without them the sum would fall apart into independent one-year problems. The

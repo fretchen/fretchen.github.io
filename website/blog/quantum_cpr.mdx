@@ -108,7 +108,150 @@ $$
 \text{subject to}\qquad s_{t+1} = s_t + g(s_t) - q\,s_t\sqrt{B_t}, \qquad t = 0, 1, 2, \dots
 $$
 
-with $s_0$ given. There is one constraint per season, and they are the only thing tying the
+with $s_0$ given. We will not solve this in general, but perturbatively in $\beta \ll 1$. We will further write down the
+boats as a polynomial in $\beta$.
+
+$$
+B_t = B_t^{(0)}+\beta B_t^{(1)}+\cdots
+$$
+
+And we also have
+
+$$
+U= U^{(0)}+ \beta U^{(1)}+\cdots
+$$
+
+We can now plug in and find:
+
+$$
+U =  \sum_{t=0}^{\infty} \beta^{t}\Big(q\,s_t\sqrt{B_t} - c\,B_t\Big)
+$$
+
+$$
+U =  \left(q s_0\sqrt{B_0} - c B_0\right)+\beta\left(q s_1\sqrt{B_1} - c B_1\right)
+$$
+
+We now need to develop $\sqrt{B} = \sqrt{B^{(0)}+\beta B^{(1)}} \approx \sqrt{B^{(0)}} (1+\frac{B^{(1)}}{B^{(0)}}\beta)$.
+Let us plug in:
+
+$$
+U =  \left(q\,s_0\sqrt{B_0} - c\,B_0\right)+\beta\left(q s_1\sqrt{B_1} - c B_1\right)
+$$
+
+It is really easy for zeroth order in $\beta$. We get:
+
+$$
+U^{(0)} =  \left(q\,s_0\sqrt{B^{(0)}_0} - c\,B^{(0)}_0\right)
+$$
+
+And we try to optimize these profits:
+
+$$
+\frac{\partial U^{(0)}}{\partial B_0^{(0)}} =  \frac{q\,s_0}{2\sqrt{B^{(0)}_0}} - c
+$$
+
+This gives us:
+
+$$
+B_0^{(0)} =\left(\frac{q s_0}{2 c}\right)^2 \\
+U^{(0)} = \frac{q^2 s_0^2}{4c}
+$$
+
+### First order
+
+Now let us go to first order in $\beta$:
+
+$$
+U = q s_0\sqrt{B_0^{(0)}}\left(1+\frac{\beta B_0^{(1)}}{2B_0^{(0)}}\right) - c B_0^{(0)} -c \beta B_0^{(1)}+\beta\left(q s_1\sqrt{B^{(0)}_1} - c B^{(0)}_1\right)\\
+U = U^{(0)} + \beta\left(s_0\sqrt{B_0^{(0)}}\left(\frac{B_0^{(1)}}{2B_0^{(0)}}\right) -c B_0^{(1)}+ \left(q s_1\sqrt{B^{(0)}_1} - c B^{(0)}_1\right)\right)
+$$
+
+This gets us:
+
+$$
+U^{(1)} = \frac{s_0 B_0^{(1)}}{2\sqrt{B_0^{(0)}}} -c (B_0^{(1)}+ B^{(0)}_1)+ q s_1\sqrt{B^{(0)}_1} \\
+U^{(1)} = B_0^{(1)}\left[\frac{q s_0}{2\sqrt{B_0^{(0)}}} - c\right] + \left(q s_1\sqrt{B_1^{(0)}} - cB_1^{(0)}\right)
+$$
+
+This first part cancels as it is just the derivative of $U^{0}$ in the expansion and we get:
+
+$$
+U^{(1)} = q s_1\sqrt{B_1^{(0)}} - cB_1^{(0)}
+$$
+
+Optimizing for $B_1^{(0)}$ gives us:
+
+$$
+B_1^{(0)} =\left(\frac{q s_1}{2 c}\right)^2 \\
+U^{(1)} = \frac{q^2 s_1^2}{4c}
+$$
+
+We now get to first order the result:
+
+$$
+U = \frac{q^2}{4c}\left( s_0^2 + \beta s_1^2\right)
+$$
+
+And here we now have the stock in the next season, which starts to be important. Let us plug in:
+
+$$
+s_1 = s_0 (1+r-q \sqrt{B^{(0)}_0})\\
+s_1 = s_0 (1+r-\frac{q^2 s_0}{2c})
+$$
+
+### Second order
+
+This is the one, where it gets technical as a number of terms show up:
+
+$$
+B_t = B_t^{(0)}+\beta B_t^{(1)}+\beta^2 B_t^{(2)}+\cdots
+$$
+
+We then have:
+
+$$
+U =  \left(q s_0 \sqrt{B_0} - c B_0\right)+\beta \left(q s_1 \sqrt{B_1} - c B_1\right)+\beta^2 \left(q s_2 \sqrt{B_2} - c B_2\right)
+$$
+
+We now need to develop the first term to second order in $\beta$
+
+$$
+\sqrt{B} = \sqrt{B^{(0)}+\beta B^{(1)}+\beta^2 B^{(2)}} \approx \sqrt{B^{(0)}} \left(1 + \frac{\beta B^{(1)}+\beta^2 B^{(2)}}{2B^{(0)}}- \frac{ \beta^2 B_{(1)}^2}{8 B_{(0)}^2}\right)\\
+\sqrt{B} \approx \sqrt{B^{(0)}} \left(1 + \beta \frac{ B^{(1)}}{2B^{(0)}}+ \frac{\beta^2}{2B^{(0)}} \left[B^{(2)}- \frac{ B_{(1)}^2}{4 B^{(0)}}\right]\right)
+$$
+
+Let us go to second order:
+
+$$
+\left(q s_0 \sqrt{B_0} - c B_0\right) = q s_0 \sqrt{B^{(0)}} \left(1 + \beta \frac{ B^{(1)}}{2B^{(0)}}+ \frac{\beta^2}{2B^{(0)}} \left[B^{(2)}- \frac{ B_{(1)}^2}{4 B^{(0)}}\right]\right) - c \left(B^{(0)}_0+\beta B^{(1)}_0+\beta^2 B^{(2)}_0\right) \\
+= U^{(0)}+ \beta^2 \left[  \left(\frac{q s_0}{2\sqrt{B^{(0)}_0}} \left[B^{(2)}- \frac{ B_{(1)}^2}{4 B^{(0)}}\right]\right) - c B^{(2)}_0\right]
+$$
+
+On the second term we get:
+
+$$
+\left(q s_1 \sqrt{B_1} - c B_1\right) = q s_1 \sqrt{B^{(0)}} \left(1 + \beta \frac{ B^{(1)}}{2B^{(0)}}\right) - c (B^{(0)}_1+\beta B^{(1)}_1)\\
+= U^{(1)}
+$$
+
+$$
+q s_1 \sqrt{B_1} - c B_1 = q\left(s_1^{(0)} + \beta s_1^{(1)}\right)\sqrt{B_1^{(0)}}\left(1 + \beta \frac{B_1^{(1)}}{2B_1^{(0)}}\right) - c\left(B_1^{(0)} + \beta B_1^{(1)}\right) \\
+= \underbrace{\left(q s_1^{(0)}\sqrt{B_1^{(0)}} - c B_1^{(0)}\right)}_{U^{(1)}} + \beta \underbrace{B_1^{(1)}\left[\frac{q s_1^{(0)}}{2\sqrt{B_1^{(0)}}} - c\right]}_{\text{cancels}} + \beta \underbrace{q s_1^{(1)} \sqrt{B_1^{(0)}}}_{\text{survives}} + O(\beta^2)
+$$
+
+And the third term gives directly:
+
+$$
+\left(q s_2 \sqrt{B_2} - c B_2\right) = \left(q s_2 \sqrt{B^{(0)}_2} - c B^{(0)}_2\right)
+$$
+
+Putting it all together we have:
+
+$$
+U^{(2)} =\left[  \left(\frac{q s_0}{2\sqrt{B^{(0)}_0}} \left[B^{(2)}_0 \frac{ B_{(1),0}^2}{4 B^{(0)}_0}\right]\right) - c B^{(2)}_0\right]+ \left(q s_2 \sqrt{B^{(0)}_2} - c B^{(0)}_2\right)
+$$
+
+There is one constraint per season, and they are the only thing tying the
 seasons together — without them the sum would fall apart into independent one-year problems. The
 chain runs
 

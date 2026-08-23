@@ -4,7 +4,10 @@ import { ESSAY_ACCENT } from "../palette";
 import { countLineCells, countFilledCells, parseCellKey, type Point } from "./boxCounting";
 
 const GRID_COLOR = "#d1d5db"; // gray-300, chrome not brand — literal per palette.ts convention
-const HIGHLIGHT_FILL = "rgba(124, 58, 237, 0.22)"; // translucent essay-accent-ish purple
+// Derived from ESSAY_ACCENT via globalAlpha rather than restated as a literal: the old
+// rgba(124, 58, 237, …) was #7C3AED (violet-600), a visibly different purple from the
+// #7B3FA0 stroke drawn on top of it.
+const HIGHLIGHT_ALPHA = 0.22;
 const FILL_ALPHA = 0.25;
 const WATER_COLOR = "#bfdbfe"; // blue-200
 const LAND_COLOR = "#bbf7d0"; // green-200
@@ -129,11 +132,13 @@ export function BoxCanvas({
 
     if (highlightHits && cellSize > 0 && points.length > 0) {
       const result = mode === "filled" ? countFilledCells(points, cellSize) : countLineCells(points, cellSize, closed);
-      ctx.fillStyle = HIGHLIGHT_FILL;
+      ctx.globalAlpha = HIGHLIGHT_ALPHA;
+      ctx.fillStyle = ESSAY_ACCENT;
       for (const key of result.cells) {
         const [col, row] = parseCellKey(key);
         ctx.fillRect(col * cellSize * scale, row * cellSize * scale, cellSize * scale, cellSize * scale);
       }
+      ctx.globalAlpha = 1;
     }
 
     if (points.length > 0) {

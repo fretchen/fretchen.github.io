@@ -220,11 +220,20 @@ $$
 \sqrt{B} \approx \sqrt{B^{(0)}} \left(1 + \beta \frac{ B^{(1)}}{2B^{(0)}}+ \frac{\beta^2}{2B^{(0)}} \left[B^{(2)}- \frac{ B_{(1)}^2}{4 B^{(0)}}\right]\right)
 $$
 
+And this also means:
+
+$$
+s_{1} = s_0 + rs_0 - qs_0 \sqrt{B^{(0)}_0} \left(1 + \beta \frac{ B^{(1)}_0}{2B^{(0)}_0}\right)\\
+s_{1} = s_1^{(0)} + \beta s_1^{(1)}\\
+s_1^{(1)} = -  \frac{ qs_0}{2\sqrt{B^{(0)}_0}}B^{(1)}_0
+$$
+
 Let us go to second order:
 
 $$
 \left(q s_0 \sqrt{B_0} - c B_0\right) = q s_0 \sqrt{B^{(0)}} \left(1 + \beta \frac{ B^{(1)}}{2B^{(0)}}+ \frac{\beta^2}{2B^{(0)}} \left[B^{(2)}- \frac{ B_{(1)}^2}{4 B^{(0)}}\right]\right) - c \left(B^{(0)}_0+\beta B^{(1)}_0+\beta^2 B^{(2)}_0\right) \\
-= U^{(0)}+ \beta^2 \left[  \left(\frac{q s_0}{2\sqrt{B^{(0)}_0}} \left[B^{(2)}- \frac{ B_{(1)}^2}{4 B^{(0)}}\right]\right) - c B^{(2)}_0\right]
+= U^{(0)}- \beta^2 \frac{q s_0}{8\sqrt{B^{(0)}_0}} \frac{ B_{(1)}^2}{ B^{(0)}}\\
+= U^{(0)}- \beta^2 c^3 \frac{ B_{(1),0}^2}{ q^2 s_0^2 }\\
 $$
 
 On the second term we get:
@@ -248,18 +257,74 @@ $$
 Putting it all together we have:
 
 $$
-U^{(2)} =\underbrace{\left[  \left(\frac{q s_0}{2\sqrt{B^{(0)}_0}} \left[B^{(2)}_0- \frac{ \left(B^{(1)}_0\right)^2}{4 B^{(0)}_0}\right]\right) - c B^{(2)}_0\right]}_{t=0}+ \underbrace{q s_1^{(1)} \sqrt{B^{(0)}_1}}_{t=1}+ \underbrace{\left(q s_2 \sqrt{B^{(0)}_2} - c B^{(0)}_2\right)}_{t=2}
+U^{(2)} =\underbrace{- c^3 \frac{ B_{(1),0}^2}{ q^2 s_0^2 }}_{t=0}+ \underbrace{-\frac{q^2 s^{(0)}_1}{2} B^{(1)}_0}_{t=1}+ \underbrace{\left(q s_2 \sqrt{B^{(0)}_2} - c B^{(0)}_2\right)}_{t=2}
 $$
 
-The $t=1$ term is the only place $B^{(1)}_0$ survives, and it enters through the stock it leaves
-behind. Differentiating the constraint $s_1 = s_0 + g(s_0) - q s_0 \sqrt{B_0}$ gives
+We can use this to take the two derivatives:
 
 $$
-s_1^{(1)} = -\frac{q s_0}{2\sqrt{B^{(0)}_0}}\,B^{(1)}_0
+\frac{\partial U^{(2)}}{\partial B_{(1),0}} = - 2 c^3 \frac{ B_{(1),0}}{ q^2 s_0^2 }-\frac{q^2 s^{(0)}_1}{2}\\
+\frac{\partial U^{(2)}}{\partial B^{(0)}_{2}} = \frac{q s_2}{2\sqrt{B^{(0)}_2}}  - c
 $$
 
-so fewer boats in season 0 mean a richer season 1. This is the return on patience, and it is what
-makes $\partial U^{(2)} / \partial B^{(1)}_0 = 0$ a condition with content.
+Now let us set to zero to find:
+
+$$
+B^{(0)}_{2} = \left(\frac{qs_2}{2c}\right)^2\\
+B^{(1)}_0  = - \frac{q^4 s_0^2 s^{(0)}_1}{4c^3}
+$$
+
+That second result is the one we were after, and it says something simple once the clutter is
+divided out. Measured against the impatient fleet $B^{(0)}_0 = (q s_0 / 2c)^2$, the correction is
+
+$$
+\frac{B^{(1)}_0}{B^{(0)}_0} = -\frac{q^2 s^{(0)}_1}{c} = -2\,V_0'\big(s^{(0)}_1\big),
+\qquad V_0'(s) \equiv \frac{q^2 s}{2c},
+$$
+
+where $V_0'$ is the shadow price of the stock — what one more fish left in the water is worth next
+season. Patience does not change the planner's rule; it puts a price tag on the catch. Every fish
+landed today is a fish missing tomorrow, so a boat-trip is worth not $v$ but $v(1 - \beta V_0')$,
+and that one substitution is the whole first-order result. It is also the only door the growth
+rate ever comes through: $r$ sits inside $s^{(0)}_1$ and nowhere else, which is why the impatient
+fleet contains no $r$ at all.
+
+Why _twice_ the price, though? Because the catch goes as $\sqrt{B}$. Boats crowd each other, so
+the fleet scales as the square of what a trip is worth: shave one percent off the value of the
+catch and you shave two percent off the fleet. Writing $\pi \equiv \beta V_0'(s^{(0)}_1)$ for the
+dimensionless price of a fish still swimming, everything above resums into the form worth
+remembering,
+
+$$
+B_0(\beta) = B^{(0)}_0\,\big(1 - \pi\big)^2 ,
+\qquad \pi = \beta\,\frac{q^2 s^{(0)}_1}{2c} ,
+$$
+
+which expands back to the coefficient above. A physicist can read $\pi$ as a coupling and the
+myopic answer as the free theory: patience renormalises the cost of a boat, $c \to c/(1-\pi)$, and
+the planner then runs the same one-season sum they always did. Here $\pi = 0.0395\,\beta$, so the
+fleet comes off its impatient value by about eight percent per unit of patience.
+
+### The sustainable regime
+
+We can now analyse how much patience would be needed to move
+towards a sustainable regime. First note, that the growth rate is not explicitly in the 
+correction of the boats. The patient fisher cares about the total stock tomorrow, but not
+really about its growth rate explicitly. This is a different question. We can use now the condition:
+
+$$
+q \sqrt{B_0} < r
+$$
+
+We can now use the usual expension to have:
+$$
+q \sqrt{B_0^{(0)}} \left(1 + \frac{\beta}{2} \frac{B_0^{(1)}}{B_0^{(0)}}\right) < r\\
+q^2 \frac{s_0}{2c} \left(1 - \frac{\beta}{2} \frac{q^2 s^{(0)}_1}{c}\right) < r\\
+$$
+
+## Further text
+
+
 
 There is one constraint per season, and they are the only thing tying the
 seasons together — without them the sum would fall apart into independent one-year problems. The

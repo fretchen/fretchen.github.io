@@ -8,6 +8,18 @@ export function formatFactor(factor: number): string {
   return factor.toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 }
 
+/**
+ * The dimension, i.e. the exponent in ×F = 2^d. Two decimals, so it matches the values the
+ * appendix quotes (Bretagne ≈ 1,19, Normandie ≈ 1,08).
+ *
+ * This is the one place a logarithm appears in the widgets' user-facing output, and it is
+ * never called one: written as the exponent of a power of two, the same number becomes
+ * something a sixth-grader can read off directly.
+ */
+export function formatDimension(dimension: number): string {
+  return dimension.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 /** What is being measured, so the sentence reads naturally in each widget. */
 export type Subject = "die Form" | "die Küste" | "deine Linie";
 

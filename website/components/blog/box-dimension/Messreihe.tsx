@@ -1,6 +1,6 @@
 import React from "react";
 import { css } from "../../../styled-system/css";
-import { formatFactor } from "./texts";
+import { formatFactor, formatDimension } from "./texts";
 
 export interface HalvingSample {
   cellSize: number;
@@ -43,8 +43,12 @@ const sizeCell = css({
 // encoded twice here (bar length and the number itself), and colour as a third encoding of
 // the same quantity only adds noise — it made the log louder than the map above it. The
 // accent is reserved for the number in focus: the guidance line and the Fazit.
+// Filled, not outlined: an outline of 20px reads much like an outline of 28px, so the one
+// thing this column exists to show — the boxes shrinking — was barely legible. A solid
+// square makes the same size step obvious. (Area is a weak encoding either way, which is
+// why the count gets the bar and this column only has to convey an ordering.)
 const swatch = css({
-  border: "2px solid token(colors.gray.400, #9ca3af)",
+  bg: "gray.400",
   borderRadius: "xs",
 });
 
@@ -59,7 +63,7 @@ const barTrack = css({
 const barFill = css({
   height: "100%",
   borderRadius: "sm",
-  bg: "gray.300",
+  bg: "gray.400",
 });
 
 const countCell = css({
@@ -99,6 +103,11 @@ const fazit = css({
 
 const fazitNumber = css({ fontSize: "2xl", fontWeight: "bold", color: "explore", lineHeight: "tight" });
 
+// `verticalAlign` must be set explicitly: Panda's preflight resets `sup` to
+// `vertical-align: baseline`, so a bare <sup> would sit on the line like any other digit —
+// and the whole point is that this number is the exponent.
+const fazitExponent = css({ fontSize: "md", verticalAlign: "super", lineHeight: "none" });
+
 const fazitText = css({
   fontFamily: "reading",
   fontSize: "lg",
@@ -126,9 +135,11 @@ export function averageFactor(samples: HalvingSample[]): number | null {
 }
 
 interface FazitText {
-  /** The result itself, set as a headline — e.g. "×2,3". */
-  headline: string;
-  /** Two short sentences explaining it. Never one long one; the post's own rule. */
+  /** The measured growth, e.g. "×2,3". */
+  factor: string;
+  /** The same number as a power of two, e.g. "1,19" in ×2,3 = 2^1,19 — which *is* the dimension. */
+  exponent: string;
+  /** Short sentences explaining it. Never one long one; the post's own rule. */
   sentence: string;
 }
 
@@ -141,8 +152,17 @@ interface FazitText {
  * hand-drawn curve, is always called a fractal — never "fast keine Linie
  * mehr", which previously contradicted the post's "Küsten sind Fraktale"
  * claim once a real measurement (e.g. Normandie) drifted under a wider
- * threshold. The position hint's boundary (2.83 = 2^1.5) is the *multiplicative*
- * midpoint between dimension 1 and 2, not the arithmetic ×3.
+ * threshold.
+ *
+ * Writing the factor as a power of two is what finally puts the *dimension* on screen. The
+ * gap between "×2,3" and "1,19" is a logarithm, which this post deliberately never teaches;
+ * as an exponent it needs no new idea, only the powers a sixth-grader already has. That also
+ * made the old position hint ("näher an der Linie", boundary 2.83 = 2^1.5) redundant — it
+ * was a verbal stand-in for the number now shown outright.
+ *
+ * The two edge cases print a whole-number exponent rather than a computed one: a line
+ * measuring ×1,9 shows 2¹, the same rounding the accompanying "genau doppelt so viele"
+ * already makes.
  */
 function explainFactor(factor: number): FazitText {
   // All three cases open with the same clause, so the big number always means the same
@@ -150,20 +170,25 @@ function explainFactor(factor: number): FazitText {
   const opening = "So viel mehr Kästchen brauchst du bei jeder Halbierung";
   if (factor <= 2.05) {
     return {
-      headline: "×2",
-      sentence: `${opening} — genau doppelt so viele, wie bei einer reinen Linie. Ihre Dimension ist 1.`,
+      factor: "×2",
+      exponent: "1",
+      sentence: `${opening} — genau doppelt so viele, wie bei einer reinen Linie. Die Hochzahl ist ihre Dimension: 1.`,
     };
   }
   if (factor >= 3.95) {
     return {
-      headline: "×4",
-      sentence: `${opening} — genau viermal so viele, wie bei einer vollen Fläche. Ihre Dimension ist 2.`,
+      factor: "×4",
+      exponent: "2",
+      sentence: `${opening} — genau viermal so viele, wie bei einer vollen Fläche. Die Hochzahl ist ihre Dimension: 2.`,
     };
   }
-  const positionHint = factor < 2.83 ? "näher an der Linie" : "näher an der Fläche";
+  // The exponent comes from the raw factor, the headline shows the factor rounded to one
+  // decimal — so 2^1,19 = 2,28 appears next to "×2,3". That is rounding, not an error.
+  const dimension = formatDimension(Math.log2(factor));
   return {
-    headline: `×${formatFactor(factor)}`,
-    sentence: `${opening}. Mehr als bei einer Linie (×2), weniger als bei einer vollen Fläche (×4) — ${positionHint}. Das ist ein Fraktal: Seine Dimension liegt zwischen 1 und 2.`,
+    factor: `×${formatFactor(factor)}`,
+    exponent: dimension,
+    sentence: `${opening} — mehr als bei einer Linie (×2), weniger als bei einer vollen Fläche (×4). Die Hochzahl ist die Dimension: hier ${dimension}, also keine ganze Zahl. Genau das ist ein Fraktal.`,
   };
 }
 
@@ -198,7 +223,9 @@ export function Messreihe({ samples, worldSize, totalSteps, fazitExtra }: Messre
     <div className={wrapper}>
       {text && (
         <div className={fazit}>
-          <p className={fazitNumber}>{text.headline}</p>
+          <p className={fazitNumber}>
+            {text.factor} = 2<sup className={fazitExponent}>{text.exponent}</sup>
+          </p>
           <p className={fazitText}>{text.sentence}</p>
           {fazitExtra && <p className={fazitText}>{fazitExtra}</p>}
         </div>
@@ -212,9 +239,10 @@ export function Messreihe({ samples, worldSize, totalSteps, fazitExtra }: Messre
       </div>
       {rows.map((r, i) => {
         const perEdge = Math.round(worldSize / r.cellSize);
-        // Floor at 10px, not 6: the finest row landed at 7px, which reads as a dot
-        // rather than as a square and stops carrying "the boxes got smaller".
-        const sizePx = Math.max(10, Math.round(28 / Math.sqrt(perEdge / 4)));
+        // 28 · 20 · 14 · 10 · 7 across the five steps. The floor stays at 7 so the last two
+        // rows differ: flooring at 10 made them identical, which is simply wrong — those
+        // boxes really are half the size.
+        const sizePx = Math.max(7, Math.round(28 / Math.sqrt(perEdge / 4)));
         // Floor at 6%: the bars are normalised to the largest count, so after five halvings
         // the first row lands near 7% and reads as an empty track — the child's very first
         // measurement would be the one they cannot see.

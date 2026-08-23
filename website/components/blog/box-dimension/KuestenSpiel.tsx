@@ -27,7 +27,8 @@ const wrapper = css({
 });
 const regionRow = css({ display: "flex", flexWrap: "wrap", gap: "2", mb: "3" });
 
-const toggleClass = (active: boolean) => `${button({ visual: "secondary", size: "md", active })} ${touchTarget}`;
+// size "sm" for toggles, see KaestchenSpiel.tsx — "md" wraps them onto separate rows at 390px.
+const toggleClass = (active: boolean) => `${button({ visual: "secondary", size: "sm", active })} ${touchTarget}`;
 const actionClass = `${button({ visual: "primary", size: "md" })} ${touchTarget}`;
 const restartClass = `${button({ visual: "secondary", size: "md" })} ${touchTarget}`;
 
@@ -129,13 +130,16 @@ export function KuestenSpiel() {
         </p>
       )}
 
+      {/* Distinct keys so React swaps the node instead of re-styling it in place — otherwise
+          the recipe's `transition: all` crossfades the blue action button into the grey
+          restart button while the label has already changed. */}
       <div className={controlsRow}>
         {isLastStep ? (
-          <button className={restartClass} onClick={() => setStepIndex(0)}>
+          <button key="restart" className={restartClass} onClick={() => setStepIndex(0)}>
             Nochmal von vorn
           </button>
         ) : (
-          <button className={actionClass} onClick={() => setStepIndex((i) => i + 1)}>
+          <button key="halve" className={actionClass} onClick={() => setStepIndex((i) => i + 1)}>
             Kästchen halbieren
           </button>
         )}

@@ -53,7 +53,9 @@ export const CIRCLE_SHAPE: ShapeDefinition = {
 // producing a measured factor closer to a fractal's than a real area's).
 export const SQUARE_SHAPE: ShapeDefinition = {
   id: "square",
-  label: "Volles Quadrat",
+  // "Quadrat", not "Volles Quadrat": at 390px the three toggles only fit on one line at
+  // this length, and the canvas already shows the fill.
+  label: "Quadrat",
   points: [
     { x: 25, y: 25 },
     { x: 75, y: 25 },

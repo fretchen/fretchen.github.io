@@ -27,7 +27,11 @@ const wrapper = css({
 
 const shapeRow = css({ display: "flex", flexWrap: "wrap", gap: "2", mb: "3" });
 
-const toggleClass = (active: boolean) => `${button({ visual: "secondary", size: "md", active })} ${touchTarget}`;
+// Toggles use size "sm", actions size "md". Not cosmetic: the article column is only 294px
+// wide on a phone, and size "md" carries 80px of horizontal padding — three "md" toggles
+// wrap onto three stacked rows and push the canvas off the screen. `touchTarget` keeps them
+// 44px tall regardless, so the finger target does not shrink with the label.
+const toggleClass = (active: boolean) => `${button({ visual: "secondary", size: "sm", active })} ${touchTarget}`;
 const actionClass = `${button({ visual: "primary", size: "md" })} ${touchTarget}`;
 const restartClass = `${button({ visual: "secondary", size: "md" })} ${touchTarget}`;
 const clearClass = `${button({ visual: "ghost", size: "sm" })} ${touchTarget}`;
@@ -199,16 +203,20 @@ export function KaestchenSpiel({ variant = "shapes" }: KaestchenSpielProps) {
 
       {/* One filled button, always in the same place — its label says what happens next.
           "Nochmal von vorn" lands in the slot the child has been hitting all along, instead
-          of appearing beside a grey "you are done" sentence where it went unnoticed. */}
+          of appearing beside a grey "you are done" sentence where it went unnoticed.
+
+          The keys matter: without them React re-styles one node in place, and the recipe's
+          `transition: all` crossfades the blue action button into the grey restart button
+          while the label has already swapped. */}
       {isDraw
         ? canCount && (
             <div className={controlsRow}>
               {isLastAnimStep ? (
-                <button className={restartClass} onClick={() => setAnimStep(0)}>
+                <button key="restart" className={restartClass} onClick={() => setAnimStep(0)}>
                   Nochmal von vorn
                 </button>
               ) : (
-                <button className={actionClass} onClick={handleHalveDraw}>
+                <button key="halve" className={actionClass} onClick={handleHalveDraw}>
                   Kästchen halbieren
                 </button>
               )}
@@ -220,17 +228,17 @@ export function KaestchenSpiel({ variant = "shapes" }: KaestchenSpielProps) {
         : canCount && (
             <div className={controlsRow}>
               {!revealed && (
-                <button className={actionClass} onClick={handleReveal}>
+                <button key="count" className={actionClass} onClick={handleReveal}>
                   Jetzt zählen
                 </button>
               )}
               {revealed && !isLastStep && (
-                <button className={actionClass} onClick={handleHalve}>
+                <button key="halve" className={actionClass} onClick={handleHalve}>
                   Kästchen halbieren
                 </button>
               )}
               {revealed && isLastStep && (
-                <button className={restartClass} onClick={resetProgress}>
+                <button key="restart" className={restartClass} onClick={resetProgress}>
                   Nochmal von vorn
                 </button>
               )}

@@ -1,0 +1,319 @@
+---
+publishing_date: 2026-08-09
+title: What patience is worth to a fishery
+category: "others"
+description: A textbook common-pool fishery, solved perturbatively in the discount factor — how much a fish left in the water is worth, and how far that argument can be pushed.
+---
+
+## The commons, and its two benchmarks
+
+We now formalize the fishery problem, so that we can work out quantitatively what patience is worth.
+I use the fishery from the [earlier post](/blog/14/), which is the textbook one — John Leach sets
+it up in §8.1 of _A Course in Public Economics_.
+Island 1 sends out $b_1$ boats and island 2
+sends $b_2$ — that is the whole decision either of them makes. The fleet on the water in season
+$t$ is $B_t = b_1 + b_2$ and the fish stock is $s_t$. Three equations close the system:
+
+- **Catch.** $y_t = q\,s_t\sqrt{B_t}$ — more boats land more fish, but with diminishing returns,
+  and a richer stock is easier to fish. The catchability $q$ says how good the gear is.
+- **Renewal.** $g(s) = r\,s\,(1 - s/K)$ — the usual logistic regrowth, with intrinsic rate $r$
+  and carrying capacity $K$. Fastest at half of $K$, zero at both ends.
+- **What is left.** $s_{t+1} = s_t + g(s_t) - y_t$ — this season's catch sets next season's
+  starting point.
+
+The catch is shared in proportion to boats and each boat costs $c$ to send, so a season's profit
+for island $j$ is
+
+$$
+u_j(b_1, b_2) = b_j\,(v - c), \qquad v \equiv \frac{y}{B} = \frac{q\,s}{\sqrt{B}},
+$$
+
+where $v$ is what one boat-trip is worth — it falls as the ground gets crowded, which is the only
+reason any of this is interesting. Writing $u_{j,t}$ for what that comes to in season $t$,
+what island $j$ actually wants to maximise is its **discounted payoff** over all seasons,
+
+$$
+U_j = \sum_{t=0}^{\infty} \beta^{t}\,u_{j,t}.
+$$
+
+A geometric weight in time, exactly like a damping factor. In economics $\beta$ tells us how much
+next year counts compared to this one, so $\beta$ near 1 is a patient
+islander and $\beta = 0$ is one who does not think about next season at all. This parameter will matter
+enormously in the following.
+
+One decoration recurs below: a subscript $t$ means "in season $t$". The symbol $t$ is always the
+season, never anything else.
+
+There are two natural benchmarks, and we can derive both directly.
+
+**Independent fisheries.** Boats keep going out while there is anything left to gain, so entry
+stops where a boat's catch only just covers what it costs to send: $v = c$, or $y/B = c$, or
+
+$$
+B_{\text{open}} = \left(\frac{q\,s_0}{c}\right)^2 .
+$$
+
+With an initial stock $s_0 = 100$, $q = 0.01$ and $c = 0.125$ that is **64 boats**, earning exactly
+nothing between them — the entire value of the catch is spent on the boats that caught it. And
+notice what the equation does not contain: the growth rate. Nobody deciding whether to sail is
+thinking about next year's stock at all, so the ground is fished down and stays depleted.
+
+**The planner.** The other answer is to hand the fishery to one manager who chooses the fleet for
+every season at once, maximising the two islands' discounted profits together. Their profits add
+to $B_t(v_t - c)$, so the objective is discounted catch minus discounted cost:
+
+$$
+\max_{\{B_t\}_{t=0}^{\infty}}\; U = U_1 + U_2 = \sum_{t=0}^{\infty} \beta^{t}\Big(q\,s_t\sqrt{B_t} - c\,B_t\Big)
+$$
+
+$$
+\text{subject to}\qquad s_{t+1} = s_t + g(s_t) - q\,s_t\sqrt{B_t}, \qquad t = 0, 1, 2, \dots
+$$
+
+with $s_0$ given. We will not solve this in general, but perturbatively in $\beta \ll 1$. We will further write down the
+boats as a polynomial in $\beta$.
+
+$$
+B_t = B_t^{(0)}+\beta B_t^{(1)}+\cdots
+$$
+
+And we also have
+
+$$
+U= U^{(0)}+ \beta U^{(1)}+\cdots
+$$
+
+We can now plug in and find:
+
+$$
+U =  \sum_{t=0}^{\infty} \beta^{t}\Big(q\,s_t\sqrt{B_t} - c\,B_t\Big)
+$$
+
+$$
+U =  \left(q s_0\sqrt{B_0} - c B_0\right)+\beta\left(q s_1\sqrt{B_1} - c B_1\right)
+$$
+
+We now need to develop $\sqrt{B} = \sqrt{B^{(0)}+\beta B^{(1)}} \approx \sqrt{B^{(0)}} (1+\frac{B^{(1)}}{B^{(0)}}\beta)$.
+Let us plug in:
+
+$$
+U =  \left(q\,s_0\sqrt{B_0} - c\,B_0\right)+\beta\left(q s_1\sqrt{B_1} - c B_1\right)
+$$
+
+It is really easy for zeroth order in $\beta$. We get:
+
+$$
+U^{(0)} =  \left(q\,s_0\sqrt{B^{(0)}_0} - c\,B^{(0)}_0\right)
+$$
+
+And we try to optimize these profits:
+
+$$
+\frac{\partial U^{(0)}}{\partial B_0^{(0)}} =  \frac{q\,s_0}{2\sqrt{B^{(0)}_0}} - c
+$$
+
+This gives us:
+
+$$
+B_0^{(0)} =\left(\frac{q s_0}{2 c}\right)^2 \\
+U^{(0)} = \frac{q^2 s_0^2}{4c}
+$$
+
+|                       | boats on the water | profit |
+| --------------------- | ------------------ | ------ |
+| independent fisheries | 64                 | 0      |
+| the planner           | 16                 | 2.00   |
+
+Four times the fleet, for nothing at all. That gap is the tragedy of the commons, and it is the
+distance any institution has to close.
+
+### First order
+
+Now let us go to first order in $\beta$:
+
+$$
+U = q s_0\sqrt{B_0^{(0)}}\left(1+\frac{\beta B_0^{(1)}}{2B_0^{(0)}}\right) - c B_0^{(0)} -c \beta B_0^{(1)}+\beta\left(q s_1\sqrt{B^{(0)}_1} - c B^{(0)}_1\right)\\
+U = U^{(0)} + \beta\left(s_0\sqrt{B_0^{(0)}}\left(\frac{B_0^{(1)}}{2B_0^{(0)}}\right) -c B_0^{(1)}+ \left(q s_1\sqrt{B^{(0)}_1} - c B^{(0)}_1\right)\right)
+$$
+
+This gets us:
+
+$$
+U^{(1)} = \frac{s_0 B_0^{(1)}}{2\sqrt{B_0^{(0)}}} -c (B_0^{(1)}+ B^{(0)}_1)+ q s_1\sqrt{B^{(0)}_1} \\
+U^{(1)} = B_0^{(1)}\left[\frac{q s_0}{2\sqrt{B_0^{(0)}}} - c\right] + \left(q s_1\sqrt{B_1^{(0)}} - cB_1^{(0)}\right)
+$$
+
+This first part cancels as it is just the derivative of $U^{0}$ in the expansion and we get:
+
+$$
+U^{(1)} = q s_1\sqrt{B_1^{(0)}} - cB_1^{(0)}
+$$
+
+Optimizing for $B_1^{(0)}$ gives us:
+
+$$
+B_1^{(0)} =\left(\frac{q s_1}{2 c}\right)^2 \\
+U^{(1)} = \frac{q^2 s_1^2}{4c}
+$$
+
+We now get to first order the result:
+
+$$
+U = \frac{q^2}{4c}\left( s_0^2 + \beta s_1^2\right)
+$$
+
+And here we now have the stock in the next season, which starts to be important. Let us plug in:
+
+$$
+s_1 = s_0 (1+r-q \sqrt{B^{(0)}_0})\\
+s_1 = s_0 (1+r-\frac{q^2 s_0}{2c})
+$$
+
+### Second order
+
+This is the one, where it gets technical as a number of terms show up:
+
+$$
+B_t = B_t^{(0)}+\beta B_t^{(1)}+\beta^2 B_t^{(2)}+\cdots
+$$
+
+We then have:
+
+$$
+U =  \left(q s_0 \sqrt{B_0} - c B_0\right)+\beta \left(q s_1 \sqrt{B_1} - c B_1\right)+\beta^2 \left(q s_2 \sqrt{B_2} - c B_2\right)
+$$
+
+We now need to develop the first term to second order in $\beta$
+
+$$
+\sqrt{B} = \sqrt{B^{(0)}+\beta B^{(1)}+\beta^2 B^{(2)}} \approx \sqrt{B^{(0)}} \left(1 + \frac{\beta B^{(1)}+\beta^2 B^{(2)}}{2B^{(0)}}- \frac{ \beta^2 B_{(1)}^2}{8 B_{(0)}^2}\right)\\
+\sqrt{B} \approx \sqrt{B^{(0)}} \left(1 + \beta \frac{ B^{(1)}}{2B^{(0)}}+ \frac{\beta^2}{2B^{(0)}} \left[B^{(2)}- \frac{ B_{(1)}^2}{4 B^{(0)}}\right]\right)
+$$
+
+And this also means:
+
+$$
+s_{1} = s_0 + rs_0 - qs_0 \sqrt{B^{(0)}_0} \left(1 + \beta \frac{ B^{(1)}_0}{2B^{(0)}_0}\right)\\
+s_{1} = s_1^{(0)} + \beta s_1^{(1)}\\
+s_1^{(1)} = -  \frac{ qs_0}{2\sqrt{B^{(0)}_0}}B^{(1)}_0
+$$
+
+Let us go to second order:
+
+$$
+\left(q s_0 \sqrt{B_0} - c B_0\right) = q s_0 \sqrt{B^{(0)}} \left(1 + \beta \frac{ B^{(1)}}{2B^{(0)}}+ \frac{\beta^2}{2B^{(0)}} \left[B^{(2)}- \frac{ B_{(1)}^2}{4 B^{(0)}}\right]\right) - c \left(B^{(0)}_0+\beta B^{(1)}_0+\beta^2 B^{(2)}_0\right) \\
+= U^{(0)}- \beta^2 \frac{q s_0}{8\sqrt{B^{(0)}_0}} \frac{ B_{(1)}^2}{ B^{(0)}}\\
+= U^{(0)}- \beta^2 c^3 \frac{ B_{(1),0}^2}{ q^2 s_0^2 }\\
+$$
+
+On the second term we get:
+
+$$
+\left(q s_1 \sqrt{B_1} - c B_1\right) = q s_1 \sqrt{B^{(0)}} \left(1 + \beta \frac{ B^{(1)}}{2B^{(0)}}\right) - c (B^{(0)}_1+\beta B^{(1)}_1)\\
+= U^{(1)}
+$$
+
+$$
+q s_1 \sqrt{B_1} - c B_1 = q\left(s_1^{(0)} + \beta s_1^{(1)}\right)\sqrt{B_1^{(0)}}\left(1 + \beta \frac{B_1^{(1)}}{2B_1^{(0)}}\right) - c\left(B_1^{(0)} + \beta B_1^{(1)}\right) \\
+= \underbrace{\left(q s_1^{(0)}\sqrt{B_1^{(0)}} - c B_1^{(0)}\right)}_{U^{(1)}} + \beta \underbrace{B_1^{(1)}\left[\frac{q s_1^{(0)}}{2\sqrt{B_1^{(0)}}} - c\right]}_{\text{cancels}} + \beta \underbrace{q s_1^{(1)} \sqrt{B_1^{(0)}}}_{\text{survives}} + O(\beta^2)
+$$
+
+And the third term gives directly:
+
+$$
+\left(q s_2 \sqrt{B_2} - c B_2\right) = \left(q s_2 \sqrt{B^{(0)}_2} - c B^{(0)}_2\right)
+$$
+
+Putting it all together we have:
+
+$$
+U^{(2)} =\underbrace{- c^3 \frac{ B_{(1),0}^2}{ q^2 s_0^2 }}_{t=0}+ \underbrace{-\frac{q^2 s^{(0)}_1}{2} B^{(1)}_0}_{t=1}+ \underbrace{\left(q s_2 \sqrt{B^{(0)}_2} - c B^{(0)}_2\right)}_{t=2}
+$$
+
+We can use this to take the two derivatives:
+
+$$
+\frac{\partial U^{(2)}}{\partial B_{(1),0}} = - 2 c^3 \frac{ B_{(1),0}}{ q^2 s_0^2 }-\frac{q^2 s^{(0)}_1}{2}\\
+\frac{\partial U^{(2)}}{\partial B^{(0)}_{2}} = \frac{q s_2}{2\sqrt{B^{(0)}_2}}  - c
+$$
+
+Now let us set to zero to find:
+
+$$
+B^{(0)}_{2} = \left(\frac{qs_2}{2c}\right)^2\\
+B^{(1)}_0  = - \frac{q^4 s_0^2 s^{(0)}_1}{4c^3}
+$$
+
+That second result is the one we were after, and it says something simple once the clutter is
+divided out. Measured against the impatient fleet $B^{(0)}_0 = (q s_0 / 2c)^2$, the correction is
+
+$$
+\frac{B^{(1)}_0}{B^{(0)}_0} = -\frac{q^2 s^{(0)}_1}{c} = -2\,V_0'\big(s^{(0)}_1\big),
+\qquad V_0'(s) \equiv \frac{q^2 s}{2c},
+$$
+
+where $V_0'$ is the shadow price of the stock — what one more fish left in the water is worth next
+season. Patience does not change the planner's rule; it puts a price tag on the catch. Every fish
+landed today is a fish missing tomorrow, so a boat-trip is worth not $v$ but $v(1 - \beta V_0')$,
+and that one substitution is the whole first-order result. It is also the only door the growth
+rate ever comes through: $r$ sits inside $s^{(0)}_1$ and nowhere else, which is why the impatient
+fleet contains no $r$ at all.
+
+Why _twice_ the price, though? Because the catch goes as $\sqrt{B}$. Boats crowd each other, so
+the fleet scales as the square of what a trip is worth: shave one percent off the value of the
+catch and you shave two percent off the fleet. Writing $\pi \equiv \beta V_0'(s^{(0)}_1)$ for the
+dimensionless price of a fish still swimming, everything above resums into the form worth
+remembering,
+
+$$
+B_0(\beta) = B^{(0)}_0\,\big(1 - \pi\big)^2 ,
+\qquad \pi = \beta\,\frac{q^2 s^{(0)}_1}{2c} ,
+$$
+
+which expands back to the coefficient above. A physicist can read $\pi$ as a coupling and the
+myopic answer as the free theory: patience renormalises the cost of a boat, $c \to c/(1-\pi)$, and
+the planner then runs the same one-season sum they always did. Here $\pi = 0.0395\,\beta$, so the
+fleet comes off its impatient value by about eight percent per unit of patience.
+
+### The sustainable regime
+
+We can now analyse how much patience would be needed to move
+towards a sustainable regime. First note, that the growth rate is not explicitly in the
+correction of the boats. The patient fisher cares about the total stock tomorrow, but not
+really about its growth rate explicitly. This is a different question. We can use now the condition:
+
+$$
+q \sqrt{B_0} < r
+$$
+
+We can now use the usual expension to have:
+
+$$
+q \sqrt{B_0^{(0)}} \left(1 + \frac{\beta}{2} \frac{B_0^{(1)}}{B_0^{(0)}}\right) < r\\
+q^2 \frac{s_0}{2c} \left(1 - \frac{\beta}{2} \frac{q^2 s^{(0)}_1}{c}\right) < r\\
+$$
+
+## Appendix: how the dynamic numbers were computed
+
+Beyond small $\beta$ the expansion above is no use, and the sequence has to be given up on
+altogether in favour of a rule. Nothing carries between seasons except the stock, so the best
+fleet can depend only on today's stock — not on the date, not on history. Writing $V(s)$ for the
+best discounted profit obtainable from today on, the whole infinite problem folds into one
+equation,
+
+$$
+V(s) = \max_{B}\Big[\,q\,s\sqrt{B} - c\,B \;+\; \beta\,V\big(s + g(s) - q\,s\sqrt{B}\big)\Big]
+$$
+
+— this season's profit plus the discounted value of the stock left behind. Differentiating in $B$,
+and writing $s'$ for next season's stock, the planner's fleet satisfies
+
+$$
+\frac{v}{2}\Big(1 - \beta\,V'(s')\Big) = c .
+$$
+
+This is the rule derived above, with the exact shadow price $V'(s')$ in place of the first-order $V_0'(s')$, and
+it is implicit: $V'$ depends on the path, which depends on the policy, which depends on $V'$.
+Hence the numerics.
+
+The planner is the same calculation with one agent choosing the total fleet.

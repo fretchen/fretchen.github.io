@@ -1,0 +1,88 @@
+---
+title: "Wie lang ist die Küste der Bretagne wirklich?"
+publishing_date: "2026-09-01"
+category: "others"
+description: "Eine Küste wird länger, je genauer man sie misst. Mit einem einfachen Kästchen-Trick kannst du herausfinden, wie zerklüftet eine Küste wirklich ist — und dabei eine Zahl entdecken, die niemand erwartet."
+---
+
+import Foldable from "../components/Foldable";
+import WidgetPlaceholder from "../components/blog/box-dimension/WidgetPlaceholder";
+
+Stell dir vor, du schaust dir eine Bucht in der Bretagne auf einer Karte an. Sie sieht klein aus, vielleicht so groß wie dein Daumennagel. Jetzt stell dir vor, du müsstest sie zu Fuß umrunden, immer dicht am Wasser entlang. Um jeden Felsen herum, in jede kleine Nebenbucht hinein, um jeden Stein, der ins Wasser ragt.
+
+Das würde ewig dauern. Viel länger, als die Karte vermuten lässt.
+
+Und jetzt kommt die eigentliche Frage: Wie lang ist diese Küste denn nun wirklich? Die Antwort ist überraschend: **Das kommt darauf an, wie genau du hinschaust.** Und genau dieses "Wie genau du hinschaust" lässt sich messen — mit einem Trick, der so einfach ist, dass du ihn sofort selbst ausprobieren kannst.
+
+## Das Kästchenspiel
+
+Leg ein Gitter aus lauter gleich großen Kästchen über eine Form. Zähl, wie viele Kästchen die Form berühren. Dann machst du die Kästchen halb so groß und zählst noch einmal.
+
+Bevor du weiterliest: Was schätzt du — bei einer **geraden Linie**, wie viel mehr Kästchen braucht man, wenn man sie halbiert?
+
+Probier es im Widget unten aus, an drei Formen: einer geraden Linie, einem Kreis und einem voll ausgemalten Quadrat.
+
+<WidgetPlaceholder
+  label="Widget: Kästchenspiel"
+  description="Canvas mit Linie / Kreis / Quadrat, Schieberegler halbiert die Kästchengröße, zeigt den Faktor groß an plus die Dimensions-Skala (2×–4× → 1–2). Enthält den Finger-Mal-Modus."
+/>
+
+Das Ergebnis: Bei der Linie und beim Kreis brauchst du **doppelt** so viele Kästchen, egal wie oft du halbierst. Beim Quadrat brauchst du **viermal** so viele.
+
+Das ist kein Zufall. Eine Linie ist eindimensional, egal ob sie gerade oder rund gebogen ist. Eine Fläche ist zweidimensional. Und der Faktor, um den die Kästchenzahl beim Halbieren wächst, hängt genau an dieser Dimension: 2× für Dimension 1, 4× für Dimension 2.
+
+Wenn du beide Zahlen nebeneinanderlegst, siehst du: Verdoppelt sich der Faktor mit jeder weiteren Dimension. 1 → 2×, 2 → 4×, und eine dritte Dimension (ein Würfel) würde 8× brauchen.
+
+## Und jetzt eine echte Küste
+
+Jetzt kommt der Clou. Was passiert, wenn du dasselbe Spiel nicht mit einer Linie, sondern mit einer echten Küste spielst?
+
+<WidgetPlaceholder
+  label="Widget: Küstenspiel"
+  description="Derselbe BoxCanvas-Regler wie oben, jetzt mit echten GSHHG-Küstenumrissen: Umschalter Bretagne / Normandie, zeigt den gemessenen Faktor live."
+/>
+
+Schau dir den Faktor an, den das Widget für die Bretagne anzeigt. Er ist **nicht 2** und **nicht 4**. Er liegt irgendwo dazwischen.
+
+Das bedeutet: Die Küste ist mehr als eine Linie, aber weniger als eine volle Fläche. Ihre Dimension liegt zwischen 1 und 2 — zum Beispiel bei 1,3. Eine Zahl, die keine ganze Zahl ist, obwohl "Dimension" für dich bisher wahrscheinlich immer 1, 2 oder 3 war.
+
+Formen, deren Dimension zwischen den ganzen Zahlen liegt, nennt man **Fraktale**. Eine Küste ist ein Fraktal, weil sie in jedem Maßstab neue kleine Zacken zeigt — zoomst du rein, taucht die nächste Miniaturbucht auf, und die nächste, und die nächste.
+
+Schalte jetzt im Widget auf die Küste der Normandie um. Der Faktor sinkt deutlich. Diese Küste sieht auf der Karte ganz anders aus als die Bretagne: viel glatter, viel gerader, mit weniger kleinen Einbuchtungen. Und genau das zeigt sich auch im gemessenen Faktor — eine glattere Küste liegt näher an der Dimension 1, eine zerklüftete Küste näher an der Dimension 2.
+
+Der Mathematiker Benoît Mandelbrot hat genau das 1967 zum ersten Mal systematisch gemessen, an der Westküste Großbritanniens. Er kam auf eine Dimension von etwa 1,25 — eine Zahl, die bis heute in jedem Buch über Fraktale steht.
+
+## Selber malen
+
+Der beste Weg, ein Gefühl dafür zu bekommen, ist: selbst ausprobieren.
+
+<WidgetPlaceholder
+  label="Widget: Mal-Modus (Finger)"
+  description="Touch-Zeichenfläche im KaestchenSpiel-Widget: eigene Kurve malen, Dimension live berechnen. touch-action muss gesetzt sein, damit die Seite beim Malen nicht mitscrollt."
+/>
+
+Mal mit dem Finger eine ruhige, geschwungene Linie. Schau dir ihre Dimension an — sie sollte nah bei 1 liegen. Mal jetzt eine wilde, zackige Kritzellinie, so wild du kannst. Die Dimension steigt.
+
+Du hast damit selbst eine Küste gebaut, nur eben mit dem Finger statt mit dem Meer. Und du hast gemessen, wie "wild" sie ist — mit genau derselben Zahl, die auch für die Bretagne, für Großbritannien und für jede andere Küste der Erde funktioniert.
+
+<Foldable label="Für Erwachsene und große Geschwister: die Formel dahinter">
+
+Der Faktor, den die Widgets oben anzeigen, ist eine vereinfachte Ansicht der klassischen Box-Counting-Dimension:
+
+$$
+d = \frac{\log N(\epsilon)}{\log(1/\epsilon)}
+$$
+
+Dabei ist $\epsilon$ die Kantenlänge eines Kästchens und $N(\epsilon)$ die Anzahl der Kästchen, die die Form schneiden. Trägt man $\log N(\epsilon)$ gegen $\log(1/\epsilon)$ für mehrere Kästchengrößen auf, ergibt sich näherungsweise eine Gerade, deren Steigung $d$ ist.
+
+[TODO: Log-Log-Plot via react-chartjs-2 einfügen, sobald boxCounting.ts über mehrere ε-Werte für Bretagne und Normandie gemessen hat — siehe Schritt 7 im Implementierungsplan.]
+
+Mandelbrots Originalarbeit: B. Mandelbrot, *How Long Is the Coast of Britain? Statistical Self-Similarity and Fractional Dimension*, Science 156 (1967). Er maß D ≈ 1,25 für die Westküste Großbritanniens und D ≈ 1,02 für die vergleichsweise glatte Küste Südafrikas.
+
+Die hier verwendeten Küstenumrisse stammen aus der GSHHG-Datenbank (Wessel & Smith), public domain.
+
+</Foldable>
+
+---
+
+*[TODO: Fred — konkrete Werte für Bretagne und Normandie einsetzen, sobald das Widget echte Daten misst (Implementierungsschritt 7). Bis dahin bleibt der Text bewusst ohne feste Zahl für die Bretagne selbst, außer dem Mandelbrot-Referenzwert für Großbritannien.]*

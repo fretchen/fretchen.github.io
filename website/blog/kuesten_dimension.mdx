@@ -5,7 +5,6 @@ category: "others"
 description: "Eine Küste wird länger, je genauer man sie misst. Mit einem einfachen Kästchen-Trick kannst du herausfinden, wie zerklüftet eine Küste wirklich ist — und dabei eine Zahl entdecken, die niemand erwartet."
 ---
 
-import Foldable from "../components/Foldable";
 import KaestchenSpiel from "../components/blog/box-dimension/KaestchenSpiel";
 import KuestenSpiel from "../components/blog/box-dimension/KuestenSpiel";
 
@@ -39,11 +38,11 @@ Jetzt kommt der Clou. Was passiert, wenn du dasselbe Spiel nicht mit einer Linie
 
 Schau dir die ×-Zahlen in deiner Messreihe an. Sie sind **nicht ×2** und **nicht ×4**. Sie liegen irgendwo dazwischen.
 
-Das bedeutet: Die Küste ist mehr als eine Linie, aber weniger als eine volle Fläche. Genau das siehst du an den ×-Zahlen, die näher an ×4 als an ×2 liegen. Ihre Dimension liegt deshalb zwischen 1 und 2 — eine Zahl, die keine ganze Zahl ist, obwohl "Dimension" für dich bisher wahrscheinlich immer 1, 2 oder 3 war.
+Das bedeutet: Die Küste ist mehr als eine Linie, aber weniger als eine volle Fläche. Genau das siehst du an den ×-Zahlen: Sie liegen näher an ×2 als an ×4 — aber eben nicht genau bei ×2. Ihre Dimension liegt deshalb zwischen 1 und 2 — eine Zahl, die keine ganze Zahl ist, obwohl "Dimension" für dich bisher wahrscheinlich immer 1, 2 oder 3 war.
 
 Formen, deren Dimension zwischen den ganzen Zahlen liegt, nennt man **Fraktale**. Eine Küste ist ein Fraktal, weil sie in jedem Maßstab neue kleine Zacken zeigt — zoomst du rein, taucht die nächste Miniaturbucht auf, und die nächste, und die nächste.
 
-Schalte jetzt im Widget auf die Küste der Normandie um. Die ×-Zahlen in der Messreihe werden kleiner, näher an ×2. Diese Küste sieht auf der Karte ganz anders aus als die Bretagne: viel glatter, viel gerader, mit weniger kleinen Einbuchtungen. Und genau das zeigt sich auch in den ×-Zahlen — eine glattere Küste liegt näher an ×2 (Dimension 1), eine zerklüftete Küste näher an ×4 (Dimension 2).
+Schalte jetzt im Widget auf die Küste der Normandie um. Die ×-Zahlen in der Messreihe werden kleiner, näher an ×2. Diese Küste sieht auf der Karte ganz anders aus als die Bretagne: viel glatter, viel gerader, mit weniger kleinen Einbuchtungen. Und genau das zeigt sich auch in den ×-Zahlen — eine glattere Küste liegt näher an ×2 (Dimension 1), eine zerklüftete Küste liegt etwas weiter von ×2 entfernt (Dimension etwas über 1).
 
 Der Mathematiker Benoît Mandelbrot hat genau das 1967 zum ersten Mal systematisch gemessen, an der Westküste Großbritanniens. Er kam auf eine Dimension von etwa 1,25 — eine Zahl, die bis heute in jedem Buch über Fraktale steht.
 
@@ -53,24 +52,18 @@ Der beste Weg, ein Gefühl dafür zu bekommen, ist: selbst ausprobieren. Hier is
 
 <KaestchenSpiel variant="draw" />
 
-Mal mit dem Finger eine ruhige, geschwungene Linie. Schau dir die ×-Zahlen in deiner Messreihe an — sie sollten nah bei ×2 liegen. Mal jetzt eine wilde, zackige Kritzellinie, so wild du kannst. Die Zahlen werden größer.
+Mal mit dem Finger eine ruhige, geschwungene Linie. Schau dir die ×-Zahlen in deiner Messreihe an — sie sollten nah bei ×2 liegen. Mal jetzt eine Linie mit ganz vielen kleinen Zacken darauf — wie ein Gebirgszug mit lauter kleinen Spitzen. Die Zahlen werden größer.
 
 Du hast damit selbst eine Küste gebaut, nur eben mit dem Finger statt mit dem Meer. Und du hast gemessen, wie "wild" sie ist — mit genau demselben Trick, der auch für die Bretagne, für Großbritannien und für jede andere Küste der Erde funktioniert.
 
-<Foldable label="Für Erwachsene und große Geschwister: die Formel dahinter">
+## Anhang: die Formel dahinter
 
-Der Faktor, den die Widgets oben anzeigen, ist eine vereinfachte Ansicht der klassischen Box-Counting-Dimension:
+Der Faktor aus den Widgets oben folgt einer einfachen Formel:
 
 $$
-d = \frac{\log N(\epsilon)}{\log(1/\epsilon)}
+N = \left(\frac{1}{s}\right)^d
 $$
 
-Dabei ist $\epsilon$ die Kantenlänge eines Kästchens und $N(\epsilon)$ die Anzahl der Kästchen, die die Form schneiden. Trägt man $\log N(\epsilon)$ gegen $\log(1/\epsilon)$ für mehrere Kästchengrößen auf, ergibt sich näherungsweise eine Gerade, deren Steigung $d$ ist.
+$N$ ist die Anzahl der Kästchen, $s$ ihre Kantenlänge, $d$ die Dimension — und genau die steckt im Exponenten. Bei einer Linie ist $d=1$: $N$ wächst mit $1/s$, halbierst du $s$, verdoppelt sich $N$. Bei einer Fläche ist $d=2$: $N$ wächst mit $(1/s)^2$, $N$ vervierfacht sich. Bei einer Küste liegt $d$ dazwischen — deshalb ist der Wachstumsfaktor auch weder 2 noch 4.
 
-[TODO: Log-Log-Plot via react-chartjs-2 einfügen, sobald boxCounting.ts über mehrere ε-Werte für Bretagne und Normandie gemessen hat — siehe Schritt 7 im Implementierungsplan.]
-
-Mandelbrots Originalarbeit: B. Mandelbrot, *How Long Is the Coast of Britain? Statistical Self-Similarity and Fractional Dimension*, Science 156 (1967). Er maß D ≈ 1,25 für die Westküste Großbritanniens und D ≈ 1,02 für die vergleichsweise glatte Küste Südafrikas.
-
-Die hier verwendeten Küstenumrisse stammen aus der GSHHG-Datenbank (Wessel & Smith), public domain. Gemessen mit demselben Kästchen-Trick wie oben, über vier Halbierungsschritte: Bretagne ≈ 1,19, Normandie ≈ 1,08.
-
-</Foldable>
+Mit den vereinfachten Daten hier (GSHHG, public domain) kommt man nicht exakt auf Mandelbrots 1,25: Die Widgets oben messen für die Bretagne ≈ 1,19, für die Normandie ≈ 1,08.

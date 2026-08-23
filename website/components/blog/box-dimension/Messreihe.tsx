@@ -95,20 +95,27 @@ function averageFactor(samples: HalvingSample[]): number | null {
 
 /**
  * Explains the ×2/×4 ⇔ Dimension-1/2 connection in words instead of a silent
- * gauge position — thresholds sit at 2.2/3.8 rather than exactly 2/4 so a
- * measured coastline like Normandie (≈×2.2) still reads as a fractal, not as
- * "basically a line".
+ * gauge position. The two edge cases are deliberately narrow (2.05/3.95) —
+ * tight enough that only genuine point-landings (the exact-2.0 line/circle and
+ * exact-4.0 square from widget 1, see boxCounting.test.ts) get "das ist genau
+ * eine Linie/Fläche". Everything else, including every real coastline and any
+ * hand-drawn curve, is always called a fractal — never "fast keine Linie
+ * mehr", which previously contradicted the post's "Küsten sind Fraktale"
+ * claim once a real measurement (e.g. Normandie) drifted under a wider
+ * threshold. The position hint's boundary (2.83 = 2^1.5) is the *multiplicative*
+ * midpoint between dimension 1 and 2, not the arithmetic ×3.
  */
 function explainFactor(factor: number): string {
-  if (factor <= 2.2) {
-    return "Deine Zahlen werden bei jeder Halbierung ungefähr doppelt so groß (×2) — fast wie bei einer reinen Linie. Ihre Dimension liegt ganz nah bei 1.";
+  if (factor <= 2.05) {
+    return "Deine Zahlen werden bei jeder Halbierung genau doppelt so groß (×2) — wie bei einer reinen Linie. Ihre Dimension ist 1.";
   }
-  if (factor >= 3.8) {
-    return "Deine Zahlen werden bei jeder Halbierung ungefähr viermal so groß (×4) — genau wie bei einer vollen Fläche. Ihre Dimension ist 2.";
+  if (factor >= 3.95) {
+    return "Deine Zahlen werden bei jeder Halbierung genau viermal so groß (×4) — wie bei einer vollen Fläche. Ihre Dimension ist 2.";
   }
+  const positionHint = factor < 2.83 ? "näher an der Linie als an der Fläche" : "näher an der Fläche als an der Linie";
   return `Deine Zahlen werden bei jeder Halbierung im Schnitt etwa ×${formatFactor(
     factor,
-  )} so groß — mehr als bei einer Linie (×2, Dimension 1), aber weniger als bei einer vollen Fläche (×4, Dimension 2). Das ist typisch für ein Fraktal: Seine Dimension liegt irgendwo dazwischen.`;
+  )} so groß — mehr als bei einer Linie (×2, Dimension 1), aber weniger als bei einer vollen Fläche (×4, Dimension 2), ${positionHint}. Das ist ein Fraktal: Seine Dimension liegt irgendwo zwischen 1 und 2.`;
 }
 
 /**

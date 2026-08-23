@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { css } from "../../../styled-system/css";
 import { BoxCanvas } from "./BoxCanvas";
-import { DimensionSkala, aggregateFactor, type HalvingSample } from "./DimensionSkala";
-import { Messreihe } from "./Messreihe";
+import { Messreihe, type HalvingSample } from "./Messreihe";
 import { countLineCells, type Point } from "./boxCounting";
 import { COAST_REGIONS } from "./coasts";
 
@@ -83,7 +82,6 @@ export function KuestenSpiel() {
     setRevealed(false);
   }
 
-  const overallFactor = aggregateFactor(samples);
   const isLastStep = stepIndex === CELL_SIZE_STEPS.length - 1;
 
   return (
@@ -125,13 +123,7 @@ export function KuestenSpiel() {
 
       {revealed && <p className={bigNumber}>{currentCount} Kästchen</p>}
 
-      {immediateFactor !== null && (
-        <p className={hint}>
-          Das ist das {immediateFactor.toFixed(1)}-fache von vorhin, nachdem die Kästchen halbiert wurden.
-        </p>
-      )}
-
-      {overallFactor !== null && <DimensionSkala factor={overallFactor} />}
+      <Messreihe samples={samples} worldSize={region.worldSize} />
     </div>
   );
 }

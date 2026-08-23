@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { css } from "../../../styled-system/css";
 import { BoxCanvas } from "./BoxCanvas";
-import { DimensionSkala, aggregateFactor, type HalvingSample } from "./DimensionSkala";
-import { Messreihe } from "./Messreihe";
+import { Messreihe, type HalvingSample } from "./Messreihe";
 import { countLineCells, countFilledCells, type Point } from "./boxCounting";
 import { DEMO_SHAPES, WORLD_SIZE, type ShapeDefinition } from "./shapes";
 
@@ -109,7 +108,6 @@ export function KaestchenSpiel({ variant = "shapes" }: KaestchenSpielProps) {
     setRevealed(false);
   }
 
-  const overallFactor = aggregateFactor(samples);
   const isLastStep = stepIndex === CELL_SIZE_STEPS.length - 1;
 
   return (
@@ -167,8 +165,6 @@ export function KaestchenSpiel({ variant = "shapes" }: KaestchenSpielProps) {
           {revealed && <p className={bigNumber}>{currentCount} Kästchen</p>}
 
           <Messreihe samples={samples} worldSize={WORLD_SIZE} />
-
-          {overallFactor !== null && <DimensionSkala factor={overallFactor} />}
         </>
       )}
     </div>

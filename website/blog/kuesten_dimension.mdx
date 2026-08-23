@@ -23,7 +23,7 @@ Bevor du weiterliest: Was schätzt du — bei einer **geraden Linie**, wie viel 
 
 Probier es im Widget unten aus, an drei Formen: einer geraden Linie, einem Kreis und einem voll ausgemalten Quadrat.
 
-<KaestchenSpiel />
+<KaestchenSpiel variant="shapes" />
 
 Das Ergebnis: Bei der Linie und beim Kreis brauchst du **doppelt** so viele Kästchen, egal wie oft du halbierst. Beim Quadrat brauchst du **viermal** so viele.
 
@@ -37,25 +37,25 @@ Jetzt kommt der Clou. Was passiert, wenn du dasselbe Spiel nicht mit einer Linie
 
 <KuestenSpiel />
 
-Schau dir den Faktor an, den das Widget für die Bretagne anzeigt. Er ist **nicht 2** und **nicht 4**. Er liegt irgendwo dazwischen.
+Schau dir die ×-Zahlen in deiner Messreihe an. Sie sind **nicht ×2** und **nicht ×4**. Sie liegen irgendwo dazwischen.
 
-Das bedeutet: Die Küste ist mehr als eine Linie, aber weniger als eine volle Fläche. Ihre Dimension liegt zwischen 1 und 2 — das Widget zeigt für die Bretagne ungefähr 1,3. Eine Zahl, die keine ganze Zahl ist, obwohl "Dimension" für dich bisher wahrscheinlich immer 1, 2 oder 3 war.
+Das bedeutet: Die Küste ist mehr als eine Linie, aber weniger als eine volle Fläche. Genau das siehst du an den ×-Zahlen, die näher an ×4 als an ×2 liegen. Ihre Dimension liegt deshalb zwischen 1 und 2 — eine Zahl, die keine ganze Zahl ist, obwohl "Dimension" für dich bisher wahrscheinlich immer 1, 2 oder 3 war.
 
 Formen, deren Dimension zwischen den ganzen Zahlen liegt, nennt man **Fraktale**. Eine Küste ist ein Fraktal, weil sie in jedem Maßstab neue kleine Zacken zeigt — zoomst du rein, taucht die nächste Miniaturbucht auf, und die nächste, und die nächste.
 
-Schalte jetzt im Widget auf die Küste der Normandie um. Der Faktor sinkt deutlich, auf eine Dimension von ungefähr 1,1. Diese Küste sieht auf der Karte ganz anders aus als die Bretagne: viel glatter, viel gerader, mit weniger kleinen Einbuchtungen. Und genau das zeigt sich auch im gemessenen Faktor — eine glattere Küste liegt näher an der Dimension 1, eine zerklüftete Küste näher an der Dimension 2.
+Schalte jetzt im Widget auf die Küste der Normandie um. Die ×-Zahlen in der Messreihe werden kleiner, näher an ×2. Diese Küste sieht auf der Karte ganz anders aus als die Bretagne: viel glatter, viel gerader, mit weniger kleinen Einbuchtungen. Und genau das zeigt sich auch in den ×-Zahlen — eine glattere Küste liegt näher an ×2 (Dimension 1), eine zerklüftete Küste näher an ×4 (Dimension 2).
 
 Der Mathematiker Benoît Mandelbrot hat genau das 1967 zum ersten Mal systematisch gemessen, an der Westküste Großbritanniens. Er kam auf eine Dimension von etwa 1,25 — eine Zahl, die bis heute in jedem Buch über Fraktale steht.
 
 ## Selber malen
 
-Der beste Weg, ein Gefühl dafür zu bekommen, ist: selbst ausprobieren. Tipp im Widget oben auf "✏️ Selber malen" — oder hier, in einer frischen Runde:
+Der beste Weg, ein Gefühl dafür zu bekommen, ist: selbst ausprobieren. Hier ist ein leeres Feld — mal drauflos:
 
-<KaestchenSpiel />
+<KaestchenSpiel variant="draw" />
 
-Mal mit dem Finger eine ruhige, geschwungene Linie. Schau dir ihre Dimension an — sie sollte nah bei 1 liegen. Mal jetzt eine wilde, zackige Kritzellinie, so wild du kannst. Die Dimension steigt.
+Mal mit dem Finger eine ruhige, geschwungene Linie. Schau dir die ×-Zahlen in deiner Messreihe an — sie sollten nah bei ×2 liegen. Mal jetzt eine wilde, zackige Kritzellinie, so wild du kannst. Die Zahlen werden größer.
 
-Du hast damit selbst eine Küste gebaut, nur eben mit dem Finger statt mit dem Meer. Und du hast gemessen, wie "wild" sie ist — mit genau derselben Zahl, die auch für die Bretagne, für Großbritannien und für jede andere Küste der Erde funktioniert.
+Du hast damit selbst eine Küste gebaut, nur eben mit dem Finger statt mit dem Meer. Und du hast gemessen, wie "wild" sie ist — mit genau demselben Trick, der auch für die Bretagne, für Großbritannien und für jede andere Küste der Erde funktioniert.
 
 <Foldable label="Für Erwachsene und große Geschwister: die Formel dahinter">
 

@@ -1,10 +1,71 @@
-# Critique: Wie lang ist die Küste der Bretagne wirklich?
+# Critique: Welche Dimension hat die Küste der Bretagne?
 
-**Target audience:** Math-interested children, roughly 10–12, reading German on an iPad/iPhone. Generic "du" — not the author's own kids, no family references (per plan).
-**Plan file:** Found (`kuesten_dimension.plan.md`). The post matches the plan's thesis, tone rules and four-section outline well. Two promised elements are missing (opener photo, honesty sentence about Mandelbrot's number), and the plan itself is stale in places (it still describes `DimensionSkala.tsx`, removed on request in a later round).
-**Overall impression:** The pedagogical spine — halve the boxes, watch the count grow, read the ×-number — is intact and genuinely well-adapted to the age group; no logarithms leak into the main text, and the two technical terms are both introduced properly. The biggest problem is that the text makes several concrete numeric promises the widgets no longer keep after the last recalibration, plus a literal `[TODO:]` marker that would ship to readers.
+**Target audience:** Math-interested German-reading children in years 6 and 8 (roughly 11–14), on an iPad/iPhone. Confirmed with the author this round — they already know integer powers, so `2¹`/`2²` need no introduction; only the fractional exponent does. Generic "du", no family references (per plan). Adults read over the shoulder and are served by the appendix.
+**Plan file:** Found (`kuesten_dimension.plan.md`), and now substantially stale — it still specifies `DimensionSkala.tsx`, the `<Foldable>` "Für Papa und die Großen", "10 bis 12 Jahre", "Potenzen mit gebrochenen Exponenten" as a hard limit (the post now teaches exactly that), and placeholder dimension values. Two of its promises remain undelivered: the opener photo and the 900–1200 word target.
+**Overall impression:** The spine is strong and the exponent notation from the last round genuinely landed — `×2,3 = 2^1,19` turns "the dimension is between 1 and 2" from a claim into something the child reads off their own measurement. Two problems now stand out, and both are seams left by recent changes: the text still says the line grows "doppelt so viele, egal wie oft du halbierst" while the widget prints ×1,8 in 18px prose right next to it, and the new title poses a question the post never plainly answers.
 
-Three review passes are collected here: **A. Post content**, **B. Widget UX**, **C. Styling & identity**. Each is independently workable.
+This round's review is below. The earlier review and its resolutions are kept underneath as a record.
+
+## Critical Issues
+
+- [ ] **[§ Intro]** The title now asks for a dimension, the opening asks for a length, and nothing bridges them. "Dimension" does not appear until after the first widget — roughly 250 words in. The pivot sentence ("genau dieses 'Wie genau du hinschaust' lässt sich messen") never says *what* is measured, so a child who clicked on the title question has no sign for two whole sections that it will be answered. This seam is new: it was created when the title changed in the last round, and one clause naming the quarry would close it.
+
+- [ ] **[§ Das Kästchenspiel]** "Bei der Linie und beim Kreis brauchst du **doppelt** so viele Kästchen, egal wie oft du halbierst" is contradicted by the widget on the same screen. The line measures ×2,0 then ×1,8 then ×1,9 and only *averages* to ×2. Since the guidance line was introduced, that per-step factor is printed as an 18px sentence — "Jetzt sind es 14 Kästchen — 1,8-mal so viele wie eben" — so the contradiction now sits in the largest text in the widget instead of a 12px table tag. A child concludes either that they did something wrong or that the text is not to be trusted, and trust is precisely what has to carry them into a non-integer dimension two sections later. Either say "im Schnitt doppelt so viele" or explain the wobble; do not leave both claims standing.
+
+- [ ] **[§ Und jetzt eine echte Küste, § Selber malen]** The post never tells the child to *operate* widgets 2 and 3. Section 1 says "Probier es im Widget unten aus"; widget 2 is dropped in after "Jetzt kommt der Clou" and the very next sentence says "Schau dir die ×-Zahlen in deiner Messreihe an" — which do not exist until "Kästchen halbieren" has been pressed four times. A child following the text literally looks at a one-row table with no ×-numbers in it and concludes the post means a different table.
+
+- [ ] **[§ Schluss]** The post never answers its own title. The nearest thing is a conditional clause mid-paragraph ("Bei ×2,3 steht im Widget die Hochzahl 1,19. Das ist ihre Dimension."), which reads as an example rather than the answer, and the final section ends on the child's own scribble without ever returning to the Bretagne. A title that poses a question needs one plain closing sentence that answers it.
+
+- [ ] **[§ Intro / frontmatter]** *(carried over, still open)* No opener image. The post begins with three paragraphs of pure prose on a page that is otherwise entirely visual, and asks a child who has never seen this coast to picture a bay full of bays. This is also the clearest identity violation — see below.
+
+## Suggestions
+
+- [ ] **[§ Das Kästchenspiel]** "Im Widget steht **neben** deinem Ergebnis noch eine zweite Schreibweise" — it is not beside the result, it *is* the result, after an equals sign. And it only appears once all five halvings are done, so a child who did two steps and read on finds nothing where the text says to look.
+
+- [ ] **[§ Und jetzt eine echte Küste]** Two paragraphs make the same point at different precision. "Sie liegen näher an ×2 als an ×4 — aber eben nicht genau bei ×2. Ihre Dimension liegt deshalb zwischen 1 und 2." is the vague version of the exact statement that follows immediately after. Cutting the vague half would also shorten what is now the densest paragraph in the post.
+
+- [ ] **[§ Und jetzt eine echte Küste]** The Normandie paragraph is weaker than the widget it describes. It offers "eine zerklüftete Küste liegt etwas weiter von ×2 entfernt (Dimension etwas über 1)" while the widget prints 1,19 against 1,08 and spells the comparison out in a sentence. Naming both numbers would make the contrast land instead of gesturing at it.
+
+- [ ] **[§ Selber malen]** Nothing says where else this turns up. One sentence — Blumenkohl, Schneeflocke, Blitz, Lunge — would give the closing section a reason to exist beyond "you did it", and it is the natural place for a math-interested 13-year-old to want to go next.
+
+- [ ] **[§ overall]** Still around 900 words against the plan's 900–1200, and the shortfall sits exactly where the missing opener image and the missing closing answer would go.
+
+- [ ] **[§ Anhang]** The plan fixes the vocabulary at "genau zwei" technical terms, Dimension and Fraktal. "Hochzahl" is now a third. It is a school word rather than jargon and almost certainly fine for years 6 and 8 — but the constraint was extended without being revisited, and the plan should say so or be retired.
+
+## Nitpicks
+
+- [ ] **[§ Das Kästchenspiel]** *(carried over)* "wie viel mehr Kästchen braucht man, wenn man **sie** halbiert" — "sie" points back at the line, but what gets halved are the boxes. A child parsing carefully gets the wrong referent at the exact moment they are asked to make a prediction.
+
+- [ ] **[§ Selber malen]** A calm hand-drawn line lands below the ×2,05 threshold, so the widget answers "genau doppelt so viele, wie bei einer reinen Linie. Die Hochzahl ist ihre Dimension: 1." Calling a wobbly finger-drawn curve "genau" a line of dimension 1 slightly overclaims — the same rounding the shapes widget makes, but less defensible when the child can see their own wobble on screen.
+
+- [ ] **[§ plan file]** *(carried over)* `kuesten_dimension.plan.md` is now contradicted by the post in four places (see "Plan file" above), including a hard constraint the post deliberately broke. Per its own step 13 it should be deleted after publishing.
+
+- [x] **[§ frontmatter]** ~~`tokenID` is missing.~~ Resolved — `tokenID: 201`.
+
+- [x] **[§ Selber malen]** ~~Nothing prepares the child for the "Kleinste Kästchengröße erreicht." dead end.~~ Resolved — that sentence was removed and the button slot now becomes "Nochmal von vorn".
+
+## Identity check
+
+Measured against [`IDENTITY.md`](../IDENTITY.md).
+
+**Holds:**
+
+- *"The built thing is the content itself, not decoration around it."* Three working instruments carry the argument; the prose is scaffolding between them. This post is close to the purest expression of the claim on the site.
+- *"Serif reads, sans operates."* Decided by content rather than container: the widget chrome is sans, the guidance line and the Fazit opt back into the reading face. That is the rule applied the way IDENTITY argues for, not the way the container would have imposed.
+- *"Clean, not decorated."* The last round removed the tinted Fazit box and confined the accent colour to the data and one number. A colour audit would now find purple in exactly two roles.
+- *"Honest."* The appendix admits the simplified data does not reach Mandelbrot's 1,25 and names the logarithm rather than hiding it.
+
+**Does not hold:**
+
+- **"Ciechanowski: the article is visible immediately."** The post opens with three paragraphs before anything is visible. The reference IDENTITY names as the target is precisely the one whose hallmark is a figure at the top. This is a second, independent argument for the opener photo — it is not only a pedagogical gap.
+- **"Figures and tools may exceed [the prose measure] — they are the content, not decoration."** `BoxCanvas` caps at `maxWidth: 360px`, so on a desktop the tool renders at half the width of the prose column it sits in. At the finest grid that is about 5,6 px per cell — the mesh the child is meant to read. IDENTITY explicitly permits the tool to be the widest thing on the page; right now it is the narrowest, and the one place where legibility is genuinely tight.
+- **"Deep, not dense" / "honest"** are both dented by Critical #2 above: a page where the prose and the instrument disagree is the failure mode both words exist to prevent.
+
+---
+
+# Earlier review — resolved unless marked open
+
+Three review passes: **A. Post content**, **B. Widget UX**, **C. Styling & identity**.
 
 ---
 

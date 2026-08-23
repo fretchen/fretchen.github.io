@@ -9,43 +9,47 @@ tokenID: 201
 import KaestchenSpiel from "../components/blog/box-dimension/KaestchenSpiel";
 import KuestenSpiel from "../components/blog/box-dimension/KuestenSpiel";
 
-Stell dir vor, du schaust dir eine Bucht in der Bretagne auf einer Karte an. Sie sieht klein aus, vielleicht so groß wie dein Daumennagel. Jetzt stell dir vor, du müsstest sie zu Fuß umrunden, immer dicht am Wasser entlang. Um jeden Felsen herum, in jede kleine Nebenbucht hinein, um jeden Stein, der ins Wasser ragt.
+Schau dir das Bild an: eine Küste in der Bretagne, von oben. Große Buchten, und in den Buchten wieder kleinere. Jetzt stell dir vor, du müsstest da unten zu Fuß entlanglaufen, immer dicht am Wasser. Um jeden Felsen herum, in jede kleine Nebenbucht hinein, um jeden Stein, der ins Wasser ragt.
 
-Das würde ewig dauern. Viel länger, als die Karte vermuten lässt.
+Das würde ewig dauern. Viel länger, als das Bild vermuten lässt.
 
 Und jetzt die Frage: Wie lang ist diese Küste denn nun wirklich? Die Antwort ist überraschend: **Das kommt darauf an, wie genau du hinschaust.** Und genau dieses "Wie genau du hinschaust" lässt sich messen — mit einem Trick, der so einfach ist, dass du ihn sofort selbst ausprobieren kannst.
+
+Am Ende steht dabei eine einzige Zahl, die diese Küste beschreibt: ihre **Dimension**. Was das heißt, baust du dir Schritt für Schritt selbst zusammen.
 
 ## Das Kästchenspiel
 
 Leg ein Gitter aus lauter gleich großen Kästchen über eine Form. Zähl, wie viele Kästchen die Form berühren. Dann machst du die Kästchen halb so groß und zählst noch einmal.
 
-Bevor du weiterliest: Was schätzt du — bei einer **geraden Linie**, wie viel mehr Kästchen braucht man, wenn man sie halbiert?
+Bevor du weiterliest: Was schätzt du — bei einer **geraden Linie**, wie viel mehr Kästchen braucht man, wenn die Kästchen halb so groß werden?
 
 Probier es im Widget unten aus, an drei Formen: einer geraden Linie, einem Kreis und einem voll ausgemalten Quadrat.
 
 <KaestchenSpiel variant="shapes" />
 
-Das Ergebnis: Bei der Linie und beim Kreis brauchst du **doppelt** so viele Kästchen, egal wie oft du halbierst. Beim Quadrat brauchst du **viermal** so viele.
+Das Ergebnis: Bei der Linie brauchst du **genau doppelt** so viele Kästchen, bei jedem einzelnen Schritt. Beim Kreis fast genau doppelt — mal ein bisschen mehr, mal ein bisschen weniger. Beim Quadrat brauchst du **viermal** so viele.
+
+Warum wackelt es beim Kreis? An den Rändern hört die Form mitten in einem Kästchen auf, und dieses angeschnittene Kästchen zählt trotzdem mit. Bei großen Kästchen fällt so eins stark ins Gewicht, bei kleinen kaum. Deshalb schaut das Widget am Ende nicht auf einen einzelnen Schritt, sondern auf den Schnitt aus allen.
 
 Das ist kein Zufall. Eine Linie ist eindimensional, egal ob sie gerade oder rund gebogen ist. Eine Fläche ist zweidimensional. Und der Faktor, um den die Kästchenzahl beim Halbieren wächst, hängt genau an dieser Dimension: 2× für Dimension 1, 4× für Dimension 2.
 
-Im Widget steht neben deinem Ergebnis noch eine zweite Schreibweise: ×2 ist dasselbe wie $2^1$, ×4 dasselbe wie $2^2$. Die Hochzahl ist genau die Dimension — ein Würfel bräuchte entsprechend $2^3 = 8$.
+Wenn du alle fünf Halbierungen gemacht hast, schreibt das Widget das Ergebnis in einer zweiten Form auf: ×2 ist dasselbe wie $2^1$, ×4 dasselbe wie $2^2$. Die Hochzahl ist genau die Dimension — ein Würfel bräuchte entsprechend $2^3 = 8$.
 
 ## Und jetzt eine echte Küste
 
-Jetzt kommt der Clou. Was passiert, wenn du dasselbe Spiel nicht mit einer Linie, sondern mit einer echten Küste spielst?
+Jetzt kommt der Clou. Was passiert, wenn du dasselbe Spiel nicht mit einer Linie, sondern mit einer echten Küste spielst? Halbier die Kästchen wieder, so oft es geht.
 
 <KuestenSpiel />
 
 Schau dir die ×-Zahlen in deiner Messreihe an. Sie sind **nicht ×2** und **nicht ×4**. Sie liegen irgendwo dazwischen.
 
-Das bedeutet: Die Küste ist mehr als eine Linie, aber weniger als eine volle Fläche. Genau das siehst du an den ×-Zahlen: Sie liegen näher an ×2 als an ×4 — aber eben nicht genau bei ×2. Ihre Dimension liegt deshalb zwischen 1 und 2. Sie ist keine ganze Zahl — obwohl "Dimension" für dich bisher wahrscheinlich immer 1, 2 oder 3 war.
+Das bedeutet: Die Küste ist mehr als eine Linie, aber weniger als eine volle Fläche. Ihre Dimension liegt deshalb zwischen 1 und 2. Sie ist keine ganze Zahl — obwohl "Dimension" für dich bisher wahrscheinlich immer 1, 2 oder 3 war.
 
 Und die Hochzahl? Zwischen $2^1 = 2$ und $2^2 = 4$ ist keine Lücke. Du kannst die Hochzahl langsam von 1 auf 2 schieben — dann wandert das Ergebnis genauso langsam von 2 auf 4 mit. Deine Küste liegt irgendwo unterwegs: Bei ×2,3 steht im Widget die Hochzahl 1,19. Das ist ihre Dimension.
 
 Formen, deren Dimension zwischen den ganzen Zahlen liegt, nennt man **Fraktale**. Eine Küste ist ein [Fraktal](https://de.wikipedia.org/wiki/Fraktal), weil sie in jedem Maßstab neue kleine Zacken zeigt — zoomst du rein, taucht die nächste Miniaturbucht auf, und die nächste, und die nächste.
 
-Schalte jetzt im Widget auf die Küste der Normandie um. Die ×-Zahlen in der Messreihe werden kleiner, näher an ×2. Diese Küste sieht auf der Karte ganz anders aus als die Bretagne: viel glatter, viel gerader, mit weniger kleinen Einbuchtungen. Und genau das zeigt sich auch in den ×-Zahlen — eine glattere Küste liegt näher an ×2 (Dimension 1), eine zerklüftete Küste liegt etwas weiter von ×2 entfernt (Dimension etwas über 1).
+Schalte jetzt im Widget auf die Küste der Normandie um. Das Gitter bleibt, wie es ist — nur die Küste darunter wechselt. Diese hier sieht ganz anders aus als die Bretagne: viel glatter, viel gerader, mit weniger kleinen Einbuchtungen. Und genau das zeigt sich in den Zahlen: Die Bretagne kommt auf die Hochzahl 1,19, die Normandie nur auf 1,08. Je zerklüfteter eine Küste ist, desto weiter rutscht ihre Dimension von 1 weg.
 
 Der Mathematiker [Benoît Mandelbrot](https://de.wikipedia.org/wiki/Beno%C3%AEt_Mandelbrot) hat genau das 1967 zum ersten Mal systematisch gemessen, an der Westküste Großbritanniens. Er kam auf eine Dimension von etwa 1,25 — eine Zahl, die bis heute in jedem Buch über Fraktale steht.
 
@@ -55,9 +59,11 @@ Der beste Weg, ein Gefühl dafür zu bekommen, ist: selbst ausprobieren. Hier is
 
 <KaestchenSpiel variant="draw" />
 
-Mal mit dem Finger eine ruhige, geschwungene Linie. Schau dir die ×-Zahlen in deiner Messreihe an — sie sollten nah bei ×2 liegen. Mal jetzt eine Linie mit ganz vielen kleinen Zacken darauf — wie ein Gebirgszug mit lauter kleinen Spitzen. Die Zahlen werden größer.
+Mal mit dem Finger eine ruhige, geschwungene Linie und halbier dann die Kästchen wie vorher. Die ×-Zahlen wackeln stärker als beim Kreis — eine Fingerlinie hat noch viel mehr angeschnittene Kästchen an den Rändern. Im Schnitt sollten sie trotzdem nah bei ×2 liegen. Mal jetzt eine Linie mit ganz vielen kleinen Zacken darauf — wie ein Gebirgszug mit lauter kleinen Spitzen. Die Zahlen werden größer.
 
-Du hast damit selbst eine Küste gebaut, nur eben mit dem Finger statt mit dem Meer. Und du hast gemessen, wie "wild" sie ist — mit genau demselben Trick, der auch für die Bretagne, für Großbritannien und für jede andere Küste der Erde funktioniert.
+Du hast damit selbst eine Küste gebaut, nur eben mit dem Finger statt mit dem Meer. Und du hast gemessen, wie "wild" sie ist — mit genau demselben Trick, der auch für die Bretagne, für Großbritannien und für jede andere Küste der Erde funktioniert. Denselben Trick benutzt man übrigens auch für ganz andere Sachen: für die Verästelungen in deiner Lunge, für Schneeflocken, für Blitze — und für einen Blumenkohl.
+
+Bleibt die Frage aus dem Titel. Die Küste der Bretagne hat die Dimension 1,19: mehr als eine Linie, weniger als eine Fläche. Keine ganze Zahl — und trotzdem eine ganz normale Antwort.
 
 ## Anhang: die Formel dahinter
 

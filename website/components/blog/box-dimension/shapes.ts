@@ -26,12 +26,18 @@ function circlePoints(cx: number, cy: number, radius: number, segments: number):
 // cell is this in?") even though boxCounting.ts resolves it consistently under the
 // hood. Nudging off any multiple of 1.5625 keeps the shape clearly inside a row/
 // column of cells at every zoom level.
+// The x-span is the full world, not 10→90: 80 units is not a multiple of the cell sizes, so
+// both ends fell mid-cell and every step picked up a partial box the previous one had not.
+// That made the line measure 4 · 8 · 14 · 26 · 52 — ×1,75 and ×1,86 in the middle — while the
+// post promises "genau doppelt, egal wie oft du halbierst". Spanning 0→100 lands both ends on
+// a grid corner at every step and measures 4 · 8 · 16 · 32 · 64, exactly ×2 throughout.
+// Pinned by test/kuestenZahlen.test.ts, which is what makes the claim in the post safe.
 export const LINE_SHAPE: ShapeDefinition = {
   id: "line",
   label: "Linie",
   points: [
-    { x: 10, y: 53 },
-    { x: 90, y: 53 },
+    { x: 0, y: 53 },
+    { x: 100, y: 53 },
   ],
   mode: "line",
   closed: false,

@@ -197,9 +197,20 @@ export function KaestchenSpiel({ variant = "shapes" }: KaestchenSpielProps) {
         highlightHits={displayHighlight}
         drawEnabled={shapeId === "draw"}
         onPointerDraw={handlePointerDraw}
+        label={
+          isDraw
+            ? "Leeres Feld mit einem Gitter aus Kästchen, auf das du mit dem Finger malen kannst"
+            : `${activeShape!.label} auf einem Gitter aus Kästchen, die berührten Kästchen sind hervorgehoben`
+        }
       />
 
-      {guidance && <p className={guidanceLine}>{guidance}</p>}
+      {/* aria-live: the count changes on every click and is otherwise announced nowhere —
+          without it the whole measuring loop is silent to a screen reader. */}
+      {guidance && (
+        <p className={guidanceLine} aria-live="polite">
+          {guidance}
+        </p>
+      )}
 
       {/* One filled button, always in the same place — its label says what happens next.
           "Nochmal von vorn" lands in the slot the child has been hitting all along, instead

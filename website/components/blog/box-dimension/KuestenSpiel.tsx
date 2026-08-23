@@ -120,10 +120,13 @@ export function KuestenSpiel() {
         closed={false}
         highlightHits
         landRings={landRings}
+        label={`Küste der ${REGION_LABELS[regionId]} auf einem Gitter aus Kästchen, die berührten Kästchen sind hervorgehoben`}
       />
 
+      {/* aria-live: the count changes on every click and is otherwise announced nowhere —
+          without it the whole measuring loop is silent to a screen reader. */}
       {guidance && (
-        <p className={guidanceLine}>
+        <p className={guidanceLine} aria-live="polite">
           {guidance.before}
           <span className={guidanceCount}>{guidance.count}</span>
           {guidance.after}

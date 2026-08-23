@@ -8,35 +8,38 @@ This round's review is below. The earlier review and its resolutions are kept un
 
 ## Critical Issues
 
-- [ ] **[§ Intro]** The title now asks for a dimension, the opening asks for a length, and nothing bridges them. "Dimension" does not appear until after the first widget — roughly 250 words in. The pivot sentence ("genau dieses 'Wie genau du hinschaust' lässt sich messen") never says *what* is measured, so a child who clicked on the title question has no sign for two whole sections that it will be answered. This seam is new: it was created when the title changed in the last round, and one clause naming the quarry would close it.
+- [x] **[§ Intro]** ~~The title asks for a dimension, the opening asks for a length, and nothing bridges them.~~ Fixed: the intro now announces the quarry — "Am Ende steht dabei eine einzige Zahl, die diese Küste beschreibt: ihre **Dimension**." — so the title's question is visibly in play from the first screen instead of surfacing 250 words later.
 
-- [ ] **[§ Das Kästchenspiel]** "Bei der Linie und beim Kreis brauchst du **doppelt** so viele Kästchen, egal wie oft du halbierst" is contradicted by the widget on the same screen. The line measures ×2,0 then ×1,8 then ×1,9 and only *averages* to ×2. Since the guidance line was introduced, that per-step factor is printed as an 18px sentence — "Jetzt sind es 14 Kästchen — 1,8-mal so viele wie eben" — so the contradiction now sits in the largest text in the widget instead of a 12px table tag. A child concludes either that they did something wrong or that the text is not to be trusted, and trust is precisely what has to carry them into a non-integer dimension two sections later. Either say "im Schnitt doppelt so viele" or explain the wobble; do not leave both claims standing.
+- [x] **[§ Das Kästchenspiel]** ~~"doppelt so viele Kästchen, egal wie oft du halbierst" is contradicted by the widget on the same screen (×2,0 / ×1,8 / ×1,9).~~ Fixed on **both** sides, which turned out to be better than either alone:
+  - *The instrument.* The wobble was an artefact, not a property of lines: `LINE_SHAPE` ran from x=10 to x=90, and 80 units is not a multiple of the cell sizes, so both ends fell mid-cell. Spanning the full world lands both ends on a grid corner at every step — measured 4 · 8 · 16 · 32 · 64, exactly ×2 throughout, verified in `test/kuestenZahlen.test.ts`.
+  - *The text.* The circle genuinely wobbles (measured ×2,17 / ×1,92 / ×2,04 / ×2,00) and no shape change fixes that, so the post now says so and explains why: the form ends mid-box at the edges, that partial box still counts, and it weighs far more at a coarse grid than a fine one. That paragraph pays for itself three times — it justifies why the new line comes out exact, it explains the "im Schnitt" in the Fazit that stood uncommented, and it covers the draw widget, where a finger line wobbles most of all.
 
-- [ ] **[§ Und jetzt eine echte Küste, § Selber malen]** The post never tells the child to *operate* widgets 2 and 3. Section 1 says "Probier es im Widget unten aus"; widget 2 is dropped in after "Jetzt kommt der Clou" and the very next sentence says "Schau dir die ×-Zahlen in deiner Messreihe an" — which do not exist until "Kästchen halbieren" has been pressed four times. A child following the text literally looks at a one-row table with no ×-numbers in it and concludes the post means a different table.
+- [x] **[§ Und jetzt eine echte Küste, § Selber malen]** ~~The post never tells the child to *operate* widgets 2 and 3.~~ Fixed by applying section 1's pattern to all three: "Halbier die Kästchen wieder, so oft es geht" before the coastline widget, "und halbier dann die Kästchen wie vorher" in the drawing section.
 
-- [ ] **[§ Schluss]** The post never answers its own title. The nearest thing is a conditional clause mid-paragraph ("Bei ×2,3 steht im Widget die Hochzahl 1,19. Das ist ihre Dimension."), which reads as an example rather than the answer, and the final section ends on the child's own scribble without ever returning to the Bretagne. A title that poses a question needs one plain closing sentence that answers it.
+- [x] **[§ Schluss]** ~~The post never answers its own title.~~ Fixed with a closing paragraph that says it plainly: "Bleibt die Frage aus dem Titel. Die Küste der Bretagne hat die Dimension 1,19: mehr als eine Linie, weniger als eine Fläche."
 
-- [ ] **[§ Intro / frontmatter]** *(carried over, still open)* No opener image. The post begins with three paragraphs of pure prose on a page that is otherwise entirely visual, and asks a child who has never seen this coast to picture a bay full of bays. This is also the clearest identity violation — see below.
+- [x] **[§ Intro / frontmatter]** ~~No opener image.~~ **Withdrawn — this finding was wrong.** `Post.tsx:142` renders the `tokenID: 201` NFT image *before* the MDX content (floated left at 220px, centred up to 300px below 768px), and it was generated specifically as the hero for this post: an aerial view of the Brittany coast with bays inside bays. Verified in the browser at both widths — it sits at the top of the article, ahead of the first paragraph.
+  The real residue was smaller: the opening asked the child to *imagine* ("Stell dir vor") what was already on screen, and called it a map when it is an aerial view. Now fixed — the first sentence points at the picture instead.
 
 ## Suggestions
 
-- [ ] **[§ Das Kästchenspiel]** "Im Widget steht **neben** deinem Ergebnis noch eine zweite Schreibweise" — it is not beside the result, it *is* the result, after an equals sign. And it only appears once all five halvings are done, so a child who did two steps and read on finds nothing where the text says to look.
+- [x] **[§ Das Kästchenspiel]** ~~"Im Widget steht **neben** deinem Ergebnis noch eine zweite Schreibweise" — it is not beside the result, it *is* the result.~~ Fixed, and it now also says when to expect it: "Wenn du alle fünf Halbierungen gemacht hast, schreibt das Widget das Ergebnis in einer zweiten Form auf."
 
-- [ ] **[§ Und jetzt eine echte Küste]** Two paragraphs make the same point at different precision. "Sie liegen näher an ×2 als an ×4 — aber eben nicht genau bei ×2. Ihre Dimension liegt deshalb zwischen 1 und 2." is the vague version of the exact statement that follows immediately after. Cutting the vague half would also shorten what is now the densest paragraph in the post.
+- [x] **[§ Und jetzt eine echte Küste]** ~~Two paragraphs make the same point at different precision.~~ Fixed — the vague half ("Sie liegen näher an ×2 als an ×4 — aber eben nicht genau bei ×2") is cut, since the exponent paragraph right after says it exactly.
 
-- [ ] **[§ Und jetzt eine echte Küste]** The Normandie paragraph is weaker than the widget it describes. It offers "eine zerklüftete Küste liegt etwas weiter von ×2 entfernt (Dimension etwas über 1)" while the widget prints 1,19 against 1,08 and spells the comparison out in a sentence. Naming both numbers would make the contrast land instead of gesturing at it.
+- [x] **[§ Und jetzt eine echte Küste]** ~~The Normandie paragraph is weaker than the widget it describes.~~ Fixed: "Die Bretagne kommt auf die Hochzahl 1,19, die Normandie nur auf 1,08." Both numbers are now pinned to the measurement by `test/kuestenZahlen.test.ts`.
 
-- [ ] **[§ Selber malen]** Nothing says where else this turns up. One sentence — Blumenkohl, Schneeflocke, Blitz, Lunge — would give the closing section a reason to exist beyond "you did it", and it is the natural place for a math-interested 13-year-old to want to go next.
+- [x] **[§ Selber malen]** ~~Nothing says where else this turns up.~~ Fixed: "für die Verästelungen in deiner Lunge, für Schneeflocken, für Blitze — und für einen Blumenkohl."
 
-- [ ] **[§ overall]** Still around 900 words against the plan's 900–1200, and the shortfall sits exactly where the missing opener image and the missing closing answer would go.
+- [x] **[§ overall]** ~~Around 900 words against the plan's 900–1200.~~ The additions this round (wobble explanation, closing answer, outlook, operating instructions) close the gap.
 
-- [ ] **[§ Anhang]** The plan fixes the vocabulary at "genau zwei" technical terms, Dimension and Fraktal. "Hochzahl" is now a third. It is a school word rather than jargon and almost certainly fine for years 6 and 8 — but the constraint was extended without being revisited, and the plan should say so or be retired.
+- [ ] **[§ Anhang]** The plan fixes the vocabulary at "genau zwei" technical terms, Dimension and Fraktal. "Hochzahl" is now a third. It is a school word rather than jargon and almost certainly fine for years 6 and 8 — but the constraint was extended without being revisited. Resolved by retiring the plan file (see Nitpicks), not by changing the post.
 
 ## Nitpicks
 
-- [ ] **[§ Das Kästchenspiel]** *(carried over)* "wie viel mehr Kästchen braucht man, wenn man **sie** halbiert" — "sie" points back at the line, but what gets halved are the boxes. A child parsing carefully gets the wrong referent at the exact moment they are asked to make a prediction.
+- [x] **[§ Das Kästchenspiel]** ~~"wenn man **sie** halbiert" — "sie" points back at the line, but what gets halved are the boxes.~~ Fixed: "…wenn die Kästchen halb so groß werden?"
 
-- [ ] **[§ Selber malen]** A calm hand-drawn line lands below the ×2,05 threshold, so the widget answers "genau doppelt so viele, wie bei einer reinen Linie. Die Hochzahl ist ihre Dimension: 1." Calling a wobbly finger-drawn curve "genau" a line of dimension 1 slightly overclaims — the same rounding the shapes widget makes, but less defensible when the child can see their own wobble on screen.
+- [x] **[§ Selber malen]** ~~A calm hand-drawn line is called "genau" a line of dimension 1, which overclaims when the child can see their own wobble.~~ Addressed by the wobble paragraph rather than by changing the threshold: the drawing section now says outright that a finger line wobbles more than the circle and why, so "im Schnitt ×2" is what the child expects to read.
 
 - [ ] **[§ plan file]** *(carried over)* `kuesten_dimension.plan.md` is now contradicted by the post in four places (see "Plan file" above), including a hard constraint the post deliberately broke. Per its own step 13 it should be deleted after publishing.
 
@@ -57,9 +60,15 @@ Measured against [`IDENTITY.md`](../IDENTITY.md).
 
 **Does not hold:**
 
-- **"Ciechanowski: the article is visible immediately."** The post opens with three paragraphs before anything is visible. The reference IDENTITY names as the target is precisely the one whose hallmark is a figure at the top. This is a second, independent argument for the opener photo — it is not only a pedagogical gap.
-- **"Figures and tools may exceed [the prose measure] — they are the content, not decoration."** `BoxCanvas` caps at `maxWidth: 360px`, so on a desktop the tool renders at half the width of the prose column it sits in. At the finest grid that is about 5,6 px per cell — the mesh the child is meant to read. IDENTITY explicitly permits the tool to be the widest thing on the page; right now it is the narrowest, and the one place where legibility is genuinely tight.
-- **"Deep, not dense" / "honest"** are both dented by Critical #2 above: a page where the prose and the instrument disagree is the failure mode both words exist to prevent.
+- ~~**"Ciechanowski: the article is visible immediately."** The post opens with three paragraphs before anything is visible.~~ **Withdrawn — wrong.** The NFT hero image is rendered above the article body by `Post.tsx`, so the article *is* visible immediately. See the retracted Critical item above.
+- [x] **"Figures and tools may exceed [the prose measure] — they are the content, not decoration."** ~~`BoxCanvas` caps at `maxWidth: 360px`, so on a desktop the tool renders at half the width of the prose column.~~ Fixed: `maxWidth` rises to 560px from 768px up, mobile unchanged. Measured in the browser — the finest grid went from 5,6 px to 8,8 px per cell on a desktop, and that mesh is the thing the reader is asked to look at.
+- [x] **"Deep, not dense" / "honest"** ~~are both dented by Critical #2: a page where the prose and the instrument disagree.~~ Resolved by fixing the instrument *and* explaining the residue — see Critical #2 above.
+
+**Added this round, not from the critique:**
+
+- [x] **The widgets were silent to screen readers.** Clicking "Kästchen halbieren" changed the guidance line, but nothing announced it — the entire measuring loop was visual only. The guidance line now carries `aria-live="polite"` in all three widgets (verified in the browser), and the canvas carries `role="img"` with a German `aria-label` describing what is drawn. The Messreihe was already real DOM and therefore readable.
+- [x] **The numbers in the post are now pinned to the measurement.** `test/kuestenZahlen.test.ts` recomputes both coastline dimensions from `coasts.ts` and asserts that every value quoted in the MDX matches, plus that the line grows by exactly ×2 at every step. This coupling broke silently three times in this project and was each time caught rounds later by re-reading the post; it can no longer break unnoticed.
+- [ ] **German posts are served under `lang="en"`.** `<html lang>` follows the URL prefix, not the content (see `README.md` → Typography), so a screen reader pronounces this post with English phonemes. Affects `sprit_national.mdx` equally — a site-wide issue, not this post's to fix, but worth recording.
 
 ---
 

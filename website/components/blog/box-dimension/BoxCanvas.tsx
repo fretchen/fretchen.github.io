@@ -12,12 +12,16 @@ const FILL_ALPHA = 0.25;
 const WATER_COLOR = "#bfdbfe"; // blue-200
 const LAND_COLOR = "#bbf7d0"; // green-200
 
+// Wider than the prose it sits in, on screens that have the room. IDENTITY.md: "Figures and
+// tools may exceed [the measure] — they are the content, not decoration." At 360px the finest
+// grid gave 5,6px per cell, and that mesh is the thing the reader is asked to look at.
 const wrapper = css({
   position: "relative",
   width: "100%",
   aspectRatio: "1 / 1",
   maxWidth: "360px",
   mx: "auto",
+  "@media (min-width: 768px)": { maxWidth: "560px" },
 });
 
 const canvasStyle = css({
@@ -47,6 +51,12 @@ export interface BoxCanvasProps {
   drawEnabled?: boolean;
   /** BoxCanvas converts client coordinates to world coordinates before calling this. */
   onPointerDraw?: (p: Point) => void;
+  /**
+   * What the canvas is showing, for screen readers — the drawing itself is opaque to them.
+   * The measurement it produces stays available: the guidance line announces each count and
+   * the Messreihe is real DOM.
+   */
+  label?: string;
   className?: string;
 }
 
@@ -61,6 +71,7 @@ export function BoxCanvas({
   landRings,
   drawEnabled = false,
   onPointerDraw,
+  label,
   className,
 }: BoxCanvasProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -190,6 +201,8 @@ export function BoxCanvas({
     <div ref={wrapperRef} className={wrapper}>
       <canvas
         ref={canvasRef}
+        role="img"
+        aria-label={label}
         className={`${canvasStyle} ${drawEnabled ? drawableCanvasStyle : ""} ${className ?? ""}`}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}

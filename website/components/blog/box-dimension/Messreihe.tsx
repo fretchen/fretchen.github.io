@@ -13,15 +13,13 @@ const caption = css({ fontSize: "sm", color: "gray.600", mb: "1" });
 
 const headerRow = css({
   display: "flex",
-  alignItems: "center",
+  justifyContent: "space-between",
+  alignItems: "baseline",
   gap: "2",
   fontSize: "xs",
   color: "gray.500",
   mb: "1",
 });
-
-const headerSize = css({ width: "40px", flexShrink: 0 });
-const headerCount = css({ flex: "1" });
 
 const row = css({
   display: "flex",
@@ -70,6 +68,49 @@ function formatFactor(factor: number): string {
   return factor.toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 }
 
+const conclusion = css({
+  mt: "3",
+  p: "3",
+  bg: "gray.50",
+  borderRadius: "md",
+  fontSize: "sm",
+  color: "gray.800",
+});
+
+/**
+ * Geometric-mean growth factor across all halving steps taken (same math the
+ * removed DimensionSkala used internally) — used only to pick which of three
+ * explanatory sentences to show, never printed as a raw "dimension" decimal.
+ */
+function averageFactor(samples: HalvingSample[]): number | null {
+  if (samples.length < 2) return null;
+  const sorted = [...samples].sort((a, b) => b.cellSize - a.cellSize);
+  const coarsest = sorted[0];
+  const finest = sorted[sorted.length - 1];
+  if (coarsest.count <= 0 || finest.count <= 0) return null;
+  const numHalvings = Math.log2(coarsest.cellSize / finest.cellSize);
+  if (!isFinite(numHalvings) || numHalvings <= 0) return null;
+  return Math.pow(finest.count / coarsest.count, 1 / numHalvings);
+}
+
+/**
+ * Explains the ×2/×4 ⇔ Dimension-1/2 connection in words instead of a silent
+ * gauge position — thresholds sit at 2.2/3.8 rather than exactly 2/4 so a
+ * measured coastline like Normandie (≈×2.2) still reads as a fractal, not as
+ * "basically a line".
+ */
+function explainFactor(factor: number): string {
+  if (factor <= 2.2) {
+    return "Deine Zahlen werden bei jeder Halbierung ungefähr doppelt so groß (×2) — fast wie bei einer reinen Linie. Ihre Dimension liegt ganz nah bei 1.";
+  }
+  if (factor >= 3.8) {
+    return "Deine Zahlen werden bei jeder Halbierung ungefähr viermal so groß (×4) — genau wie bei einer vollen Fläche. Ihre Dimension ist 2.";
+  }
+  return `Deine Zahlen werden bei jeder Halbierung im Schnitt etwa ×${formatFactor(
+    factor,
+  )} so groß — mehr als bei einer Linie (×2, Dimension 1), aber weniger als bei einer vollen Fläche (×4, Dimension 2). Das ist typisch für ein Fraktal: Seine Dimension liegt irgendwo dazwischen.`;
+}
+
 /**
  * Renders the halving steps taken so far as growing bars, each with a shrinking
  * square icon standing in for "wie klein die Kästchen gerade sind" — no raw
@@ -77,18 +118,26 @@ function formatFactor(factor: number): string {
  * to a child without translation. The ×-factor next to each count does that one
  * division for them so the growth is visible without mental arithmetic.
  */
-export function Messreihe({ samples, worldSize }: { samples: HalvingSample[]; worldSize: number }) {
+export interface MessreiheProps {
+  samples: HalvingSample[];
+  worldSize: number;
+  /** Total halving steps the widget offers — the conclusion only shows once all are measured. */
+  totalSteps: number;
+}
+
+export function Messreihe({ samples, worldSize, totalSteps }: MessreiheProps) {
   if (samples.length === 0) return null;
 
   const rows = [...samples].sort((a, b) => b.cellSize - a.cellSize);
   const maxCount = Math.max(...rows.map((r) => r.count));
+  const factor = rows.length >= totalSteps ? averageFactor(rows) : null;
 
   return (
     <div className={wrapper}>
       <p className={caption}>Deine Messungen:</p>
       <div className={headerRow}>
-        <span className={headerSize}>Größe der Kästchen</span>
-        <span className={headerCount}>Anzahl der Kästchen</span>
+        <span>Größe der Kästchen</span>
+        <span>Anzahl der Kästchen</span>
       </div>
       {rows.map((r, i) => {
         const perEdge = Math.round(worldSize / r.cellSize);
@@ -111,6 +160,7 @@ export function Messreihe({ samples, worldSize }: { samples: HalvingSample[]; wo
           </div>
         );
       })}
+      {factor !== null && <p className={conclusion}>{explainFactor(factor)}</p>}
     </div>
   );
 }

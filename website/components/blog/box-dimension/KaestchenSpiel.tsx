@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { css } from "../../../styled-system/css";
 import { BoxCanvas } from "./BoxCanvas";
 import { Messreihe, type HalvingSample } from "./Messreihe";
@@ -52,11 +52,20 @@ export interface KaestchenSpielProps {
 }
 
 export function KaestchenSpiel({ variant = "shapes" }: KaestchenSpielProps) {
-  const [shapeId, setShapeId] = useState<ShapeId>(variant === "draw" ? "draw" : "line");
+  const isDraw = variant === "draw";
+  const [shapeId, setShapeId] = useState<ShapeId>(isDraw ? "draw" : "line");
+  // stepIndex/revealed/samples drive the manual guess-then-reveal flow for
+  // variant="shapes" only — that pacing is the point there (see Runde 1).
+  // variant="draw" ignores them and measures all steps eagerly below, since by
+  // this point in the post the reader already knows the trick from widget 1.
   const [stepIndex, setStepIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [samples, setSamples] = useState<HalvingSample[]>([]);
   const [drawnPoints, setDrawnPoints] = useState<Point[]>([]);
+  // variant="draw" step counter: still a manual "Kästchen halbieren" click,
+  // like variant="shapes" — only the separate "Jetzt zählen" step is gone,
+  // since the count for whichever step you're on just shows immediately.
+  const [animStep, setAnimStep] = useState(0);
 
   const activeShape = shapeId === "draw" ? null : DEMO_SHAPES.find((s) => s.id === shapeId)!;
   const points = shapeId === "draw" ? drawnPoints : activeShape!.points;
@@ -77,10 +86,11 @@ export function KaestchenSpiel({ variant = "shapes" }: KaestchenSpielProps) {
 
   function handleClearDrawing() {
     setDrawnPoints([]);
-    resetProgress();
+    setAnimStep(0);
   }
 
   function handlePointerDraw(p: Point) {
+    setAnimStep(0);
     setDrawnPoints((prev) => {
       if (prev.length > 0) {
         const last = prev[prev.length - 1];
@@ -89,6 +99,10 @@ export function KaestchenSpiel({ variant = "shapes" }: KaestchenSpielProps) {
       }
       return [...prev, p];
     });
+  }
+
+  function handleHalveDraw() {
+    setAnimStep((i) => Math.min(i + 1, CELL_SIZE_STEPS.length - 1));
   }
 
   const canCount = points.length >= 2;
@@ -109,6 +123,18 @@ export function KaestchenSpiel({ variant = "shapes" }: KaestchenSpielProps) {
   }
 
   const isLastStep = stepIndex === CELL_SIZE_STEPS.length - 1;
+  const isLastAnimStep = animStep === CELL_SIZE_STEPS.length - 1;
+
+  const autoSamples: HalvingSample[] = useMemo(() => {
+    if (!isDraw || !canCount) return [];
+    return CELL_SIZE_STEPS.slice(0, animStep + 1).map((cs) => ({
+      cellSize: cs,
+      count: (mode === "filled" ? countFilledCells(points, cs) : countLineCells(points, cs, closed)).count,
+    }));
+  }, [isDraw, canCount, points, mode, closed, animStep]);
+
+  const displayCellSize = isDraw ? CELL_SIZE_STEPS[animStep] : cellSize;
+  const displayHighlight = isDraw ? canCount : revealed;
 
   return (
     <div className={wrapper}>
@@ -126,9 +152,9 @@ export function KaestchenSpiel({ variant = "shapes" }: KaestchenSpielProps) {
         mode={mode}
         points={points}
         worldSize={WORLD_SIZE}
-        cellSize={cellSize}
+        cellSize={displayCellSize}
         closed={closed}
-        highlightHits={revealed}
+        highlightHits={displayHighlight}
         drawEnabled={shapeId === "draw"}
         onPointerDraw={handlePointerDraw}
       />
@@ -142,7 +168,22 @@ export function KaestchenSpiel({ variant = "shapes" }: KaestchenSpielProps) {
         </div>
       )}
 
-      {canCount && (
+      {isDraw && canCount && (
+        <>
+          <div className={controlsRow}>
+            {!isLastAnimStep && (
+              <button className={actionButtonStyle(false)} onClick={handleHalveDraw}>
+                Kästchen halbieren
+              </button>
+            )}
+            {isLastAnimStep && <span className={hint}>Kleinste Kästchengröße erreicht.</span>}
+          </div>
+
+          <Messreihe samples={autoSamples} worldSize={WORLD_SIZE} totalSteps={CELL_SIZE_STEPS.length} />
+        </>
+      )}
+
+      {!isDraw && canCount && (
         <>
           {stepIndex === 0 && !revealed && (
             <p className={hint}>Schätz zuerst: Wie viele Kästchen berührt die Form wohl?</p>
@@ -164,7 +205,7 @@ export function KaestchenSpiel({ variant = "shapes" }: KaestchenSpielProps) {
 
           {revealed && <p className={bigNumber}>{currentCount} Kästchen</p>}
 
-          <Messreihe samples={samples} worldSize={WORLD_SIZE} />
+          <Messreihe samples={samples} worldSize={WORLD_SIZE} totalSteps={CELL_SIZE_STEPS.length} />
         </>
       )}
     </div>

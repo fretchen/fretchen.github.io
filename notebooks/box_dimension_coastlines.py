@@ -63,10 +63,14 @@ class BBox:
 # Bounding boxes as pinned by the approved blog post plan (kuesten_dimension.plan.md).
 REGIONS: dict[str, BBox] = {
     "bretagne": BBox(lon_min=-5.2, lon_max=-1.0, lat_min=47.2, lat_max=48.9),
-    # Ouistreham to Le Tréport, deliberately excluding the Cotentin peninsula
-    # (Cap de la Hague) — that stretch is itself jagged and would muddy the
-    # "smooth contrast coast" comparison the post makes against Bretagne.
-    "normandie": BBox(lon_min=-0.3, lon_max=1.4, lat_min=49.2, lat_max=50.1),
+    # Calvados D-Day beaches / Baie des Veys to Le Tréport. Deliberately stops
+    # short of the Cotentin peninsula proper (Cherbourg / Cap de la Hague) —
+    # that stretch is itself jagged and would muddy the "smooth contrast
+    # coast" comparison the post makes against Bretagne. Also deliberately
+    # doesn't extend past Le Tréport, which sits almost exactly on the
+    # Normandy/Picardy département border — going further east would mean
+    # showing non-Normandy coast under the "Normandie" label.
+    "normandie": BBox(lon_min=-1.3, lon_max=1.4, lat_min=49.1, lat_max=50.1),
 }
 
 # Douglas-Peucker tolerance in degrees. Must stay well below the real-world
@@ -77,6 +81,17 @@ REGIONS: dict[str, BBox] = {
 # hit the <100KB combined output budget; see step 7 (Validierung) of the blog
 # plan for the check that this doesn't erase the jaggedness being measured.
 SIMPLIFY_TOLERANCE_DEG = 0.0025
+
+# Separate, coarser tolerance for the land/water fill polygon — it only needs
+# to look right at widget scale, not defend a box-counting measurement, so it
+# can be simplified much more aggressively to keep the payload small.
+LAND_SIMPLIFY_TOLERANCE_DEG = 0.01
+
+# Minimum land fragment area to keep, in km². A bbox like Bretagne's picks up
+# hundreds of tiny offshore rocks/islets (GSHHG resolves them individually) —
+# below this size they're sub-pixel at the widget's canvas scale anyway, so
+# they're dropped rather than bloating the payload with invisible detail.
+MIN_LAND_FRAGMENT_KM2 = 1.0
 
 
 def download_gshhg() -> Path:
@@ -189,8 +204,35 @@ def _drop_frame_runs(
 KM_PER_DEG = 111.32  # rough, fine at these latitudes
 
 
-def project_to_km(line: LineString) -> tuple[list[tuple[float, float]], dict]:
-    """Equirectangular projection into real kilometres (not yet fit to WORLD_SIZE).
+def extract_land_polygons(polygons: list[Polygon], bbox: BBox) -> list[Polygon]:
+    """The clipped land area itself, for the water/land fill — unlike
+    extract_coastline, the bbox-frame edges are kept: they're the true edge of
+    the visible map here, not a measurement artifact.
+
+    Tiny fragments (see MIN_LAND_FRAGMENT_KM2) are dropped: a bbox like
+    Bretagne's overlaps hundreds of individually-resolved offshore rocks that
+    are sub-pixel at the widget's canvas scale and would only bloat the payload.
+    """
+    target = bbox.to_shapely()
+    merged = unary_union(polygons)
+    clipped = merged.intersection(target)
+    geoms = list(clipped.geoms) if hasattr(clipped, "geoms") else [clipped]
+
+    lat_mean = (bbox.lat_min + bbox.lat_max) / 2
+    km2_per_deg2 = KM_PER_DEG * KM_PER_DEG * math.cos(math.radians(lat_mean))
+
+    return [
+        g
+        for g in geoms
+        if isinstance(g, Polygon)
+        and not g.is_empty
+        and g.area * km2_per_deg2 >= MIN_LAND_FRAGMENT_KM2
+    ]
+
+
+def make_projector(bbox: BBox):
+    """Equirectangular projection into real kilometres (not yet fit to WORLD_SIZE),
+    shared by every geometry (coastline *and* land polygons) of one region.
 
     Longitude is scaled by cos(mean latitude) so x/y are both in true km — a
     single shared scale (computed later, across all regions) then converts km
@@ -198,35 +240,44 @@ def project_to_km(line: LineString) -> tuple[list[tuple[float, float]], dict]:
     if each region picked its own scale to fill the world box edge-to-edge, the
     same slider cellSize would silently mean a different real-world distance
     for each region.
+
+    The reference point is the bbox corner, not a coordinate taken from
+    whichever geometry happens to be projected first — using two different
+    geometries' own coordinates as their reference would silently offset them
+    from each other, and the coastline and its land fill must stay aligned.
     """
-    coords = list(line.coords)
-    lats = [c[1] for c in coords]
-    lons = [c[0] for c in coords]
-    lat_mean = sum(lats) / len(lats)
+    lat_mean = (bbox.lat_min + bbox.lat_max) / 2
     cos_lat = math.cos(math.radians(lat_mean))
+    lon0, lat0 = bbox.lon_min, bbox.lat_min
 
-    lon0, lat0 = lons[0], lats[0]
-    km_coords = [
-        ((lon - lon0) * cos_lat * KM_PER_DEG, -(lat - lat0) * KM_PER_DEG)
-        for lon, lat in zip(lons, lats)
-    ]
+    def project(lon: float, lat: float) -> tuple[float, float]:
+        return ((lon - lon0) * cos_lat * KM_PER_DEG, -(lat - lat0) * KM_PER_DEG)
 
-    bbox_meta = {
-        "lonMin": min(lons),
-        "lonMax": max(lons),
-        "latMin": min(lats),
-        "latMax": max(lats),
-    }
-    return km_coords, bbox_meta
+    return project
+
+
+def project_coords_to_km(coords: list[tuple[float, float]], project) -> list[tuple[float, float]]:
+    return [project(lon, lat) for lon, lat in coords]
 
 
 def normalize_with_shared_scale(
-    km_coords: list[tuple[float, float]], scale: float
+    km_coords: list[tuple[float, float]], scale: float, offset_x: float = 0, offset_y: float = 0
 ) -> list[list[float]]:
-    xs = [p[0] for p in km_coords]
-    ys = [p[1] for p in km_coords]
-    x_min, y_min = min(xs), min(ys)
-    return [[round((x - x_min) * scale, 3), round((y - y_min) * scale, 3)] for x, y in km_coords]
+    return [[round(x * scale + offset_x, 3), round(y * scale + offset_y, 3)] for x, y in km_coords]
+
+
+def center_in_world(points: list[list[float]], world_size: float) -> tuple[float, float]:
+    """Returns the (offset_x, offset_y) that centers `points` (already scaled to
+    world units, anchored at the origin) within the world_size x world_size box.
+
+    Both regions share one scale (see main()), so a physically smaller region
+    like Normandie doesn't fill the box and would otherwise sit jammed in a
+    corner instead of looking like a normal, centered map.
+    """
+    xs = [p[0] for p in points]
+    ys = [p[1] for p in points]
+    width, height = max(xs) - min(xs), max(ys) - min(ys)
+    return (world_size - width) / 2 - min(xs), (world_size - height) / 2 - min(ys)
 
 
 def _haversine_length_km(coords: list[tuple[float, float]]) -> float:
@@ -263,13 +314,31 @@ def process_region(name: str, bbox: BBox, shapefile_path: Path) -> dict:
             f"{TARGET_POINT_BUDGET} budget — consider a coarser SIMPLIFY_TOLERANCE_DEG."
         )
 
-    km_coords, bbox_meta = project_to_km(simplified)
+    project = make_projector(bbox)
+
+    line_coords = list(simplified.coords)
+    lons = [c[0] for c in line_coords]
+    lats = [c[1] for c in line_coords]
+    bbox_meta = {"lonMin": min(lons), "lonMax": max(lons), "latMin": min(lats), "latMax": max(lats)}
+
+    km_coords = project_coords_to_km(line_coords, project)
     x_range = max(x for x, _ in km_coords) - min(x for x, _ in km_coords)
     y_range = max(y for _, y in km_coords) - min(y for _, y in km_coords)
+
+    land_polygons = extract_land_polygons(polygons, bbox)
+    land_rings_km = []
+    for poly in land_polygons:
+        simplified_ring = poly.exterior.simplify(
+            LAND_SIMPLIFY_TOLERANCE_DEG, preserve_topology=True
+        )
+        land_rings_km.append(project_coords_to_km(list(simplified_ring.coords), project))
+    ring_points = sum(len(r) for r in land_rings_km)
+    print(f"  land fill: {len(land_rings_km)} ring(s), {ring_points} points total")
 
     return {
         "name": name,
         "km_coords": km_coords,
+        "land_rings_km": land_rings_km,
         "sourceLengthKm": simplified_km,
         "boundingBox": bbox_meta,
         "spanKm": max(x_range, y_range),
@@ -303,7 +372,16 @@ def main():
 
     regions_out = {}
     for name, raw in regions_raw.items():
-        points = normalize_with_shared_scale(raw["km_coords"], shared_scale)
+        # Center in the shared world box first (based on the coastline's own extent),
+        # then apply the exact same scale+offset to the land rings so both stay aligned.
+        unscaled_points = normalize_with_shared_scale(raw["km_coords"], shared_scale)
+        offset_x, offset_y = center_in_world(unscaled_points, WORLD_SIZE)
+        points = normalize_with_shared_scale(raw["km_coords"], shared_scale, offset_x, offset_y)
+        land_rings = [
+            normalize_with_shared_scale(ring, shared_scale, offset_x, offset_y)
+            for ring in raw["land_rings_km"]
+        ]
+
         meta = {
             "sourceLengthKm": raw["sourceLengthKm"],
             "simplificationToleranceDeg": SIMPLIFY_TOLERANCE_DEG,
@@ -311,12 +389,19 @@ def main():
             "minCellSizeRealKm": min_cell_size_real_km,
             "boundingBox": raw["boundingBox"],
         }
-        approx_bytes = len(json.dumps(points))
+        approx_bytes = len(json.dumps(points)) + len(json.dumps(land_rings))
         print(
-            f"  {name}: {len(points)} points, ~{approx_bytes / 1024:.1f} KB, span used "
+            f"  {name}: {len(points)} line points + {sum(len(r) for r in land_rings)} land "
+            f"points, ~{approx_bytes / 1024:.1f} KB, span used "
             f"{raw['spanKm'] * shared_scale:.1f}/{WORLD_SIZE} world-units"
         )
-        regions_out[name] = {"name": name, "points": points, "worldSize": WORLD_SIZE, "meta": meta}
+        regions_out[name] = {
+            "name": name,
+            "points": points,
+            "landRings": land_rings,
+            "worldSize": WORLD_SIZE,
+            "meta": meta,
+        }
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(OUTPUT_PATH, "w") as f:

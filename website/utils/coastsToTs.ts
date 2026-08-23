@@ -25,6 +25,7 @@ const OUTPUT_PATH = path.resolve(__dirname, "../components/blog/box-dimension/co
 interface RawRegion {
   name: string;
   points: [number, number][];
+  landRings: [number, number][][];
   worldSize: number;
   meta: {
     sourceLengthKm: number;
@@ -41,6 +42,7 @@ function regionConst(id: string, region: RawRegion): string {
   name: ${JSON.stringify(region.name)},
   worldSize: ${region.worldSize},
   points: ${JSON.stringify(region.points)},
+  landRings: ${JSON.stringify(region.landRings)},
   meta: ${JSON.stringify(region.meta, null, 2).replace(/\n/g, "\n  ")},
 };
 `;
@@ -65,6 +67,7 @@ export interface CoastRegion {
   name: string;
   worldSize: number;
   points: [number, number][];
+  landRings: [number, number][][];
   meta: {
     sourceLengthKm: number;
     simplificationToleranceDeg: number;

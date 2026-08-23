@@ -6,6 +6,8 @@ import { countLineCells, countFilledCells, parseCellKey, type Point } from "./bo
 const GRID_COLOR = "#d1d5db"; // gray-300, chrome not brand — literal per palette.ts convention
 const HIGHLIGHT_FILL = "rgba(124, 58, 237, 0.22)"; // translucent essay-accent-ish purple
 const FILL_ALPHA = 0.25;
+const WATER_COLOR = "#bfdbfe"; // blue-200
+const LAND_COLOR = "#bbf7d0"; // green-200
 
 const wrapper = css({
   position: "relative",
@@ -37,6 +39,8 @@ export interface BoxCanvasProps {
   closed?: boolean;
   highlightHits?: boolean;
   showGrid?: boolean;
+  /** Filled polygons drawn as a land silhouette on a water-colored background (real coastlines only). */
+  landRings?: Point[][];
   drawEnabled?: boolean;
   /** BoxCanvas converts client coordinates to world coordinates before calling this. */
   onPointerDraw?: (p: Point) => void;
@@ -51,6 +55,7 @@ export function BoxCanvas({
   closed = false,
   highlightHits = true,
   showGrid = true,
+  landRings,
   drawEnabled = false,
   onPointerDraw,
   className,
@@ -84,6 +89,24 @@ export function BoxCanvas({
     ctx.clearRect(0, 0, cssWidth, cssWidth);
 
     const scale = cssWidth / worldSize;
+    const hasLand = !!landRings && landRings.length > 0;
+
+    ctx.fillStyle = hasLand ? WATER_COLOR : "white";
+    ctx.fillRect(0, 0, cssWidth, cssWidth);
+
+    if (hasLand) {
+      ctx.fillStyle = LAND_COLOR;
+      for (const ring of landRings) {
+        if (ring.length < 3) continue;
+        ctx.beginPath();
+        ctx.moveTo(ring[0].x * scale, ring[0].y * scale);
+        for (let i = 1; i < ring.length; i++) {
+          ctx.lineTo(ring[i].x * scale, ring[i].y * scale);
+        }
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
 
     if (showGrid && cellSize > 0) {
       ctx.strokeStyle = GRID_COLOR;
@@ -132,7 +155,7 @@ export function BoxCanvas({
       ctx.lineWidth = 2;
       ctx.stroke();
     }
-  }, [points, cellSize, mode, closed, highlightHits, showGrid, cssWidth, worldSize]);
+  }, [points, cellSize, mode, closed, highlightHits, showGrid, landRings, cssWidth, worldSize]);
 
   function toWorldPoint(clientX: number, clientY: number): Point | null {
     const canvas = canvasRef.current;

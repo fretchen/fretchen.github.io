@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { css } from "../../../styled-system/css";
 import { BoxCanvas } from "./BoxCanvas";
 import { Messreihe, type HalvingSample } from "./Messreihe";
@@ -44,43 +44,37 @@ function actionButtonStyle(disabled: boolean) {
 }
 
 const controlsRow = css({ display: "flex", gap: "2", alignItems: "center", flexWrap: "wrap", mt: "3" });
-const bigNumber = css({ fontSize: "2xl", fontWeight: "bold", color: "explore", mt: "3" });
 const hint = css({ fontSize: "sm", color: "gray.600", fontStyle: "italic", mt: "2" });
 
 export function KuestenSpiel() {
   const [regionId, setRegionId] = useState<RegionId>(REGION_IDS[0]);
+  // Widget 1 already taught the halving trick — clicking "Kästchen halbieren"
+  // still drives the progression here (that stays a deliberate action), but
+  // there's no separate "Jetzt zählen" step anymore: the count for whichever
+  // step you're on shows immediately, no extra click to reveal it.
   const [stepIndex, setStepIndex] = useState(0);
-  const [revealed, setRevealed] = useState(false);
-  const [samples, setSamples] = useState<HalvingSample[]>([]);
+
+  // Reset progress when the region changes — adjusting state during render
+  // (rather than in an effect) avoids an extra cascading render, per
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes.
+  const [prevRegionId, setPrevRegionId] = useState(regionId);
+  if (regionId !== prevRegionId) {
+    setPrevRegionId(regionId);
+    setStepIndex(0);
+  }
 
   const region = COAST_REGIONS[regionId];
   const points: Point[] = region.points.map(([x, y]) => ({ x, y }));
-  const cellSize = CELL_SIZE_STEPS[stepIndex];
+  const landRings: Point[][] = region.landRings.map((ring) => ring.map(([x, y]) => ({ x, y })));
 
-  function resetProgress() {
-    setStepIndex(0);
-    setRevealed(false);
-    setSamples([]);
-  }
-
-  function handleSelectRegion(id: RegionId) {
-    setRegionId(id);
-    resetProgress();
-  }
-
-  const currentCount = countLineCells(points, cellSize, false).count;
-
-  function handleReveal() {
-    setRevealed(true);
-    setSamples((prev) =>
-      prev.some((s) => s.cellSize === cellSize) ? prev : [...prev, { cellSize, count: currentCount }],
-    );
-  }
-
-  function handleHalve() {
-    setStepIndex((i) => Math.min(i + 1, CELL_SIZE_STEPS.length - 1));
-    setRevealed(false);
-  }
+  const samples: HalvingSample[] = useMemo(
+    () =>
+      CELL_SIZE_STEPS.slice(0, stepIndex + 1).map((cellSize) => ({
+        cellSize,
+        count: countLineCells(points, cellSize, false).count,
+      })),
+    [points, stepIndex],
+  );
 
   const isLastStep = stepIndex === CELL_SIZE_STEPS.length - 1;
 
@@ -88,7 +82,7 @@ export function KuestenSpiel() {
     <div className={wrapper}>
       <div className={regionRow}>
         {REGION_IDS.map((id) => (
-          <button key={id} className={regionButtonStyle(regionId === id)} onClick={() => handleSelectRegion(id)}>
+          <button key={id} className={regionButtonStyle(regionId === id)} onClick={() => setRegionId(id)}>
             {REGION_LABELS[id]}
           </button>
         ))}
@@ -98,32 +92,22 @@ export function KuestenSpiel() {
         mode="line"
         points={points}
         worldSize={region.worldSize}
-        cellSize={cellSize}
+        cellSize={CELL_SIZE_STEPS[stepIndex]}
         closed={false}
-        highlightHits={revealed}
+        highlightHits
+        landRings={landRings}
       />
 
-      {stepIndex === 0 && !revealed && (
-        <p className={hint}>Schätz zuerst: Wie viele Kästchen berührt die Küste wohl?</p>
-      )}
-
       <div className={controlsRow}>
-        {!revealed && (
-          <button className={actionButtonStyle(false)} onClick={handleReveal}>
-            Jetzt zählen
-          </button>
-        )}
-        {revealed && !isLastStep && (
-          <button className={actionButtonStyle(false)} onClick={handleHalve}>
+        {!isLastStep && (
+          <button className={actionButtonStyle(false)} onClick={() => setStepIndex((i) => i + 1)}>
             Kästchen halbieren
           </button>
         )}
-        {revealed && isLastStep && <span className={hint}>Kleinste Kästchengröße erreicht.</span>}
+        {isLastStep && <span className={hint}>Kleinste Kästchengröße erreicht.</span>}
       </div>
 
-      {revealed && <p className={bigNumber}>{currentCount} Kästchen</p>}
-
-      <Messreihe samples={samples} worldSize={region.worldSize} />
+      <Messreihe samples={samples} worldSize={region.worldSize} totalSteps={CELL_SIZE_STEPS.length} />
     </div>
   );
 }

@@ -3,8 +3,8 @@ import {
   countLineCells,
   countFilledCells,
   parseCellKey,
+  type Point,
 } from "../components/blog/box-dimension/boxCounting";
-import type { Point } from "../components/blog/box-dimension/boxCounting";
 
 function square(size: number): Point[] {
   return [

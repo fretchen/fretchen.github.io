@@ -41,9 +41,6 @@ next year counts compared to this one, so $\beta$ near 1 is a patient
 islander and $\beta = 0$ is one who does not think about next season at all. This parameter will matter
 enormously in the following.
 
-One decoration recurs below: a subscript $t$ means "in season $t$". The symbol $t$ is always the
-season, never anything else.
-
 There are two natural benchmarks, and we can derive both directly.
 
 **Independent fisheries.** Boats keep going out while there is anything left to gain, so entry
@@ -70,54 +67,8 @@ $$
 \text{subject to}\qquad s_{t+1} = s_t + g(s_t) - q\,s_t\sqrt{B_t}, \qquad t = 0, 1, 2, \dots
 $$
 
-with $s_0$ given. We will not solve this in general, but perturbatively in $\beta \ll 1$. We will further write down the
-boats as a polynomial in $\beta$.
-
-$$
-B_t = B_t^{(0)}+\beta B_t^{(1)}+\cdots
-$$
-
-And we also have
-
-$$
-U= U^{(0)}+ \beta U^{(1)}+\cdots
-$$
-
-We can now plug in and find:
-
-$$
-U =  \sum_{t=0}^{\infty} \beta^{t}\Big(q\,s_t\sqrt{B_t} - c\,B_t\Big)
-$$
-
-$$
-U =  \left(q s_0\sqrt{B_0} - c B_0\right)+\beta\left(q s_1\sqrt{B_1} - c B_1\right)
-$$
-
-We now need to develop $\sqrt{B} = \sqrt{B^{(0)}+\beta B^{(1)}} \approx \sqrt{B^{(0)}} (1+\frac{B^{(1)}}{B^{(0)}}\beta)$.
-Let us plug in:
-
-$$
-U =  \left(q\,s_0\sqrt{B_0} - c\,B_0\right)+\beta\left(q s_1\sqrt{B_1} - c B_1\right)
-$$
-
-It is really easy for zeroth order in $\beta$. We get:
-
-$$
-U^{(0)} =  \left(q\,s_0\sqrt{B^{(0)}_0} - c\,B^{(0)}_0\right)
-$$
-
-And we try to optimize these profits:
-
-$$
-\frac{\partial U^{(0)}}{\partial B_0^{(0)}} =  \frac{q\,s_0}{2\sqrt{B^{(0)}_0}} - c
-$$
-
-This gives us:
-
-$$
-B_0^{(0)} =\left(\frac{q s_0}{2 c}\right)^2 \\
-U^{(0)} = \frac{q^2 s_0^2}{4c}
-$$
+with $s_0$ given. It will turn out to be **16 boats** earning **2.00** between them, against the 64
+of open access:
 
 |                       | boats on the water | profit |
 | --------------------- | ------------------ | ------ |
@@ -127,171 +78,256 @@ $$
 Four times the fleet, for nothing at all. That gap is the tragedy of the commons, and it is the
 distance any institution has to close.
 
+Getting the 16 is the rest of this post, and two simplifications make it much easier.
+
+The first is that the planner does not care who catches what — only the total counts. So the
+island label can go: write $u \equiv u_1 + u_2$ for the whole fleet's profit in a single season.
+It is the same $u$ as before with the $j$ dropped, and it means that **from here on a subscript is
+always a season.** $B_t$, $s_t$, $y_t$ — nothing but seasons will be written down there again.
+
+The second is that almost nothing in the problem depends on the square root, or on logistic
+regrowth, or on fish. So let us not carry them. Keep $u(B,s)$ for one season's profit from a fleet
+$B$ on a stock $s$, and write $\sigma(B,s)$ for the stock it leaves behind:
+
+$$
+U = \sum_{t=0}^{\infty}\beta^{t} u(B_t, s_t), \qquad s_{t+1} = \sigma(B_t, s_t).
+$$
+
+This fishery is the case $u(B,s) = q s\sqrt{B} - cB$ and
+$\sigma(B,s) = s + g(s) - q s\sqrt{B}$, but we will not need that until the very end.
+
+Both take two arguments, so a derivative has to say which one it acts on. Everything below is
+written $\partial_B u$, $\partial_s u$, $\partial_{BB} u$ — never a prime, never a subscript,
+since the subscript slot is spoken for by seasons. One more piece of shorthand pays for itself:
+$\big(\partial_B u\big)_t$ means that derivative **evaluated in season $t$**, at the fleet and
+stock the impatient planner would have there. So the subscript is still a season, exactly as
+promised.
+
+These are the quantities economists call **marginal**, and the word is less forbidding than it
+looks: it is simply their way of saying _the derivative of_. What it does not say on its own is
+_with respect to what_ — that lives in the phrase that follows. The noun names what gets
+differentiated and the "of …" names what it is differentiated by, so $\partial_B u$ is the
+marginal profit **of a boat** and $\partial_s u$ the marginal profit **of a fish**. The "of" and
+the subscript on $\partial$ are carrying exactly the same information; the notation is just the
+more honest of the two, since it can never quietly leave the "of" out.
+
+All the derivation asks is that $u$ be concave in $B$ — so $\partial_{BB} u < 0$ — and that the
+optimum be interior. Solve perturbatively in $\beta \ll 1$, with both the fleet and the payoff as
+polynomials:
+
+$$
+B_t = B_t^{(0)}+\beta B_t^{(1)}+\cdots, \qquad U = U^{(0)}+\beta U^{(1)}+\beta^{2} U^{(2)}+\cdots
+$$
+
+### Zeroth order
+
+At $\beta = 0$ only $t = 0$ survives and the planner maximises this season alone:
+
+$$
+U^{(0)} = u\big(B_0^{(0)}, s_0\big), \qquad \big(\partial_B u\big)_0 = 0 .
+$$
+
+The second equation is the **myopic rule** — the best fleet if next year did not exist — and it
+defines a policy $B^{(0)}(s)$, one fleet for each stock. That is the entire zeroth order.
+
+Keep the condition $\partial_B u = 0$ in view, though. It is about to do a great deal of work: at
+every order from here on, some term arrives multiplied by it and vanishes. A physicist will
+recognise the pattern as Hellmann–Feynman — corrections to the optimum are invisible to the
+quantity being optimised, at leading order.
+
 ### First order
 
-Now let us go to first order in $\beta$:
+Two things feed the $\beta^{1}$ coefficient: season 1 at zeroth order, and the first-order
+correction to season 0's fleet. Expanding $u$ around $B_0^{(0)}$,
 
 $$
-U = q s_0\sqrt{B_0^{(0)}}\left(1+\frac{\beta B_0^{(1)}}{2B_0^{(0)}}\right) - c B_0^{(0)} -c \beta B_0^{(1)}+\beta\left(q s_1\sqrt{B^{(0)}_1} - c B^{(0)}_1\right)\\
-U = U^{(0)} + \beta\left(s_0\sqrt{B_0^{(0)}}\left(\frac{B_0^{(1)}}{2B_0^{(0)}}\right) -c B_0^{(1)}+ \left(q s_1\sqrt{B^{(0)}_1} - c B^{(0)}_1\right)\right)
+U^{(1)} = \underbrace{\big(\partial_B u\big)_0\,B_0^{(1)}}_{=\;0} + u\big(B_1^{(0)}, s_1^{(0)}\big)
 $$
 
-This gets us:
+and the first term vanishes — its bracket is the zeroth-order condition. **The correction to
+today's fleet drops out of the first-order payoff.** Season 0's fleet was already optimal, so
+nudging it changes this season's profit only at second order.
+
+What survives is the same one-season problem, one season later. Maximising over $B_1^{(0)}$
+returns the myopic rule at the new stock:
 
 $$
-U^{(1)} = \frac{s_0 B_0^{(1)}}{2\sqrt{B_0^{(0)}}} -c (B_0^{(1)}+ B^{(0)}_1)+ q s_1\sqrt{B^{(0)}_1} \\
-U^{(1)} = B_0^{(1)}\left[\frac{q s_0}{2\sqrt{B_0^{(0)}}} - c\right] + \left(q s_1\sqrt{B_1^{(0)}} - cB_1^{(0)}\right)
+B_1^{(0)} = B^{(0)}\big(s_1^{(0)}\big), \qquad s_1^{(0)} = \sigma\big(B_0^{(0)}, s_0\big) .
 $$
 
-This first part cancels as it is just the derivative of $U^{0}$ in the expansion and we get:
+So through first order
 
 $$
-U^{(1)} = q s_1\sqrt{B_1^{(0)}} - cB_1^{(0)}
+U = u\big(B_0^{(0)}, s_0\big) + \beta\,u\big(B_1^{(0)}, s_1^{(0)}\big) + O(\beta^{2}),
 $$
 
-Optimizing for $B_1^{(0)}$ gives us:
+the same expression twice, one season apart. That is what "order $k$ looks $k$ seasons ahead"
+means concretely.
 
-$$
-B_1^{(0)} =\left(\frac{q s_1}{2 c}\right)^2 \\
-U^{(1)} = \frac{q^2 s_1^2}{4c}
-$$
-
-We now get to first order the result:
-
-$$
-U = \frac{q^2}{4c}\left( s_0^2 + \beta s_1^2\right)
-$$
-
-And here we now have the stock in the next season, which starts to be important. Let us plug in:
-
-$$
-s_1 = s_0 (1+r-q \sqrt{B^{(0)}_0})\\
-s_1 = s_0 (1+r-\frac{q^2 s_0}{2c})
-$$
+But notice what we have not got. $B_0^{(1)}$, the correction to _today's_ fleet and the thing we
+actually want, has cancelled. No further work on $U^{(1)}$ will produce it. Quantum mechanics has
+the same wall: $E^{(1)} = \langle\psi_0|H'|\psi_0\rangle$ needs only $\psi_0$, and $\psi^{(1)}$
+cannot be recovered from it. It appears at second order.
 
 ### Second order
 
-This is the one, where it gets technical as a number of terms show up:
+Three seasons now contribute, season $t$ entering at boat-order $2-t$. Two of the three collapse
+on sight.
+
+**Season 0** contributes its second-order Taylor remainder. The $B_0^{(2)}$ piece arrives
+multiplied by $\big(\partial_B u\big)_0 = 0$ and dies exactly as $B_0^{(1)}$ did one order ago,
+leaving only the quadratic $\tfrac{1}{2}\big(\partial_{BB} u\big)_0\big(B_0^{(1)}\big)^2$.
+
+**Season 1** carries an explicit $\beta$, so it reaches $\beta^2$ through its own first-order
+parts. Its $B_1^{(1)}$ piece is multiplied by $\big(\partial_B u\big)_1$ — zero for the same
+reason. What survives is the dependence on the _stock_, because $s_1$ is not a constant: it
+inherits a $\beta$-dependence from $B_0$, namely
+$s_1^{(1)} = \big(\partial_B \sigma\big)_0\,B_0^{(1)}$.
+
+**Season 2** contributes a fresh myopic season. Altogether
 
 $$
-B_t = B_t^{(0)}+\beta B_t^{(1)}+\beta^2 B_t^{(2)}+\cdots
+U^{(2)} = \underbrace{\tfrac{1}{2}\big(\partial_{BB} u\big)_0\big(B_0^{(1)}\big)^{2}}_{t=0}
+\;+\; \underbrace{\big(\partial_s u\big)_1\,\big(\partial_B \sigma\big)_0\,B_0^{(1)}}_{t=1}
+\;+\; \underbrace{u\big(B_2^{(0)}, s_2^{(0)}\big)}_{t=2} .
 $$
 
-We then have:
+$B_0^{(1)}$ now appears twice, and in two structurally different ways: **quadratically** through
+season 0, **linearly** through season 1. That pairing is what makes the problem well posed. A
+downward parabola plus a line has one interior maximum — with only the line the correction would
+run away, and with only the parabola it would sit at zero and patience would never move anything.
+The two terms are the cost of leaving the myopic optimum and the reward for the stock that buys.
+
+Setting $\partial U^{(2)} / \partial B_0^{(1)} = 0$:
 
 $$
-U =  \left(q s_0 \sqrt{B_0} - c B_0\right)+\beta \left(q s_1 \sqrt{B_1} - c B_1\right)+\beta^2 \left(q s_2 \sqrt{B_2} - c B_2\right)
+B_0^{(1)} = -\frac{\big(\partial_B \sigma\big)_0\;\big(\partial_s u\big)_1}{\big(\partial_{BB} u\big)_0}
 $$
 
-We now need to develop the first term to second order in $\beta$
+That is the whole result, and it is three derivatives of two functions. How hard the control
+pushes the state, what a richer state is worth next season, and how sharply this season's profit
+falls away from its peak — nothing else about a problem matters at this order. In quantum
+mechanics the move is Hylleraas's, the first-order correction to the state fixed by making the
+second-order energy stationary, with the curvature $\partial_{BB} u$ sitting exactly where an
+energy denominator would.
+
+Note what $\big(\partial_s u\big)_1$ is: the **marginal value of one more fish** — how much extra
+profit next season's fleet makes from a slightly fuller sea. It is an exchange rate between fish
+and money, and that is precisely the number you need in order to weigh a fish caught today against
+a fish left for tomorrow.
+
+Since $\partial_{BB} u < 0$, the sign of the correction is the sign of
+$\big(\partial_B \sigma\big)_0\big(\partial_s u\big)_1$: **the control moves
+toward whatever raises tomorrow's value.** For a fishery, where effort depletes a stock worth
+having, that means fewer boats. For a problem whose control builds a valuable stock instead, the
+same formula says to do more of it.
+
+### What this becomes for a harvest problem
+
+Specialise now, but only halfway. Suppose profit is the catch minus a linear cost, and the stock
+loses exactly what is caught:
 
 $$
-\sqrt{B} = \sqrt{B^{(0)}+\beta B^{(1)}+\beta^2 B^{(2)}} \approx \sqrt{B^{(0)}} \left(1 + \frac{\beta B^{(1)}+\beta^2 B^{(2)}}{2B^{(0)}}- \frac{ \beta^2 B_{(1)}^2}{8 B_{(0)}^2}\right)\\
-\sqrt{B} \approx \sqrt{B^{(0)}} \left(1 + \beta \frac{ B^{(1)}}{2B^{(0)}}+ \frac{\beta^2}{2B^{(0)}} \left[B^{(2)}- \frac{ B_{(1)}^2}{4 B^{(0)}}\right]\right)
+u(B,s) = y(B,s) - c\,B, \qquad \sigma(B,s) = s + g(s) - y(B,s) .
 $$
 
-And this also means:
+All three ingredients read off directly. The myopic rule $\partial_B u = 0$ becomes
+$\partial_B y = c$: **send boats until one more boat's catch only just covers what that boat
+costs.** The marginal value of a fish is $\partial_s u = \partial_s y$ — a fish left in the water
+is worth the extra catch it enables. And $\partial_B \sigma = -\partial_B y$, which at the myopic
+optimum is exactly $-c$: one more boat costs the stock precisely $c$ worth of fish. So
 
 $$
-s_{1} = s_0 + rs_0 - qs_0 \sqrt{B^{(0)}_0} \left(1 + \beta \frac{ B^{(1)}_0}{2B^{(0)}_0}\right)\\
-s_{1} = s_1^{(0)} + \beta s_1^{(1)}\\
-s_1^{(1)} = -  \frac{ qs_0}{2\sqrt{B^{(0)}_0}}B^{(1)}_0
+B_0^{(1)} = \frac{c\;\big(\partial_s y\big)_1}{\big(\partial_{BB}\, y\big)_0} .
 $$
 
-Let us go to second order:
+**The renewal function has vanished.** $g$ appears nowhere in the correction — it enters only by
+setting what $s_1^{(0)}$ is. That is worth pausing on, because it is tempting to assume a patient
+planner is one who fishes below the growth rate. It is not. The planner is buying _stock_, not
+_growth_: a fuller sea is cheaper to fish next season, and that is the entire mechanism. How fast
+the fish breed matters only through how full the sea will be.
+
+Patience, then, does not change the planner's rule. It puts a price tag on the catch: every fish
+landed today is a fish missing tomorrow, so a boat-trip is worth not $v$ but
+$v\big(1-\beta\,\partial_s y\big)$. Writing $\pi \equiv \beta\big(\partial_s y\big)_1$ for that
+dimensionless price, the fleet responds at a rate set by the curvature,
 
 $$
-\left(q s_0 \sqrt{B_0} - c B_0\right) = q s_0 \sqrt{B^{(0)}} \left(1 + \beta \frac{ B^{(1)}}{2B^{(0)}}+ \frac{\beta^2}{2B^{(0)}} \left[B^{(2)}- \frac{ B_{(1)}^2}{4 B^{(0)}}\right]\right) - c \left(B^{(0)}_0+\beta B^{(1)}_0+\beta^2 B^{(2)}_0\right) \\
-= U^{(0)}- \beta^2 \frac{q s_0}{8\sqrt{B^{(0)}_0}} \frac{ B_{(1)}^2}{ B^{(0)}}\\
-= U^{(0)}- \beta^2 c^3 \frac{ B_{(1),0}^2}{ q^2 s_0^2 }\\
+\frac{\delta B}{B_0^{(0)}} = \frac{c}{B_0^{(0)}\,\big(\partial_{BB}\, y\big)_0}\;\delta\pi ,
 $$
 
-On the second term we get:
-
-$$
-\left(q s_1 \sqrt{B_1} - c B_1\right) = q s_1 \sqrt{B^{(0)}} \left(1 + \beta \frac{ B^{(1)}}{2B^{(0)}}\right) - c (B^{(0)}_1+\beta B^{(1)}_1)\\
-= U^{(1)}
-$$
-
-$$
-q s_1 \sqrt{B_1} - c B_1 = q\left(s_1^{(0)} + \beta s_1^{(1)}\right)\sqrt{B_1^{(0)}}\left(1 + \beta \frac{B_1^{(1)}}{2B_1^{(0)}}\right) - c\left(B_1^{(0)} + \beta B_1^{(1)}\right) \\
-= \underbrace{\left(q s_1^{(0)}\sqrt{B_1^{(0)}} - c B_1^{(0)}\right)}_{U^{(1)}} + \beta \underbrace{B_1^{(1)}\left[\frac{q s_1^{(0)}}{2\sqrt{B_1^{(0)}}} - c\right]}_{\text{cancels}} + \beta \underbrace{q s_1^{(1)} \sqrt{B_1^{(0)}}}_{\text{survives}} + O(\beta^2)
-$$
-
-And the third term gives directly:
-
-$$
-\left(q s_2 \sqrt{B_2} - c B_2\right) = \left(q s_2 \sqrt{B^{(0)}_2} - c B^{(0)}_2\right)
-$$
-
-Putting it all together we have:
-
-$$
-U^{(2)} =\underbrace{- c^3 \frac{ B_{(1),0}^2}{ q^2 s_0^2 }}_{t=0}+ \underbrace{-\frac{q^2 s^{(0)}_1}{2} B^{(1)}_0}_{t=1}+ \underbrace{\left(q s_2 \sqrt{B^{(0)}_2} - c B^{(0)}_2\right)}_{t=2}
-$$
-
-We can use this to take the two derivatives:
-
-$$
-\frac{\partial U^{(2)}}{\partial B_{(1),0}} = - 2 c^3 \frac{ B_{(1),0}}{ q^2 s_0^2 }-\frac{q^2 s^{(0)}_1}{2}\\
-\frac{\partial U^{(2)}}{\partial B^{(0)}_{2}} = \frac{q s_2}{2\sqrt{B^{(0)}_2}}  - c
-$$
-
-Now let us set to zero to find:
-
-$$
-B^{(0)}_{2} = \left(\frac{qs_2}{2c}\right)^2\\
-B^{(1)}_0  = - \frac{q^4 s_0^2 s^{(0)}_1}{4c^3}
-$$
-
-That second result is the one we were after, and it says something simple once the clutter is
-divided out. Measured against the impatient fleet $B^{(0)}_0 = (q s_0 / 2c)^2$, the correction is
-
-$$
-\frac{B^{(1)}_0}{B^{(0)}_0} = -\frac{q^2 s^{(0)}_1}{c} = -2\,V_0'\big(s^{(0)}_1\big),
-\qquad V_0'(s) \equiv \frac{q^2 s}{2c},
-$$
-
-where $V_0'$ is the shadow price of the stock — what one more fish left in the water is worth next
-season. Patience does not change the planner's rule; it puts a price tag on the catch. Every fish
-landed today is a fish missing tomorrow, so a boat-trip is worth not $v$ but $v(1 - \beta V_0')$,
-and that one substitution is the whole first-order result. It is also the only door the growth
-rate ever comes through: $r$ sits inside $s^{(0)}_1$ and nowhere else, which is why the impatient
-fleet contains no $r$ at all.
-
-Why _twice_ the price, though? Because the catch goes as $\sqrt{B}$. Boats crowd each other, so
-the fleet scales as the square of what a trip is worth: shave one percent off the value of the
-catch and you shave two percent off the fleet. Writing $\pi \equiv \beta V_0'(s^{(0)}_1)$ for the
-dimensionless price of a fish still swimming, everything above resums into the form worth
-remembering,
-
-$$
-B_0(\beta) = B^{(0)}_0\,\big(1 - \pi\big)^2 ,
-\qquad \pi = \beta\,\frac{q^2 s^{(0)}_1}{2c} ,
-$$
-
-which expands back to the coefficient above. A physicist can read $\pi$ as a coupling and the
-myopic answer as the free theory: patience renormalises the cost of a boat, $c \to c/(1-\pi)$, and
-the planner then runs the same one-season sum they always did. Here $\pi = 0.0395\,\beta$, so the
-fleet comes off its impatient value by about eight percent per unit of patience.
+which for a catch going as $B^{\alpha}$ is $-1/(1-\alpha)$. Diminishing returns amplify the price:
+the flatter the profit peak, the further the fleet slides for a given nudge. A physicist can read
+$\pi$ as a coupling and the myopic answer as the free theory — patience renormalises the cost of a
+boat, $c \to c/(1-\pi)$, and the planner then runs the same one-season sum as always.
 
 ### The sustainable regime
 
-We can now analyse how much patience would be needed to move
-towards a sustainable regime. First note, that the growth rate is not explicitly in the
-correction of the boats. The patient fisher cares about the total stock tomorrow, but not
-really about its growth rate explicitly. This is a different question. We can use now the condition:
+Sustainability is a separate question from patience, and the derivation above makes clear why.
+Fishing sustainably means taking no more than grows back,
 
 $$
-q \sqrt{B_0} < r
+y\big(B_0, s_0\big) < g(s_0),
 $$
 
-We can now use the usual expension to have:
+which compares the catch to the renewal — but we have just seen that the planner's correction
+never looks at $g$ at all. Nothing in $B_0^{(1)}$ is steering toward this condition; a patient
+planner satisfies it only by accident, if the fleet it wants happens to be small enough.
+
+So the honest way to ask how much patience buys sustainability is to substitute the expansion into
+the condition and see what $\beta$ it demands. Since $\partial_B y = c$ at the myopic optimum,
+$y(B_0,s_0) \simeq y\big(B_0^{(0)},s_0\big) + \beta\,c\,B_0^{(1)}$, and the condition becomes
 
 $$
-q \sqrt{B_0^{(0)}} \left(1 + \frac{\beta}{2} \frac{B_0^{(1)}}{B_0^{(0)}}\right) < r\\
-q^2 \frac{s_0}{2c} \left(1 - \frac{\beta}{2} \frac{q^2 s^{(0)}_1}{c}\right) < r\\
+y\big(B_0^{(0)}, s_0\big) + \beta\,c\,B_0^{(1)} < g(s_0) .
 $$
+
+Whether any $\beta \le 1$ satisfies it is a question about the specific numbers, and for this
+fishery the answer is instructive — see below.
+
+## The fishery, worked out
+
+Now put the square root back in. Everything above needed three derivatives of the catch function,
+so here they are for $y = q\,s\sqrt{B}$, with $q = 0.01$, $c = 0.125$, $r = 0.03$, $K = 1000$ and
+$s_0 = 100$.
+
+| ingredient      | general                             | for $y = q s\sqrt{B}$               | value             |
+| --------------- | ----------------------------------- | ----------------------------------- | ----------------- |
+| myopic rule     | $\partial_B y = c$                  | $q s / 2\sqrt{B} = c$               | —                 |
+| myopic fleet    | $B^{(0)}(s)$                        | $\left(q s / 2c\right)^{2}$         | **16 boats**      |
+| myopic profit   | $y - cB$ at $B^{(0)}$               | $q^{2} s^{2} / 4c$                  | **2.00**          |
+| value of a fish | $\partial_s y$                      | $q^{2} s / 2c$                      | 0.0395 at $s_1$   |
+| curvature       | $\partial_{BB}\, y$ at $B^{(0)}$    | $-2c^{3} / q^{2} s^{2}$             | $-0.0039$         |
+| **correction**  | $c\,\partial_s y / \partial_{BB} y$ | $-q^{4} s_0^{2} s_1^{(0)} / 4c^{3}$ | $\mathbf{-1.263}$ |
+
+The zeroth order is the 16 boats and 2.00 promised at the start. One season of that fleet lands
+$y_0 = 4.00$ and leaves $s_1^{(0)} = 98.7$.
+
+The curvature is the interesting entry: $-0.0039$ is a very flat peak. That is why the fleet is so
+responsive — a nudge in the price of fish slides it a long way. Concretely, the response
+$c / B_0^{(0)}\big(\partial_{BB}\, y\big)_0$ comes out at exactly $-2$, the $\alpha = 1/2$ case, so
+the fleet resums into
+
+$$
+B_0(\beta) = B_0^{(0)}\big(1-\pi\big)^{2}, \qquad \pi = \beta\,\frac{q^{2}s_1^{(0)}}{2c} = 0.0395\,\beta,
+$$
+
+and comes off its impatient value by about eight percent per unit of patience. **The exponent 2
+belongs to the square root, not to the theory** — a catch going as $B^{1/3}$ would give $3/2$.
+
+Finally the sustainability condition, which is where the expansion admits its limit. Substituting,
+$4.00 - 0.158\,\beta < 2.70$, so it wants
+
+$$
+\beta > 8.2 .
+$$
+
+There is no such discount factor. Even a perfectly patient planner, $\beta = 1$, still lands 3.84
+against a growth of 2.70 and mines the stock. The reading is not that patience cannot save a
+fishery: solving the problem exactly, by the method in the appendix, lifts the long-run stock from
+69.8 at $\beta = 0$ to around 90 at $\beta = 0.9$. It is that **sustainability is a large-$\beta$
+phenomenon, and a small-$\beta$ expansion is constitutionally unable to see it.** Perturbation
+theory tells you which way patience pushes, and how hard, but not where the system ends up.
 
 ## Appendix: how the dynamic numbers were computed
 
@@ -309,11 +345,14 @@ $$
 and writing $s'$ for next season's stock, the planner's fleet satisfies
 
 $$
-\frac{v}{2}\Big(1 - \beta\,V'(s')\Big) = c .
+\frac{v}{2}\Big(1 - \beta\,\partial_s V(s')\Big) = c .
 $$
 
-This is the rule derived above, with the exact shadow price $V'(s')$ in place of the first-order $V_0'(s')$, and
-it is implicit: $V'$ depends on the path, which depends on the policy, which depends on $V'$.
-Hence the numerics.
+This is the rule derived above with one substitution: the exact marginal value of a fish,
+$\partial_s V$, stands where the perturbative treatment had the myopic $\partial_s y$. That swap is the whole difference between the
+two, and it is what makes the exact problem hard — $\partial_s y$ is a derivative of a function we
+were handed, while $\partial_s V$ is a derivative of the answer. It is implicit: $\partial_s V$
+depends on the path, which depends on the policy, which depends on $\partial_s V$. Hence the
+numerics.
 
 The planner is the same calculation with one agent choosing the total fleet.

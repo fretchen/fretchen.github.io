@@ -5,111 +5,138 @@ category: "others"
 description: A textbook common-pool fishery, solved perturbatively in the discount factor — how much a fish left in the water is worth, and how far that argument can be pushed.
 ---
 
-## The commons, and its two benchmarks
+**Common-pool resources** are a powerful and frequent model in economics. The idea is that nobody can be kept away from the pool,
+and every unit one person takes is a unit nobody else can. Fish stocks
+are the textbook case. So are groundwater basins, grazing land, road space at rush hour or the atmosphere, considered as a place to put carbon: no one can be
+excluded from using it, and every tonne emitted uses up part of a finite budget.
 
-We now formalize the fishery problem, so that we can work out quantitatively what patience is worth.
-I use the fishery from the [earlier post](/blog/14/), which is the textbook one — John Leach sets
-it up in §8.1 of _A Course in Public Economics_.
-Island 1 sends out $b_1$ boats and island 2
-sends $b_2$ — that is the whole decision either of them makes. The fleet on the water in season
-$t$ is $B_t = b_1 + b_2$ and the fish stock is $s_t$. Three equations close the system:
+What follows are notes on the general model and then I apply them to the example of fishery. I wrote about the same fishery [earlier](/blog/14/) but this time it
+is all math.
 
-- **Catch.** $y_t = q\,s_t\sqrt{B_t}$ — more boats land more fish, but with diminishing returns,
-  and a richer stock is easier to fish. The catchability $q$ says how good the gear is.
-- **Renewal.** $g(s) = r\,s\,(1 - s/K)$ — the usual logistic regrowth, with intrinsic rate $r$
-  and carrying capacity $K$. Fastest at half of $K$, zero at both ends.
-- **What is left.** $s_{t+1} = s_t + g(s_t) - y_t$ — this season's catch sets next season's
-  starting point.
+## The commons
 
-The catch is shared in proportion to boats and each boat costs $c$ to send, so a season's profit
-for island $j$ is
+A common-pool problem needs very little to write down. There is a **stock** $s_t$ — fish in the
+sea, water in the aquifer, room left in the carbon budget. Several users draw on it; user $j$
+takes $b_j$, and what happens to the pool depends only on the total draw
 
 $$
-u_j(b_1, b_2) = b_j\,(v - c), \qquad v \equiv \frac{y}{B} = \frac{q\,s}{\sqrt{B}},
+B_t = \sum_j b_j .
 $$
 
-where $v$ is what one boat-trip is worth — it falls as the ground gets crowded, which is the only
-reason any of this is interesting. Writing $u_{j,t}$ for what that comes to in season $t$,
-what island $j$ actually wants to maximise is its **discounted payoff** over all seasons,
+Drawing pays. Write $u_{j,t}$ for what user $j$ earns in season $t$, and $u(B_t, s_t)$ for what
+they earn between them — a season's payoff depends on how hard the pool is being worked and on how
+much is in it. What makes this a problem rather than a list is that **the stock remembers**:
+whatever is left, plus whatever grows back on its own, is the starting point for next season,
 
 $$
-U_j = \sum_{t=0}^{\infty} \beta^{t}\,u_{j,t}.
+s_{t+1} = \sigma(B_t, s_t) .
 $$
 
-A geometric weight in time, exactly like a damping factor. In economics $\beta$ tells us how much
-next year counts compared to this one, so $\beta$ near 1 is a patient
-islander and $\beta = 0$ is one who does not think about next season at all. This parameter will matter
-enormously in the following.
-
-There are two natural benchmarks, and we can derive both directly.
-
-**Independent fisheries.** Boats keep going out while there is anything left to gain, so entry
-stops where a boat's catch only just covers what it costs to send: $v = c$, or $y/B = c$, or
+Nothing in the derivation depends on the shape of $u$ or $\sigma$, which is the whole reason for
+writing them this way. Users also care about seasons other than this one, and weight the future
+geometrically:
 
 $$
-B_{\text{open}} = \left(\frac{q\,s_0}{c}\right)^2 .
+U_j = \sum_{t=0}^{\infty} \beta^{t}\,u_{j,t} .
 $$
 
-With an initial stock $s_0 = 100$, $q = 0.01$ and $c = 0.125$ that is **64 boats**, earning exactly
-nothing between them — the entire value of the catch is spent on the boats that caught it. And
-notice what the equation does not contain: the growth rate. Nobody deciding whether to sail is
-thinking about next year's stock at all, so the ground is fished down and stays depleted.
+A geometric weight in time, exactly like a damping factor. $\beta$ near 1 is a patient user,
+$\beta = 0$ one who does not think about next season at all.
 
-**The planner.** The other answer is to hand the fishery to one manager who chooses the fleet for
-every season at once, maximising the two islands' discounted profits together. Their profits add
-to $B_t(v_t - c)$, so the objective is discounted catch minus discounted cost:
+Three conventions, all to save trouble later. **A subscript is always a season** — $B_t$, $s_t$ —
+and the user label $j$ drops away almost at once, because from the planner's point of view only
+the total matters. **Derivatives are written $\partial$**: since $u$ and $\sigma$ each take two
+arguments, a derivative has to say which one it acts on, so $\partial_B u$, $\partial_s u$,
+$\partial_{BB} u$ — never a prime, never a subscript, the subscript slot being spoken for. And
+$\big(\partial_B u\big)_t$ means that derivative **evaluated in season $t$**, which keeps the
+subscript a season even there.
 
-$$
-\max_{\{B_t\}_{t=0}^{\infty}}\; U = U_1 + U_2 = \sum_{t=0}^{\infty} \beta^{t}\Big(q\,s_t\sqrt{B_t} - c\,B_t\Big)
-$$
+The third is vocabulary. These are the quantities economists call **marginal**, and the word is
+less forbidding than it looks: it is simply their way of saying _the derivative of_. What it does
+not say on its own is _with respect to what_ — that lives in the phrase that follows. The noun
+names what gets differentiated and the "of …" names what it is differentiated by, so
+$\partial_B u$ is the marginal payoff **of one more unit drawn** and $\partial_s u$ the marginal
+payoff **of one more unit left in the pool**. The "of" and the subscript on $\partial$ carry
+exactly the same information; the notation is just the more honest of the two, since it can never
+quietly leave the "of" out.
 
-$$
-\text{subject to}\qquad s_{t+1} = s_t + g(s_t) - q\,s_t\sqrt{B_t}, \qquad t = 0, 1, 2, \dots
-$$
+## Independent actors
 
-with $s_0$ given. It will turn out to be **16 boats** earning **2.00** between them, against the 64
-of open access:
-
-|                       | boats on the water | profit |
-| --------------------- | ------------------ | ------ |
-| independent fisheries | 64                 | 0      |
-| the planner           | 16                 | 2.00   |
-
-Four times the fleet, for nothing at all. That gap is the tragedy of the commons, and it is the
-distance any institution has to close.
-
-Getting the 16 is the rest of this post, and two simplifications make it much easier.
-
-The first is that the planner does not care who catches what — only the total counts. So the
-island label can go: write $u \equiv u_1 + u_2$ for the whole fleet's profit in a single season.
-It is the same $u$ as before with the $j$ dropped, and it means that **from here on a subscript is
-always a season.** $B_t$, $s_t$, $y_t$ — nothing but seasons will be written down there again.
-
-The second is that almost nothing in the problem depends on the square root, or on logistic
-regrowth, or on fish. So let us not carry them. Keep $u(B,s)$ for one season's profit from a fleet
-$B$ on a stock $s$, and write $\sigma(B,s)$ for the stock it leaves behind:
+So far $u(B,s)$ is what the pool pays out as a whole. To say what happens when $N$ users draw on
+it independently, one thing has to be added: how that payout is divided. Take the obvious rule —
+each user gets the share matching how hard it worked,
 
 $$
-U = \sum_{t=0}^{\infty}\beta^{t} u(B_t, s_t), \qquad s_{t+1} = \sigma(B_t, s_t).
+u_j = \frac{b_j}{B}\,u(B,s) .
 $$
 
-This fishery is the case $u(B,s) = q s\sqrt{B} - cB$ and
-$\sigma(B,s) = s + g(s) - q s\sqrt{B}$, but we will not need that until the very end.
+That is the only new assumption in this section.
 
-Both take two arguments, so a derivative has to say which one it acts on. Everything below is
-written $\partial_B u$, $\partial_s u$, $\partial_{BB} u$ — never a prime, never a subscript,
-since the subscript slot is spoken for by seasons. One more piece of shorthand pays for itself:
-$\big(\partial_B u\big)_t$ means that derivative **evaluated in season $t$**, at the fleet and
-stock the impatient planner would have there. So the subscript is still a season, exactly as
-promised.
+Each user picks $b_j$ to make its own $u_j$ as large as possible, taking everyone else's draw as
+given. Raising $b_j$ raises $B$ one for one, so
 
-These are the quantities economists call **marginal**, and the word is less forbidding than it
-looks: it is simply their way of saying _the derivative of_. What it does not say on its own is
-_with respect to what_ — that lives in the phrase that follows. The noun names what gets
-differentiated and the "of …" names what it is differentiated by, so $\partial_B u$ is the
-marginal profit **of a boat** and $\partial_s u$ the marginal profit **of a fish**. The "of" and
-the subscript on $\partial$ are carrying exactly the same information; the notation is just the
-more honest of the two, since it can never quietly leave the "of" out.
+$$
+\frac{\partial u_j}{\partial b_j}
+= \underbrace{\frac{u}{B}}_{\text{your share of the pool}}
+\;+\; \frac{b_j}{B}\underbrace{\Big(\partial_B u - \frac{u}{B}\Big)}_{\text{the crowding you cause}}
+\;=\; 0 .
+$$
+
+The $-u/B$ in the bracket is the dilution of your own share: raising $b_j$ raises $B$ too, which
+splits the pool more thinly. It comes from differentiating the share $b_j/B$, not from $u$.
+
+If the $N$ users are alike they draw alike, so $b_j/B = 1/N$ and the condition becomes
+
+$$
+\Big(1-\tfrac{1}{N}\Big)\,\frac{u}{B} \;+\; \tfrac{1}{N}\,\partial_B u \;=\; 0 .
+$$
+
+**That one line is the tragedy of the commons.** It balances two quantities that ought to agree
+and do not. $u/B$ is the **average**: the pool's whole payout divided by the whole effort, what a
+typical unit of effort is earning right now. It is also what you collect by adding one, because
+your share grows with your effort. $\partial_B u$ is the **marginal**: what one more unit actually
+adds to the pool. It is the smaller of the two, because your extra effort crowds everyone a
+little, and the gap between them is the damage that crowding does.
+
+Now ask who pays for the damage. It falls on all $N$ users, so you carry $1/N$ of it — while
+collecting the average in full. This is a dinner bill split $N$ ways: you eat the whole extra
+dish and pay a fraction of it, so you order too much, and so does everyone else. That is exactly
+what the two weights say, heavy on what you pocket and light on what the pool gains.
+
+And the marginal is always the smaller one. If every unit earns less than the one before — which
+is what crowding means — then the newest unit must sit below the average of all of them, the way
+a falling exam score drags down a running average. (Formally: concavity, which we already assumed,
+together with $u(0,s) = 0$.) So the more users share the pool, the further the balance tips toward
+what you pocket, and the further the draw runs before it settles. **More users, more effort, less
+left over** — with nobody behaving badly. Each is doing the best available thing given what the
+others do.
+
+Two limits are worth naming.
+
+- **$N = 1$** collapses it to $\partial_B u = 0$: draw until one more unit adds nothing to the
+  pool. The whole cost of crowding lands on the only actor who causes it.
+- **$N \to \infty$** collapses it to $u/B = 0$, that is $u = 0$. Every scrap of surplus is gone —
+  the pool yields exactly what it costs to work it, and no more.
+
+## The planner
+
+The first of those limits is worth dwelling on, because it is the benchmark the rest of this post
+measures against. A planner is usually introduced as somebody from outside — a manager, a
+regulator, an authority with better information. None of that is needed. **The planner is simply
+$N = 1$**: the same first-order condition with the externality switched off, because there is
+nobody else to push the crowding onto.
+
+That is why a planner is efficient, and it is also why nothing about the calculation changes.
+$\partial_B u = 0$ is the rule the whole expansion below is built on — it turns up again in a
+moment as the zeroth-order condition, and every order after that leans on it. Over
+many seasons the objective is the one we already have,
+
+$$
+\max_{\{B_t\}_{t=0}^{\infty}}\; U = \sum_{t=0}^{\infty} \beta^{t}\,u(B_t, s_t),
+\qquad \text{subject to}\qquad s_{t+1} = \sigma(B_t, s_t),
+$$
+
+with $s_0$ given. Working that out is the rest of this post.
 
 All the derivation asks is that $u$ be concave in $B$ — so $\partial_{BB} u < 0$ — and that the
 optimum be interior. Solve perturbatively in $\beta \ll 1$, with both the fleet and the payoff as
@@ -219,13 +246,28 @@ a fish left for tomorrow.
 Since $\partial_{BB} u < 0$, the sign of the correction is the sign of
 $\big(\partial_B \sigma\big)_0\big(\partial_s u\big)_1$: **the control moves
 toward whatever raises tomorrow's value.** For a fishery, where effort depletes a stock worth
-having, that means fewer boats. For a problem whose control builds a valuable stock instead, the
-same formula says to do more of it.
+having, that means fewer boats.
+
+The atmosphere is worth putting beside it, because it is the same formula run with both signs
+flipped:
+
+|                     | fishery              | carbon                   |
+| ------------------- | -------------------- | ------------------------ |
+| stock $s$           | fish, worth having   | CO₂, worth avoiding      |
+| control $B$         | boats                | emissions                |
+| $\partial_B \sigma$ | $-$ fishing depletes | $+$ emitting accumulates |
+| $\partial_s u$      | $+$                  | $-$                      |
+| $B_0^{(1)}$         | $-$ fewer boats      | $-$ fewer emissions      |
+
+Fishing draws down a stock you want; emitting builds up one you do not. Both terms change sign,
+their product does not, and patience pulls the control down either way — for reasons that are
+structural mirror images of each other. That is the sort of thing the general derivation buys, and
+the fishery-only version could never have said.
 
 ### What this becomes for a harvest problem
 
-Specialise now, but only halfway. Suppose profit is the catch minus a linear cost, and the stock
-loses exactly what is caught:
+Specialise now, but only halfway. Suppose the pool yields a harvest $y(B,s)$ that is sold at a
+fixed price, each unit of effort costs $c$, and the stock loses exactly what is taken:
 
 $$
 u(B,s) = y(B,s) - c\,B, \qquad \sigma(B,s) = s + g(s) - y(B,s) .
@@ -287,9 +329,62 @@ fishery the answer is instructive — see below.
 
 ## The fishery, worked out
 
-Now put the square root back in. Everything above needed three derivatives of the catch function,
-so here they are for $y = q\,s\sqrt{B}$, with $q = 0.01$, $c = 0.125$, $r = 0.03$, $K = 1000$ and
-$s_0 = 100$.
+To put numbers on any of this we need an instance, and the fishery is the one you can picture.
+John Leach sets it up in §8.1 of _A Course in Public Economics_, and I used it in an
+[earlier post](/blog/14/). Two islands send $b_1$ and $b_2$ boats onto the same ground, so
+$B_t$ is the fleet on the water and $s_t$ the fish stock. Three equations close it:
+
+- **Catch.** $y_t = q\,s_t\sqrt{B_t}$ — more boats land more fish, but with diminishing returns,
+  and a richer stock is easier to fish. The catchability $q$ says how good the gear is.
+- **Renewal.** $g(s) = r\,s\,(1 - s/K)$ — the usual logistic regrowth, with intrinsic rate $r$
+  and carrying capacity $K$. Fastest at half of $K$, zero at both ends.
+- **What is left.** $s_{t+1} = s_t + g(s_t) - y_t$ — this season's catch sets next season's
+  starting point.
+
+The catch is shared in proportion to boats and each boat costs $c$ to send, so island $j$ earns
+$u_j = b_j (v - c)$ in a season, where $v \equiv y/B = q\,s/\sqrt{B}$ is what one boat-trip is
+worth. It falls as the ground gets crowded, which is the only reason any of this is interesting.
+In the general notation of the last section, this fishery is the case
+
+$$
+u(B,s) = q\,s\sqrt{B} - c\,B, \qquad \sigma(B,s) = s + g(s) - q\,s\sqrt{B} .
+$$
+
+Throughout, $q = 0.01$, $c = 0.125$, $r = 0.03$, $K = 1000$ and $s_0 = 100$.
+
+### What the tragedy costs
+
+Take the $N$-user condition first. With $u = q s\sqrt{B} - cB$ the two pieces it balances are
+
+$$
+\frac{u}{B} = \frac{q\,s}{\sqrt{B}} - c , \qquad \partial_B u = \frac{q\,s}{2\sqrt{B}} - c ,
+$$
+
+so the catch term appears at half strength in the second — that is what diminishing returns amount
+to here. Substituting into
+$\big(1-\tfrac1N\big)\tfrac{u}{B} + \tfrac1N \partial_B u = 0$, the $c$ terms combine to exactly
+$-c$ and the rest to $\tfrac{q s}{\sqrt B}\big(1-\tfrac{1}{2N}\big)$, giving the whole family in
+closed form:
+
+$$
+B^{*}(N) = \Big(\frac{q\,s_0}{c}\Big)^{2}\Big(1-\frac{1}{2N}\Big)^{2} .
+$$
+
+|                    | one owner | two islands | open access |
+| ------------------ | --------- | ----------- | ----------- |
+| $N$                | 1         | 2           | $\to\infty$ |
+| boats on the water | **16**    | 36          | **64**      |
+| profit between all | **2.00**  | 1.50        | **0**       |
+
+Four times the fleet, for nothing at all. That gap is the tragedy of the commons, and it is the
+distance any institution has to close. Two islands already give away most of it — 36 boats is
+closer to open access than to the owner — which is worth knowing before assuming that a small
+group will sort itself out.
+
+### The derivatives the expansion needed
+
+Everything in the general derivation ran on three derivatives of the catch function. Here they
+are.
 
 | ingredient      | general                             | for $y = q s\sqrt{B}$               | value             |
 | --------------- | ----------------------------------- | ----------------------------------- | ----------------- |

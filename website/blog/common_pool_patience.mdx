@@ -77,70 +77,73 @@ given. Raising $b_j$ raises $B$ one for one, so
 
 $$
 \frac{\partial u_j}{\partial b_j}
-= \underbrace{\frac{u}{B}}_{\text{your share of the pool}}
-\;+\; \frac{b_j}{B}\underbrace{\Big(\partial_B u - \frac{u}{B}\Big)}_{\text{the crowding you cause}}
-\;=\; 0 .
+= \frac{u}{B} \;+\; \frac{b_j}{B}\Big(\partial_B u - \frac{u}{B}\Big) \;=\; 0 .
 $$
 
 The $-u/B$ in the bracket is the dilution of your own share: raising $b_j$ raises $B$ too, which
 splits the pool more thinly. It comes from differentiating the share $b_j/B$, not from $u$.
 
-If the $N$ users are alike they draw alike, so $b_j/B = 1/N$ and the condition becomes
+That bracket is worth a name of its own. Write
 
 $$
-\Big(1-\tfrac{1}{N}\Big)\,\frac{u}{B} \;+\; \tfrac{1}{N}\,\partial_B u \;=\; 0 .
+D \;\equiv\; \frac{u}{B} - \partial_B u
 $$
 
-**That one line is the tragedy of the commons.** It balances two quantities that ought to agree
-and do not. $u/B$ is the **average**: the pool's whole payout divided by the whole effort, what a
-typical unit of effort is earning right now. It is also what you collect by adding one, because
-your share grows with your effort. $\partial_B u$ is the **marginal**: what one more unit actually
-adds to the pool. It is the smaller of the two, because your extra effort crowds everyone a
-little, and the gap between them is the damage that crowding does.
+for how much less one more unit of effort earns than the units already working — the **damage** a
+unit does. $D$ is positive whenever $u$ is concave in $B$ and pays nothing for no effort,
+$u(0,s) = 0$ — and those are the only properties of $u$ this section needs. Diminishing returns
+and crowding are not separate ingredients; they are two names for $D > 0$. With that, the
+condition reads
 
-Now ask who pays for the damage. It falls on all $N$ users, so you carry $1/N$ of it — while
-collecting the average in full. This is a dinner bill split $N$ ways: you eat the whole extra
-dish and pay a fraction of it, so you order too much, and so does everyone else. That is exactly
-what the two weights say, heavy on what you pocket and light on what the pool gains.
+$$
+\frac{\partial u_j}{\partial b_j}
+= \underbrace{\frac{u}{B}}_{\text{what you collect}}
+\;-\; \frac{b_j}{B}\underbrace{\vphantom{\frac{u}{B}}D}_{\text{the damage}}
+\;=\; 0 ,
+$$
 
-And the marginal is always the smaller one. If every unit earns less than the one before — which
-is what crowding means — then the newest unit must sit below the average of all of them, the way
-a falling exam score drags down a running average. (Formally: concavity, which we already assumed,
-together with $u(0,s) = 0$.) So the more users share the pool, the further the balance tips toward
-what you pocket, and the further the draw runs before it settles. **More users, more effort, less
-left over** — with nobody behaving badly. Each is doing the best available thing given what the
-others do.
+and if the $N$ users are alike they draw alike, so $b_j/B = 1/N$ and it becomes simply
 
-Two limits are worth naming.
+$$
+\frac{u}{B} \;=\; \frac{D}{N} .
+$$
 
-- **$N = 1$** collapses it to $\partial_B u = 0$: draw until one more unit adds nothing to the
-  pool. The whole cost of crowding lands on the only actor who causes it.
-- **$N \to \infty$** collapses it to $u/B = 0$, that is $u = 0$. Every scrap of surplus is gone —
-  the pool yields exactly what it costs to work it, and no more.
+**That one line is the tragedy of the commons.** Read it as an instruction: draw until what you
+collect equals the share of the damage you carry. You are paid $u/B$ for the extra unit — the full
+going rate, because your share grows with your effort. The damage it does is $D$, but $D$ lands on
+all $N$ users, so your own bill is $D/N$.
+
+It is a dinner split $N$ ways. You eat the whole extra dish and pay a fraction of it, so you order
+too much — and so does everyone else, for exactly the same good reason.
+
+The consequence follows at once. Raising $N$ shrinks $D/N$, so $u/B$ has to shrink to match, and
+$u/B$ only falls as $B$ grows. **More users, more effort, less left over** — with nobody behaving
+badly. Each is doing the best available thing given what the others do.
+
+The two ends of that range are worth naming.
+
+- **$N = 1$** gives $u/B = D$, which is $\partial_B u = 0$: draw until one more unit adds nothing
+  to the pool. You are dining alone and pay the whole bill, so you order exactly as much as you
+  want.
+- **$N \to \infty$** sends $D/N$ to zero, so $u/B = 0$ and $u = 0$. Your share of the bill has
+  vanished, and the pool ends up yielding exactly what it costs to work it — no more.
 
 ## The planner
 
 The first of those limits is worth dwelling on, because it is the benchmark the rest of this post
 measures against. A planner is usually introduced as somebody from outside — a manager, a
 regulator, an authority with better information. None of that is needed. **The planner is simply
-$N = 1$**: the same first-order condition with the externality switched off, because there is
-nobody else to push the crowding onto.
+$N = 1$**: the same first-order condition with the externality switched off.
 
-That is why a planner is efficient, and it is also why nothing about the calculation changes.
-$\partial_B u = 0$ is the rule the whole expansion below is built on — it turns up again in a
-moment as the zeroth-order condition, and every order after that leans on it. Over
-many seasons the objective is the one we already have,
+And he will always try to maximise the total discounted payoff:
 
 $$
 \max_{\{B_t\}_{t=0}^{\infty}}\; U = \sum_{t=0}^{\infty} \beta^{t}\,u(B_t, s_t),
 \qquad \text{subject to}\qquad s_{t+1} = \sigma(B_t, s_t),
 $$
 
-with $s_0$ given. Working that out is the rest of this post.
-
-All the derivation asks is that $u$ be concave in $B$ — so $\partial_{BB} u < 0$ — and that the
-optimum be interior. Solve perturbatively in $\beta \ll 1$, with both the fleet and the payoff as
-polynomials:
+with $s_0$ given. Working this out in general is analytically not possible but likely we have a good
+perturbation parameter in $\beta \ll 1$, with both the fleet and the payoff as polynomials:
 
 $$
 B_t = B_t^{(0)}+\beta B_t^{(1)}+\cdots, \qquad U = U^{(0)}+\beta U^{(1)}+\beta^{2} U^{(2)}+\cdots
@@ -157,10 +160,20 @@ $$
 The second equation is the **myopic rule** — the best fleet if next year did not exist — and it
 defines a policy $B^{(0)}(s)$, one fleet for each stock. That is the entire zeroth order.
 
+It is worth seeing how far that is from what the independent actors do. Their condition was
+$u/B = D/N$ with $D = u/B - \partial_B u$; eliminating $D$ between the two gives
+
+$$
+\big(\partial_B u\big)_{N\text{ users}} \;=\; (1-N)\,\frac{u}{B} ,
+$$
+
+which is negative for every $N > 1$. They stop at a point where the pool's total payoff is already
+_falling_ — past the top of the hill, on the way down. The planner, at $\partial_B u = 0$, stops
+exactly on the summit. That is the precise sense in which it does better, and the gap between the
+two is the whole of the tragedy.
+
 Keep the condition $\partial_B u = 0$ in view, though. It is about to do a great deal of work: at
-every order from here on, some term arrives multiplied by it and vanishes. A physicist will
-recognise the pattern as Hellmann–Feynman — corrections to the optimum are invisible to the
-quantity being optimised, at leading order.
+every order from here on, some term arrives multiplied by it and vanishes.
 
 ### First order
 
@@ -172,8 +185,7 @@ U^{(1)} = \underbrace{\big(\partial_B u\big)_0\,B_0^{(1)}}_{=\;0} + u\big(B_1^{(
 $$
 
 and the first term vanishes — its bracket is the zeroth-order condition. **The correction to
-today's fleet drops out of the first-order payoff.** Season 0's fleet was already optimal, so
-nudging it changes this season's profit only at second order.
+today's fleet drops out of the first-order payoff.**
 
 What survives is the same one-season problem, one season later. Maximising over $B_1^{(0)}$
 returns the myopic rule at the new stock:
@@ -188,13 +200,10 @@ $$
 U = u\big(B_0^{(0)}, s_0\big) + \beta\,u\big(B_1^{(0)}, s_1^{(0)}\big) + O(\beta^{2}),
 $$
 
-the same expression twice, one season apart. That is what "order $k$ looks $k$ seasons ahead"
-means concretely.
+the same expression twice, one season apart.
 
 But notice what we have not got. $B_0^{(1)}$, the correction to _today's_ fleet and the thing we
-actually want, has cancelled. No further work on $U^{(1)}$ will produce it. Quantum mechanics has
-the same wall: $E^{(1)} = \langle\psi_0|H'|\psi_0\rangle$ needs only $\psi_0$, and $\psi^{(1)}$
-cannot be recovered from it. It appears at second order.
+actually want, has cancelled. It appears at second order.
 
 ### Second order
 
@@ -233,101 +242,52 @@ $$
 
 That is the whole result, and it is three derivatives of two functions. How hard the control
 pushes the state, what a richer state is worth next season, and how sharply this season's profit
-falls away from its peak — nothing else about a problem matters at this order. In quantum
-mechanics the move is Hylleraas's, the first-order correction to the state fixed by making the
-second-order energy stationary, with the curvature $\partial_{BB} u$ sitting exactly where an
-energy denominator would.
+falls away from its peak — nothing else about a problem matters at this order.
 
-Note what $\big(\partial_s u\big)_1$ is: the **marginal value of one more fish** — how much extra
-profit next season's fleet makes from a slightly fuller sea. It is an exchange rate between fish
-and money, and that is precisely the number you need in order to weigh a fish caught today against
-a fish left for tomorrow.
+Note what $\big(\partial_s u\big)_1$ is: the **marginal value of one more unit left in the pool** —
+how much extra next season earns from starting slightly fuller. It is an exchange rate between the
+stock and money, and that is precisely the number you need in order to weigh a unit taken today
+against a unit left for tomorrow.
 
 Since $\partial_{BB} u < 0$, the sign of the correction is the sign of
-$\big(\partial_B \sigma\big)_0\big(\partial_s u\big)_1$: **the control moves
-toward whatever raises tomorrow's value.** For a fishery, where effort depletes a stock worth
-having, that means fewer boats.
+$\big(\partial_B \sigma\big)_0\big(\partial_s u\big)_1$: **the control moves toward whatever
+raises tomorrow's value.** Both factors can carry either sign, and the two examples at the end of
+this post are chosen so that each carries the opposite one.
 
-The atmosphere is worth putting beside it, because it is the same formula run with both signs
-flipped:
+## Sustainability
 
-|                     | fishery              | carbon                   |
-| ------------------- | -------------------- | ------------------------ |
-| stock $s$           | fish, worth having   | CO₂, worth avoiding      |
-| control $B$         | boats                | emissions                |
-| $\partial_B \sigma$ | $-$ fishing depletes | $+$ emitting accumulates |
-| $\partial_s u$      | $+$                  | $-$                      |
-| $B_0^{(1)}$         | $-$ fewer boats      | $-$ fewer emissions      |
-
-Fishing draws down a stock you want; emitting builds up one you do not. Both terms change sign,
-their product does not, and patience pulls the control down either way — for reasons that are
-structural mirror images of each other. That is the sort of thing the general derivation buys, and
-the fishery-only version could never have said.
-
-### What this becomes for a harvest problem
-
-Specialise now, but only halfway. Suppose the pool yields a harvest $y(B,s)$ that is sold at a
-fixed price, each unit of effort costs $c$, and the stock loses exactly what is taken:
+Sustainability is a different question from patience, and the derivation above shows why. Drawing
+sustainably means only that **the stock does not fall**: what this season hands to the next is at
+least what this season started with,
 
 $$
-u(B,s) = y(B,s) - c\,B, \qquad \sigma(B,s) = s + g(s) - y(B,s) .
+\sigma\big(B_0, s_0\big) \;\ge\; s_0 .
 $$
 
-All three ingredients read off directly. The myopic rule $\partial_B u = 0$ becomes
-$\partial_B y = c$: **send boats until one more boat's catch only just covers what that boat
-costs.** The marginal value of a fish is $\partial_s u = \partial_s y$ — a fish left in the water
-is worth the extra catch it enables. And $\partial_B \sigma = -\partial_B y$, which at the myopic
-optimum is exactly $-c$: one more boat costs the stock precisely $c$ worth of fish. So
+Now look back at the correction we derived. Nothing in
 
 $$
-B_0^{(1)} = \frac{c\;\big(\partial_s y\big)_1}{\big(\partial_{BB}\, y\big)_0} .
+B_0^{(1)} = -\frac{\big(\partial_B \sigma\big)_0\;\big(\partial_s u\big)_1}{\big(\partial_{BB} u\big)_0}
 $$
 
-**The renewal function has vanished.** $g$ appears nowhere in the correction — it enters only by
-setting what $s_1^{(0)}$ is. That is worth pausing on, because it is tempting to assume a patient
-planner is one who fishes below the growth rate. It is not. The planner is buying _stock_, not
-_growth_: a fuller sea is cheaper to fish next season, and that is the entire mechanism. How fast
-the fish breed matters only through how full the sea will be.
+says anything about whether the stock holds steady. The planner is not aiming at sustainability at
+all — it is aiming at the value of the stock, which is a different target that happens to point in
+the same direction. A patient planner meets the condition only by accident, if the draw it wants
+is small enough.
 
-Patience, then, does not change the planner's rule. It puts a price tag on the catch: every fish
-landed today is a fish missing tomorrow, so a boat-trip is worth not $v$ but
-$v\big(1-\beta\,\partial_s y\big)$. Writing $\pi \equiv \beta\big(\partial_s y\big)_1$ for that
-dimensionless price, the fleet responds at a rate set by the curvature,
+So the honest way to ask what patience buys is to put the expansion into the condition and see
+which $\beta$ it demands. To first order,
 
 $$
-\frac{\delta B}{B_0^{(0)}} = \frac{c}{B_0^{(0)}\,\big(\partial_{BB}\, y\big)_0}\;\delta\pi ,
+\sigma\big(B_0^{(0)}, s_0\big) \;+\; \beta\,\big(\partial_B \sigma\big)_0\,B_0^{(1)} \;\ge\; s_0 ,
 $$
 
-which for a catch going as $B^{\alpha}$ is $-1/(1-\alpha)$. Diminishing returns amplify the price:
-the flatter the profit peak, the further the fleet slides for a given nudge. A physicist can read
-$\pi$ as a coupling and the myopic answer as the free theory — patience renormalises the cost of a
-boat, $c \to c/(1-\pi)$, and the planner then runs the same one-season sum as always.
+where the first term is the stock an impatient planner would leave and the second is what patience
+adds back — positive, since $\big(\partial_B\sigma\big)_0$ and $B_0^{(1)}$ are both negative.
+Whether any $\beta \le 1$ is large enough is a question about particular numbers, and for the
+fishery the answer is instructive.
 
-### The sustainable regime
-
-Sustainability is a separate question from patience, and the derivation above makes clear why.
-Fishing sustainably means taking no more than grows back,
-
-$$
-y\big(B_0, s_0\big) < g(s_0),
-$$
-
-which compares the catch to the renewal — but we have just seen that the planner's correction
-never looks at $g$ at all. Nothing in $B_0^{(1)}$ is steering toward this condition; a patient
-planner satisfies it only by accident, if the fleet it wants happens to be small enough.
-
-So the honest way to ask how much patience buys sustainability is to substitute the expansion into
-the condition and see what $\beta$ it demands. Since $\partial_B y = c$ at the myopic optimum,
-$y(B_0,s_0) \simeq y\big(B_0^{(0)},s_0\big) + \beta\,c\,B_0^{(1)}$, and the condition becomes
-
-$$
-y\big(B_0^{(0)}, s_0\big) + \beta\,c\,B_0^{(1)} < g(s_0) .
-$$
-
-Whether any $\beta \le 1$ satisfies it is a question about the specific numbers, and for this
-fishery the answer is instructive — see below.
-
-## The fishery, worked out
+## Example 1: the fishery
 
 To put numbers on any of this we need an instance, and the fishery is the one you can picture.
 John Leach sets it up in §8.1 of _A Course in Public Economics_, and I used it in an
@@ -383,8 +343,14 @@ group will sort itself out.
 
 ### The derivatives the expansion needed
 
-Everything in the general derivation ran on three derivatives of the catch function. Here they
-are.
+Everything in the general derivation ran on three derivatives, and for a fishery all three reduce
+to derivatives of the catch. Profit is the catch minus a linear cost, $u = y - cB$, so
+$\partial_B u = \partial_B y - c$ and $\partial_s u = \partial_s y$. The stock loses exactly what
+is landed, $\sigma = s + g(s) - y$, so $\partial_B \sigma = -\partial_B y$ — which at the myopic
+optimum, where $\partial_B y = c$, is exactly $-c$. One more boat costs the stock precisely $c$
+worth of fish, and the general correction becomes $c\,\partial_s y / \partial_{BB} y$.
+
+Here they are.
 
 | ingredient      | general                             | for $y = q s\sqrt{B}$               | value             |
 | --------------- | ----------------------------------- | ----------------------------------- | ----------------- |
@@ -397,6 +363,13 @@ are.
 
 The zeroth order is the 16 boats and 2.00 promised at the start. One season of that fleet lands
 $y_0 = 4.00$ and leaves $s_1^{(0)} = 98.7$.
+
+Notice what is missing from that last row. **The renewal function never appears.** $g$ enters the
+correction only by setting what $s_1^{(0)}$ is, and nowhere else — which is the fishery's version
+of the point made under Sustainability. It is tempting to assume a patient planner is one who
+fishes below the growth rate; it is not. The planner is buying _stock_, not _growth_. A fuller sea
+is cheaper to fish next season, and that is the whole mechanism. How fast the fish breed matters
+only through how full the sea will be.
 
 The curvature is the interesting entry: $-0.0039$ is a very flat peak. That is why the fleet is so
 responsive — a nudge in the price of fish slides it a long way. Concretely, the response
@@ -424,30 +397,20 @@ fishery: solving the problem exactly, by the method in the appendix, lifts the l
 phenomenon, and a small-$\beta$ expansion is constitutionally unable to see it.** Perturbation
 theory tells you which way patience pushes, and how hard, but not where the system ends up.
 
-## Appendix: how the dynamic numbers were computed
+## Example 2: the atmosphere
 
-Beyond small $\beta$ the expansion above is no use, and the sequence has to be given up on
-altogether in favour of a rule. Nothing carries between seasons except the stock, so the best
-fleet can depend only on today's stock — not on the date, not on history. Writing $V(s)$ for the
-best discounted profit obtainable from today on, the whole infinite problem folds into one
-equation,
+The atmosphere is worth putting beside it, because it is the same formula run with both signs
+flipped:
 
-$$
-V(s) = \max_{B}\Big[\,q\,s\sqrt{B} - c\,B \;+\; \beta\,V\big(s + g(s) - q\,s\sqrt{B}\big)\Big]
-$$
+|                     | fishery              | carbon                   |
+| ------------------- | -------------------- | ------------------------ |
+| stock $s$           | fish, worth having   | CO₂, worth avoiding      |
+| control $B$         | boats                | emissions                |
+| $\partial_B \sigma$ | $-$ fishing depletes | $+$ emitting accumulates |
+| $\partial_s u$      | $+$                  | $-$                      |
+| $B_0^{(1)}$         | $-$ fewer boats      | $-$ fewer emissions      |
 
-— this season's profit plus the discounted value of the stock left behind. Differentiating in $B$,
-and writing $s'$ for next season's stock, the planner's fleet satisfies
-
-$$
-\frac{v}{2}\Big(1 - \beta\,\partial_s V(s')\Big) = c .
-$$
-
-This is the rule derived above with one substitution: the exact marginal value of a fish,
-$\partial_s V$, stands where the perturbative treatment had the myopic $\partial_s y$. That swap is the whole difference between the
-two, and it is what makes the exact problem hard — $\partial_s y$ is a derivative of a function we
-were handed, while $\partial_s V$ is a derivative of the answer. It is implicit: $\partial_s V$
-depends on the path, which depends on the policy, which depends on $\partial_s V$. Hence the
-numerics.
-
-The planner is the same calculation with one agent choosing the total fleet.
+Fishing draws down a stock you want; emitting builds up one you do not. Both terms change sign,
+their product does not, and patience pulls the control down either way — for reasons that are
+structural mirror images of each other. That is the sort of thing the general derivation buys, and
+the fishery-only version could never have said.

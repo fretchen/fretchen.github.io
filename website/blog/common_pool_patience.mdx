@@ -1,8 +1,8 @@
 ---
-publishing_date: 2026-08-09
-title: What patience is worth to a fishery
+publishing_date: 2026-08-27
+title: Common-pool resources, expanded in the discount factor
 category: "others"
-description: A textbook common-pool fishery, solved perturbatively in the discount factor — how much a fish left in the water is worth, and how far that argument can be pushed.
+description: Notes on the common-pool model — the tragedy derived for N users, the patient planner expanded order by order in the discount factor, and a textbook fishery worked through at the end.
 ---
 
 **Common-pool resources** are a powerful and frequent model in economics. The idea is that nobody can be kept away from the pool,
@@ -349,14 +349,14 @@ worth of fish, and the general correction becomes $c\,\partial_s y / \partial_{B
 
 Here they are.
 
-| ingredient      | general                             | for $y = q s\sqrt{B}$               | value             |
-| --------------- | ----------------------------------- | ----------------------------------- | ----------------- |
-| myopic rule     | $\partial_B y = c$                  | $q s / 2\sqrt{B} = c$               | —                 |
-| myopic fleet    | $B^{(0)}(s)$                        | $\left(q s / 2c\right)^{2}$         | **16 boats**      |
-| myopic profit   | $y - cB$ at $B^{(0)}$               | $q^{2} s^{2} / 4c$                  | **2.00**          |
-| value of a fish | $\partial_s y$                      | $q^{2} s / 2c$                      | 0.0395 at $s_1$   |
-| curvature $\big(\partial_{BB} u\big)_0$ | $\partial_{BB}\, y$ at $B^{(0)}$ | $-2c^{3} / q^{2} s^{2}$             | $-0.0039$         |
-| **correction $B_0^{(1)}$** | $c\,\partial_s y / \partial_{BB} y$ | $-q^{4} s_0^{2} s_1^{(0)} / 4c^{3}$ | $\mathbf{-1.263}$ |
+| ingredient                              | general                             | for $y = q s\sqrt{B}$               | value             |
+| --------------------------------------- | ----------------------------------- | ----------------------------------- | ----------------- |
+| myopic rule                             | $\partial_B y = c$                  | $q s / 2\sqrt{B} = c$               | —                 |
+| myopic fleet                            | $B^{(0)}(s)$                        | $\left(q s / 2c\right)^{2}$         | **16 boats**      |
+| myopic profit                           | $y - cB$ at $B^{(0)}$               | $q^{2} s^{2} / 4c$                  | **2.00**          |
+| value of a fish                         | $\partial_s y$                      | $q^{2} s / 2c$                      | 0.0395 at $s_1$   |
+| curvature $\big(\partial_{BB} u\big)_0$ | $\partial_{BB}\, y$ at $B^{(0)}$    | $-2c^{3} / q^{2} s^{2}$             | $-0.0039$         |
+| **correction $B_0^{(1)}$**              | $c\,\partial_s y / \partial_{BB} y$ | $-q^{4} s_0^{2} s_1^{(0)} / 4c^{3}$ | $\mathbf{-1.263}$ |
 
 The zeroth order is the 16 boats and 2.00 promised at the start. One season of that fleet lands
 $y_0 = 4.00$ and leaves $s_1^{(0)} = 98.7$.
@@ -372,48 +372,22 @@ percent per unit of patience.
 
 ### Where the fishery ends up
 
-AUTHOR: Shorten substantially or remove as this goes beyond the general discussion.
-The expansion says which way the fleet moves; it says nothing about the destination. For this
-model the destination is exact, and it is worth the two lines it costs.
+The expansion says which way the fleet moves; it says nothing about where the fishery settles. That
+was Sustainability's question, and for this fishery the two ends of the patience range are very far
+apart:
 
-A stock is steady when the catch offsets the regrowth, $q\,s\sqrt{B} = g(s)$, so holding stock $s$
-needs $B = \big(g(s)/q s\big)^{2}$ boats. Writing $w \equiv 1 - s/K$ for how far the stock sits
-below capacity, and
+|        | myopic, $\beta = 0$ | far-sighted, $\beta \to 1$ |
+| ------ | ------------------- | -------------------------- |
+| stock  | 69.8                | **518**                    |
+| boats  | 7.79                | **2.09**                   |
+| catch  | 1.95                | **7.49**                   |
+| profit | 0.97                | **7.23**                   |
 
-$$
-\epsilon \;\equiv\; \frac{c\,r}{q^{2}K}
-$$
+A quarter of the boats landing four times the fish, on a sea seven times fuller. That is what
+patience buys here, and it is not austerity — a fuller sea is cheaper to work, so more stock and
+more catch arrive together.
 
-for how expensive effort is relative to what the sea produces, the sustainable profit collapses to
-a downward parabola:
-
-$$
-u^{\text{ss}} \;=\; r K\,w \;-\; r K (1+\epsilon)\,w^{2} .
-$$
-
-Both ends of the patience range now read straight off it. The myopic planner catches
-$q^2s^2/2c$; setting that equal to the regrowth gives $1 - w = 2\epsilon w$. The far-sighted
-planner takes the vertex, $w = 1/2(1+\epsilon)$. So
-
-$$
-s^{*}_{\beta = 0} = K\,\frac{2\epsilon}{1+2\epsilon} = 69.8 ,
-\qquad
-s^{*}_{\beta \to 1} = K\,\frac{1+2\epsilon}{2(1+\epsilon)} = 518 ,
-$$
-
-with sustainable profit $rK/4(1+\epsilon) = 7.23$ at the far end against 0.97 at the near one.
-Here $\epsilon = 0.0375$. In boats: the patient fishery runs **2.09 boats landing 7.49**, the
-myopic one **7.79 boats landing 1.95** — a quarter of the effort for four times the fish. Solving
-the dynamic problem numerically confirms the walk: from $s_0 = 100$ the long-run stock comes out
-at 69.7, 89.7, 375.9 and 503.2 for $\beta = 0$, $0.9$, $0.99$ and $0.999$.
-
-The parameter $\epsilon$ is the one that matters. As $\epsilon \to 0$ — effort cheap against what
-the sea produces — the myopic stock goes to **zero** while the patient one goes to $K/2$, the stock
-of maximum growth. As $\epsilon$ grows the two converge, and patience buys nothing because nobody
-fishes much anyway. Note too that the patient stock sits _above_ $K/2$ whenever $\epsilon > 0$: it
-is worth holding more fish than the biologically most productive number, because a fuller sea is
-cheaper to work.
-
-That whole journey, 69.8 to 518, happens in the last stretch of the patience range — precisely the
-ground a small-$\beta$ expansion cannot cover. Perturbation theory tells you which way patience
-pushes and how hard. It does not tell you where you arrive.
+Solving the dynamic problem numerically shows the fishery walking there as $\beta$ rises: starting
+from $s_0 = 100$, the long-run stock comes out at 69.7, 89.7, 375.9 and 503.2 for $\beta = 0$,
+$0.9$, $0.99$ and $0.999$. Almost all of that journey happens in the last stretch of the patience
+range — which is exactly the ground a small-$\beta$ expansion cannot cover.

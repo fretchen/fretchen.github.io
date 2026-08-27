@@ -250,6 +250,14 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.fretchen.eu/blog/33/"/>
   </url>
   <url>
+    <loc>https://www.fretchen.eu/blog/34/</loc>
+    <lastmod>2026-08-27</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.fretchen.eu/de/blog/34/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.fretchen.eu/blog/34/"/>
+  </url>
+  <url>
     <loc>https://www.fretchen.eu/blog/4/</loc>
     <lastmod>2026-08-27</lastmod>
     <changefreq>monthly</changefreq>

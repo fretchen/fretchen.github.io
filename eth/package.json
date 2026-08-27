@@ -15,10 +15,10 @@
     "@openzeppelin/hardhat-upgrades": "^4.1.0",
     "@solidstate/hardhat-abi-exporter": "^3.0.4",
     "chai": "^6.0.0",
-    "eslint": "^10.8.1",
+    "eslint": "^10.9.0",
     "eslint-plugin-chai-expect": "^4.1.0",
     "globals": "^17.11.0",
-    "hardhat": "^3.11.1",
+    "hardhat": "^3.14.0",
     "tsx": "^4.23.12",
     "typescript": "^6.0.3"
   },

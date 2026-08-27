@@ -283,7 +283,7 @@ is optimal control and it is done properly in Colin Clark's _Mathematical Bioeco
 original argument is Clark and Munro, _The economics of fishing and modern capital theory_, Journal
 of Environmental Economics and Management **2** (1975).
 
-## Example 1: the fishery
+## Example: Fishery
 
 To put numbers on any of this we need an instance, and the fishery is the one you can picture.
 John Leach sets it up in §8.1 of _A Course in Public Economics_, and I used it in an
@@ -319,8 +319,9 @@ $$
 so the catch term appears at half strength in the second — that is what diminishing returns amount
 to here. Substituting into
 $\big(1-\tfrac1N\big)\tfrac{u}{B} + \tfrac1N \partial_B u = 0$, the $c$ terms combine to exactly
-$-c$ and the rest to $\tfrac{q s}{\sqrt B}\big(1-\tfrac{1}{2N}\big)$, giving the whole family in
-closed form:
+$-c$ and the rest to $\tfrac{q s}{\sqrt B}\big(1-\tfrac{1}{2N}\big)$, giving the equilibrium
+fleet $B^{*}(N)$ — the total number of boats $N$ independent islands end up sending — in closed
+form:
 
 $$
 B^{*}(N) = \Big(\frac{q\,s_0}{c}\Big)^{2}\Big(1-\frac{1}{2N}\Big)^{2} .
@@ -354,33 +355,24 @@ Here they are.
 | myopic fleet    | $B^{(0)}(s)$                        | $\left(q s / 2c\right)^{2}$         | **16 boats**      |
 | myopic profit   | $y - cB$ at $B^{(0)}$               | $q^{2} s^{2} / 4c$                  | **2.00**          |
 | value of a fish | $\partial_s y$                      | $q^{2} s / 2c$                      | 0.0395 at $s_1$   |
-| curvature       | $\partial_{BB}\, y$ at $B^{(0)}$    | $-2c^{3} / q^{2} s^{2}$             | $-0.0039$         |
-| **correction**  | $c\,\partial_s y / \partial_{BB} y$ | $-q^{4} s_0^{2} s_1^{(0)} / 4c^{3}$ | $\mathbf{-1.263}$ |
+| curvature $\big(\partial_{BB} u\big)_0$ | $\partial_{BB}\, y$ at $B^{(0)}$ | $-2c^{3} / q^{2} s^{2}$             | $-0.0039$         |
+| **correction $B_0^{(1)}$** | $c\,\partial_s y / \partial_{BB} y$ | $-q^{4} s_0^{2} s_1^{(0)} / 4c^{3}$ | $\mathbf{-1.263}$ |
 
 The zeroth order is the 16 boats and 2.00 promised at the start. One season of that fleet lands
 $y_0 = 4.00$ and leaves $s_1^{(0)} = 98.7$.
 
 Notice what is missing from that last row. **The renewal function never appears.** $g$ enters the
-correction only by setting what $s_1^{(0)}$ is, and nowhere else — which is the fishery's version
-of the point made under Sustainability. It is tempting to assume a patient planner is one who
-fishes below the growth rate; it is not. The planner is buying _stock_, not _growth_. A fuller sea
-is cheaper to fish next season, and that is the whole mechanism. How fast the fish breed matters
-only through how full the sea will be.
+correction only by setting what $s_1^{(0)}$ is, and nowhere else. It is tempting to assume a
+patient planner is one who fishes below the growth rate; it is not. The planner is buying _stock_,
+not _growth_ — a fuller sea is cheaper to fish next season, and that is the whole mechanism.
 
-The curvature is the interesting entry: $-0.0039$ is a very flat peak. That is why the fleet is so
-responsive — a nudge in the price of fish slides it a long way. Concretely, the response
-$c / B_0^{(0)}\big(\partial_{BB}\, y\big)_0$ comes out at exactly $-2$, the $\alpha = 1/2$ case, so
-the fleet resums into
-
-$$
-B_0(\beta) = B_0^{(0)}\big(1-\pi\big)^{2}, \qquad \pi = \beta\,\frac{q^{2}s_1^{(0)}}{2c} = 0.0395\,\beta,
-$$
-
-and comes off its impatient value by about eight percent per unit of patience. **The exponent 2
-belongs to the square root, not to the theory** — a catch going as $B^{1/3}$ would give $3/2$.
+The curvature explains the size of the effect: $-0.0039$ is a very flat peak, so a small price on
+fish slides the fleet a long way. Concretely, it comes off the impatient 16 boats by about eight
+percent per unit of patience.
 
 ### Where the fishery ends up
 
+AUTHOR: Shorten substantially or remove as this goes beyond the general discussion.
 The expansion says which way the fleet moves; it says nothing about the destination. For this
 model the destination is exact, and it is worth the two lines it costs.
 
@@ -425,21 +417,3 @@ cheaper to work.
 That whole journey, 69.8 to 518, happens in the last stretch of the patience range — precisely the
 ground a small-$\beta$ expansion cannot cover. Perturbation theory tells you which way patience
 pushes and how hard. It does not tell you where you arrive.
-
-## Example 2: the atmosphere
-
-The atmosphere is worth putting beside it, because it is the same formula run with both signs
-flipped:
-
-|                     | fishery              | carbon                   |
-| ------------------- | -------------------- | ------------------------ |
-| stock $s$           | fish, worth having   | CO₂, worth avoiding      |
-| control $B$         | boats                | emissions                |
-| $\partial_B \sigma$ | $-$ fishing depletes | $+$ emitting accumulates |
-| $\partial_s u$      | $+$                  | $-$                      |
-| $B_0^{(1)}$         | $-$ fewer boats      | $-$ fewer emissions      |
-
-Fishing draws down a stock you want; emitting builds up one you do not. Both terms change sign,
-their product does not, and patience pulls the control down either way — for reasons that are
-structural mirror images of each other. That is the sort of thing the general derivation buys, and
-the fishery-only version could never have said.

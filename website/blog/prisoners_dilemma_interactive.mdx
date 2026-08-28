@@ -6,14 +6,10 @@ category: "others"
 description: "I explore the Prisoner's Dilemma through interactive game theory simulations. Discover strategic decision-making, Nash equilibrium, and how cooperation emerges in competition."
 ---
 
-import { clientOnly } from "vike-react/clientOnly";
 import PayoffMatrix from "../components/blog/PayoffMatrix";
 import StrategyAnalysis from "../components/blog/StrategyAnalysis";
-
-{/* Both pull in the same ~25KB gzip chart.js chunk — kept out of this post's own primed
-    module so it doesn't sit in the pre-hydration blocking path (website/MDX_MIGRATION.md §2.1). */}
-export const ExpectedUtilityPlot = clientOnly(() => import("../components/blog/ExpectedUtilityPlot"));
-export const GameSimulation = clientOnly(() => import("../components/blog/GameSimulation"));
+import ExpectedUtilityPlot from "../components/blog/ExpectedUtilityPlot";
+import GameSimulation from "../components/blog/GameSimulation";
 
 Why did the 2024 Nobel Prize in Economics go to researchers who study why some countries prosper with strong institutions while others don&rsquo;t? When I looked into the question, the answer turned out to be connected to a famous social game called the Prisoner&rsquo;s Dilemma.
 

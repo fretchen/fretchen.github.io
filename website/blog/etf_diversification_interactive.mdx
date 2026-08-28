@@ -6,12 +6,8 @@ category: "others"
 description: "A hands-on guide to ETF diversification using risk budgets, with interactive tools to find your own allocation."
 ---
 
-import { clientOnly } from "vike-react/clientOnly";
+import DiversificationRandomWalk from "../components/blog/DiversificationRandomWalk";
 import PortfolioRiskAllocator from "../components/blog/PortfolioRiskAllocator";
-
-{/* Chart.js pulls a ~25KB gzip shared chunk — kept out of this post's own primed module so
-    it doesn't sit in the pre-hydration blocking path (see website/MDX_MIGRATION.md §2.1). */}
-export const DiversificationRandomWalk = clientOnly(() => import("../components/blog/DiversificationRandomWalk"));
 
 In this blog post, I present a simple, systematic approach to invest money across multiple asset classes. It is flexible enough to fit different risk tolerances and simple enough that it requires minimal time once set up. So it is pretty close to the approach that I use for my own savings.
 

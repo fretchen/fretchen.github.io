@@ -175,8 +175,26 @@ gemessen (`rm -rf build && npm run build`, dann `gzip -c <chunk> | wc -c`):
 Das liegt in derselben Größenordnung wie andere, nie gegatete Widgets im Repo — und weit
 unter dem, was die vorherigen schweren Dependencies gebraucht hätten. **Ergebnis: `clientOnly`
 wird für keinen der drei Posts mehr gebraucht.** Es verschwindet nicht, weil es ersetzt wurde,
-sondern weil nichts mehr ein Gating braucht. Die `clientOnly`/`useHydrated`-Frage aus Stufe 2.1
-bleibt damit vollständig offen für den (heute vermutlich leeren) Rest-Scope.
+sondern weil nichts mehr ein Gating braucht.
+
+**Update, nach Merge in `spike/stufe-2.0`:** Die drei `clientOnly()`-Stellen wurden entfernt
+(zurück auf normale `import`s, wie jedes andere Widget in `components/blog/`). Vorher/Nachher
+gemessen (Gzip, `rm -rf build && npm run build`):
+
+| Post | Mit `clientOnly` (Post-Chunk + separate(r) Widget-Chunk(s)) | Ohne Gating (ein Chunk) |
+| --- | --- | --- |
+| `etf_diversification_interactive` | 8.2 KB + 3.0 KB = 11.1 KB, 2 Requests | 11.3 KB, 1 Request |
+| `prisoners_dilemma_interactive` | 12.1 KB + 1.4 KB + 2.4 KB = 15.9 KB, 3 Requests | 14.2 KB, 1 Request |
+| `merkle_ai_batching_fundamentals` | 4.7 KB + 2.8 KB + 2.6 KB = 10.2 KB, 3 Requests | 9.2 KB, 1 Request |
+
+`clientOnly` war zu diesem Zeitpunkt auf jeder Achse schlechter: mehr Bytes insgesamt (der
+Modul-Wrapper pro Chunk kostet etwas), mehr Requests, und kein echter UX-Vorteil — es lädt
+sofort beim Client-Mount, nicht erst bei Sichtbarkeit/Interaktion, verzögert also nichts
+Sinnvolles. `clientOnly` wurde außerdem **ausschließlich** in diesen drei `.mdx`-Dateien
+verwendet (`grep -rln clientOnly` im ganzen Repo) — mit der Entfernung ist die deprecated API
+vollständig aus dem Code verschwunden, ohne dass der zuvor entworfene `useHydrated` +
+`lazy` + `Suspense`-Ersatz gebraucht wurde. Die `clientOnly`/`useHydrated`-Frage aus
+Stufe 2.1 ist damit geschlossen.
 
 ### Abnahme
 
@@ -230,32 +248,27 @@ Die Komponentenfunktion wurde dadurch durch ihr eigenes Render-Ergebnis ersetzt.
 **Konsequenz:** Stufe 3 ist **nicht** der erzwungene Weg. Sie bleibt optional, wie ursprünglich
 vorgesehen. `stream` wird nie angefasst.
 
-### 2.1 Widgets client-only machen
+### 2.1 Widgets client-only machen — erledigt, Ergebnis: nicht gebraucht
 
-Statt den ganzen Post nachzuladen, nur die DOM-abhängigen Teile. In einer `.mdx`-Datei muss
-das ein `export const` sein — ein reines `const` ohne `export` lehnt der MDX-Compiler im
-Top-Level-ESM-Block ab (`only import/exports are supported`, geprüft mit `compileSync`):
+Ursprüngliche Idee: statt den ganzen Post nachzuladen, nur die DOM-abhängigen Teile per
+`clientOnly()` gating — für `ExpectedUtilityPlot`/`GameSimulation`/`DiversificationRandomWalk`
+(chart.js) und `BatchCreator`/`ProofDemo` (`@openzeppelin/merkle-tree`), die drei Posts mit
+messbar schweren Widget-Dependencies. Das wurde im Spike (2.0, Q3) auch nachweislich korrekt
+umgesetzt: Server liefert nur den Fallback, Widget bleibt aus dem HTML draußen, eigener
+kleiner Chunk bleibt erhalten.
 
-```mdx
-import { clientOnly } from "vike-react/clientOnly";
-export const RiskReality = clientOnly(() => import("./RiskReality"));
-```
+`clientOnly()` ist aber deprecated (`assertWarning` in `vike-react/dist/helpers/clientOnly.js`,
+verweist auf `<ClientOnly>`). Stufe 1.6 (siehe oben) hat die eigentliche Ursache behoben, statt
+die deprecated API zu ersetzen: chart.js wurde durch handgebautes SVG ersetzt, das
+`@openzeppelin/merkle-tree`-Paket durch einen minimalen, gegengetesteten Wrapper auf `viem`.
+Danach war in keinem der drei Posts noch etwas übrig, das ein Gating gerechtfertigt hätte
+(gemessen, siehe „Ergebnis für die `clientOnly`-Frage" oben) — die drei `clientOnly()`-Stellen
+wurden entfernt, zurück auf normale `import`s wie jedes andere Widget in `components/blog/`.
 
-Kandidaten: alles in `components/blog/` mit `ChartJS.register(...)`,
-`components/MermaidDiagram.tsx`, alles mit Wallet-/Wagmi-Zugriff.
-
-**`clientOnly()` ist deprecated** (`assertWarning` in `vike-react/dist/helpers/clientOnly.js`,
-verweist auf `<ClientOnly>`) — funktioniert im Spike (2.0, Q3) aber nachweislich korrekt:
-Server liefert nur den Fallback, Widget bleibt aus dem HTML draußen, eigener kleiner Chunk
-bleibt erhalten. `<ClientOnly>` verlangt dagegen `children === undefined` auf dem Server
-(`dist/components/ClientOnly.js`) — ein strengerer Vertrag, der mit MDX-Kindern eventuell
-nicht trivial ist. Vor der echten 2.1-Umsetzung beide Varianten kurz gegenprüfen, dann auf
-die gewählte API festlegen.
-
-Anmerkung: `website/CLAUDE.md` verlangt „Client-only components need `{ ssr: false }`" —
-diese Regel beschreibt derzeit keine gelebte Praxis, es gibt kein einziges Vorkommen im Repo.
-Mit dieser Stufe wird sie erstmals wahr und sollte auf die tatsächliche API
-(`clientOnly` / `<ClientOnly>`) präzisiert werden.
+`clientOnly` wurde ausschließlich in diesen drei `.mdx`-Dateien verwendet — mit der Entfernung
+ist die deprecated API vollständig aus dem Code verschwunden. Damit bleibt auch die Notiz in
+`website/CLAUDE.md` („Client-only components need `{ ssr: false }`") weiterhin ohne gelebtes
+Vorkommen im Repo — unverändert korrekt, aber ungenutzt.
 
 ### 2.2 `ReactPostRenderer` umbauen
 
@@ -386,7 +399,10 @@ Stufe 2 — sie sind reine Prosa ohne Widgets.
 ## Querschnitt
 
 - [x] `CLAUDE.md` (Repo-Wurzel), Abschnitt *Blog Posts*: `.tsx` als Post-Format streichen (erledigt in Stufe 1, siehe oben)
-- [ ] `website/CLAUDE.md`: die `{ ssr: false }`-Regel auf `clientOnly` / `<ClientOnly>` präzisieren
+- [x] `website/CLAUDE.md`: die `{ ssr: false }`-Regel auf `clientOnly` / `<ClientOnly>`
+  präzisieren — erübrigt sich: `clientOnly()` wurde in Stufe 2.1 eingeführt und noch in
+  derselben Stufe wieder vollständig entfernt (siehe dort), die Regel bleibt weiterhin ohne
+  gelebtes Vorkommen im Repo
 - [ ] `blog-planner`-Skill: falls dort TSX-Posts als Option auftauchen, entfernen
 - [ ] `utils/checkChunkSizes.ts`: die Chunk-Erwartungen ändern sich in Stufe 2 und 3
 

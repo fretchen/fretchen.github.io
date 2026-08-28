@@ -8,13 +8,8 @@ description: "I explore the fundamentals of Merkle trees for efficient LLM batch
 ---
 
 import MermaidDiagram from "../components/MermaidDiagram";
-import { clientOnly } from "vike-react/clientOnly";
-
-{/* Both pull in @openzeppelin/merkle-tree, a ~42KB gzip shared chunk — the heaviest
-    dependency found in any post's widgets — kept out of this post's own primed module so it
-    doesn't sit in the pre-hydration blocking path (website/MDX_MIGRATION.md §2.1). */}
-export const BatchCreator = clientOnly(() => import("../components/blog/BatchCreator"));
-export const ProofDemo = clientOnly(() => import("../components/blog/ProofDemo"));
+import BatchCreator from "../components/blog/BatchCreator";
+import ProofDemo from "../components/blog/ProofDemo";
 
 export const merkleTreeMathDiagram = `graph TD
     R1["R₁<br/>(Request 1)"] --> H1["H₁ = hash(R₁)"]

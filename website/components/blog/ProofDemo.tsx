@@ -213,8 +213,7 @@ export default function ProofDemo() {
       })}
     >
       {/* h4, not h3: this is a widget title, not a document section — the ToC scans h2/h3,
-          and this post's real sections shouldn't share a heading level with widget chrome
-          that (as clientOnly()) may mount after the ToC's initial scan. */}
+          and this post's real sections shouldn't share a heading level with widget chrome. */}
       <h4 className={css({ fontSize: "lg", fontWeight: "bold", marginBottom: "4" })}>
         🔍 Interactive Proof Demo: Alice&apos;s Story
       </h4>

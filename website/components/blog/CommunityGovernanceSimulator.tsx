@@ -278,7 +278,14 @@ const CommunityResultsTable: React.FC<{ history: CommunityRoundHistory[] }> = ({
               </tr>
             ))}
             {/* Summary Row */}
-            <tr className={css({ background: "slate.200", fontWeight: 600, borderTop: "2px solid", borderTopColor: "sky.200" })}>
+            <tr
+              className={css({
+                background: "slate.200",
+                fontWeight: 600,
+                borderTop: "2px solid",
+                borderTopColor: "sky.200",
+              })}
+            >
               <td className={css({ padding: "4px 8px", textAlign: "center" })} colSpan={2}>
                 Total
               </td>

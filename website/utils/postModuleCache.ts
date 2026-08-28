@@ -1,16 +1,14 @@
 /**
- * SPIKE (Stufe 2.0, website/MDX_MIGRATION.md): module-scope cache so a post's
- * component can be resolved once, awaited, and then rendered SYNCHRONOUSLY —
- * no React.lazy, no Suspense, no risk of React parking late content in a
- * <template> tag at the end of the document.
+ * Module-scope cache so a post's component is resolved once, awaited, and
+ * then rendered SYNCHRONOUSLY — no React.lazy, no Suspense, no risk of React
+ * parking late content in a <template> tag at the end of the document.
  *
- * Primed by +onBeforeRenderHtml.ts (server) and +onBeforeRenderClient.ts
- * (client) before React ever renders the page; components/Post.tsx then
- * reads it synchronously in render.
+ * Primed by pages/+onBeforeRenderHtml.ts (server) and
+ * pages/+onBeforeRenderClient.ts (client), both awaited by vike-react before
+ * render/hydrate — so by the time components/Post.tsx's ReactPostRenderer
+ * mounts, the entry (component or error) is already here to read.
  *
- * Throwaway: if the spike is kept, this earns proper doc comments as part of
- * 2.1/2.2. If discarded, delete this file along with the two page hooks and
- * the cache branch in Post.tsx.
+ * Stufe 2, website/MDX_MIGRATION.md.
  */
 import type { ComponentType } from "react";
 import { loadLazyModuleFromDirectory } from "./lazyGlobRegistry";
@@ -18,13 +16,17 @@ import { isSupportedDirectory, getSupportedDirectories } from "./supportedDirect
 
 type PostComponent = ComponentType<{ components?: Record<string, ComponentType> }>;
 
-const cache = new Map<string, PostComponent>();
+type CacheEntry = { component: PostComponent } | { error: string };
+
+const cache = new Map<string, CacheEntry>();
 
 /**
  * Resolves componentPath (e.g. "../blog/ipfs.mdx") to its module and caches
- * it. Safe to call multiple times for the same path (idempotent, no re-fetch
- * once cached). Swallows errors — a miss just means Post.tsx's synchronous
- * read finds nothing and falls back to the existing useEffect loader.
+ * the outcome — component on success, message on failure (unsupported
+ * directory, chunk fetch failure, missing default export). Never throws:
+ * a failure is recorded, not propagated, so the caller (a page render hook)
+ * doesn't need its own try/catch. Idempotent — a path already in the cache,
+ * success or failure, is not retried.
  */
 export async function primePostModule(componentPath: string | undefined): Promise<void> {
   if (!componentPath || cache.has(componentPath)) return;
@@ -34,24 +36,39 @@ export async function primePostModule(componentPath: string | undefined): Promis
   const filename = pathParts[pathParts.length - 1];
 
   if (!isSupportedDirectory(directory)) {
-    console.warn(
-      `[postModuleCache] Unsupported directory: ${directory}. Supported: ${getSupportedDirectories().join(", ")}`,
-    );
+    const message = `Unsupported directory: ${directory}. Supported: ${getSupportedDirectories().join(", ")}`;
+    console.warn(`[postModuleCache] ${message}`);
+    cache.set(componentPath, { error: message });
     return;
   }
 
   try {
     const module = await loadLazyModuleFromDirectory(directory, filename);
     if (module.default) {
-      cache.set(componentPath, module.default as PostComponent);
+      cache.set(componentPath, { component: module.default as PostComponent });
+    } else {
+      cache.set(componentPath, { error: `No default export found in ${filename}` });
     }
   } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error occurred";
     console.warn(`[postModuleCache] Failed to prime ${componentPath}:`, err);
+    cache.set(componentPath, { error: message });
   }
 }
 
-/** Synchronous read — undefined until primePostModule() has resolved for this path. */
+/** Synchronous read — undefined until primed successfully, or if priming failed. */
 export function getPostModule(componentPath: string | undefined): PostComponent | undefined {
-  if (!componentPath) return undefined;
-  return cache.get(componentPath);
+  const entry = componentPath ? cache.get(componentPath) : undefined;
+  return entry && "component" in entry ? entry.component : undefined;
+}
+
+/** The failure reason, if priming was attempted and failed. Undefined if never primed or if it succeeded. */
+export function getPostModuleError(componentPath: string | undefined): string | undefined {
+  const entry = componentPath ? cache.get(componentPath) : undefined;
+  return entry && "error" in entry ? entry.error : undefined;
+}
+
+/** Test-only: clears the module-scope cache so tests don't leak state into each other. */
+export function __resetPostModuleCacheForTests(): void {
+  cache.clear();
 }

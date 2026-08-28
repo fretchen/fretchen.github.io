@@ -4,6 +4,7 @@ import { renderToString } from "react-dom/server";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { renderWithQuery, createTestQueryClient } from "./testUtils";
 import { Post } from "../components/Post";
+import { primePostModule, __resetPostModuleCacheForTests } from "../utils/postModuleCache";
 import React from "react";
 import "@testing-library/jest-dom";
 
@@ -45,19 +46,25 @@ const postProps = {
 };
 
 /**
- * `e-content` must describe the article, not the box that stands in for it.
+ * `e-content` must describe the article, not a stand-in for it.
  *
- * Post bodies load through a dynamic import in an effect, so the prerendered HTML — the HTML
- * Bridgy Fed reads from a permalink — contains a loading placeholder. While `e-content` sat
- * on an always-present wrapper, that placeholder *was* the syndicated body of every post:
- * mf2 parsed `content` as "🔄 Lade interaktive Komponente...Pfad: ../blog/…".
+ * Post components are resolved by pages/+onBeforeRenderHtml.ts / +onBeforeRenderClient.ts
+ * (utils/postModuleCache.ts) *before* Post.tsx ever renders, so in the real pipeline the
+ * prerendered HTML already contains the actual article. Historically it didn't: bodies loaded
+ * through a dynamic import in a `useEffect`, so the prerendered HTML — the HTML Bridgy Fed
+ * reads from a permalink — contained only a loading placeholder, and while `e-content` sat on
+ * an always-present wrapper, that placeholder *was* the syndicated body of every post: mf2
+ * parsed `content` as "🔄 Lade interaktive Komponente...Pfad: ../blog/…".
  *
- * An h-entry with no `content` is valid, and `summary` is correct on every post, so consumers
- * fall back to it. These tests pin the class to the loaded article.
+ * These tests don't go through Vike's page hooks, so they prime the cache explicitly where a
+ * post is expected to render, and leave it unprimed where a genuine failure is expected. An
+ * h-entry with no `content` is valid, and `summary` is correct on every post, so consumers
+ * fall back to it either way. These tests pin the class to the loaded article.
  */
 describe("Post microformats", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    __resetPostModuleCacheForTests();
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       json: async () => ({ children: [] }),
     } as Response);
@@ -70,16 +77,24 @@ describe("Post microformats", () => {
       </QueryClientProvider>,
     );
 
-  it("emits no e-content in the server markup, where the body is still a placeholder", () => {
+  it("emits e-content directly in the server markup once the module is primed", async () => {
+    await primePostModule(postProps.componentPath);
     const html = ssr(postProps);
 
-    expect(html).toContain("Lade interaktive Komponente");
-    expect(html).not.toContain("e-content");
+    expect(html).toContain("e-content");
+    expect(html).not.toContain("Lade interaktive Komponente");
   });
 
-  it("keeps the rest of the h-entry intact in the server markup", () => {
-    // Only `content` is being withheld — everything a consumer needs to render a reference
-    // to the post must still be there.
+  it("emits no e-content in the server markup when the module was never primed", () => {
+    const html = ssr(postProps);
+
+    expect(html).not.toContain("e-content");
+    expect(html).toContain("Fehler beim Laden");
+  });
+
+  it("keeps the rest of the h-entry intact regardless of priming", () => {
+    // Only `content` is affected by priming — everything a consumer needs to render a
+    // reference to the post must still be there either way.
     const html = ssr(postProps);
 
     expect(html).toContain("h-entry");
@@ -88,7 +103,8 @@ describe("Post microformats", () => {
     expect(html).toContain("u-url");
   });
 
-  it("emits e-content once the article has actually rendered", async () => {
+  it("emits e-content once the article has actually rendered client-side", async () => {
+    await primePostModule(postProps.componentPath);
     const { container } = renderWithQuery(<Post {...postProps} />);
 
     await waitFor(() => {

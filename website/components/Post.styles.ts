@@ -55,16 +55,6 @@ export const post = {
     // so it only picks which language's rules apply, never whether to hyphenate at all.
     hyphens: "manual",
   }),
-  // Lazy-loaded interactive component is still resolving.
-  loadingBox: css({
-    padding: "5",
-    textAlign: "center",
-  }),
-  // Path line under the loading message — secondary to it, so muted and smaller.
-  loadingPath: css({
-    fontSize: "sm",
-    color: "textMuted",
-  }),
   // Same shape as ImageGenerator's `compactError`, so error panels read alike site-wide.
   errorBox: css({
     padding: "5",

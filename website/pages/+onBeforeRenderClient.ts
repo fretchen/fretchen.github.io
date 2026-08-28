@@ -1,4 +1,4 @@
-// SPIKE (Stufe 2.0, website/MDX_MIGRATION.md) — see utils/postModuleCache.ts.
+// Stufe 2, website/MDX_MIGRATION.md — see utils/postModuleCache.ts.
 // Client counterpart of +onBeforeRenderHtml.ts. Awaited by vike-react before
 // ReactDOM.hydrateRoot/createRoot (dist/integration/onRenderClient.js), so
 // the very first client render already has the module cached — no flash of

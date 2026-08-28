@@ -1,4 +1,4 @@
-// SPIKE (Stufe 2.0, website/MDX_MIGRATION.md) — see utils/postModuleCache.ts.
+// Stufe 2, website/MDX_MIGRATION.md — see utils/postModuleCache.ts.
 // Root-level so this one file covers /blog/@id and all four /quantum/*/@id
 // routes. Awaited by vike-react before renderToString/renderToStream runs
 // (dist/integration/onRenderHtml.js), so the module is already in the

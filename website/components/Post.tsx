@@ -6,15 +6,14 @@ import { NFTFloatImage } from "./NFTFloatImage";
 import { MdxPre } from "./MdxCodeBlock";
 import { post } from "./Post.styles";
 import { button } from "../styled-system/recipes";
-import { loadLazyModuleFromDirectory } from "../utils/lazyGlobRegistry";
-import { isSupportedDirectory, getSupportedDirectories } from "../utils/supportedDirectories";
-// SPIKE (Stufe 2.0, website/MDX_MIGRATION.md): see utils/postModuleCache.ts.
-import { getPostModule } from "../utils/postModuleCache";
-import { useKaTeXRenderer } from "../hooks/useKaTeXRenderer";
-// KaTeX's own stylesheet — it carries the Computer Modern @font-face rules and the math
-// layout. It lives here, not on the routes, because every prose route (blog and all four
-// quantum sections) renders through this shell. Previously only /blog/@id imported it, so
-// lecture math shipped KaTeX markup with no KaTeX CSS.
+// Post modules are resolved before this component ever renders — see utils/postModuleCache.ts,
+// primed by pages/+onBeforeRenderHtml.ts (server) and pages/+onBeforeRenderClient.ts (client),
+// both awaited by vike-react before render/hydrate. Stufe 2, website/MDX_MIGRATION.md.
+import { getPostModule, getPostModuleError } from "../utils/postModuleCache";
+// KaTeX's own stylesheet — rehype-katex (vite.config.ts) renders math to real KaTeX markup
+// at build time, but that markup still needs this CSS (Computer Modern @font-face rules,
+// math layout) to display correctly. Lives here, not on the routes, because every prose
+// route (blog and all four quantum sections) renders through this shell.
 import "katex/dist/katex.min.css";
 import { useWebmentionUrls } from "../hooks/useWebmentionUrls";
 import { fetchWebmentions } from "../utils/webmentionUtils";
@@ -29,97 +28,29 @@ import { CommentsSection } from "./CommentsSection";
 // MdxPre); plain TSX posts simply ignore it.
 type PostComponent = React.ComponentType<{ components?: Record<string, React.ComponentType> }>;
 
-// Dynamic React component renderer
+// Renders a post's component. By the time this mounts, +onBeforeRenderHtml.ts /
+// +onBeforeRenderClient.ts have already primed postModuleCache for componentPath — read is
+// synchronous, no loading state, no Suspense. `key={componentPath}` on the caller below
+// forces a remount per post, so this can't go stale across post-to-post navigation.
 const ReactPostRenderer: React.FC<{
   componentPath: string;
   tokenID?: number;
   contentRef: React.RefObject<HTMLDivElement | null>;
   onReady?: () => void;
 }> = ({ componentPath, tokenID, contentRef, onReady }) => {
-  // SPIKE (Stufe 2.0): +onBeforeRenderHtml.ts / +onBeforeRenderClient.ts prime this cache
-  // before render, so on both server and client the module is often already resolved by
-  // the time this component mounts — no useEffect, no Suspense, no <template> risk.
-  // Read once at mount (ReactPostRenderer is remounted per componentPath via `key=` on the
-  // caller below), so this can't go stale across posts.
-  const [cachedComponent] = React.useState(() => getPostModule(componentPath));
+  const Component = getPostModule(componentPath) as PostComponent | undefined;
 
-  // NOTE: must be a lazy initializer (`() => ...`), not `cachedComponent ?? null` directly —
-  // useState treats a bare function argument as an initializer and CALLS it, which for a
-  // component function silently replaces "the component" with "the component's own render
-  // output" as state. That was this spike's actual bug (Q1 diagnostic below).
-  const [Component, setComponent] = React.useState<PostComponent | null>(() => cachedComponent ?? null);
-  const [error, setError] = React.useState<string | null>(null);
-  const [loading, setLoading] = React.useState<boolean>(!cachedComponent);
-
+  // Signals the ToC once this post's content is in the DOM. A real effect (not a call during
+  // render) because render must stay pure; nothing async belongs in it anymore — the module
+  // is already resolved by the time we get here.
   React.useEffect(() => {
-    if (cachedComponent) {
-      // Already rendered synchronously above; still signal readiness for the ToC.
-      onReady?.();
-      return;
-    }
+    if (Component) onReady?.();
+  }, [componentPath, Component, onReady]);
 
-    let cancelled = false;
-
-    const loadComponent = async () => {
-      try {
-        // Extract directory and filename from componentPath
-        const pathParts = componentPath.replace(/^\.\.\//, "").split("/");
-        const directory = pathParts.slice(0, -1).join("/");
-        const filename = pathParts[pathParts.length - 1];
-
-        // Validate directory is supported
-        if (!isSupportedDirectory(directory)) {
-          throw new Error(
-            `Unsupported directory: ${directory}. Supported directories: ${getSupportedDirectories().join(", ")}`,
-          );
-        }
-
-        // Use centralized lazy glob registry - only fetches this post's own chunk
-        const module = await loadLazyModuleFromDirectory(directory, filename);
-
-        // The component should be the default export (works for both MDX and TSX)
-        const LoadedComponent = module.default;
-
-        if (!LoadedComponent) {
-          throw new Error(`No default export found in ${filename}`);
-        }
-
-        if (cancelled) return;
-        setComponent(() => LoadedComponent);
-        setLoading(false);
-        onReady?.();
-      } catch (err) {
-        if (cancelled) return;
-        console.error("ReactPostRenderer: Error loading React component:", err);
-        setError(err instanceof Error ? err.message : "Unknown error occurred");
-        setLoading(false);
-      }
-    };
-
-    void loadComponent();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [componentPath, onReady, cachedComponent]);
-
-  // Use custom hook for KaTeX rendering
-  useKaTeXRenderer(contentRef, !!Component);
-
-  if (loading) {
-    return (
-      <div className={post.contentContainer}>
-        <div className={post.loadingBox}>
-          <p>🔄 Lade interaktive Komponente...</p>
-          <p className={post.loadingPath}>
-            Pfad: <code>{componentPath}</code>
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !Component) {
+  if (!Component) {
+    // Genuine failure only — primePostModule() already caught the underlying error (missing
+    // module, no default export, unsupported directory) and recorded its message.
+    const error = getPostModuleError(componentPath);
     return (
       <div className={post.contentContainer}>
         <div className={post.errorBox}>
@@ -141,7 +72,7 @@ const ReactPostRenderer: React.FC<{
             <summary>Mögliche Lösungen</summary>
             <ul className={post.errorSpacing}>
               <li>Laden Sie die Seite neu (hilft nach einem Update der Website)</li>
-              <li>Überprüfen Sie, ob die TSX-Datei existiert</li>
+              <li>Überprüfen Sie, ob die MDX-Datei existiert</li>
               <li>Stellen Sie sicher, dass die Komponente als default export verfügbar ist</li>
               <li>Überprüfen Sie die Konsolenausgabe für weitere Details</li>
             </ul>

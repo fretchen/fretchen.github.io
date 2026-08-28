@@ -30,22 +30,12 @@ type PostComponent = React.ComponentType<{ components?: Record<string, React.Com
 
 // Renders a post's component. By the time this mounts, +onBeforeRenderHtml.ts /
 // +onBeforeRenderClient.ts have already primed postModuleCache for componentPath — read is
-// synchronous, no loading state, no Suspense. `key={componentPath}` on the caller below
-// forces a remount per post, so this can't go stale across post-to-post navigation.
+// synchronous, no loading state, no Suspense, no effect needed to signal readiness.
 const ReactPostRenderer: React.FC<{
   componentPath: string;
   tokenID?: number;
-  contentRef: React.RefObject<HTMLDivElement | null>;
-  onReady?: () => void;
-}> = ({ componentPath, tokenID, contentRef, onReady }) => {
+}> = ({ componentPath, tokenID }) => {
   const Component = getPostModule(componentPath) as PostComponent | undefined;
-
-  // Signals the ToC once this post's content is in the DOM. A real effect (not a call during
-  // render) because render must stay pure; nothing async belongs in it anymore — the module
-  // is already resolved by the time we get here.
-  React.useEffect(() => {
-    if (Component) onReady?.();
-  }, [componentPath, Component, onReady]);
 
   if (!Component) {
     // Genuine failure only — primePostModule() already caught the underlying error (missing
@@ -83,12 +73,10 @@ const ReactPostRenderer: React.FC<{
   }
 
   return (
-    // e-content lives here, on the article itself, rather than on the wrapper in Post below.
-    // The wrapper is always present, but the body only exists once this dynamic import has
-    // resolved — so on the prerendered page the class used to describe the loading box, and
-    // mf2 parsed the post's content as "🔄 Lade interaktive Komponente...Pfad: ../blog/…".
-    // That string is what Bridgy Fed syndicated as the body of every post.
-    <div className={`e-content ${post.contentContainer}`} ref={contentRef}>
+    // e-content marks this div as the syndicated body for mf2/Bridgy Fed. The ref used for
+    // ToC scanning lives one level up, on Post's wrapper (see below) — one ref is enough
+    // now that content is present synchronously; it doesn't need to be re-scoped per state.
+    <div className={`e-content ${post.contentContainer}`}>
       {tokenID && <NFTFloatImage tokenId={tokenID} />}
       <Component components={{ pre: MdxPre }} />
     </div>
@@ -110,13 +98,6 @@ export function Post({
   const { urlWithoutSlash, urlWithSlash } = useWebmentionUrls();
   const [reactionCount, setReactionCount] = React.useState<number>(0);
   const contentRef = React.useRef<HTMLDivElement>(null);
-
-  // Tracks which componentPath has finished loading. Comparing against the current
-  // path (instead of a plain boolean) makes readiness flip false automatically on
-  // post-to-post navigation, so the ToC rescans once the new content mounts.
-  const [readyPath, setReadyPath] = React.useState<string | null>(null);
-  const handleContentReady = React.useCallback(() => setReadyPath(componentPath ?? ""), [componentPath]);
-  const contentReady = readyPath === (componentPath ?? "");
 
   // Format publishing date as ISO8601 for dt-published if available
   const isoDatetime = publishing_date ? new Date(publishing_date).toISOString().split("T")[0] : null;
@@ -168,19 +149,16 @@ export function Post({
             <MetadataLine publishingDate={publishing_date} showSupport={true} reactionCount={reactionCount} />
           </>
         }
-        toc={<TableOfContents contentRef={contentRef} isReady={contentReady} />}
+        // `key={componentPath}` remounts the ToC on post-to-post navigation, so it rescans
+        // this post's headings instead of keeping the previous post's list. Content is
+        // present synchronously (see ReactPostRenderer), so there's no separate "is it ready
+        // yet" state to track — the remount itself is the invalidation.
+        toc={<TableOfContents key={componentPath} contentRef={contentRef} />}
       >
-        {/* Render based on post type */}
-        {/* Carries the ref the ToC and KaTeX scan. Deliberately no e-content: that class
+        {/* Carries the ref the ToC scan reads. Deliberately no e-content here: that class
             belongs to the rendered article, which ReactPostRenderer adds once it exists. */}
         <div ref={contentRef}>
-          <ReactPostRenderer
-            key={componentPath}
-            componentPath={componentPath ?? ""}
-            tokenID={tokenID}
-            contentRef={contentRef}
-            onReady={handleContentReady}
-          />
+          <ReactPostRenderer componentPath={componentPath ?? ""} tokenID={tokenID} />
         </div>
 
         {/* Navigation zwischen Posts */}

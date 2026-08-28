@@ -22,11 +22,18 @@ const cache = new Map<string, CacheEntry>();
 
 /**
  * Resolves componentPath (e.g. "../blog/ipfs.mdx") to its module and caches
- * the outcome — component on success, message on failure (unsupported
- * directory, chunk fetch failure, missing default export). Never throws:
- * a failure is recorded, not propagated, so the caller (a page render hook)
- * doesn't need its own try/catch. Idempotent — a path already in the cache,
- * success or failure, is not retried.
+ * the outcome — component on success, message on failure. Idempotent — a
+ * path already in the cache, success or failure, is not retried.
+ *
+ * Failure handling differs by environment, deliberately:
+ * - **Server (prerender)**: rethrows. A module that can't resolve during the
+ *   build is a build bug (bad content, broken import) — it must fail the
+ *   build loudly, not get baked into static HTML as a rendered error page
+ *   with an exit code of 0.
+ * - **Client**: catches and records the error instead. Here a failure is a
+ *   runtime event outside our control (stale hashed chunk URL after a
+ *   redeploy, flaky network) — Post.tsx's error UI with a reload button is
+ *   the right response, and there's no "build" to fail.
  */
 export async function primePostModule(componentPath: string | undefined): Promise<void> {
   if (!componentPath || cache.has(componentPath)) return;
@@ -35,21 +42,20 @@ export async function primePostModule(componentPath: string | undefined): Promis
   const directory = pathParts.slice(0, -1).join("/");
   const filename = pathParts[pathParts.length - 1];
 
-  if (!isSupportedDirectory(directory)) {
-    const message = `Unsupported directory: ${directory}. Supported: ${getSupportedDirectories().join(", ")}`;
-    console.warn(`[postModuleCache] ${message}`);
-    cache.set(componentPath, { error: message });
-    return;
-  }
-
   try {
-    const module = await loadLazyModuleFromDirectory(directory, filename);
-    if (module.default) {
-      cache.set(componentPath, { component: module.default as PostComponent });
-    } else {
-      cache.set(componentPath, { error: `No default export found in ${filename}` });
+    if (!isSupportedDirectory(directory)) {
+      throw new Error(`Unsupported directory: ${directory}. Supported: ${getSupportedDirectories().join(", ")}`);
     }
+
+    const module = await loadLazyModuleFromDirectory(directory, filename);
+    if (!module.default) {
+      throw new Error(`No default export found in ${filename}`);
+    }
+
+    cache.set(componentPath, { component: module.default as PostComponent });
   } catch (err) {
+    if (import.meta.env.SSR) throw err;
+
     const message = err instanceof Error ? err.message : "Unknown error occurred";
     console.warn(`[postModuleCache] Failed to prime ${componentPath}:`, err);
     cache.set(componentPath, { error: message });

@@ -66,24 +66,9 @@ export default function GameSimulation() {
     const walterAvg = walterTotal / numGames;
     const jesseAvg = jesseTotal / numGames;
 
-    // Check for exploitation in both directions
-    let exploited = false;
-    let exploitationMessage = "";
-
     const avgDifference = walterAvg - jesseAvg;
     const walterExploitingJesse = avgDifference < -3; // Walter gets 3+ years less than Jesse (better for Walter)
     const jesseExploitingWalter = avgDifference > 3; // Walter gets 3+ years more than Jesse (worse for Walter)
-
-    if (jesseExploitingWalter) {
-      exploited = true;
-      exploitationMessage = `Jesse consistently got better deals while you suffered. Average difference: ${avgDifference.toFixed(1)} years worse for you.`;
-    } else if (walterExploitingJesse) {
-      exploited = true;
-      exploitationMessage = `You consistently got better deals while Jesse suffered. Average difference: ${Math.abs(avgDifference).toFixed(1)} years worse for Jesse.`;
-    } else if (walterStrategy === "cooperate" && jesseAvg < 4 && walterAvg > 8) {
-      exploited = true;
-      exploitationMessage = "You cooperated but Jesse took advantage of your cooperation repeatedly.";
-    }
 
     let verdict = "";
     let level: SeverityLevel = "warning";
@@ -108,7 +93,7 @@ export default function GameSimulation() {
       level = "danger";
     }
 
-    return { verdict, level, walterAvg, jesseAvg, exploited, exploitationMessage };
+    return { verdict, level, walterAvg, jesseAvg };
   };
 
   const analysis = getOutcomeAnalysis();

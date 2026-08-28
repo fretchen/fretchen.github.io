@@ -119,24 +119,6 @@ describe("Post Component Integration Tests", () => {
     });
   });
 
-  describe("TypeScript Blog Rendering", () => {
-    it("should render TypeScript interactive blog title", () => {
-      // Arrange: Use a TypeScript blog component
-      const postProps = {
-        title: "Merkle Ai Batching",
-        content: "",
-        type: "react" as const,
-        componentPath: "../blog/merkle_ai_batching.tsx",
-      };
-
-      // Act
-      renderWithQuery(<Post {...postProps} />);
-
-      // Assert: Title
-      expect(screen.getByText("Merkle Ai Batching")).toBeInTheDocument();
-    });
-  });
-
   describe("Navigation Links", () => {
     it("should render previous and next post links", () => {
       // Arrange

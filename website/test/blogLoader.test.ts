@@ -104,7 +104,6 @@ This is the blog content.`;
     const mockBlogPost: BlogPost = {
       title: "Test Post",
       content: "",
-      type: "react",
       componentPath: "../blog/test.mdx",
       publishing_date: "2024-12-02",
       tokenID: 123,
@@ -112,26 +111,9 @@ This is the blog content.`;
 
     expect(mockBlogPost).toHaveProperty("title");
     expect(mockBlogPost).toHaveProperty("content");
-    expect(mockBlogPost).toHaveProperty("type");
-    expect(mockBlogPost.type).toBe("react");
     expect(mockBlogPost.componentPath).toBeDefined();
     expect(mockBlogPost.publishing_date).toBe("2024-12-02");
     expect(mockBlogPost.tokenID).toBe(123);
-  });
-
-  it("should handle TypeScript blog files", () => {
-    // After MDX migration, TypeScript blogs now have type "react" to use ReactPostRenderer
-    const mockTsxBlogPost: BlogPost = {
-      title: "React Blog Post",
-      content: "",
-      type: "react",
-      componentPath: "../blog/test_post.tsx",
-    };
-
-    expect(mockTsxBlogPost.type).toBe("react");
-    expect(mockTsxBlogPost.componentPath).toBeDefined();
-    expect(mockTsxBlogPost.componentPath).toMatch(/\.tsx$/);
-    expect(mockTsxBlogPost.content).toBe("");
   });
 });
 

@@ -1,0 +1,144 @@
+---
+title: "My AI Assistant That Takes ETH Instead of Subscriptions"
+publishing_date: "2025-08-28"
+tokenID: 41
+category: "blockchain"
+secondaryCategory: "ai"
+description: "I build an AI assistant that accepts Ethereum payments instead of subscriptions. Discover how Merkle batching enables efficient prepaid AI with instant responses."
+---
+
+import MermaidDiagram from "../components/MermaidDiagram";
+
+export const updatedLlmWorkflowDiagram = `sequenceDiagram
+    Actor Alice as Alice
+    participant Contract as Smart Contract
+    participant AIService as AI Service
+    participant BatchCoord as Batch Coordinator
+    participant Settlement as Settlement Layer
+
+    Note over Alice,Contract: Phase 1: Setup - Prepaid Deposit
+    Alice->>Contract: Deposit ETH for AI usage
+    Contract->>Contract: Update user balance
+
+    Note over Alice,Settlement: Phase 2: Usage - Instant AI Interactions
+    Alice->>AIService: Request: "Analyze sentiment"
+    AIService->>Contract: Validate sufficient balance
+    AIService->>AIService: Process with LLM API
+    AIService-->>Alice: Instant AI response
+    AIService->>BatchCoord: Queue request for batching
+
+    Note over BatchCoord,Settlement: Phase 3: Settlement - Efficient Batch Processing
+    BatchCoord->>BatchCoord: Build Merkle tree from queued requests
+    BatchCoord->>Contract: Process batch settlement
+    Contract->>Contract: Verify proofs and deduct costs
+    Contract->>Settlement: Single efficient transaction
+    Settlement-->>Alice: Settlement confirmation`;
+
+While working on some DeFi projects, something felt strange: I kept paying Copilot with my credit card while having ETH sitting in my wallet. I could instantly swap tokens without an creepy KYC, but AI services still require an email verification and monthly subscriptions. So I started wondering - what would an AI that accepts crypto payments actually look like?
+
+**My initial answer is now live:** [Feel free to try my AI assistant](/assistent) - you connect your wallet, deposit ETH, and chat with an LLM. No subscriptions, no accounts, no data weird harvesting. And you just pay for exactly what you use.
+
+In this post, I&apos;ll walk you through the technical implementation - from smart contract architecture to serverless functions - showing my approach to the crypto-native AI problem.
+
+> **Working Proof-of-Concept** — This is a functional implementation that demonstrates crypto-native AI payments in production. While fully operational, it&apos;s in active development with significant opportunities for optimization and community contributions.
+>
+> **Your input shapes this project:** Cost optimizations, UX improvements, and feature requests directly influence the development roadmap.
+
+## Building on Previous Blockchain-AI Experience
+
+I previously built an [AI image generator with blockchain payments](/blog/9), proving that crypto-native AI services can work. But LLMs present fundamentally different challenges: users expect multiple requests per session, instant responses, and variable costs per interaction. The traditional &quot;one transaction per request&quot; model becomes prohibitively expensive and cumbersome.
+
+For my LLM assistant, I needed to solve three key problems: how to batch multiple requests efficiently, how to maintain instant response times, and how to keep transaction costs reasonable. The solution required rethinking the entire payment architecture around prepaid balances and batch settlement.
+
+## LLM System Architecture
+
+After evaluating different approaches, Merkle tree batching emerged as the optimal solution - providing cryptographic proof of each interaction while enabling efficient batch processing. This approach balances the competing demands of user experience, cost efficiency, and technical simplicity. I explored this technique in detail in my [previous post on Merkle tree fundamentals](/blog/15). While that post covered the mathematical foundations, here we&apos;ll focus on the practical implementation for real-time AI services.
+
+The core architectural change is switching from immediate settlement to a prepaid model with batch processing. Users deposit funds upfront, enabling instant LLM responses while deferring blockchain costs until batch settlement. This creates a trustless system where:
+
+- User deposits $50 → Guaranteed $50 available
+- LLM requests consume balance → No payment risk
+- Batch settlement → Efficient blockchain transactions
+- Refunds possible → User controls remaining balance
+
+This prepaid model fundamentally changes the user experience compared to traditional per-transaction payments. The workflow below demonstrates how Alice interacts with the system, showing each phase where these benefits become tangible:
+
+<MermaidDiagram
+  definition={updatedLlmWorkflowDiagram}
+  title="Simplified User Journey: Prepaid AI with Batch Settlement"
+  config={{
+    sequence: {
+      diagramMarginX: 50,
+      diagramMarginY: 10,
+      boxTextMargin: 5,
+      noteMargin: 10,
+      messageMargin: 35,
+      mirrorActors: false,
+    },
+  }}
+/>
+
+### System Data Flow
+
+The diagram above illustrates the simplified system architecture with three distinct phases: Setup (deposit), Usage (instant AI interactions), and Settlement (efficient batch processing). Each phase optimizes for different goals - user experience, response speed, and cost efficiency.
+
+### Core Components
+
+Our LLM system consists of three main components working together to enable instant responses with efficient blockchain settlement:
+
+#### Smart Contract - LLMv1.sol
+
+**Purpose:** Manages user deposits, tracks balances, and processes Merkle tree batches for settlement. Built as an upgradeable contract using [OpenZeppelin&apos;s UUPS pattern](https://docs.openzeppelin.com/upgrades-plugins/1.x/proxies#uups).
+
+**Core Functions:** Accept ETH deposits, track user balances, verify Merkle proofs for batch settlement, and enable fund withdrawals.
+
+#### AI Service (sc_llm.js)
+
+**Purpose:** Orchestrates the entire LLM request flow - from balance validation to LLM API calls and batch coordination.
+
+**Core Functions:** Validate user balances, process LLM requests instantly through OpenAI/Anthropic APIs, and coordinate Merkle tree batching when 4 requests accumulate.
+
+#### Frontend Interface
+
+**Purpose:** Provides the user interface for wallet connection, balance management, and chat interaction.
+
+**Core Functions:** Wallet integration, ETH deposits, real-time chat with LLM, and request history tracking.
+
+### Critical Implementation Details
+
+The system&apos;s efficiency comes from three key design decisions that enable instant responses while maintaining cost efficiency:
+
+#### Merkle Tree Batching
+
+Using [OpenZeppelin&apos;s StandardMerkleTree](https://github.com/OpenZeppelin/merkle-tree) library, multiple AI requests get bundled into single blockchain transactions. This reduces per-request costs by approximately 60% compared to individual transactions while maintaining cryptographic proof of each interaction.
+
+#### Prepaid Balance Architecture
+
+Users deposit ETH once and consume balance through LLM requests without repeated wallet confirmations. This eliminates transaction friction while maintaining full control - unused funds can be withdrawn anytime.
+
+#### Automatic Settlement
+
+The system triggers batch settlement when 4 requests accumulate, balancing real-time settlement with transaction efficiency. Running on [Optimism](https://docs.optimism.io/get-started/superchain), this threshold ensures users see balance updates quickly while keeping transaction costs under 1 cent - making micro-payments for AI services economically viable today.
+
+## Help Shape This Project
+
+As an early-stage implementation, your feedback directly influences development priorities and helps validate the crypto-native AI approach. This is exactly the kind of input that makes the Web3 innovation so attractive to me.
+
+### Critical Feedback Areas
+
+- **Economics:** What cost structure would make crypto-AI payments compelling vs. traditional subscriptions? How do L2 fees feel in practice?
+- **User Experience:** Where does wallet integration feel clunky? What onboarding steps cause confusion? How intuitive is the prepaid balance model?
+- **Technical Features:** What AI capabilities would justify blockchain overhead? How could batch settlement be optimized? Should the system support other LLM providers?
+
+**Share your thoughts:** Comments below or in [GitHub issues](https://github.com/fretchen/fretchen.github.io/issues) - help to build a better crypto-native AI infrastructure.
+
+## What&apos;s Next
+
+This implementation proves that blockchain-native AI services can deliver both user control and excellent performance. The next steps focus on expanding capabilities and improving accessibility:
+
+- **Multiple LLM Support:** Integration with Anthropic Claude, local models, and specialized AI services
+- **Enhanced Batching:** Dynamic batch sizes and cross-user optimization for even lower costs
+- **Account Abstraction Integration:** The [EIP-7702 upgrade](https://eip7702.io/) enables smart accounts with native batching capabilities, potentially making the current Merkle tree approach unnecessary while improving UX through gasless interactions
+- **Easier User Journey:** Improved UX to make the system more accessible and intuitive
+
+I believe these technologies might enable more user sovereignty over data surveillance. By combining blockchain payments with efficient batching techniques, we can build AI services that respect privacy, provide transparency, and align incentives between users and providers through the settlement layer.

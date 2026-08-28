@@ -4,18 +4,18 @@
  */
 
 import type { ComponentType } from "react";
-import { BlogPost, BlogPostMeta, NFTMetadata } from "../types/BlogPost";
+import { BlogPost, NFTMetadata } from "../types/BlogPost";
 import { GLOB_REGISTRY, type SupportedDirectory } from "./globRegistry";
 
 // Global cache for build-time to prevent multiple loads during pre-rendering
 const buildTimeCache = new Map<string, BlogPost[]>();
 
 /**
- * Extracts metadata from a loaded module (MDX or TSX).
+ * Extracts metadata from a loaded MDX module.
  * Pure function for easy testing.
  *
  * @param module - The loaded module object
- * @param path - The file path (used to determine type and generate fallback title)
+ * @param path - The file path (used to generate a fallback title)
  * @returns Partial BlogPost with extracted metadata, or null if invalid
  */
 export function extractMetadataFromModule(module: unknown, path: string): Partial<BlogPost> | null {
@@ -23,57 +23,31 @@ export function extractMetadataFromModule(module: unknown, path: string): Partia
     return null;
   }
 
-  const cleanPath = path.replace(/\?.*$/, "");
-  const isTsx = path.endsWith(".tsx");
-  const isMdx = path.endsWith(".mdx");
-
-  let title: string | undefined;
-  let publishingDate: string | undefined;
-  let order: number | undefined;
-  let tokenID: number | undefined;
-  let description: string | undefined;
-  let category: string | undefined;
-  let secondaryCategory: string | undefined;
-
-  if (isMdx) {
-    const frontmatter = (module as { frontmatter?: Record<string, unknown> }).frontmatter;
-    if (!frontmatter || typeof frontmatter !== "object") {
-      return null;
-    }
-
-    title = frontmatter.title as string | undefined;
-    publishingDate = frontmatter.publishing_date as string | undefined;
-    order = frontmatter.order as number | undefined;
-    tokenID = frontmatter.tokenID as number | undefined;
-    description = frontmatter.description as string | undefined;
-    category = frontmatter.category as string | undefined;
-    secondaryCategory = frontmatter.secondaryCategory as string | undefined;
-  } else if (isTsx) {
-    const meta = (module as { meta?: BlogPostMeta })?.meta || {};
-
-    title = meta.title;
-    publishingDate = meta.publishing_date;
-    tokenID = meta.tokenID;
-    description = meta.description;
-    category = meta.category;
-    secondaryCategory = meta.secondaryCategory;
-  } else {
+  if (!path.endsWith(".mdx")) {
     return null;
   }
 
+  const frontmatter = (module as { frontmatter?: Record<string, unknown> }).frontmatter;
+  if (!frontmatter || typeof frontmatter !== "object") {
+    return null;
+  }
+
+  const title = frontmatter.title as string | undefined;
+  const publishingDate = frontmatter.publishing_date as string | undefined;
+  const order = frontmatter.order as number | undefined;
+  const tokenID = frontmatter.tokenID as number | undefined;
+  const description = frontmatter.description as string | undefined;
+  const category = frontmatter.category as string | undefined;
+  const secondaryCategory = frontmatter.secondaryCategory as string | undefined;
+
   // Generate fallback title from filename if needed
+  const cleanPath = path.replace(/\?.*$/, "");
   const fileName = cleanPath.split("/").pop() || "";
-  const fallbackTitle = isTsx
-    ? fileName
-        .replace(".tsx", "")
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, (l) => l.toUpperCase())
-    : fileName.replace(/\.mdx$/, "");
+  const fallbackTitle = fileName.replace(/\.mdx$/, "");
 
   return {
     title: title || fallbackTitle,
     content: "",
-    type: "react",
     publishing_date: publishingDate,
     order: order,
     tokenID: tokenID,
@@ -157,8 +131,7 @@ export function sortBlogs(blogs: BlogPost[], sortBy: "order" | "publishing_date"
  * @remarks
  * This function replaces the old static JSON generation system with dynamic loading:
  * - Uses Vite's `import.meta.glob` for automatic dependency tracking and HMR
- * - Processes both Markdown/MDX files (.md, .mdx) and TypeScript files (.tsx)
- * - Extracts frontmatter metadata automatically via remark plugins
+ * - Processes MDX files, extracting frontmatter metadata automatically via remark plugins
  * - Supports hot reload: changes to blog files trigger instant updates without page refresh
  *
  * @example
@@ -193,7 +166,7 @@ export async function loadBlogs(
     return [];
   }
 
-  // Process all files (MDX and TSX) - they're all React components now
+  // Process all MDX files
   const blogs: BlogPost[] = [];
 
   for (const [path, module] of Object.entries(registry.modules)) {

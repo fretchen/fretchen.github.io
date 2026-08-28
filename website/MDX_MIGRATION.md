@@ -54,12 +54,15 @@ funktioniert.
 
 Aufsteigend nach Schwierigkeit, nicht nach Größe.
 
-- [ ] **1.1 `budget_gridlock_interactive.tsx`** (669 Z., 262 Z. Prosa in Template-Strings, chart.js)
+- [x] **1.1 `budget_gridlock_interactive.tsx`** (669 Z., 262 Z. Prosa in Template-Strings, chart.js)
   Pilot. Höchster Prosa-Anteil, der bereits als Markdown vorliegt.
-- [ ] **1.2 `tragedy_of_commons_fishing.tsx`** (2025 Z., 140 Z. Markdown-Strings)
-- [ ] **1.3 `prisoners_dilemma_interactive.tsx`** (1606 Z., 190 Z. Strings + 18 `<p>` in JSX, chart.js)
-- [ ] **1.4 `merkle_ai_batching.tsx`** (381 Z., reine JSX-Prosa, 23 `<p>`, Mermaid)
-- [ ] **1.5 `merkle_ai_batching_fundamentals.tsx`** (1243 Z., reine JSX-Prosa, 21 `<p>`, Mermaid)
+- [x] **1.2 `tragedy_of_commons_fishing.tsx`** (2025 Z., 140 Z. Markdown-Strings)
+- [x] **1.3 `prisoners_dilemma_interactive.tsx`** (1606 Z., 190 Z. Strings + 18 `<p>` in JSX, chart.js)
+- [x] **1.4 `merkle_ai_batching.tsx`** (381 Z., reine JSX-Prosa, 23 `<p>`, Mermaid) —
+  Callout-Boxen und der eingefärbte Link wurden beim Umbau auf Blockquote/Liste/Standardlink
+  vereinfacht statt als neue `components/blog/`-Komponenten portiert (Analyse gegen
+  `IDENTITY.md`: keiner der 31 bestehenden MDX-Posts nutzt `<div>`/`className`).
+- [x] **1.5 `merkle_ai_batching_fundamentals.tsx`** (1243 Z., reine JSX-Prosa, 21 `<p>`, Mermaid)
 
 1.1–1.3 sind weitgehend mechanisch: die Prosa liegt dort schon als Markdown vor und wird
 heute nur **zur Laufzeit im Browser** von `react-markdown` geparst statt zur Buildzeit von
@@ -89,12 +92,20 @@ MDX. Das ist eine echte Dopplung der Pipeline.
 
 ### Aufräumen, wenn alle fünf durch sind
 
-- [ ] `utils/blogLoader.ts:27,51-62,66-71` — TSX-Zweig und zweite Fallback-Titel-Regel entfernen
-- [ ] `utils/globRegistry.ts` + `utils/lazyGlobRegistry.ts` — 10× `*.{tsx,mdx}` → `*.mdx`
-- [ ] `types/BlogPost.ts:12-21` — `BlogPostMeta` löschen
-- [ ] `types/BlogPost.ts` — `PostType` ist tot: `blogLoader.ts:77` setzt immer `"react"`, niemand liest es
-- [ ] `components/MarkdownWithLatex.tsx` löschen (danach ungenutzt; `react-markdown` bleibt als Dependency für `AssistantChat.tsx`)
-- [ ] Tests: `test/blogLoader.unit.test.ts:117,141`, `test/blogLoader.test.ts:128-133`, `test/blogLoader.integration.test.ts:29,50`, `test/blogLoader.nft.test.ts:29`
+- [x] `utils/blogLoader.ts` — TSX-Zweig und zweite Fallback-Titel-Regel entfernt
+- [x] `utils/globRegistry.ts` + `utils/lazyGlobRegistry.ts` — 10× `*.{tsx,mdx}` → `*.mdx`
+- [x] `types/BlogPost.ts` — `BlogPostMeta` gelöscht
+- [x] `types/BlogPost.ts` — `PostType` entfernt, dazu das tote `type`-Feld auf
+  `BlogPost`/`PostProps` und `type={blog.type}` in allen fünf `+Page.tsx` (blog + 4×
+  quantum) — beim Aufräumen zusätzlich gefunden, nicht Teil der ursprünglichen Liste
+- [x] `components/MarkdownWithLatex.tsx` gelöscht (`react-markdown` bleibt als Dependency
+  für `AssistantChat.tsx`)
+- [x] Tests: `blogLoader.unit.test.ts`, `blogLoader.test.ts`, `blogLoader.integration.test.ts`,
+  `blogLoader.nft.test.ts` — plus (breiterer Kreis als ursprünglich vermutet)
+  `Post.integration.test.tsx`, `Post.microformats.test.tsx`, `Post.chunkFailure.test.tsx`,
+  `EntryList.integration.test.tsx`, die alle noch `type: "react"`-Requisiten oder
+  `.tsx`-Filter enthielten
+- [x] Root `CLAUDE.md` → Abschnitt *Blog Posts*: `.tsx` als Format gestrichen
 
 ### Abnahme
 

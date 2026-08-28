@@ -1,0 +1,1 @@
+import{n as e}from"./chunk-B3c6Nd_W.js";var t=e({base:{margin:`32px 0`,padding:`6`,backgroundColor:`rgba(59, 130, 246, 0.05)`,borderRadius:`sm`,border:`1px solid rgba(59, 130, 246, 0.2)`}});export{t};

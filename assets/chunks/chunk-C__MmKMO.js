@@ -1,0 +1,1 @@
+var e=()=>{let e=0,t=0;for(;e===0;)e=Math.random();for(;t===0;)t=Math.random();return Math.sqrt(-2*Math.log(e))*Math.cos(2*Math.PI*t)},t=e=>{let t=e<0?-1:1;e=Math.abs(e)/Math.sqrt(2);let n=1/(1+.3275911*e);return .5*(1+t*(1-((((1.061405429*n+-1.453152027)*n+1.421413741)*n+-.284496736)*n+.254829592)*n*Math.exp(-e*e)))};export{t as n,e as t};

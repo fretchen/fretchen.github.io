@@ -1,1 +1,0 @@
-var e=[`en`,`de`];export{e as t};

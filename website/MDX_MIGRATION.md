@@ -126,38 +126,62 @@ Zusätzlich `npm test`, `npm run typecheck`, `npm run lint`.
 Komponente...` (siehe die Klage in `components/Post.tsx:136-140`), SEO, LCP, ToC ohne JS.
 **Betrifft alle 36 Seiten**, nicht nur die fünf aus Stufe 1.
 
-### 2.0 Spike zuerst — das ist die entscheidende offene Frage
+### 2.0 Spike — erledigt, Ergebnis: Ansatz B, kein `<template>`, `stream` bleibt unangetastet
 
-Der naheliegende Weg ist `React.lazy` + `<Suspense>` statt `useEffect`, zusammen mit
-`stream: { require: true, disable: true }` in `pages/+config.ts`. Streaming-SSR löst
-`lazy` auf, und `disable: true` fasst den Stream zu einem vollständigen HTML-String
-zusammen — genau das, was eine statische Datei braucht.
+Der ursprünglich hier notierte Weg (`React.lazy` + `<Suspense>` + `stream: { require: true,
+disable: true }`) wurde **nicht gebraucht**. Beim Lesen der installierten `vike-react`-Quelle
+zeigte sich ein dritter, einfacherer Mechanismus:
 
-**Das Risiko:** React liefert spät aufgelösten Suspense-Inhalt als `<template>` am
-Dokumentende plus ein Inline-Script, das ihn an die richtige Stelle schiebt. Der Text
-*steht* dann im HTML — aber an der falschen Position, bis JS läuft. Für Bridgy Fed und
-mf2-Parser, die rohes HTML lesen, wäre das kaum besser als heute. Und genau dieser
-Konsument war der Anlass für den ganzen Umbau.
+**Ansatz B — Modul vorab auflösen, dann synchron rendern.** `+onBeforeRenderHtml.ts`
+(Server) und `+onBeforeRenderClient.ts` (Client) werden von vike-react **awaited**, bevor
+`renderToString`/`renderToStream` bzw. `hydrateRoot` laufen. Dort wird das Post-Modul per
+`import()` aufgelöst und in einem modul-scope Cache (`utils/postModuleCache.ts`) abgelegt;
+`components/Post.tsx` liest den Cache dann **synchron** und rendert die Komponente direkt —
+kein `lazy`, kein `Suspense`, keine `<template>`-Möglichkeit, weil gar keine
+Suspense-Boundary im SSR-Baum existiert. Code-Splitting bleibt erhalten, weil der Import
+weiterhin über `utils/lazyGlobRegistry.ts` läuft.
 
-- [ ] **2.0** Einen Post prototypisch auf `lazy` + `Suspense` + `stream` umstellen, bauen, und
-  im erzeugten `index.html` prüfen: steht der Artikeltext **innerhalb** von
-  `<article class="h-entry">` in Dokumentreihenfolge — oder in einem `<template>` am Ende?
+Gemessen auf `spike/stufe-2.0` (Details und Rohdaten im dortigen Plan-Verlauf):
 
-**Wenn in Dokumentreihenfolge:** Stufe 2 ist ein eigenständiges Ziel, weitermachen mit 2.1.
-**Wenn im `<template>`:** Stufe 2 lässt sich mit dem `@id`-Catch-all nicht sauber lösen.
-Dann ist Stufe 3 nicht optional, sondern der Weg dorthin — siehe die Begründung dort.
+- **Q1 (die Weiche):** `/blog/3` (`ipfs.mdx`) — Ladetext weg, Artikeltext 477 → 4582 Zeichen,
+  **null** `<template>`-Tags. Text steht in Dokumentreihenfolge in `<article class="h-entry">`.
+- **Q3 (Widget-Posts):** `/blog/23` mit einem auf `clientOnly()` umgestellten Widget — Build
+  grün, Prosa im HTML, Widget-eigene UI-Strings **fehlen** im HTML (Server-Fallback greift),
+  Widget-Chunk bleibt klein (23 KB) und getrennt von den großen Vendor-Chunks.
+- **Q2 (Hydration/Splitting):** `npm test`/`typecheck`/`lint` grün, `[ChunkSizes]` unauffällig,
+  keine Server-Fehler im Dev-Log. **Offen:** ein Mensch muss noch in der Browser-Konsole auf
+  eine Hydration-Mismatch-Warnung prüfen — das konnte diese Session nicht headless verifizieren.
+
+**Ein echter Bug wurde dabei gefunden und behoben**, nicht im Framework, sondern im
+Spike-Code selbst: `React.useState(cachedComponent ?? null)` — eine Funktion direkt als
+Initialwert an `useState` übergeben, wird von React als Lazy-Initializer **aufgerufen**.
+Die Komponentenfunktion wurde dadurch durch ihr eigenes Render-Ergebnis ersetzt. Fix:
+`useState(() => cachedComponent ?? null)`.
+
+**Konsequenz:** Stufe 3 ist **nicht** der erzwungene Weg. Sie bleibt optional, wie ursprünglich
+vorgesehen. `stream` wird nie angefasst.
 
 ### 2.1 Widgets client-only machen
 
-Statt den ganzen Post nachzuladen, nur die DOM-abhängigen Teile:
+Statt den ganzen Post nachzuladen, nur die DOM-abhängigen Teile. In einer `.mdx`-Datei muss
+das ein `export const` sein — ein reines `const` ohne `export` lehnt der MDX-Compiler im
+Top-Level-ESM-Block ab (`only import/exports are supported`, geprüft mit `compileSync`):
 
-```tsx
+```mdx
 import { clientOnly } from "vike-react/clientOnly";
-const RiskReality = clientOnly(() => import("./RiskReality"));
+export const RiskReality = clientOnly(() => import("./RiskReality"));
 ```
 
 Kandidaten: alles in `components/blog/` mit `ChartJS.register(...)`,
 `components/MermaidDiagram.tsx`, alles mit Wallet-/Wagmi-Zugriff.
+
+**`clientOnly()` ist deprecated** (`assertWarning` in `vike-react/dist/helpers/clientOnly.js`,
+verweist auf `<ClientOnly>`) — funktioniert im Spike (2.0, Q3) aber nachweislich korrekt:
+Server liefert nur den Fallback, Widget bleibt aus dem HTML draußen, eigener kleiner Chunk
+bleibt erhalten. `<ClientOnly>` verlangt dagegen `children === undefined` auf dem Server
+(`dist/components/ClientOnly.js`) — ein strengerer Vertrag, der mit MDX-Kindern eventuell
+nicht trivial ist. Vor der echten 2.1-Umsetzung beide Varianten kurz gegenprüfen, dann auf
+die gewählte API festlegen.
 
 Anmerkung: `website/CLAUDE.md` verlangt „Client-only components need `{ ssr: false }`" —
 diese Regel beschreibt derzeit keine gelebte Praxis, es gibt kein einziges Vorkommen im Repo.

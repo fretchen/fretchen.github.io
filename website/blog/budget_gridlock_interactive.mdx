@@ -6,7 +6,12 @@ category: "others"
 description: "A simple model explains why budget negotiations might fail in democracies"
 ---
 
-import BudgetNegotiationWidget from "../components/blog/BudgetNegotiationWidget";
+{/* SPIKE (Stufe 2.0, website/MDX_MIGRATION.md) Q3: clientOnly() is deprecated in the
+    installed vike-react — used here anyway, deliberately, because it's the cheapest way to
+    test whether a widget-in-a-primed-post-module still renders correctly client-side-only.
+    Revert to a plain import if the spike is discarded. */}
+import { clientOnly } from "vike-react/clientOnly";
+export const BudgetNegotiationWidget = clientOnly(() => import("../components/blog/BudgetNegotiationWidget"));
 
 In the current political climate, one thing really sticks out. Even for the most basic jobs of the government, it seems really hard to compromise. From an outsider's view it seems completely irrational that in some situations politicians flat out refuse to cooperate. We saw several failed budget negotiations in the US, Germany or France in recent years. So, what's going on here?
 

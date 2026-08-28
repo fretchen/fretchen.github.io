@@ -8,6 +8,8 @@ import { post } from "./Post.styles";
 import { button } from "../styled-system/recipes";
 import { loadLazyModuleFromDirectory } from "../utils/lazyGlobRegistry";
 import { isSupportedDirectory, getSupportedDirectories } from "../utils/supportedDirectories";
+// SPIKE (Stufe 2.0, website/MDX_MIGRATION.md): see utils/postModuleCache.ts.
+import { getPostModule } from "../utils/postModuleCache";
 import { useKaTeXRenderer } from "../hooks/useKaTeXRenderer";
 // KaTeX's own stylesheet — it carries the Computer Modern @font-face rules and the math
 // layout. It lives here, not on the routes, because every prose route (blog and all four
@@ -34,11 +36,28 @@ const ReactPostRenderer: React.FC<{
   contentRef: React.RefObject<HTMLDivElement | null>;
   onReady?: () => void;
 }> = ({ componentPath, tokenID, contentRef, onReady }) => {
-  const [Component, setComponent] = React.useState<PostComponent | null>(null);
+  // SPIKE (Stufe 2.0): +onBeforeRenderHtml.ts / +onBeforeRenderClient.ts prime this cache
+  // before render, so on both server and client the module is often already resolved by
+  // the time this component mounts — no useEffect, no Suspense, no <template> risk.
+  // Read once at mount (ReactPostRenderer is remounted per componentPath via `key=` on the
+  // caller below), so this can't go stale across posts.
+  const [cachedComponent] = React.useState(() => getPostModule(componentPath));
+
+  // NOTE: must be a lazy initializer (`() => ...`), not `cachedComponent ?? null` directly —
+  // useState treats a bare function argument as an initializer and CALLS it, which for a
+  // component function silently replaces "the component" with "the component's own render
+  // output" as state. That was this spike's actual bug (Q1 diagnostic below).
+  const [Component, setComponent] = React.useState<PostComponent | null>(() => cachedComponent ?? null);
   const [error, setError] = React.useState<string | null>(null);
-  const [loading, setLoading] = React.useState<boolean>(true);
+  const [loading, setLoading] = React.useState<boolean>(!cachedComponent);
 
   React.useEffect(() => {
+    if (cachedComponent) {
+      // Already rendered synchronously above; still signal readiness for the ToC.
+      onReady?.();
+      return;
+    }
+
     let cancelled = false;
 
     const loadComponent = async () => {
@@ -82,7 +101,7 @@ const ReactPostRenderer: React.FC<{
     return () => {
       cancelled = true;
     };
-  }, [componentPath, onReady]);
+  }, [componentPath, onReady, cachedComponent]);
 
   // Use custom hook for KaTeX rendering
   useKaTeXRenderer(contentRef, !!Component);

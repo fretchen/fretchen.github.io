@@ -70,8 +70,8 @@ export default function GameSimulation() {
     const walterExploitingJesse = avgDifference < -3; // Walter gets 3+ years less than Jesse (better for Walter)
     const jesseExploitingWalter = avgDifference > 3; // Walter gets 3+ years more than Jesse (worse for Walter)
 
-    let verdict = "";
-    let level: SeverityLevel = "warning";
+    let verdict: string;
+    let level: SeverityLevel;
 
     if (walterExploitingJesse) {
       verdict = "Exploitative partnership - you're taking advantage of Jesse's cooperation.";

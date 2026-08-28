@@ -119,6 +119,75 @@ Zusätzlich `npm test`, `npm run typecheck`, `npm run lint`.
 
 ---
 
+## Stufe 1.6 — Schwere Widget-Dependencies entfernen ("Posts aufräumen")
+
+**Anlass:** Die Suche nach einem nicht-deprecateten Ersatz für `clientOnly()` (Stufe 2.1)
+zeigte, dass zwei der drei schweren Dependencies, die es gating-mäßig verstecken sollte,
+gar nicht nötig waren — nicht nur später ladbar, sondern komplett entfernbar. chart.js war
+reine Dekoration, die an anderer Stelle in genau diesem Repo bereits von Hand als SVG
+gebaut wird; der Merkle-Tree-Post ließ sich um ~85 % verkleinern, indem `viem` (ohnehin
+Dependency) statt des vollen `@openzeppelin/merkle-tree`-Pakets verwendet wird. Diese
+Arbeit ist orthogonal zum Render-Mechanismus aus Stufe 2 — sie rührt `Post.tsx`,
+`postModuleCache.ts` und die Render-Hooks nicht an, nur `components/blog/*.tsx` und
+`package.json`. Sie ist deshalb in einem eigenen Branch/PR gelandet, **vor** der
+Rückkehr zur `clientOnly`-Frage.
+
+### Teil A — Chart.js → handgebautes SVG (2 Posts, 3 Dateien, keine Textänderung)
+
+- `ExpectedUtilityPlot.tsx`, `GameSimulation.tsx` (`prisoners_dilemma_interactive`) und
+  die Line-Chart-Hälfte von `DiversificationRandomWalk.tsx` (`etf_diversification_interactive`)
+  nutzen jetzt `components/blog/SvgLineChart.tsx` — ein gemeinsames, handgebautes
+  SVG-Linienchart (Legende, Achsentitel/-ticks, optionale gestrichelte Marker-Linie) statt
+  `react-chartjs-2`.
+- `chart.js`, `react-chartjs-2`, `chartjs-plugin-annotation` aus `package.json` entfernt.
+- Bewusst weggelassen: Hover-Tooltips (gab es vorher per chart.js gratis; kein bestehendes
+  SVG-Widget im Repo hat das Muster, und die Kurvenform/Kreuzungspunkte tragen die
+  didaktische Aussage bereits über Labels/Marker-Linie).
+
+### Teil B — Merkle-Tree → minimaler Wrapper (1 Post, 2 Dateien, MIT Text-Hinweis)
+
+- `utils/minimalMerkleTree.ts` — eine minimale Neuimplementierung von
+  `StandardMerkleTree` (`.of()`, `.root`, `.getProof()`, `.leafHash()`, `.entries()`,
+  `.verify()`) auf Basis von `encodeAbiParameters`/`keccak256` aus `viem`. Repliziert
+  OpenZeppelins Algorithmus exakt (doppeltes Leaf-Hashing, sortiertes Pair-Hashing für
+  interne Knoten) — keine vereinfachte Variante.
+- `@openzeppelin/merkle-tree` ist jetzt **nur noch devDependency**, verwendet einzig in
+  `test/minimalMerkleTree.test.ts` als permanente Regressionsprüfung: beide Implementierungen
+  laufen über dieselben Fixture-Daten, `.root`/`.getProof()`/`.leafHash()`/`.verify()` müssen
+  exakt übereinstimmen (inkl. Edge Cases: ungerade Blattzahl, ein einzelnes Blatt).
+- `components/blog/BatchCreator.tsx` und `ProofDemo.tsx` importieren jetzt aus
+  `utils/minimalMerkleTree.ts` statt aus dem OpenZeppelin-Paket.
+- `blog/merkle_ai_batching_fundamentals.mdx` hat einen neuen Abschnitt *"A note on the demos
+  above"* (vor dem Schlussabschnitt), der offenlegt, dass die Demos eine minimale, gegen das
+  Original getestete Neuimplementierung nutzen statt der vollen Bibliothek.
+
+### Ergebnis für die `clientOnly`-Frage
+
+Nach Teil A und B wurden die Gzip-Größen der drei betroffenen Post-eigenen Chunks frisch
+gemessen (`rm -rf build && npm run build`, dann `gzip -c <chunk> | wc -c`):
+
+| Post | Chunk-Größe (gzip) |
+| --- | --- |
+| `etf_diversification_interactive` | ~11.3 KB |
+| `prisoners_dilemma_interactive` | ~12.6 KB |
+| `merkle_ai_batching_fundamentals` | ~9.2 KB |
+
+Das liegt in derselben Größenordnung wie andere, nie gegatete Widgets im Repo — und weit
+unter dem, was die vorherigen schweren Dependencies gebraucht hätten. **Ergebnis: `clientOnly`
+wird für keinen der drei Posts mehr gebraucht.** Es verschwindet nicht, weil es ersetzt wurde,
+sondern weil nichts mehr ein Gating braucht. Die `clientOnly`/`useHydrated`-Frage aus Stufe 2.1
+bleibt damit vollständig offen für den (heute vermutlich leeren) Rest-Scope.
+
+### Abnahme
+
+`npm test`, `npm run typecheck`, `npm run lint`, `npm run build` (Chart.js/react-chartjs-2/
+chartjs-plugin-annotation und `@openzeppelin/merkle-tree` dürfen in keinem Build-Chunk mehr
+auftauchen — per `grep -rl` geprüft), visueller Check beider Posts (Slider/Buttons steuern
+die Charts weiterhin korrekt, Legenden/Achsentitel vorhanden, Proof-Demo generiert/validiert
+weiterhin).
+
+---
+
 ## Stufe 2 — Inhalt ins HTML bringen
 
 **Ziel:** Der Artikeltext steht in der Datei, nicht im JavaScript.

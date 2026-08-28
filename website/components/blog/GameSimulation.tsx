@@ -1,21 +1,9 @@
 import React, { useState } from "react";
-import { Line } from "react-chartjs-2";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-} from "chart.js";
 import { css, cx } from "../../styled-system/css";
 import { playRepeatedGame, type Strategy } from "./prisonersDilemmaModel";
 import { severityBox, severityText, type SeverityLevel } from "./severityStyle";
 import { widgetCard } from "./widgetCard";
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+import { SvgLineChart } from "./SvgLineChart";
 
 export default function GameSimulation() {
   const [walterStrategy, setWalterStrategy] = useState<Strategy>("tit-for-tat");
@@ -300,63 +288,14 @@ export default function GameSimulation() {
               📈 Cumulative Prison Sentences Over Time
             </h6>
             <div style={{ position: "relative", height: "200px", width: "100%" }}>
-              <Line
-                data={{
-                  labels: Array.from({ length: numGames }, (_, i) => `Episode ${i + 1}`),
-                  datasets: [
-                    {
-                      label: "Walter (You)",
-                      data: gameData.totalPayoffs1,
-                      borderColor: "#2563eb",
-                      backgroundColor: "rgba(37, 99, 235, 0.1)",
-                      borderWidth: 2,
-                      fill: false,
-                    },
-                    {
-                      label: "Jesse",
-                      data: gameData.totalPayoffs2,
-                      borderColor: "#7c3aed",
-                      backgroundColor: "rgba(124, 58, 237, 0.1)",
-                      borderWidth: 2,
-                      fill: false,
-                    },
-                  ],
-                }}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: {
-                      display: true,
-                      position: "top" as const,
-                      labels: {
-                        boxWidth: 12,
-                        font: { size: 11 },
-                      },
-                    },
-                  },
-                  scales: {
-                    x: {
-                      display: false, // Hide x-axis labels for cleaner look
-                    },
-                    y: {
-                      beginAtZero: true,
-                      title: {
-                        display: true,
-                        text: "Total Prison Years",
-                        font: { size: 10 },
-                      },
-                      ticks: {
-                        font: { size: 10 },
-                      },
-                    },
-                  },
-                  elements: {
-                    point: {
-                      radius: 0, // Hide individual points for cleaner lines
-                    },
-                  },
-                }}
+              <SvgLineChart
+                height={200}
+                series={[
+                  { label: "Walter (You)", values: gameData.totalPayoffs1, color: "#2563eb" },
+                  { label: "Jesse", values: gameData.totalPayoffs2, color: "#7c3aed" },
+                ]}
+                yAxisTitle="Total Prison Years"
+                yMin={0}
               />
             </div>
             <p className={css({ fontSize: "xs", color: "gray.500", textAlign: "center", marginTop: "2" })}>

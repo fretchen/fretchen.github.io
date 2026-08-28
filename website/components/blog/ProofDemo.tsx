@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { css } from "../../styled-system/css";
-import { StandardMerkleTree } from "@openzeppelin/merkle-tree";
+import { StandardMerkleTree } from "../../utils/minimalMerkleTree";
 
 // Sample data for demonstrations
 const sampleBatch = {

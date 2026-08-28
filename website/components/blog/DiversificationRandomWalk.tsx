@@ -1,21 +1,9 @@
-import React, { useState, useRef, useCallback, useEffect } from "react";
-import { Line } from "react-chartjs-2";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-} from "chart.js";
+import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { css } from "../../styled-system/css";
 import { DATA } from "./etfData";
 import { ESSAY_ACCENT } from "./palette";
 import { gaussianRandom } from "./mathUtils";
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+import { SvgLineChart, pickEvenTicks, type XTick } from "./SvgLineChart";
 
 const TRADING_DAYS_PER_YEAR = 252;
 const STEPS = 504; // 2 trading years — more points for smoother histogram
@@ -262,73 +250,14 @@ export default function DiversificationRandomWalk() {
   const mixReturns = paths ? paths.bondReturns.map((br, i) => (1 - w) * br + w * paths.stockReturns[i]) : [];
   const mixPath = paths ? cumulativePath(mixReturns, stepsToShow) : [];
 
-  const chartData = {
-    labels,
-    datasets: [
-      {
-        label: "Bonds only",
-        data: bondPath,
-        borderColor: DATA.clusters[0].color,
-        backgroundColor: "transparent",
-        borderWidth: 2,
-        pointRadius: 0,
-        pointStyle: "line" as const,
-        tension: 0.1,
-      },
-      {
-        label: "Stocks only",
-        data: stockPath,
-        borderColor: DATA.clusters[1].color,
-        backgroundColor: "transparent",
-        borderWidth: 2,
-        pointRadius: 0,
-        pointStyle: "line" as const,
-        tension: 0.1,
-      },
-      {
-        label: `Mix (${100 - stockPct}/${stockPct})`,
-        data: mixPath,
-        borderColor: ESSAY_ACCENT,
-        backgroundColor: "transparent",
-        borderWidth: 3,
-        pointRadius: 0,
-        pointStyle: "line" as const,
-        tension: 0.1,
-      },
-    ],
-  };
-
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: { duration: 0 },
-    plugins: {
-      legend: { position: "top" as const, labels: { font: { size: 12 }, usePointStyle: true, pointStyleWidth: 20 } },
-      title: { display: false },
-    },
-    scales: {
-      x: {
-        title: { display: true, text: "Months", font: { size: 11 } },
-        ticks: {
-          maxTicksLimit: 13,
-          font: { size: 10 },
-          callback: function (_: unknown, index: number) {
-            return labels[index] || null;
-          },
-        },
-      },
-      y: {
-        title: {
-          display: true,
-          text: "Portfolio value (€)",
-          font: { size: 11 },
-        },
-        ticks: { font: { size: 10 } },
-        suggestedMin: 70,
-        suggestedMax: 130,
-      },
-    },
-  };
+  const xTicks: XTick[] = useMemo(
+    () =>
+      pickEvenTicks(
+        labels.map((label, index) => ({ index, label })).filter((t) => t.label !== ""),
+        13,
+      ),
+    [labels],
+  );
 
   // Measured volatilities (only meaningful when animation finished)
   const showVol = stepsToShow >= STEPS && paths;
@@ -435,7 +364,19 @@ export default function DiversificationRandomWalk() {
       <div className={css({ display: "flex", gap: "1", marginBottom: "4" })}>
         {/* Line chart */}
         <div className={css({ flex: "1 1 0%", height: "300px", minWidth: 0 })}>
-          <Line data={chartData} options={chartOptions} />
+          <SvgLineChart
+            height={300}
+            series={[
+              { label: "Bonds only", values: bondPath, color: DATA.clusters[0].color },
+              { label: "Stocks only", values: stockPath, color: DATA.clusters[1].color },
+              { label: `Mix (${100 - stockPct}/${stockPct})`, values: mixPath, color: ESSAY_ACCENT, width: 3 },
+            ]}
+            xTicks={xTicks}
+            xAxisTitle="Months"
+            yAxisTitle="Portfolio value (€)"
+            yMin={70}
+            yMax={130}
+          />
         </div>
 
         {/* Rotated histogram on the right */}

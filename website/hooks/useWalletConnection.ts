@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { useAccount, useConnect } from "wagmi";
 import { useIsMounted } from "./useIsMounted";
+import { useIsWalletConnected } from "./useIsWalletConnected";
 import { useUmami } from "./useUmami";
 import { pickWalletConnector } from "../utils/walletConnector";
 import { WalletEvents } from "../utils/analytics";
@@ -13,16 +14,18 @@ import { WalletEvents } from "../utils/analytics";
  * user pick a specific connector from a list, so it keeps raw useConnect.)
  */
 export function useWalletConnection() {
-  const { address, status } = useAccount();
+  const { address } = useAccount();
   const { connectors, connect } = useConnect();
   const hasMounted = useIsMounted();
   const { trackEvent } = useUmami();
 
-  // status === "connected" (not just isConnected) waits for wagmi's reconnect to finish
-  // before callers trust `address` (owner checks / signing). hasMounted avoids SSR/client
-  // hydration mismatch — SSR always renders disconnected. `status` itself is intentionally
-  // not returned below — only this derived, safe flag is, so callers can't bypass it.
-  const isConnected = hasMounted && status === "connected";
+  // useIsWalletConnected waits for wagmi's post-hydration reconnect before trusting
+  // `address` (owner checks / signing), avoiding both a hydration mismatch and a
+  // flash of stale "disconnected" state — see its own doc comment. `hasMounted` is
+  // returned separately below for callers that need an SSR/hydration gate without
+  // waiting on the wallet reconnect itself (e.g. a page shell that renders the same
+  // way whether or not a wallet ends up connected).
+  const isConnected = useIsWalletConnected();
 
   const connectWallet = useCallback(
     (source: string, metadata?: Record<string, string | number | boolean>) => {

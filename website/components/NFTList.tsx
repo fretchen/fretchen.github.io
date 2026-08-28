@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useAccount } from "wagmi";
+import { useIsWalletConnected } from "../hooks/useIsWalletConnected";
 import { useMultiChainUserNFTs } from "../hooks/useMultiChainNFTs";
 import { NFTListProps } from "../types/components";
 import * as styles from "../layouts/shared";
@@ -15,7 +15,7 @@ export function NFTList({
   activeTab: controlledActiveTab,
   onTabChange,
 }: NFTListProps = {}) {
-  const { isConnected } = useAccount();
+  const isConnected = useIsWalletConnected();
 
   // Use controlled tab state if provided, otherwise use local state
   const [localActiveTab, setLocalActiveTab] = useState<"my" | "public">(() => {

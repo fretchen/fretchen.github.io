@@ -13,9 +13,10 @@
  */
 
 import { useState, useCallback, useEffect } from "react";
-import { useWalletClient, useAccount } from "wagmi";
+import { useWalletClient } from "wagmi";
 import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
 import { getConfiguredPublicClient } from "./useConfiguredPublicClient";
+import { useIsWalletConnected } from "./useIsWalletConnected";
 import { probeAccepts, negotiateNetwork, LLM_V1_FLOOR } from "./x402Discovery";
 import type { X402ChatMessage, X402ChatResponse, X402PaymentReceipt, X402GenerationStatus } from "../types/x402";
 // Type-only import — erased at compile time, so no @x402 runtime is pulled into SSR.
@@ -161,7 +162,7 @@ export interface UseX402ChatResult {
  */
 export function useX402Chat(network: string, agentUrl: string = DEFAULT_LLM_AGENT_URL): UseX402ChatResult {
   const { data: walletClient } = useWalletClient();
-  const { isConnected } = useAccount();
+  const isConnected = useIsWalletConnected();
 
   const [status, setStatus] = useState<X402GenerationStatus>("idle");
   const [error, setError] = useState<string | null>(null);

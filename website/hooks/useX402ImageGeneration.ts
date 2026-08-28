@@ -6,7 +6,8 @@
  */
 
 import { useState, useCallback } from "react";
-import { useWalletClient, useAccount } from "wagmi";
+import { useWalletClient } from "wagmi";
+import { useIsWalletConnected } from "./useIsWalletConnected";
 import type { X402GenImgRequest, X402GenImgResponse, X402PaymentReceipt, X402GenerationStatus } from "../types/x402";
 
 // API URL from environment (fallback to env var if not set)
@@ -26,7 +27,7 @@ export interface UseX402ImageGenerationResult {
 
 export function useX402ImageGeneration(): UseX402ImageGenerationResult {
   const { data: walletClient } = useWalletClient();
-  const { isConnected } = useAccount();
+  const isConnected = useIsWalletConnected();
 
   const [status, setStatus] = useState<X402GenerationStatus>("idle");
   const [error, setError] = useState<string | null>(null);

@@ -51,6 +51,7 @@ describe("useMultiChainUserNFTs", () => {
     mockUseAccount.mockReturnValue({
       address: "0x1234567890123456789012345678901234567890",
       isConnected: true,
+      status: "connected",
     });
   });
 
@@ -62,6 +63,7 @@ describe("useMultiChainUserNFTs", () => {
     mockUseAccount.mockReturnValue({
       address: undefined,
       isConnected: false,
+      status: "disconnected",
     });
 
     const { result } = renderHookWithQuery(() => useMultiChainUserNFTs());

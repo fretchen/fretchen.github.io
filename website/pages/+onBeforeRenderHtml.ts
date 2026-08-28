@@ -6,9 +6,10 @@
 export { onBeforeRenderHtml };
 
 import type { PageContextServer } from "vike/types";
-import { primePostModule } from "../utils/postModuleCache";
+import { getBlogComponentPath, primePostModule } from "../utils/postModuleCache";
 
 async function onBeforeRenderHtml(pageContext: PageContextServer) {
-  const componentPath = (pageContext.data as { blog?: { componentPath?: string } } | undefined)?.blog?.componentPath;
-  await primePostModule(componentPath);
+  // No try/catch: a module that fails to resolve during prerender is a build
+  // bug and must fail the build loudly — see primePostModule's doc comment.
+  await primePostModule(getBlogComponentPath(pageContext));
 }

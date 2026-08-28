@@ -25,7 +25,11 @@ export default defineConfig({
         remarkMath, // Protects $$...$$ from Markdown transformations
       ],
       rehypePlugins: [
-        [rehypeKatex, { trust: true, strict: false, throwOnError: false }],
+        // throwOnError: true — fail the build on malformed LaTeX inside a recognized
+        // math node, instead of shipping an inline KaTeX error span to readers. (See
+        // test/mdxMathDelimiters.test.ts for the separate, harder case of math that
+        // remark-math never recognizes as a math node at all.)
+        [rehypeKatex, { trust: true, strict: false, throwOnError: true }],
         // Rewrites bare `<img src="./x.png">` (from notebook-style `![alt](./x.png)` markdown)
         // into an import, so Vite's asset pipeline hashes/copies the file instead of leaving a
         // relative string that 404s once the page is served from a different URL.

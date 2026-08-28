@@ -1,20 +1,7 @@
 import React, { useMemo, useState } from "react";
-import { Line } from "react-chartjs-2";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-} from "chart.js";
-import annotationPlugin from "chartjs-plugin-annotation";
 import { css } from "../../styled-system/css";
 import { widgetCard } from "./widgetCard";
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, annotationPlugin);
+import { SvgLineChart, pickEvenTicks } from "./SvgLineChart";
 
 export default function ExpectedUtilityPlot() {
   const [probabilityDefect, setProbabilityDefect] = useState(0.5);
@@ -36,84 +23,13 @@ export default function ExpectedUtilityPlot() {
   const cooperateValues = useMemo(() => probabilities.map((p) => R * (1 - p) + S * p), [probabilities, S]);
   const defectValues = useMemo(() => probabilities.map((p) => T * (1 - p) + P * p), [probabilities, P]);
 
-  const data = useMemo(
-    () => ({
-      labels: probabilities.map((p) => (p * 100).toFixed(0) + "%"),
-      datasets: [
-        {
-          label: "Cooperate with Jesse",
-          data: cooperateValues,
-          borderColor: "rgb(59, 130, 246)",
-          backgroundColor: "rgba(59, 130, 246, 0.1)",
-          tension: 0.1,
-        },
-        {
-          label: "Defect against Jesse",
-          data: defectValues,
-          borderColor: "rgb(239, 68, 68)",
-          backgroundColor: "rgba(239, 68, 68, 0.1)",
-          tension: 0.1,
-        },
-      ],
-    }),
-    [probabilities, cooperateValues, defectValues],
-  );
-
-  const options = useMemo(
-    () => ({
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: "top" as const,
-          labels: {
-            font: { size: 12 },
-          },
-        },
-        title: {
-          display: false,
-        },
-        annotation: {
-          annotations: {
-            line1: {
-              type: "line" as const,
-              xMin: probabilityDefect * 100,
-              xMax: probabilityDefect * 100,
-              borderColor: "rgba(0, 0, 0, 0.5)",
-              borderWidth: 2,
-              borderDash: [5, 5],
-              label: {
-                display: false,
-              },
-            },
-          },
-        },
-      },
-      scales: {
-        x: {
-          title: {
-            display: true,
-            text: "How likely Jesse is to defect (%)",
-            font: { size: 11 },
-          },
-          ticks: {
-            maxTicksLimit: 6,
-            font: { size: 10 },
-          },
-        },
-        y: {
-          title: {
-            display: true,
-            text: "Walter's expected prison sentence (years)",
-            font: { size: 11 },
-          },
-          ticks: {
-            font: { size: 10 },
-          },
-        },
-      },
-    }),
-    [probabilityDefect],
+  const xTicks = useMemo(
+    () =>
+      pickEvenTicks(
+        probabilities.map((p, index) => ({ index, label: (p * 100).toFixed(0) + "%" })),
+        6,
+      ),
+    [probabilities],
   );
 
   return (
@@ -223,7 +139,17 @@ export default function ExpectedUtilityPlot() {
           marginBottom: "4",
         })}
       >
-        <Line data={data} options={options} />
+        <SvgLineChart
+          height={250}
+          series={[
+            { label: "Cooperate with Jesse", values: cooperateValues, color: "rgb(59, 130, 246)" },
+            { label: "Defect against Jesse", values: defectValues, color: "rgb(239, 68, 68)" },
+          ]}
+          xTicks={xTicks}
+          xAxisTitle="How likely Jesse is to defect (%)"
+          yAxisTitle="Walter's expected prison sentence (years)"
+          markerXFraction={probabilityDefect}
+        />
       </div>
 
       {/* Decision Recommendation Section */}

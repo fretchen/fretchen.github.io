@@ -1,6 +1,6 @@
 /**
  * Central registry for all content directory glob patterns.
- * This provides a single source of truth for eagerly loading MDX/TSX components
+ * This provides a single source of truth for eagerly loading MDX components
  * across the application (used in blogLoader.ts for server-side metadata extraction).
  *
  * Why is this necessary?
@@ -20,20 +20,20 @@ export type { SupportedDirectory };
 
 export const GLOB_REGISTRY = {
   blog: {
-    modules: import.meta.glob<{ default: React.ComponentType }>(["../blog/*.{tsx,mdx}", "!../blog/*.plan.md"], {
+    modules: import.meta.glob<{ default: React.ComponentType }>(["../blog/*.mdx", "!../blog/*.plan.md"], {
       eager: true,
     }),
   },
   "quantum/amo": {
-    modules: import.meta.glob<{ default: React.ComponentType }>("../quantum/amo/*.{tsx,mdx}", { eager: true }),
+    modules: import.meta.glob<{ default: React.ComponentType }>("../quantum/amo/*.mdx", { eager: true }),
   },
   "quantum/basics": {
-    modules: import.meta.glob<{ default: React.ComponentType }>("../quantum/basics/*.{tsx,mdx}", { eager: true }),
+    modules: import.meta.glob<{ default: React.ComponentType }>("../quantum/basics/*.mdx", { eager: true }),
   },
   "quantum/hardware": {
-    modules: import.meta.glob<{ default: React.ComponentType }>("../quantum/hardware/*.{tsx,mdx}", { eager: true }),
+    modules: import.meta.glob<{ default: React.ComponentType }>("../quantum/hardware/*.mdx", { eager: true }),
   },
   "quantum/qml": {
-    modules: import.meta.glob<{ default: React.ComponentType }>("../quantum/qml/*.{tsx,mdx}", { eager: true }),
+    modules: import.meta.glob<{ default: React.ComponentType }>("../quantum/qml/*.mdx", { eager: true }),
   },
 } as const satisfies Record<SupportedDirectory, { modules: Record<string, unknown> }>;

@@ -1,0 +1,141 @@
+---
+title: "Merkle Trees for LLM Batching - The fundamentals"
+publishing_date: "2025-07-29"
+tokenID: 38
+category: "blockchain"
+secondaryCategory: "ai"
+description: "I explore the fundamentals of Merkle trees for efficient LLM batching. Learn cryptographic proofs, batch verification, and AI service settlement optimization."
+---
+
+import MermaidDiagram from "../components/MermaidDiagram";
+import BatchCreator from "../components/blog/BatchCreator";
+import ProofDemo from "../components/blog/ProofDemo";
+
+export const merkleTreeMathDiagram = `graph TD
+    R1["R₁<br/>(Request 1)"] --> H1["H₁ = hash(R₁)"]
+    R2["R₂<br/>(Request 2)"] --> H2["H₂ = hash(R₂)"]
+    R3["R₃<br/>(Request 3)"] --> H3["H₃ = hash(R₃)"]
+    R4["R₄<br/>(Request 4)"] --> H4["H₄ = hash(R₄)"]
+
+    H1 --> H12["H₁₂ = hash(H₁ + H₂)"]
+    H2 --> H12
+    H3 --> H34["H₃₄ = hash(H₃ + H₄)"]
+    H4 --> H34
+
+    H12 --> ROOT["ROOT<br/>hash(H₁₂ + H₃₄)"]
+    H34 --> ROOT
+
+    classDef requestNode fill:#f8fafc,stroke:#64748b,stroke-width:1px
+    classDef hashNode fill:#f1f5f9,stroke:#475569,stroke-width:1px
+    classDef rootNode fill:#f7f7f7,stroke:#374151,stroke-width:2px
+
+    class R1,R2,R3,R4 requestNode
+    class H1,H2,H3,H4,H12,H34 hashNode
+    class ROOT rootNode`;
+
+export const merkleProofPathDiagram = `graph TD
+    R1["R₁<br/>(Request 1)"] --> H1["H₁ = hash(R₁)"]
+    R2["R₂<br/>(Request 2)"] --> H2["H₂ = hash(R₂)"]
+    R3["R₃<br/>(Request 3)"] --> H3["H₃ = hash(R₃)"]
+    R4["R₄<br/>(Request 4)"] --> H4["H₄ = hash(R₄)"]
+
+    H1 --> H12["H₁₂ = hash(H₁ + H₂)"]
+    H2 --> H12
+    H3 --> H34["H₃₄ = hash(H₃ + H₄)"]
+    H4 --> H34
+
+    H12 --> ROOT["ROOT<br/>hash(H₁₂ + H₃₄)"]
+    H34 --> ROOT
+
+    classDef requestNode fill:#f8fafc,stroke:#64748b,stroke-width:1px
+    classDef hashNode fill:#f1f5f9,stroke:#475569,stroke-width:1px
+    classDef rootNode fill:#f7f7f7,stroke:#374151,stroke-width:2px
+    classDef proofPath fill:#fef3c7,stroke:#f59e0b,stroke-width:3px
+    classDef proofNode fill:#ecfdf5,stroke:#10b981,stroke-width:2px
+
+    class R1,R2,R4 requestNode
+    class H1,H2 hashNode
+    class ROOT rootNode
+    class R3 proofPath
+    class H3,H34 proofPath
+    class H4,H12 proofNode`;
+
+**Update on 2025-08-26: I substantially overhauled this blog post to improve clarity and focus on the Merkle tree topic.**
+
+The integration of Large Language Models (LLMs) into my website is an exciting possibility. But one problem remains: How can I reduce the blockchain transaction costs when users need multiple LLM API calls in an application? In this blog post, I will explore how it might become possible with Merkle trees.
+
+## From My Image Generator to LLM Batching
+
+I&apos;ve already built an AI image generator that works on the blockchain - you can try it on my [image generation page](/imagegen). Users pay with their wallet, and my [GenImNFT contract](https://optimistic.etherscan.io/address/0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb#code) handles the payment and delivery automatically. It works great for single images.
+
+But when I started thinking about LLM text generation, I run into trouble. If someone wants to analyze 10 documents or generate multiple pieces of content, they&apos;d need 10 separate blockchain transactions. These are substantial gas fees, plus the hassle of confirming each transaction in their wallet.
+
+An interesting solution lies in a mathematical concept called **Merkle trees** - think of it like a business expense report system. When you travel for business, you don&apos;t submit a separate expense report for every coffee or taxi ride. Instead, you collect all your receipts and submit them together in one report. The accounting department can still verify each individual expense, but you only go through the submission process once.
+
+Merkle trees work similarly on the blockchain: you can bundle multiple LLM requests together and submit them as one transaction, while still maintaining cryptographic proof that each individual request is valid and accounted for.
+
+To see this in action, try the interactive demo below. Send a few LLM requests and watch how each one would normally require its own blockchain transaction. Once you reach 4 requests, you&apos;ll see how the Merkle tree automatically bundles everything into a single transaction:
+
+<BatchCreator />
+
+## How Merkle Trees Make This Magic Possible
+
+In our expense report analogy, the accounting department needs to verify individual receipts. But how do they do this efficiently? Here&apos;s where Merkle Trees provide the mathematical solution.
+
+The mapping is straightforward:
+
+- individual receipts become Merkle leaves (each LLM request gets its own cryptographic fingerprint)
+- summary pages become internal nodes (groups of receipts get combined into summary fingerprints)
+- the master receipt becomes the Merkle root (one final fingerprint represents the entire batch)
+- proof of purchase becomes a Merkle proof (you can prove any receipt belongs without showing others)
+
+But what exactly is a &quot;cryptographic fingerprint&quot;? When we say each LLM request gets processed through a hash function, we mean it goes through a special mathematical algorithm called [Keccak256](https://en.wikipedia.org/wiki/SHA-3) (the same one Ethereum uses). For example, if you input `{id: 1, timestamp: "2024-01-15T10:30:00Z", tokens: 150, wallet: "0xUser1..."}`, you get output like `0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b`.
+
+This process has four key properties that make it perfect for our use case:
+
+- it&apos;s deterministic (same input always produces the same hash)
+- collision resistant (nearly impossible for two different inputs to produce the same hash)
+- fixed length (always 64 characters regardless of input size)
+- irreversible (you cannot recreate the original data from the hash alone)
+
+### Building up the Merkle Tree
+
+A Merkle tree is then built up step by step. Let&apos;s say we have 4 LLM requests from our batching example. We now build the tree in three steps:
+
+1. First, each request gets its own hash (H₁, H₂, H₃, H₄).
+2. Then we pair them up - combine H₁+H₂ into H₁₂, and H₃+H₄ into H₃₄.
+3. Finally, we create the root by combining H₁₂+H₃₄ into the final ROOT hash. This ROOT hash is like the master receipt number that represents all 4 requests.
+
+Here&apos;s what this tree-building process looks like visually:
+
+<MermaidDiagram definition={merkleTreeMathDiagram} title="Merkle Tree Mathematical Foundation" />
+
+As you can see in the diagram above, the ROOT hash represents all 4 requests in a single value. This means instead of needing 4 separate blockchain transactions (one for each request), we need just 1 transaction to register the entire batch. The ROOT hash enables us to register thousands of LLM requests with just one blockchain transaction while maintaining cryptographic proof of each individual request.
+
+## Proving Individual Transactions with Merkle Proofs
+
+Now that we&apos;ve seen how to batch LLM requests into a Merkle tree, there is actually another cool feature possible. The user can verify the validity of the tree with fairly reduced information.
+
+A Merkle proof is a cryptographic proof that allows the user, we name her Alice, to demonstrate that her transaction is included in the Merkle tree without revealing any other transactions. To prove that Alice&apos;s transaction R<sub>3</sub> is in the tree, she provides a &quot;proof path&quot; - the minimum set of hash values needed to reconstruct the path from her leaf to the root:
+
+<figure>
+  <MermaidDiagram definition={merkleProofPathDiagram} title="🔍 Merkle Proof Path for Request 3 (R₃)" />
+  <figcaption>
+    Visualization of the Merkle proof for R<sub>3</sub>: Alice needs to provide the request and proof siblings
+    that are highlighted in green. The hashes that are highlighted in orange can be calculated from the
+    information. Finally, she can verify if the calculated root is the same as the root she was provided. If
+    they are the same, her request is stored in the merkle tree.
+  </figcaption>
+</figure>
+
+This elegant mathematical verification proves Alice&apos;s transaction is authentic without revealing any other transaction details. In the little demonstrator below, you can test in a simple example how the proof can be generated and validated.
+
+<ProofDemo />
+
+## From Problem to Solution
+
+This brings us to the end of this blog post. We started this journey with a significant cost problem: someone wanting to send 10 LLM requests would face significant gas fees alone, plus the hassle of confirming 10 separate transactions in their wallet. For any practical LLM application on the blockchain, this creates an immediate barrier to adoption.
+
+We saw how Merkle trees provide an elegant mathematical solution that transforms this experience entirely. Those same 10 LLM requests can now be bundled into a single blockchain transaction, reducing gas costs by 90% and eliminating the multi-transaction friction. Users get immediate LLM responses while cryptographic proofs ensure every request is verifiable and secure.
+
+This isn&apos;t just theory - it&apos;s the foundation for my new LLM assistant. In the next post, I&apos;ll show you how I built such a system with smart contracts, batching services, and the corresponding frontend integration. Stay tuned!

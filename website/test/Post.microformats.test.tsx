@@ -40,7 +40,6 @@ global.fetch = vi.fn();
 const postProps = {
   title: "Hello World",
   content: "",
-  type: "react" as const,
   componentPath: "../blog/hello_world.mdx",
   publishing_date: "2024-12-02",
 };

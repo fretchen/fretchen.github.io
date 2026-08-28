@@ -61,7 +61,6 @@ describe("Post Component Integration Tests", () => {
       const postProps = {
         title: "Hello World",
         content: "",
-        type: "react" as const,
         componentPath: "../blog/hello_world.mdx",
         publishing_date: "2024-12-02",
         tokenID: 2,
@@ -84,7 +83,6 @@ describe("Post Component Integration Tests", () => {
       const postProps = {
         title: "Moving old lectures",
         content: "",
-        type: "react" as const,
         componentPath: "../blog/moving_lectures.mdx",
         publishing_date: "2025-01-06",
       };
@@ -104,7 +102,6 @@ describe("Post Component Integration Tests", () => {
       const postProps = {
         title: "A gallery of AI images",
         content: "",
-        type: "react" as const,
         componentPath: "../blog/nft_gallery.mdx",
         publishing_date: "2025-06-03",
         tokenID: 24,
@@ -119,31 +116,12 @@ describe("Post Component Integration Tests", () => {
     });
   });
 
-  describe("TypeScript Blog Rendering", () => {
-    it("should render TypeScript interactive blog title", () => {
-      // Arrange: Use a TypeScript blog component
-      const postProps = {
-        title: "Merkle Ai Batching",
-        content: "",
-        type: "react" as const,
-        componentPath: "../blog/merkle_ai_batching.tsx",
-      };
-
-      // Act
-      renderWithQuery(<Post {...postProps} />);
-
-      // Assert: Title
-      expect(screen.getByText("Merkle Ai Batching")).toBeInTheDocument();
-    });
-  });
-
   describe("Navigation Links", () => {
     it("should render previous and next post links", () => {
       // Arrange
       const postProps = {
         title: "Current Post",
         content: "",
-        type: "react" as const,
         componentPath: "../blog/test.mdx",
         prevPost: { title: "Previous Post", id: 0 },
         nextPost: { title: "Next Post", id: 2 },
@@ -164,7 +142,6 @@ describe("Post Component Integration Tests", () => {
       const postProps = {
         title: "Standalone Post",
         content: "",
-        type: "react" as const,
         componentPath: "../blog/test.mdx",
       };
 
@@ -184,7 +161,6 @@ describe("Post Component Integration Tests", () => {
       const postProps = {
         title: "Test Post",
         content: "",
-        type: "react" as const,
         componentPath: "../blog/test.mdx",
         publishing_date: "2024-01-01",
       };
@@ -206,7 +182,6 @@ describe("Post Component Integration Tests", () => {
       const postProps = {
         title: "Test Post",
         content: "",
-        type: "react" as const,
         componentPath: "../blog/test.mdx",
         publishing_date: "2024-01-01",
       };
@@ -238,7 +213,6 @@ describe("Post Component Integration Tests", () => {
       const postProps = {
         title: "Test Post",
         content: "",
-        type: "react" as const,
         componentPath: "../blog/test.mdx",
         publishing_date: "2024-01-01",
       };

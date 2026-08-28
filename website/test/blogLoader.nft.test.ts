@@ -26,8 +26,8 @@ vi.mock("../utils/globRegistry", () => ({
             publishing_date: "2025-01-10",
           },
         },
-        "../blog/interactive.tsx": {
-          meta: {
+        "../blog/interactive.mdx": {
+          frontmatter: {
             title: "Interactive Post",
             publishing_date: "2025-01-20",
             tokenID: 42,
@@ -109,10 +109,10 @@ describe("blogLoader - NFT Metadata Loading (Mocked)", () => {
     const { extractTokenIDs } = await import("../utils/blogLoader");
 
     const mockBlogs: BlogPost[] = [
-      { title: "A", content: "", type: "react", tokenID: 26 },
-      { title: "B", content: "", type: "react", tokenID: 42 },
-      { title: "C", content: "", type: "react", tokenID: 26 }, // Duplicate
-      { title: "D", content: "", type: "react" }, // No tokenID
+      { title: "A", content: "", tokenID: 26 },
+      { title: "B", content: "", tokenID: 42 },
+      { title: "C", content: "", tokenID: 26 }, // Duplicate
+      { title: "D", content: "" }, // No tokenID
     ];
 
     const tokenIDs = extractTokenIDs(mockBlogs);
@@ -126,8 +126,8 @@ describe("blogLoader - NFT Metadata Loading (Mocked)", () => {
     const { attachNFTMetadata } = await import("../utils/blogLoader");
 
     const mockBlogs: BlogPost[] = [
-      { title: "A", content: "", type: "react", tokenID: 26 },
-      { title: "B", content: "", type: "react" },
+      { title: "A", content: "", tokenID: 26 },
+      { title: "B", content: "" },
     ];
 
     const mockNFTMetadata: Record<number, NFTMetadata> = {
@@ -161,7 +161,7 @@ describe("blogLoader - NFT Metadata Loading (Mocked)", () => {
   it("should validate NFT metadata structure", async () => {
     const { attachNFTMetadata } = await import("../utils/blogLoader");
 
-    const mockBlogs: BlogPost[] = [{ title: "A", content: "", type: "react", tokenID: 123 }];
+    const mockBlogs: BlogPost[] = [{ title: "A", content: "", tokenID: 123 }];
 
     const mockNFTMetadata: Record<number, NFTMetadata> = {
       123: {
@@ -190,7 +190,6 @@ describe("blogLoader - NFT Metadata Loading (Mocked)", () => {
     blogs.forEach((blog) => {
       expect(blog).toHaveProperty("title");
       expect(blog).toHaveProperty("content");
-      expect(blog).toHaveProperty("type");
       expect(typeof blog.title).toBe("string");
       expect(blog.title.length).toBeGreaterThan(0);
     });

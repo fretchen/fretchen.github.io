@@ -14,19 +14,19 @@ import type { SupportedDirectory } from "./supportedDirectories";
 
 export const LAZY_GLOB_REGISTRY = {
   blog: {
-    modules: import.meta.glob<{ default: React.ComponentType }>(["../blog/*.{tsx,mdx}", "!../blog/*.plan.md"]),
+    modules: import.meta.glob<{ default: React.ComponentType }>(["../blog/*.mdx", "!../blog/*.plan.md"]),
   },
   "quantum/amo": {
-    modules: import.meta.glob<{ default: React.ComponentType }>("../quantum/amo/*.{tsx,mdx}"),
+    modules: import.meta.glob<{ default: React.ComponentType }>("../quantum/amo/*.mdx"),
   },
   "quantum/basics": {
-    modules: import.meta.glob<{ default: React.ComponentType }>("../quantum/basics/*.{tsx,mdx}"),
+    modules: import.meta.glob<{ default: React.ComponentType }>("../quantum/basics/*.mdx"),
   },
   "quantum/hardware": {
-    modules: import.meta.glob<{ default: React.ComponentType }>("../quantum/hardware/*.{tsx,mdx}"),
+    modules: import.meta.glob<{ default: React.ComponentType }>("../quantum/hardware/*.mdx"),
   },
   "quantum/qml": {
-    modules: import.meta.glob<{ default: React.ComponentType }>("../quantum/qml/*.{tsx,mdx}"),
+    modules: import.meta.glob<{ default: React.ComponentType }>("../quantum/qml/*.mdx"),
   },
 } as const satisfies Record<SupportedDirectory, { modules: Record<string, unknown> }>;
 

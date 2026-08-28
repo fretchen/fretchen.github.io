@@ -35,6 +35,7 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-markdown": "^10.1.0",
+    "rehype-katex": "^7.0.1",
     "rehype-mdx-import-media": "^1.4.0",
     "remark-frontmatter": "^5.0.0",
     "remark-gfm": "^4.0.1",

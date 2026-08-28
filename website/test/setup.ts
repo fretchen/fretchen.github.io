@@ -60,7 +60,11 @@ export function buildAccountData(overrides: AccountDataOverrides = {}): ReturnTy
   return {
     address: "0x123456789abcdef" as `0x${string}`,
     isConnected: false,
-    status: "disconnected",
+    // Derived from isConnected when the caller doesn't pass status explicitly, so
+    // `buildAccountData({ isConnected: true })` produces an internally-consistent
+    // mock — hooks/useIsWalletConnected.ts (and anything built on it) reads status,
+    // not isConnected.
+    status: overrides.isConnected ? "connected" : "disconnected",
     isConnecting: false,
     isDisconnected: true,
     isReconnecting: false,

@@ -6,13 +6,14 @@ import { NFTFloatImage } from "./NFTFloatImage";
 import { MdxPre } from "./MdxCodeBlock";
 import { post } from "./Post.styles";
 import { button } from "../styled-system/recipes";
-import { loadLazyModuleFromDirectory } from "../utils/lazyGlobRegistry";
-import { isSupportedDirectory, getSupportedDirectories } from "../utils/supportedDirectories";
-import { useKaTeXRenderer } from "../hooks/useKaTeXRenderer";
-// KaTeX's own stylesheet — it carries the Computer Modern @font-face rules and the math
-// layout. It lives here, not on the routes, because every prose route (blog and all four
-// quantum sections) renders through this shell. Previously only /blog/@id imported it, so
-// lecture math shipped KaTeX markup with no KaTeX CSS.
+// Post modules are resolved before this component ever renders — see utils/postModuleCache.ts,
+// primed by pages/+onBeforeRenderHtml.ts (server) and pages/+onBeforeRenderClient.ts (client),
+// both awaited by vike-react before render/hydrate. Stufe 2, website/MDX_MIGRATION.md.
+import { getPostModule, getPostModuleError } from "../utils/postModuleCache";
+// KaTeX's own stylesheet — rehype-katex (vite.config.ts) renders math to real KaTeX markup
+// at build time, but that markup still needs this CSS (Computer Modern @font-face rules,
+// math layout) to display correctly. Lives here, not on the routes, because every prose
+// route (blog and all four quantum sections) renders through this shell.
 import "katex/dist/katex.min.css";
 import { useWebmentionUrls } from "../hooks/useWebmentionUrls";
 import { fetchWebmentions } from "../utils/webmentionUtils";
@@ -27,80 +28,19 @@ import { CommentsSection } from "./CommentsSection";
 // MdxPre); plain TSX posts simply ignore it.
 type PostComponent = React.ComponentType<{ components?: Record<string, React.ComponentType> }>;
 
-// Dynamic React component renderer
+// Renders a post's component. By the time this mounts, +onBeforeRenderHtml.ts /
+// +onBeforeRenderClient.ts have already primed postModuleCache for componentPath — read is
+// synchronous, no loading state, no Suspense, no effect needed to signal readiness.
 const ReactPostRenderer: React.FC<{
   componentPath: string;
   tokenID?: number;
-  contentRef: React.RefObject<HTMLDivElement | null>;
-  onReady?: () => void;
-}> = ({ componentPath, tokenID, contentRef, onReady }) => {
-  const [Component, setComponent] = React.useState<PostComponent | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
-  const [loading, setLoading] = React.useState<boolean>(true);
+}> = ({ componentPath, tokenID }) => {
+  const Component = getPostModule(componentPath) as PostComponent | undefined;
 
-  React.useEffect(() => {
-    let cancelled = false;
-
-    const loadComponent = async () => {
-      try {
-        // Extract directory and filename from componentPath
-        const pathParts = componentPath.replace(/^\.\.\//, "").split("/");
-        const directory = pathParts.slice(0, -1).join("/");
-        const filename = pathParts[pathParts.length - 1];
-
-        // Validate directory is supported
-        if (!isSupportedDirectory(directory)) {
-          throw new Error(
-            `Unsupported directory: ${directory}. Supported directories: ${getSupportedDirectories().join(", ")}`,
-          );
-        }
-
-        // Use centralized lazy glob registry - only fetches this post's own chunk
-        const module = await loadLazyModuleFromDirectory(directory, filename);
-
-        // The component should be the default export (works for both MDX and TSX)
-        const LoadedComponent = module.default;
-
-        if (!LoadedComponent) {
-          throw new Error(`No default export found in ${filename}`);
-        }
-
-        if (cancelled) return;
-        setComponent(() => LoadedComponent);
-        setLoading(false);
-        onReady?.();
-      } catch (err) {
-        if (cancelled) return;
-        console.error("ReactPostRenderer: Error loading React component:", err);
-        setError(err instanceof Error ? err.message : "Unknown error occurred");
-        setLoading(false);
-      }
-    };
-
-    void loadComponent();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [componentPath, onReady]);
-
-  // Use custom hook for KaTeX rendering
-  useKaTeXRenderer(contentRef, !!Component);
-
-  if (loading) {
-    return (
-      <div className={post.contentContainer}>
-        <div className={post.loadingBox}>
-          <p>🔄 Lade interaktive Komponente...</p>
-          <p className={post.loadingPath}>
-            Pfad: <code>{componentPath}</code>
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !Component) {
+  if (!Component) {
+    // Genuine failure only — primePostModule() already caught the underlying error (missing
+    // module, no default export, unsupported directory) and recorded its message.
+    const error = getPostModuleError(componentPath);
     return (
       <div className={post.contentContainer}>
         <div className={post.errorBox}>
@@ -122,7 +62,7 @@ const ReactPostRenderer: React.FC<{
             <summary>Mögliche Lösungen</summary>
             <ul className={post.errorSpacing}>
               <li>Laden Sie die Seite neu (hilft nach einem Update der Website)</li>
-              <li>Überprüfen Sie, ob die TSX-Datei existiert</li>
+              <li>Überprüfen Sie, ob die MDX-Datei existiert</li>
               <li>Stellen Sie sicher, dass die Komponente als default export verfügbar ist</li>
               <li>Überprüfen Sie die Konsolenausgabe für weitere Details</li>
             </ul>
@@ -133,12 +73,10 @@ const ReactPostRenderer: React.FC<{
   }
 
   return (
-    // e-content lives here, on the article itself, rather than on the wrapper in Post below.
-    // The wrapper is always present, but the body only exists once this dynamic import has
-    // resolved — so on the prerendered page the class used to describe the loading box, and
-    // mf2 parsed the post's content as "🔄 Lade interaktive Komponente...Pfad: ../blog/…".
-    // That string is what Bridgy Fed syndicated as the body of every post.
-    <div className={`e-content ${post.contentContainer}`} ref={contentRef}>
+    // e-content marks this div as the syndicated body for mf2/Bridgy Fed. The ref used for
+    // ToC scanning lives one level up, on Post's wrapper (see below) — one ref is enough
+    // now that content is present synchronously; it doesn't need to be re-scoped per state.
+    <div className={`e-content ${post.contentContainer}`}>
       {tokenID && <NFTFloatImage tokenId={tokenID} />}
       <Component components={{ pre: MdxPre }} />
     </div>
@@ -160,13 +98,6 @@ export function Post({
   const { urlWithoutSlash, urlWithSlash } = useWebmentionUrls();
   const [reactionCount, setReactionCount] = React.useState<number>(0);
   const contentRef = React.useRef<HTMLDivElement>(null);
-
-  // Tracks which componentPath has finished loading. Comparing against the current
-  // path (instead of a plain boolean) makes readiness flip false automatically on
-  // post-to-post navigation, so the ToC rescans once the new content mounts.
-  const [readyPath, setReadyPath] = React.useState<string | null>(null);
-  const handleContentReady = React.useCallback(() => setReadyPath(componentPath ?? ""), [componentPath]);
-  const contentReady = readyPath === (componentPath ?? "");
 
   // Format publishing date as ISO8601 for dt-published if available
   const isoDatetime = publishing_date ? new Date(publishing_date).toISOString().split("T")[0] : null;
@@ -218,19 +149,16 @@ export function Post({
             <MetadataLine publishingDate={publishing_date} showSupport={true} reactionCount={reactionCount} />
           </>
         }
-        toc={<TableOfContents contentRef={contentRef} isReady={contentReady} />}
+        // `key={componentPath}` remounts the ToC on post-to-post navigation, so it rescans
+        // this post's headings instead of keeping the previous post's list. Content is
+        // present synchronously (see ReactPostRenderer), so there's no separate "is it ready
+        // yet" state to track — the remount itself is the invalidation.
+        toc={<TableOfContents key={componentPath} contentRef={contentRef} />}
       >
-        {/* Render based on post type */}
-        {/* Carries the ref the ToC and KaTeX scan. Deliberately no e-content: that class
+        {/* Carries the ref the ToC scan reads. Deliberately no e-content here: that class
             belongs to the rendered article, which ReactPostRenderer adds once it exists. */}
         <div ref={contentRef}>
-          <ReactPostRenderer
-            key={componentPath}
-            componentPath={componentPath ?? ""}
-            tokenID={tokenID}
-            contentRef={contentRef}
-            onReady={handleContentReady}
-          />
+          <ReactPostRenderer componentPath={componentPath ?? ""} tokenID={tokenID} />
         </div>
 
         {/* Navigation zwischen Posts */}

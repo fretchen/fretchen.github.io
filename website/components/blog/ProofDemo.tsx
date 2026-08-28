@@ -212,9 +212,10 @@ export default function ProofDemo() {
         backgroundColor: "codeBg",
       })}
     >
-      <h3 className={css({ fontSize: "lg", fontWeight: "bold", marginBottom: "4" })}>
+      {/* h4, not h3 — see components/TableOfContents.tsx's doc comment */}
+      <h4 className={css({ fontSize: "lg", fontWeight: "bold", marginBottom: "4" })}>
         🔍 Interactive Proof Demo: Alice&apos;s Story
-      </h3>
+      </h4>
 
       {/* Sample Batch Display */}
       <div

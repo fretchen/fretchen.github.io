@@ -172,9 +172,10 @@ export default function BatchCreator() {
         backgroundColor: "codeBg",
       })}
     >
-      <h3 className={css({ fontSize: "lg", fontWeight: "bold", marginBottom: "4" })}>
+      {/* h4, not h3 — see components/TableOfContents.tsx's doc comment */}
+      <h4 className={css({ fontSize: "lg", fontWeight: "bold", marginBottom: "4" })}>
         🧪 Interactive LLM Batch Processing Demo
-      </h3>
+      </h4>
 
       <div
         className={css({

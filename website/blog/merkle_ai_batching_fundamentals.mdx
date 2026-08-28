@@ -137,6 +137,10 @@ This elegant mathematical verification proves Alice&apos;s transaction is authen
 
 <ProofDemo />
 
+### A note on the demos above
+
+The `BatchCreator` and `ProofDemo` widgets above don&apos;t pull in the full [@openzeppelin/merkle-tree](https://github.com/OpenZeppelin/merkle-tree) package — this is only a blog post, and shipping a whole library to every reader&apos;s browser for two small demos felt like the wrong trade-off. Instead they run a minimal reimplementation of the same `StandardMerkleTree` algorithm, built directly on [viem](https://viem.sh/) (already used elsewhere on this site). It replicates OpenZeppelin&apos;s exact leaf-hashing and tree-building rules, not a simplified lookalike, and a regression test in the site&apos;s repository checks it against the real package on every change to make sure the two never drift apart.
+
 ## From Problem to Solution
 
 This brings us to the end of this blog post. We started this journey with a significant cost problem: someone wanting to send 10 LLM requests would face significant gas fees alone, plus the hassle of confirming 10 separate transactions in their wallet. For any practical LLM application on the blockchain, this creates an immediate barrier to adoption.

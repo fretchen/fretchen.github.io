@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { css } from "../../styled-system/css";
-import { StandardMerkleTree } from "@openzeppelin/merkle-tree";
+import { StandardMerkleTree } from "../../utils/minimalMerkleTree";
 
 // Mock types and interfaces
 interface LLMRequest {
@@ -61,7 +61,7 @@ const visualizeMerkleTree = (tree: ReturnType<typeof buildMerkleTree>): string =
   visualization += "\nTree Structure:\n";
   for (const [index, value] of tree.entries()) {
     const leafHash = tree.leafHash(value);
-    visualization += `Leaf ${index + 1}: ${leafHash.substring(0, 16)}... (${value[0]}, ${value[3]})\n`;
+    visualization += `Leaf ${index + 1}: ${leafHash.substring(0, 16)}... (${String(value[0])}, ${String(value[3])})\n`;
   }
 
   return visualization;

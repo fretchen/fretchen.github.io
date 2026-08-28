@@ -72,6 +72,6 @@ Rules that apply everywhere:
 
 ## Blog Posts
 
-Posts are `.md`/`.mdx` (or `.tsx` when interactive) in `website/blog/`, with frontmatter: `title`, `publishing_date`, `category`, `description`, `tokenID`.
+Posts are `.md`/`.mdx` in `website/blog/`, with frontmatter: `title`, `publishing_date`, `category`, `description`, `tokenID`. Interactive posts import their widgets as regular React components from `website/components/blog/` — there is no `.tsx` post format.
 
 Use the **`blog-planner`** skill to plan or write one — it enforces the plan-first rule (no MDX before an approved `website/blog/<slug>.plan.md`) and carries the audience and style conventions. Use **`blog-critic`** to review a draft; it is read-only and outputs a `.todos.md`.

@@ -5,7 +5,7 @@ import { GLOB_REGISTRY } from "../utils/globRegistry";
 describe("blogLoader - Integration Test", () => {
   it("should load blogs from blog directory", async () => {
     // This test will actually use import.meta.glob
-    // It should load real markdown and tsx files from the blog directory
+    // It should load real MDX files from the blog directory
     const blogs = await loadBlogs("blog", "publishing_date");
 
     console.log(`[Integration Test] Loaded ${blogs.length} blogs`);
@@ -13,42 +13,17 @@ describe("blogLoader - Integration Test", () => {
       "[Integration Test] Blog titles:",
       blogs.map((b) => b.title),
     );
-    console.log(
-      "[Integration Test] Blog types:",
-      blogs.map((b) => b.type),
-    );
 
     // We should have at least some blogs
     expect(blogs.length).toBeGreaterThan(0);
 
-    // After MDX migration, all blogs have type "react"
-    // Distinguish by componentPath extension
-    const markdownBlogs = blogs.filter(
-      (b) => b.componentPath && (b.componentPath.endsWith(".md") || b.componentPath.endsWith(".mdx")),
-    );
-    const typescriptBlogs = blogs.filter((b) => b.componentPath && b.componentPath.endsWith(".tsx"));
-
-    console.log(`[Integration Test] Markdown blogs: ${markdownBlogs.length}`);
-    console.log(`[Integration Test] TypeScript blogs: ${typescriptBlogs.length}`);
-
-    // Verify that we have both types
-    expect(markdownBlogs.length).toBeGreaterThan(0);
-    expect(typescriptBlogs.length).toBeGreaterThan(0);
-
-    // Verify that markdown blogs have required metadata
-    markdownBlogs.forEach((blog) => {
+    // Every blog is an MDX file
+    blogs.forEach((blog) => {
       expect(blog.title).toBeDefined();
       expect(blog.title.length).toBeGreaterThan(0);
       expect(blog.componentPath).toBeDefined();
+      expect(blog.componentPath).toMatch(/\.mdx$/);
       // MDX blogs don't have content in the BlogPost object - it's in the component
-      expect(blog.content).toBe("");
-    });
-
-    // Verify that typescript blogs have componentPath
-    typescriptBlogs.forEach((blog) => {
-      expect(blog.componentPath).toBeDefined();
-      expect(blog.componentPath).toMatch(/\.tsx$/);
-      expect(blog.type).toBe("react");
       expect(blog.content).toBe("");
     });
   });
@@ -72,34 +47,25 @@ describe("blogLoader - Integration Test", () => {
 
   it("should parse frontmatter from real markdown files", async () => {
     const blogs = await loadBlogs("blog", "publishing_date");
-    // After MDX migration, markdown blogs have componentPath ending in .md/.mdx
-    const markdownBlogs = blogs.filter(
-      (b) => b.componentPath && (b.componentPath.endsWith(".md") || b.componentPath.endsWith(".mdx")),
-    );
 
-    expect(markdownBlogs.length).toBeGreaterThan(0);
+    expect(blogs.length).toBeGreaterThan(0);
 
-    if (markdownBlogs.length > 0) {
-      const firstBlog = markdownBlogs[0];
+    const firstBlog = blogs[0];
 
-      console.log("[Integration Test] First markdown blog:", {
-        title: firstBlog.title,
-        type: firstBlog.type,
-        hasContent: firstBlog.content.length > 0,
-        publishing_date: firstBlog.publishing_date,
-        tokenID: firstBlog.tokenID,
-      });
+    console.log("[Integration Test] First blog:", {
+      title: firstBlog.title,
+      hasContent: firstBlog.content.length > 0,
+      publishing_date: firstBlog.publishing_date,
+      tokenID: firstBlog.tokenID,
+    });
 
-      // Should have extracted title from frontmatter
-      expect(firstBlog.title).toBeDefined();
-      expect(firstBlog.title).not.toBe("");
+    // Should have extracted title from frontmatter
+    expect(firstBlog.title).toBeDefined();
+    expect(firstBlog.title).not.toBe("");
 
-      // Should have content (without frontmatter)
-      expect(firstBlog.content).toBeDefined();
-      expect(firstBlog.content).not.toContain("---"); // Frontmatter should be removed
-    } else {
-      console.warn("[Integration Test] No markdown blogs found in blog directory!");
-    }
+    // Should have content (without frontmatter)
+    expect(firstBlog.content).toBeDefined();
+    expect(firstBlog.content).not.toContain("---"); // Frontmatter should be removed
   });
 
   it("should handle blogs with and without metadata", async () => {
@@ -111,7 +77,6 @@ describe("blogLoader - Integration Test", () => {
         title: b.title,
         date: b.publishing_date,
         token: b.tokenID,
-        type: b.type,
       })),
     );
 

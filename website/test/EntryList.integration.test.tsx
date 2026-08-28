@@ -74,27 +74,22 @@ describe("EntryList with Real Blog Data", () => {
     });
   });
 
-  it("should render both markdown and typescript blogs", async () => {
+  it("should render markdown blogs", async () => {
     const blogs = await loadBlogs("blog", "publishing_date");
 
-    // After MDX migration, markdown blogs have type "react" with .md/.mdx componentPath
     const markdownBlogs = blogs.filter(
       (b) => b.componentPath && (b.componentPath.endsWith(".md") || b.componentPath.endsWith(".mdx")),
     );
-    // TypeScript blogs now also have type "react" but with .tsx componentPath
-    const typescriptBlogs = blogs.filter((b) => b.componentPath && b.componentPath.endsWith(".tsx"));
 
     console.log(`[EntryList Test] Markdown blogs: ${markdownBlogs.length}`);
-    console.log(`[EntryList Test] TypeScript blogs: ${typescriptBlogs.length}`);
 
     expect(markdownBlogs.length).toBeGreaterThan(0);
-    expect(typescriptBlogs.length).toBeGreaterThan(0);
 
     // All blogs should have titles
     blogs.forEach((blog) => {
       expect(blog.title).toBeDefined();
       expect(blog.title.length).toBeGreaterThan(0);
-      console.log(`[EntryList Test] Blog: "${blog.title}" (${blog.type})`);
+      console.log(`[EntryList Test] Blog: "${blog.title}"`);
     });
 
     // Convert all blogs to EntryList format
@@ -114,7 +109,6 @@ describe("EntryList with Real Blog Data", () => {
 
   it("should handle blogs with different frontmatter formats", async () => {
     const blogs = await loadBlogs("blog", "publishing_date");
-    // After MDX migration, markdown blogs have type "react" with .md/.mdx componentPath
     const markdownBlogs = blogs.filter(
       (b) => b.componentPath && (b.componentPath.endsWith(".md") || b.componentPath.endsWith(".mdx")),
     );
@@ -141,8 +135,7 @@ describe("EntryList with Real Blog Data", () => {
 
   it("should display full multi-word titles, not just first word", async () => {
     const blogs = await loadBlogs("blog", "publishing_date");
-    // Markdown blogs now have type "react" because they're MDX components
-    const markdownBlogs = blogs.filter((b) => b.type === "react" && b.componentPath?.match(/\.(md|mdx)$/));
+    const markdownBlogs = blogs.filter((b) => b.componentPath?.match(/\.(md|mdx)$/));
 
     // Find blogs that should have multi-word titles
     const multiWordBlogs = markdownBlogs.filter((b) => {

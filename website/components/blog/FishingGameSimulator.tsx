@@ -464,8 +464,6 @@ const FishingEndSummary: React.FC<{
 
 export default function FishingGameSimulator() {
   const [round, setRound] = useState(1); // 1, 2, 3
-  const [fishStock, setFishStock] = useState(MODEL_PARAMS.s_init); // Start with notebook value
-  const [moanaTotal, setMoanaTotal] = useState(0);
   const [scenario, setScenario] = useState<ScenarioType>("random");
   const [history, setHistory] = useState<RoundHistory[]>([
     {
@@ -502,7 +500,12 @@ export default function FishingGameSimulator() {
       regeneration: null,
     },
   ]);
-  const [gameOver, setGameOver] = useState(false);
+
+  // Derived from history instead of separate state, so they can never drift out of sync with it.
+  const lastCompletedRound = [...history].reverse().find((h) => h.fishAfter !== null);
+  const fishStock = lastCompletedRound ? lastCompletedRound.fishAfter! : MODEL_PARAMS.s_init;
+  const moanaTotal = history.reduce((sum, h) => sum + (h.moanaFish ?? 0), 0);
+  const gameOver = history[2].moanaBoats !== null;
 
   function handleBoatChoice(moanaBoats: number) {
     if (gameOver || history[round - 1].moanaBoats !== null) return;
@@ -567,20 +570,14 @@ export default function FishingGameSimulator() {
     );
 
     setHistory(newHistory);
-    setMoanaTotal(moanaTotal + moanaFish);
-    setFishStock(Math.round(nextStock));
 
-    if (round === 3) {
-      setGameOver(true);
-    } else {
+    if (round !== 3) {
       setRound(round + 1);
     }
   }
 
   function reset() {
     setRound(1);
-    setFishStock(MODEL_PARAMS.s_init);
-    setMoanaTotal(0);
     setHistory([
       {
         round: 1,
@@ -616,7 +613,6 @@ export default function FishingGameSimulator() {
         regeneration: null,
       },
     ]);
-    setGameOver(false);
     setScenario("random");
   }
 

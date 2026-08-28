@@ -227,7 +227,10 @@ export default function IslandEfficiencyDemonstratorWithRounds() {
   const [scenario, setScenario] = useState<ScenarioType>("sustainable");
   const [history, setHistory] = useState<IslandRoundHistory[]>([]);
 
-  const [fishStock, setFishStock] = useState(MODEL_PARAMS.s_init);
+  const fishStock =
+    history.length > 0
+      ? Math.max(0, history[history.length - 1].fishAfter ?? MODEL_PARAMS.s_init)
+      : MODEL_PARAMS.s_init;
 
   // Auto-simulate all rounds when scenario changes
   useEffect(() => {
@@ -315,7 +318,6 @@ export default function IslandEfficiencyDemonstratorWithRounds() {
     // Use setTimeout to avoid synchronous setState in effect
     setTimeout(() => {
       setHistory(newHistory);
-      setFishStock(currentStock);
     }, 0);
   }, [scenario]);
 

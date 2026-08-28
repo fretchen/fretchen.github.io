@@ -1,6 +1,8 @@
 import React, { useState } from "react";
-import { css } from "../../styled-system/css";
+import { css, cx } from "../../styled-system/css";
 import { playRepeatedGame, type Strategy } from "./prisonersDilemmaModel";
+import { severityBox, severityText, type SeverityLevel } from "./severityStyle";
+import { widgetCard } from "./widgetCard";
 
 export default function StrategyAnalysis() {
   const [analysisResults, setAnalysisResults] = useState<Record<
@@ -26,37 +28,46 @@ export default function StrategyAnalysis() {
 
   const runAnalysis = () => {
     setIsAnalyzing(true);
-    setTimeout(() => {
-      const results: Record<Strategy, Record<Strategy, { avgScore1: string; avgScore2: string }>> = {} as Record<
-        Strategy,
-        Record<Strategy, { avgScore1: string; avgScore2: string }>
-      >;
 
-      strategies.forEach((strat1) => {
-        results[strat1] = {} as Record<Strategy, { avgScore1: string; avgScore2: string }>;
-        strategies.forEach((strat2) => {
-          // Run multiple simulations for statistical reliability
-          const simulations = Array.from({ length: 50 }, () => {
-            const { totalPayoffs1, totalPayoffs2 } = playRepeatedGame(100, strat1, strat2);
-            return {
-              score1: totalPayoffs1[totalPayoffs1.length - 1],
-              score2: totalPayoffs2[totalPayoffs2.length - 1],
-            };
-          });
+    const pairs = strategies.flatMap((s1) => strategies.map((s2): [Strategy, Strategy] => [s1, s2]));
+    const results: Record<Strategy, Record<Strategy, { avgScore1: string; avgScore2: string }>> = {} as Record<
+      Strategy,
+      Record<Strategy, { avgScore1: string; avgScore2: string }>
+    >;
 
-          const avgScore1 = simulations.reduce((sum, sim) => sum + sim.score1, 0) / simulations.length;
-          const avgScore2 = simulations.reduce((sum, sim) => sum + sim.score2, 0) / simulations.length;
+    // Chunked one matchup at a time so the browser can paint/scroll between chunks instead of
+    // blocking the main thread for all 4*4*50*100 = 80,000 rounds in a single synchronous call.
+    const processNext = (index: number) => {
+      if (index >= pairs.length) {
+        setAnalysisResults(results);
+        setIsAnalyzing(false);
+        return;
+      }
 
-          results[strat1][strat2] = {
-            avgScore1: avgScore1.toFixed(1),
-            avgScore2: avgScore2.toFixed(1),
-          };
-        });
+      const [strat1, strat2] = pairs[index];
+      results[strat1] ??= {} as Record<Strategy, { avgScore1: string; avgScore2: string }>;
+
+      // Run multiple simulations for statistical reliability
+      const simulations = Array.from({ length: 50 }, () => {
+        const { totalPayoffs1, totalPayoffs2 } = playRepeatedGame(100, strat1, strat2);
+        return {
+          score1: totalPayoffs1[totalPayoffs1.length - 1],
+          score2: totalPayoffs2[totalPayoffs2.length - 1],
+        };
       });
 
-      setAnalysisResults(results);
-      setIsAnalyzing(false);
-    }, 2000);
+      const avgScore1 = simulations.reduce((sum, sim) => sum + sim.score1, 0) / simulations.length;
+      const avgScore2 = simulations.reduce((sum, sim) => sum + sim.score2, 0) / simulations.length;
+
+      results[strat1][strat2] = {
+        avgScore1: avgScore1.toFixed(1),
+        avgScore2: avgScore2.toFixed(1),
+      };
+
+      setTimeout(() => processNext(index + 1), 0);
+    };
+
+    setTimeout(() => processNext(0), 0);
   };
 
   const getBestStrategy = (jesseStrategy: Strategy) => {
@@ -76,11 +87,10 @@ export default function StrategyAnalysis() {
     return { strategy: bestStrategy, score: bestScore };
   };
 
-  const getRecommendationColor = (score: number) => {
-    if (score < 4) return "#10b981"; // green - excellent
-    if (score < 6) return "#f59e0b"; // yellow - decent
-    if (score < 10) return "#f97316"; // orange - troubled
-    return "#ef4444"; // red - bad
+  const getSeverityLevel = (score: number): SeverityLevel => {
+    if (score < 4) return "success";
+    if (score < 10) return "warning";
+    return "danger";
   };
 
   const getRecommendationText = (score: number) => {
@@ -91,15 +101,7 @@ export default function StrategyAnalysis() {
   };
 
   return (
-    <div
-      className={css({
-        margin: "32px 0",
-        padding: "6",
-        backgroundColor: "rgba(59, 130, 246, 0.05)",
-        borderRadius: "sm",
-        border: "1px solid rgba(59, 130, 246, 0.2)",
-      })}
-    >
+    <div className={widgetCard()}>
       <h4
         className={css({
           fontSize: "md",
@@ -160,7 +162,7 @@ export default function StrategyAnalysis() {
           >
             {strategies.map((jesseStrat) => {
               const best = getBestStrategy(jesseStrat);
-              const color = best ? getRecommendationColor(best.score) : "#6b7280";
+              const level: SeverityLevel = best ? getSeverityLevel(best.score) : "warning";
               const recommendationText = best ? getRecommendationText(best.score) : "";
 
               return (
@@ -190,29 +192,19 @@ export default function StrategyAnalysis() {
                   </div>
 
                   {best && (
-                    <div
-                      className={css({
-                        textAlign: "center",
-                        padding: "3",
-                        borderRadius: "md",
-                        backgroundColor: "white",
-                        border: `2px solid ${color}`,
-                      })}
-                    >
+                    <div className={severityBox({ level })}>
                       <div
-                        className={css({
-                          color: color,
-                          fontWeight: "bold",
-                          fontSize: "sm",
-                          marginBottom: "1",
-                        })}
+                        className={cx(
+                          severityText({ level }),
+                          css({ fontWeight: "bold", fontSize: "sm", marginBottom: "1" }),
+                        )}
                       >
                         🎯 Walter should be: {strategyNames[best.strategy as keyof typeof strategyNames]}
                       </div>
                       <div className={css({ fontSize: "xs", color: "gray.500", marginBottom: "1" })}>
                         Average: {best.score} years prison
                       </div>
-                      <div className={css({ fontSize: "xs", color: color, fontWeight: "semibold" })}>
+                      <div className={cx(severityText({ level }), css({ fontSize: "xs", fontWeight: "semibold" }))}>
                         {recommendationText}
                       </div>
                     </div>

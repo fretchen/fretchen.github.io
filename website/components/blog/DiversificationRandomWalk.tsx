@@ -13,19 +13,9 @@ import {
 import { css } from "../../styled-system/css";
 import { DATA } from "./etfData";
 import { ESSAY_ACCENT } from "./palette";
+import { gaussianRandom } from "./mathUtils";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
-
-// ============================================================
-// Random Walk helpers
-// ============================================================
-const gaussianRandom = (): number => {
-  let u = 0;
-  let v = 0;
-  while (u === 0) u = Math.random();
-  while (v === 0) v = Math.random();
-  return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
-};
 
 const TRADING_DAYS_PER_YEAR = 252;
 const STEPS = 504; // 2 trading years — more points for smoother histogram

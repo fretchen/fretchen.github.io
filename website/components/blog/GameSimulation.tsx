@@ -10,8 +10,10 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import { css } from "../../styled-system/css";
+import { css, cx } from "../../styled-system/css";
 import { playRepeatedGame, type Strategy } from "./prisonersDilemmaModel";
+import { severityBox, severityText, type SeverityLevel } from "./severityStyle";
+import { widgetCard } from "./widgetCard";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
@@ -84,43 +86,35 @@ export default function GameSimulation() {
     }
 
     let verdict = "";
-    let color = "";
+    let level: SeverityLevel = "warning";
 
     if (walterExploitingJesse) {
       verdict = "Exploitative partnership - you're taking advantage of Jesse's cooperation.";
-      color = "#dc2626"; // red
+      level = "danger";
     } else if (jesseExploitingWalter) {
       verdict = "You're being exploited - Jesse is getting better deals while you suffer.";
-      color = "#dc2626"; // red
+      level = "danger";
     } else if (walterAvg < 4 && jesseAvg < 4) {
       verdict = "Excellent partnership! You're both doing well.";
-      color = "#10b981"; // green
+      level = "success";
     } else if (walterAvg < 6 && jesseAvg < 6) {
       verdict = "Decent cooperation with some conflicts.";
-      color = "#f59e0b"; // yellow
+      level = "warning";
     } else if (walterAvg < 10) {
       verdict = "Troubled relationship with frequent betrayals.";
-      color = "#f97316"; // orange
+      level = "warning";
     } else {
       verdict = "Toxic partnership - this relationship is falling apart.";
-      color = "#ef4444"; // red
+      level = "danger";
     }
 
-    return { verdict, color, walterAvg, jesseAvg, exploited, exploitationMessage };
+    return { verdict, level, walterAvg, jesseAvg, exploited, exploitationMessage };
   };
 
   const analysis = getOutcomeAnalysis();
 
   return (
-    <div
-      className={css({
-        margin: "32px 0",
-        padding: "6",
-        backgroundColor: "rgba(59, 130, 246, 0.05)",
-        borderRadius: "sm",
-        border: "1px solid rgba(59, 130, 246, 0.2)",
-      })}
-    >
+    <div className={widgetCard()}>
       <h4
         className={css({
           fontSize: "md",
@@ -292,17 +286,8 @@ export default function GameSimulation() {
               </div>
             </div>
 
-            <div
-              className={css({
-                textAlign: "center",
-                padding: "3",
-                borderRadius: "md",
-                backgroundColor: "white",
-                border: `2px solid ${analysis.color}`,
-                marginBottom: "4",
-              })}
-            >
-              <div className={css({ color: analysis.color, fontWeight: "bold", fontSize: "md" })}>
+            <div className={cx(severityBox({ level: analysis.level }), css({ marginBottom: "4" }))}>
+              <div className={cx(severityText({ level: analysis.level }), css({ fontWeight: "bold", fontSize: "md" }))}>
                 {analysis.verdict}
               </div>
             </div>

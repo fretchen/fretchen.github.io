@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { css } from "../../styled-system/css";
 import { prisonersDilemma, type Choice } from "./prisonersDilemmaModel";
+import { widgetCard } from "./widgetCard";
 
 export default function PayoffMatrix() {
   const [playerChoice, setPlayerChoice] = useState<Choice | null>(null);
@@ -31,15 +32,7 @@ export default function PayoffMatrix() {
   };
 
   return (
-    <div
-      className={css({
-        margin: "32px 0",
-        padding: "6",
-        backgroundColor: "rgba(59, 130, 246, 0.05)", // Very subtle blue background
-        borderRadius: "sm",
-        border: "1px solid rgba(59, 130, 246, 0.2)", // Subtle border
-      })}
-    >
+    <div className={widgetCard()}>
       <h4
         className={css({
           fontSize: "md",

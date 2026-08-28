@@ -40,42 +40,20 @@ const mockPrompts = [
   "Debug this JavaScript code: console.log(hello world)",
 ];
 
-// Calculate Merkle Root using OpenZeppelin StandardMerkleTree
-const calculateMerkleRoot = (requests: LLMRequest[]): string => {
-  if (requests.length === 0) return "";
-
-  // Use the actual leaf data from requests
+// Build the OpenZeppelin StandardMerkleTree for the current batch of requests
+const buildMerkleTree = (requests: LLMRequest[]) => {
   const treeData = requests.map((req) => [
     req.leafData!.id,
     req.leafData!.timestamp,
     req.leafData!.tokenCount,
     req.leafData!.wallet,
   ]);
-
-  // Define types for the tree
   const demoTypes = ["uint256", "string", "uint256", "string"];
-
-  // Create StandardMerkleTree
-  const tree = StandardMerkleTree.of(treeData, demoTypes);
-
-  return tree.root;
+  return StandardMerkleTree.of(treeData, demoTypes);
 };
 
-// Function to visualize the Merkle Tree structure using StandardMerkleTree
-const visualizeMerkleTree = (requests: LLMRequest[]): string => {
-  if (requests.length === 0) return "";
-
-  // Use the same leaf data format as calculateMerkleRoot
-  const treeData = requests.map((req) => [
-    req.leafData!.id,
-    req.leafData!.timestamp,
-    req.leafData!.tokenCount,
-    req.leafData!.wallet,
-  ]);
-
-  const demoTypes = ["uint256", "string", "uint256", "string"];
-  const tree = StandardMerkleTree.of(treeData, demoTypes);
-
+// Render the Merkle Tree structure for an already-built tree
+const visualizeMerkleTree = (tree: ReturnType<typeof buildMerkleTree>): string => {
   let visualization = "Merkle Tree (OpenZeppelin StandardMerkleTree):\n";
   visualization += `Root: ${tree.root.substring(0, 16)}...\n`;
 
@@ -153,10 +131,9 @@ export default function BatchCreator() {
   useEffect(() => {
     const createMerkleTree = () => {
       if (requests.length >= BATCH_SIZE_THRESHOLD && !batchRegistered) {
-        const root = calculateMerkleRoot(requests);
-        const treeVis = visualizeMerkleTree(requests);
-        setMerkleRoot(root);
-        setMerkleTreeVisualization(treeVis);
+        const tree = buildMerkleTree(requests);
+        setMerkleRoot(tree.root);
+        setMerkleTreeVisualization(visualizeMerkleTree(tree));
         setBatchRegistered(true);
       }
     };

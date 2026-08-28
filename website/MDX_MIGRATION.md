@@ -292,7 +292,7 @@ Stufe 2 — sie sind reine Prosa ohne Widgets.
 
 ## Querschnitt
 
-- [ ] `CLAUDE.md` (Repo-Wurzel), Abschnitt *Blog Posts*: `.tsx` als Post-Format streichen
+- [x] `CLAUDE.md` (Repo-Wurzel), Abschnitt *Blog Posts*: `.tsx` als Post-Format streichen (erledigt in Stufe 1, siehe oben)
 - [ ] `website/CLAUDE.md`: die `{ ssr: false }`-Regel auf `clientOnly` / `<ClientOnly>` präzisieren
 - [ ] `blog-planner`-Skill: falls dort TSX-Posts als Option auftauchen, entfernen
 - [ ] `utils/checkChunkSizes.ts`: die Chunk-Erwartungen ändern sich in Stufe 2 und 3

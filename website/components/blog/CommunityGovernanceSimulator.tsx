@@ -54,25 +54,26 @@ const CommunityScenarioSelector: React.FC<{
               onClick={() => {
                 setScenario(key as CommunityScenarioType);
               }}
-              style={{
+              className={css({
                 padding: "12px 16px",
-                border: isSelected ? "2px solid #3b82f6" : "1px solid #d1d5db",
-                borderRadius: 8,
-                background: isSelected ? "#eff6ff" : "#fff",
+                border: isSelected ? "2px solid" : "1px solid",
+                borderColor: isSelected ? "blue.500" : "gray.300",
+                borderRadius: "8px",
+                backgroundColor: isSelected ? "blue.50" : "white",
                 cursor: "pointer",
                 textAlign: "left",
-                maxWidth: 220,
-                fontSize: 14,
+                maxWidth: "220px",
+                fontSize: "sm",
                 position: "relative",
-              }}
+              })}
             >
-              <div style={{ fontWeight: 600, marginBottom: 4, color: "#111827" }}>{info.name}</div>
+              <div className={css({ fontWeight: 600, marginBottom: "4px", color: "gray.900" })}>{info.name}</div>
               <div
-                style={{
-                  color: "#64748b",
-                  fontSize: 12,
+                className={css({
+                  color: "gray.500",
+                  fontSize: "xs",
                   lineHeight: "1.3",
-                }}
+                })}
               >
                 {info.description}
               </div>
@@ -109,11 +110,11 @@ const CommunityResultsTable: React.FC<{ history: CommunityRoundHistory[] }> = ({
     }
 
     return (
-      <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 12 }}>
+      <div className={css({ textAlign: "center" })}>
+        <div className={css({ fontSize: "xs" })}>
           {originalCatch.toFixed(1)}🐟 → {finalCatch.toFixed(1)}🐟
         </div>
-        <div style={{ fontSize: 10, color: "#64748b" }}>${cost.toFixed(2)}</div>
+        <div className={css({ fontSize: "xs", color: "gray.500" })}>${cost.toFixed(2)}</div>
       </div>
     );
   }
@@ -142,11 +143,19 @@ const CommunityResultsTable: React.FC<{ history: CommunityRoundHistory[] }> = ({
     };
 
     return (
-      <div style={{ textAlign: "center" }}>
-        <div style={{ fontWeight: 600, fontSize: 12, marginBottom: "2px" }}>{leaderNames[leader]}</div>
+      <div className={css({ textAlign: "center" })}>
+        <div className={css({ fontWeight: 600, fontSize: "xs", marginBottom: "2px" })}>{leaderNames[leader]}</div>
 
         {/* Decision Icons Row */}
-        <div style={{ display: "flex", justifyContent: "center", gap: "2px", fontSize: "10px", marginBottom: "2px" }}>
+        <div
+          className={css({
+            display: "flex",
+            justifyContent: "center",
+            gap: "2px",
+            fontSize: "xs",
+            marginBottom: "2px",
+          })}
+        >
           <span title={`Conservation Strategy: ${strategy}`}>
             {conservationIcons[strategy as keyof typeof conservationIcons] || "❓"}
           </span>
@@ -168,94 +177,90 @@ const CommunityResultsTable: React.FC<{ history: CommunityRoundHistory[] }> = ({
   }
 
   return (
-    <div style={{ margin: "18px 0" }}>
+    <div className={css({ margin: "18px 0" })}>
       {/* Legend for Leadership Decision Icons */}
       <div
-        style={{
+        className={css({
           marginBottom: "12px",
           padding: "8px 12px",
-          backgroundColor: "#f8fafc",
+          backgroundColor: "slate.50",
           borderRadius: "6px",
-          fontSize: "12px",
-          border: "1px solid #e2e8f0",
-        }}
+          fontSize: "xs",
+          border: "1px solid",
+          borderColor: "gray.200",
+        })}
       >
-        <div style={{ fontWeight: "600", marginBottom: "6px" }}>Leadership Decision Icons Guide:</div>
+        <div className={css({ fontWeight: "600", marginBottom: "6px" })}>Leadership Decision Icons Guide:</div>
 
         {/* Conservation Strategy Icons */}
-        <div style={{ marginBottom: "4px" }}>
+        <div className={css({ marginBottom: "4px" })}>
           <strong>Conservation Strategy:</strong>
-          <span style={{ marginLeft: "8px" }}>🛡️ conservative (protect stocks)</span>
-          <span style={{ marginLeft: "8px" }}>⚖️ moderate (balanced approach)</span>
-          <span style={{ marginLeft: "8px" }}>⚔️ aggressive (maximize current catch)</span>
+          <span className={css({ marginLeft: "8px" })}>🛡️ conservative (protect stocks)</span>
+          <span className={css({ marginLeft: "8px" })}>⚖️ moderate (balanced approach)</span>
+          <span className={css({ marginLeft: "8px" })}>⚔️ aggressive (maximize current catch)</span>
         </div>
 
         {/* Distribution Method Icons */}
-        <div style={{ marginBottom: "4px" }}>
+        <div className={css({ marginBottom: "4px" })}>
           <strong>Distribution Method:</strong>
-          <span style={{ marginLeft: "8px" }}>🟰 equal (same quotas for all)</span>
-          <span style={{ marginLeft: "8px" }}>🔄 hybrid (balanced allocation)</span>
-          <span style={{ marginLeft: "8px" }}>📈 efficiency (quota based on capability)</span>
+          <span className={css({ marginLeft: "8px" })}>🟰 equal (same quotas for all)</span>
+          <span className={css({ marginLeft: "8px" })}>🔄 hybrid (balanced allocation)</span>
+          <span className={css({ marginLeft: "8px" })}>📈 efficiency (quota based on capability)</span>
         </div>
 
         {/* Redistribution Policy Icons */}
         <div>
           <strong>Redistribution Policy:</strong>
-          <span style={{ marginLeft: "8px" }}>🔐 conservative (minimal sharing)</span>
-          <span style={{ marginLeft: "8px" }}>🔄 moderate (balanced redistribution)</span>
-          <span style={{ marginLeft: "8px" }}>🔓 progressive (significant wealth sharing)</span>
+          <span className={css({ marginLeft: "8px" })}>🔐 conservative (minimal sharing)</span>
+          <span className={css({ marginLeft: "8px" })}>🔄 moderate (balanced redistribution)</span>
+          <span className={css({ marginLeft: "8px" })}>🔓 progressive (significant wealth sharing)</span>
         </div>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "center" }}>
-        <table style={{ borderCollapse: "collapse", fontSize: 14, minWidth: 600 }}>
+      <div className={css({ display: "flex", justifyContent: "center" })}>
+        <table className={css({ borderCollapse: "collapse", fontSize: "sm", minWidth: "600px" })}>
           <thead>
-            <tr style={{ background: "#bae6fd" }}>
-              <th style={{ padding: "6px 8px" }}>Round</th>
-              <th style={{ padding: "6px 8px" }}>Leader</th>
-              <th style={{ padding: "6px 8px" }}>
+            <tr className={css({ background: "sky.200" })}>
+              <th className={css({ padding: "6px 8px" })}>Round</th>
+              <th className={css({ padding: "6px 8px" })}>Leader</th>
+              <th className={css({ padding: "6px 8px" })}>
                 Moana
                 <br />
                 Original → Final • Cost
               </th>
               {otherChiefs.map((chief) => (
-                <th key={chief} style={{ padding: "6px 8px", fontSize: 12 }}>
+                <th key={chief} className={css({ padding: "6px 8px", fontSize: "xs" })}>
                   {chief.replace("Chief ", "")}
                   <br />
                   Original → Final • Cost
                 </th>
               ))}
-              <th style={{ padding: "6px 8px" }}>Stock After</th>
+              <th className={css({ padding: "6px 8px" })}>Stock After</th>
             </tr>
           </thead>
           <tbody>
             {history.map((h, idx) => (
-              <tr
-                key={idx}
-                style={{
-                  background: idx % 2 === 0 ? "#f8fafc" : "#fff",
-                }}
-              >
+              <tr key={idx} className={css({ background: idx % 2 === 0 ? "slate.50" : "white" })}>
                 <td
-                  style={{
+                  className={css({
                     padding: "4px 8px",
                     textAlign: "center",
                     fontWeight: 400,
-                  }}
+                  })}
                 >
                   {h.round}
                 </td>
                 {/* Leader */}
-                <td style={{ padding: "4px 8px" }}>
+                <td className={css({ padding: "4px 8px" })}>
                   {leaderCell(h.leader, h.leaderStrategy, h.leaderDistributionMethod, h.leaderRedistributionPolicy)}
                 </td>
                 {/* Moana */}
-                <td style={{ padding: "4px 8px" }}>
+                <td className={css({ padding: "4px 8px" })}>
                   {redistributionCell(h.moanaOriginalCatch, h.moanaFish, h.moanaNetTransfer, h.moanaCost)}
                 </td>
                 {/* Other Chiefs */}
                 {otherChiefs.map((_, i) => (
-                  <td key={i} style={{ padding: "4px 8px" }}>
+                  <td key={i} className={css({ padding: "4px 8px" })}>
                     {h.otherFish && h.otherOriginalCatch && h.otherFish[i] !== undefined && h.otherCosts
                       ? redistributionCell(
                           h.otherOriginalCatch[i],
@@ -267,29 +272,29 @@ const CommunityResultsTable: React.FC<{ history: CommunityRoundHistory[] }> = ({
                   </td>
                 ))}
                 {/* Fish Stock */}
-                <td style={{ padding: "4px 8px", textAlign: "center", fontWeight: 500 }}>
+                <td className={css({ padding: "4px 8px", textAlign: "center", fontWeight: 500 })}>
                   {h.fishAfter !== null ? `${Math.round(h.fishAfter)}🐟` : "-"}
                 </td>
               </tr>
             ))}
             {/* Summary Row */}
-            <tr style={{ background: "#e0e7ef", fontWeight: 600, borderTop: "2px solid #bae6fd" }}>
-              <td style={{ padding: "4px 8px", textAlign: "center" }} colSpan={2}>
+            <tr className={css({ background: "slate.200", fontWeight: 600, borderTop: "2px solid", borderTopColor: "sky.200" })}>
+              <td className={css({ padding: "4px 8px", textAlign: "center" })} colSpan={2}>
                 Total
               </td>
-              <td style={{ padding: "4px 8px", textAlign: "center" }}>
+              <td className={css({ padding: "4px 8px", textAlign: "center" })}>
                 {Math.round(moanaSum)}🐟
                 <br />
-                <span style={{ fontSize: 10, color: "#64748b" }}>${moanaCostSum.toFixed(2)}</span>
+                <span className={css({ fontSize: "xs", color: "gray.500" })}>${moanaCostSum.toFixed(2)}</span>
               </td>
               {chiefsSums.map((sum, i) => (
-                <td key={i} style={{ padding: "4px 8px", textAlign: "center" }}>
+                <td key={i} className={css({ padding: "4px 8px", textAlign: "center" })}>
                   {Math.round(sum)}🐟
                   <br />
-                  <span style={{ fontSize: 10, color: "#64748b" }}>${chiefsCostSums[i].toFixed(2)}</span>
+                  <span className={css({ fontSize: "xs", color: "gray.500" })}>${chiefsCostSums[i].toFixed(2)}</span>
                 </td>
               ))}
-              <td style={{ padding: "4px 8px", textAlign: "center", fontSize: 11 }}>
+              <td className={css({ padding: "4px 8px", textAlign: "center", fontSize: "xs" })}>
                 Redistributed: {totalRedistribution.toFixed(1)}🐟
               </td>
             </tr>
@@ -318,59 +323,61 @@ const CommunityEndSummary: React.FC<{
   const avgCostPerFish = totalFishCaught > 0 ? totalCost / totalFishCaught : 0;
 
   return (
-    <div style={{ textAlign: "center", margin: "18px 0" }}>
+    <div className={css({ textAlign: "center", margin: "18px 0" })}>
       <div
-        style={{
-          background: "#f0f9ff",
-          border: "1px solid #c7d2fe",
-          borderRadius: 8,
-          padding: 16,
-          marginBottom: 16,
-        }}
+        className={css({
+          background: "sky.50",
+          border: "1px solid",
+          borderColor: "indigo.200",
+          borderRadius: "8px",
+          padding: "16px",
+          marginBottom: "16px",
+        })}
       >
-        <div style={{ fontSize: 15, marginBottom: 8 }}>
+        <div className={css({ fontSize: "sm", marginBottom: "8px" })}>
           🏛️ <strong>{scenario === "democratic" ? "Democratic Council" : "Moana-Led Governance"}</strong> Results
         </div>
-        <div style={{ fontSize: 14, marginBottom: 8 }}>
+        <div className={css({ fontSize: "sm", marginBottom: "8px" })}>
           🐟 <strong>{Math.round(totalFishCaught)}</strong> fish caught {"·"} 💰{" "}
           <strong>${avgCostPerFish.toFixed(2)}</strong> average cost per fish
         </div>
         {scenario === "democratic" && (
-          <div style={{ fontSize: 12, marginBottom: 8, color: "#10b981", fontStyle: "italic" }}>
+          <div className={css({ fontSize: "xs", marginBottom: "8px", color: "success", fontStyle: "italic" })}>
             ✨ Community Benefit: Lower costs through coordinated fishing
           </div>
         )}
-        <div style={{ fontSize: 14, marginBottom: 8 }}>
+        <div className={css({ fontSize: "sm", marginBottom: "8px" })}>
           ↔️ Fish Redistributed: <strong>{totalRedistribution.toFixed(1)}🐟</strong>
         </div>
-        <div style={{ fontSize: 14, marginBottom: 8 }}>
+        <div className={css({ fontSize: "sm", marginBottom: "8px" })}>
           🌊 <strong>{Math.round(fishStock)}</strong> fish remaining in ocean
         </div>
       </div>
 
       {/* Ostrom Principles Active */}
       <div
-        style={{
-          background: "#f0fdf4",
-          border: "1px solid #bbf7d0",
-          borderRadius: 8,
-          padding: 12,
-          marginBottom: 16,
-          fontSize: 13,
-        }}
+        className={css({
+          background: "green.50",
+          border: "1px solid",
+          borderColor: "green.200",
+          borderRadius: "8px",
+          padding: "12px",
+          marginBottom: "16px",
+          fontSize: "xs",
+        })}
       >
-        <div style={{ fontWeight: 600, marginBottom: 8 }}>🎯 Active Ostrom Principles:</div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center" }}>
+        <div className={css({ fontWeight: 600, marginBottom: "8px" })}>🎯 Active Ostrom Principles:</div>
+        <div className={css({ display: "flex", flexWrap: "wrap", gap: "6px", justifyContent: "center" })}>
           {allPrinciples.map((principle, i) => (
             <span
               key={i}
-              style={{
-                background: "#dcfce7",
-                color: "#166534",
+              className={css({
+                background: "green.100",
+                color: "green.800",
                 padding: "2px 8px",
-                borderRadius: 12,
-                fontSize: 11,
-              }}
+                borderRadius: "12px",
+                fontSize: "xs",
+              })}
             >
               {principle}
             </span>
@@ -384,7 +391,10 @@ const CommunityEndSummary: React.FC<{
 export default function CommunityGovernanceSimulator() {
   const [scenario, setScenario] = useState<CommunityScenarioType>("democratic");
   const [history, setHistory] = useState<CommunityRoundHistory[]>([]);
-  const [fishStock, setFishStock] = useState(MODEL_PARAMS.s_init);
+  const fishStock =
+    history.length > 0
+      ? Math.max(0, history[history.length - 1].fishAfter ?? MODEL_PARAMS.s_init)
+      : MODEL_PARAMS.s_init;
 
   const getActiveOstromPrinciples = (leader: number, scenario: CommunityScenarioType): string[] => {
     const principles = [];
@@ -492,15 +502,17 @@ export default function CommunityGovernanceSimulator() {
       const adjustedSustainableBoats = conservationDecision.adjustedSustainableBoats;
       const leaderStrategy = conservationDecision.strategy;
 
-      // Declare allChiefBoats outside the if-statement so it's accessible later
+      // Declare allChiefBoats/distributionResult outside the if-statement so they're
+      // accessible later (distributionResult.method is also needed further below).
       let allChiefBoats: number[];
+      let distributionResult: ReturnType<typeof leaderDistribution> | undefined;
 
       // in the case of the hierarchical scenario use the standard sustainable boats
       if (scenario === "hierarchical") {
         allChiefBoats = [0, 1, 2, 3].map(() => calculateSustainableBoats(currentStock));
       } else {
         // LEADER DECISION 2: Choose quota distribution method
-        const distributionResult = leaderDistribution(
+        distributionResult = leaderDistribution(
           leader,
           MODEL_PARAMS.nplayers,
           COMMUNITY_PARAMS.cooperation_bonus,
@@ -545,15 +557,8 @@ export default function CommunityGovernanceSimulator() {
 
       // Calculate the latest choice of the chief if we are in the democratic scenario
       if (scenario === "democratic") {
-        // Get the distribution method from the distributionResult we calculated earlier
-        const distributionResult = leaderDistribution(
-          leader,
-          MODEL_PARAMS.nplayers,
-          COMMUNITY_PARAMS.cooperation_bonus,
-          COMMUNITY_PARAMS.efficiency_bonus,
-          COMMUNITY_PARAMS.base_quota,
-        );
-        leaderDistributionMethod = distributionResult.method;
+        // Reuse the distributionResult already calculated above instead of recomputing it.
+        leaderDistributionMethod = distributionResult!.method;
 
         // Apply community redistribution
         const redistribution = applyRedistribution(originalCatches, leader, currentStock);
@@ -615,7 +620,6 @@ export default function CommunityGovernanceSimulator() {
     // Use setTimeout to avoid synchronous setState in effect
     setTimeout(() => {
       setHistory(newHistory);
-      setFishStock(currentStock);
     }, 0);
   }, [scenario]);
 

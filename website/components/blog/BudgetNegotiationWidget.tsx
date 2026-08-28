@@ -1,35 +1,13 @@
 import React, { useState } from "react";
 import { css } from "../../styled-system/css";
+import { widgetCard } from "./widgetCard";
+import { gaussianRandom, normalCDF } from "./mathUtils";
 
 // Risk aversion parameter for utility function
 const GAMMA = 0.8;
 
 // Quadratic utility function: U(Y) = Y - 0.5 * γ * Y² - concave, risk-averse
 const utility = (y: number): number => y - 0.5 * GAMMA * y * y;
-
-// Normal distribution CDF approximation
-const normalCDF = (x: number): number => {
-  const a1 = 0.254829592;
-  const a2 = -0.284496736;
-  const a3 = 1.421413741;
-  const a4 = -1.453152027;
-  const a5 = 1.061405429;
-  const p = 0.3275911;
-  const sign = x < 0 ? -1 : 1;
-  x = Math.abs(x) / Math.sqrt(2);
-  const t = 1.0 / (1.0 + p * x);
-  const y = 1.0 - ((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
-  return 0.5 * (1.0 + sign * y);
-};
-
-// Box-Muller transform for Gaussian random numbers
-const gaussianRandom = (): number => {
-  let u = 0;
-  let v = 0;
-  while (u === 0) u = Math.random();
-  while (v === 0) v = Math.random();
-  return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
-};
 
 // Budget Negotiation Strategy Widget
 export default function BudgetNegotiationWidget() {
@@ -152,15 +130,7 @@ export default function BudgetNegotiationWidget() {
   };
 
   return (
-    <div
-      className={css({
-        margin: "32px 0",
-        padding: "6",
-        backgroundColor: "rgba(59, 130, 246, 0.05)",
-        borderRadius: "sm",
-        border: "1px solid rgba(59, 130, 246, 0.2)",
-      })}
-    >
+    <div className={widgetCard()}>
       <h4
         className={css({
           fontSize: "md",

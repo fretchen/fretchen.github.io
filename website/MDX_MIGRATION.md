@@ -88,7 +88,8 @@ MDX. Das ist eine echte Dopplung der Pipeline.
   Konvertierung im Browser ansehen.
 - **Panda:** die inline-`css()`-Boxen aus 1.4/1.5 müssen entweder eigene Komponenten
   werden oder in Markdown aufgehen. Kein `css()` mit JS-Variablen — siehe `CLAUDE.md` Regel 1.
-- **Mermaid** (`components/MermaidDiagram.tsx`) wird in Stufe 2 ein `clientOnly()`-Kandidat.
+- **Mermaid** (`components/MermaidDiagram.tsx`) galt als `clientOnly()`-Kandidat für Stufe 2 —
+  hinfällig, siehe Stufe 2.1: `clientOnly` ist inzwischen ganz aus dem Repo verschwunden.
 
 ### Aufräumen, wenn alle fünf durch sind
 
@@ -314,85 +315,138 @@ Nebenprodukts der Sortierung.
 
 ---
 
-## Stufe 3 — Vike-Filesystem-Routing
+## Stufe 3 — Eine Vike-Seite pro Post, über `+pages`
 
-**Ziel:** Vike übernimmt Routing, Code-Splitting und SSR pro Post; die handgebaute
-Infrastruktur entfällt.
+**Ziel:** Vike kennt das Modul jedes Posts zur Buildzeit statisch. Damit wird der Post
+gewöhnlicher synchroner SSR-Inhalt, Code-Splitting kommt gratis, und die in Stufe 2
+handgebaute Priming-Infrastruktur wird **löschbar statt ersetzbar**.
 
-### Zur Frage „alte Links erhalten, per Frontmatter?"
+**Randbedingung (gesetzt):** kein Unterordner pro Post, und `blog/` und `quantum/` bleiben,
+wo sie sind. Explizite IDs sind ok.
 
-**Links erhalten: ja, problemlos.** **Per Frontmatter: nein — das ist nicht der Hebel.**
+### Warum die alten Varianten 3a/3b gestorben sind
 
-Vike baut Routen aus dem **Dateisystem**, bevor irgendein MDX-Modul ausgewertet wird. Ein
-`id:` im Frontmatter ist zur Routing-Zeit nicht sichtbar. Zwei Wege funktionieren wirklich:
+Beide (`pages/blog/3/+Page.mdx` bzw. Slug-Ordner + `+route.ts`) verlangen **einen Ordner pro
+Post** und das Verschieben der Inhalte nach `pages/`. Das ist kein Schönheitsfehler des
+Plans, sondern Vikes Routing-Modell: eine Seite *ist* ein Verzeichnis mit einer
+`+Page`-Datei. Flache Datei-Routen gibt es nicht. Damit fallen 3a und 3b unter der
+Randbedingung aus.
 
-**Variante 3a — Der Ordnername *ist* die URL**
+Zur Einordnung — das ist eine anerkannte, offene Schwäche, keine Geschmacksfrage:
+[#1322](https://github.com/vikejs/vike/issues/1322) („the file name … is much more
+significant than the folder it is in", offen seit Dez 2023) — brillout schlägt dort flache
+`pages/about+Page.js`-Syntax vor, nennt sie *"functional"*, später *"Neat ideas, I like
+them … we're going in the right direction 👀"*. Seit über zwei Jahren nicht umgesetzt.
 
+### Der Mechanismus: `+pages` (verifiziert)
+
+Vike kann Seiten **programmatisch aus einer einzigen globalen Datei** definieren. Verifiziert
+per Wegwerf-Spike in diesem Repo (vike 0.4.262):
+
+```ts
+// pages/+pages.ts  — der Default-Export IST das Array
+import BlogStack from "../blog/blog_stack.mdx";     // Inhalt bleibt in blog/
+import BlogUpdates from "../blog/blog_updates.mdx";
+
+const ordered = [BlogStack, BlogUpdates];
+export default ordered.map((Page, i) => ({ route: `/blog/${i}`, Page }));
 ```
-pages/blog/3/+Page.mdx     →  /blog/3
-```
 
-Bit-identische URLs, **null** zusätzliche Dateien, reinstes Vike. Preis: `pages/blog/`
-besteht dann aus `0/`, `1/`, … `35/` — die sprechenden Dateinamen (`ipfs.mdx`,
-`vc_lessons.mdx`) gehen als Navigationshilfe verloren. Titel und Thema stehen nur noch im
-Frontmatter.
+Gemessen:
 
-**Variante 3b — Slug-Ordner plus gepinnte Route**
+- ✅ Baut und prerendert — echter Fließtext im statischen HTML
+- ✅ **Kein Ordner pro Post**, Inhalte bleiben in `blog/` / `quantum/`
+- ✅ **Echtes Code-Splitting pro Seite**, nachgewiesen: Seite A referenziert nur A's Chunk,
+  nicht B's, und umgekehrt. Vike wandelt `.mdx`-Importe in Config-Dateien automatisch in
+  *Pointer Imports* um (alles, was kein „plain script file" ist) und splittet selbst.
+- ✅ Das Array darf **generiert** werden (`.map()`), es müssen nur die `import`-Zeilen
+  literal sein.
 
-```
-pages/blog/ipfs/+Page.mdx
-pages/blog/ipfs/+route.ts   →  export default "/blog/3"
-```
+Zwei Stolpersteine aus dem Spike: `+pages` ist ein **globaler** Config (muss nach
+`pages/+pages.ts`, nicht `pages/blog/`), und der Default-Export ist das Array selbst, nicht
+`{ pages: [...] }`.
 
-Lesbare Ordner, URLs identisch, und der spätere Wechsel auf `/blog/ipfs` ist eine
-Einzeiler-Änderung plus Redirect. Preis: 34 zusätzliche Ein-Zeilen-Dateien.
+### Wie experimentell ist das?
 
-**Anti-Muster:** eine Route-Funktion, die sich das `frontmatter` aus dem
-Nachbar-`+Page.mdx` importiert, um daraus die numerische URL zu bauen. Technisch möglich,
-aber sie zieht jedes Post-Modul in das Routing-Bundle und zerstört damit exakt das
-Code-Splitting, das Stufe 3 gewinnen soll.
+Als `@experimental` markiert und die Doku-Seite `vike.dev/pages` ist noch 404 — das heißt hier
+aber „neu, Doku ausstehend, Feature-Ausbau geplant", nicht „instabil":
 
-**Empfehlung: 3b.** Die 34 Einzeiler sind einmalig; opake Zahlenordner sind dauerhaft.
+- Ausgeliefert in 0.4.259 via [PR #3356](https://github.com/vikejs/vike/pull/3356) (wir sind
+  auf **0.4.262**), schließt [#1691](https://github.com/vikejs/vike/issues/1691) (2024) und
+  entsperrt [#341](https://github.com/vikejs/vike/issues/341) „Single Route File" — **offen
+  seit 2022**.
+- brillout: *"Programmatic at config time is easy and **definitely on the radar** (I'll
+  actually personally need it for a couple of things I want to implement)."* Der schwierige
+  Teil (Runtime/CMS) wurde bewusst nach [#3359](https://github.com/vikejs/vike/issues/3359)
+  abgespalten — wir brauchen nur den ausgelieferten Config-Time-Teil.
+- Es ist **tragend**, kein Nebenexperiment: laut PR das „registration primitive" für
+  First-Party-Extensions (`vike-authjs`, `vike-better-auth`) und Page-Variants.
+- Dünne Implementierung: jeder Eintrag wird zu einem synthetischen `+config.js` an einer
+  namespaced `locationId` und läuft „through the **existing** config-resolution pipeline
+  unchanged, with no duplicated logic".
 
-### Warum Stufe 3 evtl. nicht optional ist
+**Bekannte Limitierungen** (Liste des Maintainers), soweit für uns relevant:
 
-Beim `@id`-Catch-all laufen alle Posts durch **ein** Seitenmodul. Vike kann daraus nur
-einen Chunk bauen — das Splitting pro Post muss von Hand kommen (`lazyGlobRegistry.ts`),
-und genau daraus folgt die Suspense-Problematik aus 2.0.
+| # | Limitierung | Bedeutung für uns |
+|---|---|---|
+| 2 | Nur Route-**Strings**, Route-Funktionen werden abgewiesen | egal — wir wollen literale `/blog/3` |
+| 4 | Identität ist **positionell**: Einfügen/Umsortieren ändert `pageId`s und **Client-Chunk-Dateinamen** späterer Einträge. **URLs und prerendertes HTML bleiben unberührt** | harmlos: Cache-Busting später Posts beim Einfügen |
+| 6 | Config-Time kann das Frontmatter eines Pointer-Imports **nicht** lesen | ⇒ **Reihenfolge muss explizit sein** (genau das, wofür Stufe 2.5 die IDs vergibt) |
+| 7 | `Page` muss ein Pointer Import sein (non-plain-script) | `.mdx` ✅ erfüllt, im Spike bewiesen |
+| — | `+pages` ist global ⇒ Einträge erben die **Root**-Config, nicht `pages/blog/` | Shell (`Layout`/`title`/`Head`/`data`) muss **pro Eintrag** gesetzt werden; Hooks aus `.ts` brauchen explizit `with { type: 'vike:pointer' }` |
 
-Mit einer Seite pro Post kennt Vike das Modul zur Buildzeit statisch. Dann ist der Post
-gewöhnlicher synchroner SSR-Inhalt: **kein `lazy`, kein `Suspense`, kein `<template>`,
-sauberes HTML** — und Code-Splitting bekommst du gratis, weil jede Seite ohnehin ihr
-eigenes Bundle hat.
+### Warum Route-Funktionen das *nicht* lösen
 
-Falls Spike 2.0 negativ ausgeht, ist das der Grund, direkt hierher zu gehen.
+Eine Route Function beantwortet „passt diese Seite auf diese URL, und was sind die Params?" —
+sie **wählt niemals ein Modul aus**. Ein Seitenverzeichnis = ein `Page`-Modul. `@id` plus
+Route Function schickt also weiterhin alle Posts durch *ein* Seitenmodul; Vike kann das
+`.mdx` nach wie vor nicht statisch kennen, und `lazyGlobRegistry.ts` + `postModuleCache.ts` +
+beide Render-Hooks bleiben.
+
+Route-Funktionen konsolidieren nur die fünf duplizierten `@id`-Ordner zu einem:
+**Datei-Ersparnis, keine Maschinerie-Ersparnis.** (Bleibt als Fallback-Option, falls `+pages`
+enttäuscht.)
 
 ### Umsetzung
 
-- [ ] **3.1** Shell in `pages/blog/+Layout.tsx` ziehen: Titel, `MetadataLine`, ToC,
-      `NFTFloatImage`, prev/next, `Webmentions`, `CommentsSection`.
-- [ ] **3.2** Metadaten für die Shell: **ein** geerbtes `pages/blog/+data.ts` reicht — es
-      bekommt `pageContext.urlPathname` und schlägt das Frontmatter über den Glob nach.
-      Keine 34 einzelnen `+data.ts`.
-      ⚠️ Das bestehende `pages/blog/+data.ts` (Übersichtsseite) wird an Kindseiten vererbt.
-      Beide Fälle müssen darin sauber getrennt werden — hier lauert der Konflikt.
-- [ ] **3.3** Posts nach `pages/blog/<slug>/+Page.mdx` verschieben, `+route.ts` je Post.
-- [ ] **3.4** Löschen: `utils/lazyGlobRegistry.ts`, `ReactPostRenderer`
-      (`components/Post.tsx:31-146`, ~110 Zeilen), `componentPath` aus `types/BlogPost.ts`,
-      die `isSupportedDirectory`-Prüfung in `Post.tsx:52-56`.
+- [ ] **3.1** `pages/+pages.ts` anlegen: 35 literale `.mdx`-Importe für `blog/`, dazu die
+      explizit geordnete Liste. Die Array-Position bzw. der `route`-String pinnt die URL
+      dauerhaft — Stufe 2.5 liefert die Werte.
+- [ ] **3.2** Shell pro Eintrag setzen (`Layout`/`title`/`Head`/`data`). ⚠️ Hauptarbeit:
+      wegen der globalen Platzierung erben die Einträge die Root-Config, **nicht**
+      `pages/blog/+config`. Hook-Configs aus `.ts` brauchen `with { type: 'vike:pointer' }`.
+- [ ] **3.3** `pages/blog/@id/` löschen (7 Dateien).
+- [ ] **3.4** Löschen: `utils/postModuleCache.ts`, `utils/lazyGlobRegistry.ts`,
+      `pages/+onBeforeRenderHtml.ts`, `pages/+onBeforeRenderClient.ts` (zusammen **193
+      Zeilen**), dazu `ReactPostRenderer` samt Fehler-UI in `components/Post.tsx` und
+      `componentPath` aus `types/BlogPost.ts`.
+- [ ] **3.5** Abnahme: URL-Menge und Titel-zu-URL-Zuordnung **identisch** zu vorher
+      (`build/blog/*/index.html` vorher/nachher), Fließtext weiterhin im HTML, pro Post ein
+      eigener Chunk (`grep` der Chunk-Referenzen in zwei Post-HTMLs — sie dürfen sich nicht
+      überschneiden), dazu `npm test` / `typecheck` / `lint`.
 
 ### Was *nicht* verschwindet
 
-`utils/blogLoader.ts` und `utils/globRegistry.ts` bleiben — die Übersichtsseite, die
-prev/next-Navigation und der Frontmatter-Lookup brauchen weiter alle Metadaten. Der Glob
-kann aber auf `{ import: 'frontmatter' }` schrumpfen und lädt dann keine Komponenten mehr.
+`utils/blogLoader.ts` und `utils/globRegistry.ts` bleiben — Übersichtsseite, prev/next und
+Frontmatter-Lookup brauchen weiter alle Metadaten. Der Glob kann aber auf
+`{ import: 'frontmatter' }` schrumpfen und lädt dann keine Komponenten mehr. Das ist auch
+inhaltlich fällig: `vike.dev/markdown` rät ausdrücklich davon ab, alle Markdown-Dateien per
+`import.meta.glob()` zu laden — genau das tut `globRegistry.ts` heute mit `eager: true` über
+alle 68 Dateien.
 
 ### Scope-Grenze
 
-**Nur `blog/`.** Die 33 Quantum-Vorlesungen in vier Ordnern nach demselben Muster
-umzustellen hieße 33 weitere Verzeichnisse. Diese Entscheidung erst treffen, wenn Stufe 3
-für den Blog steht und sich bewährt hat. Vorlesungen profitieren ohnehin fast nur von
-Stufe 2 — sie sind reine Prosa ohne Widgets.
+**Erst nur `blog/` (35 Posts).** Die 33 Quantum-Vorlesungen bleiben zunächst auf `@id` — als
+laufende Referenz, falls `+pages` doch Probleme macht. Erst übertragen, wenn Stufe 3 für den
+Blog steht und sich bewährt hat.
+
+### Rückfallebene
+
+Sollte `+pages` enttäuschen (API-Änderung beim vike-Upgrade), gibt es zwei Ausstiege, beide
+mechanisch: die Route-Function-Konsolidierung (oben) oder Variante 3a/3b — letztere ist der
+von `vike.dev/markdown` dokumentierte Mainstream-Weg (`/pages/blog/<slug>/+Page.md`) und
+völlig risikofrei, kostet aber genau die beiden Dinge, die die Randbedingung ausschließt.
+vike-Version deshalb pinnen und die Umstellung auf einem Branch verifizieren.
 
 ---
 
@@ -413,6 +467,6 @@ Stufe 2 — sie sind reine Prosa ohne Widgets.
 | Stufe 1 | ein Format, ~60 Zeilen Sonderfälle weg, Stufe 2 wird möglich | nichts |
 | Stufe 2 | Inhalt im HTML — Bridgy, SEO, LCP | nichts |
 | Stufe 2.5 | URLs sind stabil gegen rückdatierte Posts | nichts |
-| Stufe 3 | ~110 Zeilen Renderer + eine Registry weg, Splitting von Vike | 34 `+route.ts`-Einzeiler |
+| Stufe 3 | 193 Zeilen Priming-Maschinerie + `ReactPostRenderer` + 7 `@id`-Dateien weg, Splitting von Vike | eine `+pages.ts` mit 35 Import-Zeilen; Abhängigkeit von einem `@experimental` Config |
 
 Kein Zwischenstand hinterlässt einen halben Umbau.

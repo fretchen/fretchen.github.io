@@ -1,14 +1,9 @@
 import React, { useEffect, useState } from "react";
-import {
-  useWriteContract,
-  useWaitForTransactionReceipt,
-  useReadContract,
-  useSimulateContract,
-  useAccount,
-} from "wagmi";
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useSimulateContract } from "wagmi";
 import { formatEther } from "viem";
 import { getCollectorNFTAddress, CollectorNFTv1ABI, COLLECTOR_NFT_NETWORKS, fromCAIP2 } from "@fretchen/chain-utils";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
+import { useIsWalletConnected } from "../hooks/useIsWalletConnected";
 import { useLocale } from "../hooks/useLocale";
 import { button } from "../styled-system/recipes";
 
@@ -24,7 +19,7 @@ interface SimpleCollectButtonProps {
  */
 export function SimpleCollectButton({ genImTokenId }: SimpleCollectButtonProps) {
   // Wagmi hooks
-  const { isConnected } = useAccount();
+  const isConnected = useIsWalletConnected();
   const { network, switchIfNeeded } = useAutoNetwork(COLLECTOR_NFT_NETWORKS);
   const { writeContract, isPending, data: hash } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });

@@ -4,6 +4,7 @@ import { formatUnits, parseUnits, type Address } from "viem";
 import { css } from "../styled-system/css";
 import { getUSDCConfig, fromCAIP2, type USDCConfig } from "@fretchen/chain-utils";
 import { button } from "../styled-system/recipes";
+import { useIsWalletConnected } from "../hooks/useIsWalletConnected";
 
 // Minimal ERC-20 ABI for allowance + approve
 export const ERC20_ABI = [
@@ -126,7 +127,8 @@ export function FacilitatorApproval({
   facilitatorAddress: propAddress,
   showTestnets = false,
 }: FacilitatorApprovalProps) {
-  const { address, isConnected, chainId } = useAccount();
+  const { address, chainId } = useAccount();
+  const isConnected = useIsWalletConnected();
   const { switchChainAsync } = useSwitchChain();
   const [facilitatorAddress, setFacilitatorAddress] = useState<Address | null>(propAddress ?? null);
   const [fetchError, setFetchError] = useState<string | null>(null);

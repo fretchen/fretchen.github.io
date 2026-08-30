@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useAccount } from "wagmi";
+import { useIsWalletConnected } from "../hooks/useIsWalletConnected";
 import { useMultiChainUserNFTs } from "../hooks/useMultiChainNFTs";
 import { NFTMetadata, ModalImageData } from "../types/components";
 import * as styles from "../layouts/shared";
@@ -18,7 +18,7 @@ interface MyNFTListProps {
 }
 
 export function MyNFTList({ newlyCreatedNFT, onNewNFTDisplayed }: MyNFTListProps) {
-  const { isConnected } = useAccount();
+  const isConnected = useIsWalletConnected();
 
   // Use the new multi-chain hook to fetch NFTs from all networks
   const { tokens, isLoading, reload } = useMultiChainUserNFTs();

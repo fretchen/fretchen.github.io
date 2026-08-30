@@ -12,7 +12,6 @@ import React from "react";
 import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
 import { MdxPre } from "../components/MdxCodeBlock";
-import Lecture5 from "../quantum/amo/lecture5.mdx";
 
 const PY = `def add(a, b):\n    return a + b`;
 
@@ -56,28 +55,10 @@ describe("MdxPre", () => {
     expect(container.querySelector("[class^='hljs-']")).toBeNull();
   });
 
-  it("leaves remark-math's language-math fence untouched (regression: useKaTeXRenderer depends on this class)", () => {
-    const latex = "\\hat{H} = \\frac{p^2}{2m}";
-    const { container } = render(
-      <MdxPre>
-        <code className="language-math math-display">{latex}</code>
-      </MdxPre>,
-    );
-
-    const code = container.querySelector("code.language-math");
-    expect(code).not.toBeNull();
-    expect(code?.className).toBe("language-math math-display");
-    expect(code?.textContent).toBe(latex);
-    expect(container.querySelector("[class^='hljs-']")).toBeNull();
-  });
-
-  it("preserves code.language-math.math-display when a real lecture is rendered exactly as Post.tsx renders it (regression test)", () => {
-    const { container } = render(<Lecture5 components={{ pre: MdxPre }} />);
-
-    // Inline math ($...$) renders as a bare <code class="language-math math-inline"> that never
-    // goes through <pre>/MdxPre at all, so it can't detect this regression. Display math ($$...$$)
-    // is the one that goes through <pre> — assert on .math-display specifically, the same selector
-    // useKaTeXRenderer.ts relies on to find and replace block math. Lecture5 has both kinds.
-    expect(container.querySelectorAll("code.language-math.math-display").length).toBeGreaterThan(0);
-  });
+  // A `language-math` fence (remark-math's block-math output) used to need a dedicated
+  // untouched-passthrough case here, because the old client-side KaTeX renderer found and
+  // replaced it by that exact selector after MdxPre ran. That renderer is gone — rehype-katex
+  // (vite.config.ts) now turns math into real `.katex` markup at build time, before MdxPre
+  // ever sees the tree, so `language-math` never reaches this component at all. See
+  // test/KaTeXRenderer.test.tsx for the math-rendering assertions.
 });

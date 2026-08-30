@@ -61,6 +61,7 @@ describe("MyNFTList Multi-Chain Support", () => {
     mockUseAccount.mockReturnValue({
       address: "0x1234567890123456789012345678901234567890",
       isConnected: true,
+      status: "connected",
     });
 
     // Default: some NFTs from multiple chains
@@ -124,6 +125,7 @@ describe("MyNFTList Multi-Chain Support", () => {
     mockUseAccount.mockReturnValue({
       address: undefined,
       isConnected: false,
+      status: "disconnected",
     });
 
     render(<MyNFTList />);
@@ -195,6 +197,7 @@ describe("MyNFTList callback behavior", () => {
     mockUseAccount.mockReturnValue({
       address: "0x1234567890123456789012345678901234567890",
       isConnected: true,
+      status: "connected",
     });
 
     mockUseMultiChainUserNFTs.mockReturnValue({

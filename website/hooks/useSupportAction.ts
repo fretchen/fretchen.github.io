@@ -24,6 +24,7 @@ import {
 } from "../utils/getChain";
 import { config } from "../wagmi.config";
 import { trackEvent } from "../utils/analytics";
+import { useIsWalletConnected } from "./useIsWalletConnected";
 import { useLocale } from "./useLocale";
 
 // Fixed donation amount: 0.50 USDC (6 decimals)
@@ -58,7 +59,8 @@ export function useSupportAction(url: string) {
   const modalBody = useLocale({ label: "metadataLine.modalBody" });
 
   // Wagmi hooks
-  const { isConnected, chainId: accountChainId, address } = useAccount();
+  const { chainId: accountChainId, address } = useAccount();
+  const isConnected = useIsWalletConnected();
   const wagmiChainId = useChainId();
   const { switchChainAsync } = useSwitchChain();
   const { writeContract, isPending, data: hash, error: writeError } = useWriteContract();

@@ -7,17 +7,6 @@ const LANG_ALIASES: Record<string, CodeLang> = {
   sh: "bash",
 };
 
-/**
- * `remark-math` (configured in vite.config.ts) also renders through `<pre><code class="language-math ...">`
- * — the same shape as a fenced code block, but it's not one. `useKaTeXRenderer.ts` finds these via
- * `querySelectorAll("code.language-math")` and replaces them with real KaTeX markup client-side.
- * MdxPre must leave this class untouched, or that selector stops matching and math silently stops
- * rendering (this exact regression happened once already — hence the dedicated check and test).
- */
-function isMathFence(className?: string): boolean {
-  return /(^|\s)language-math(\s|$)/.test(className ?? "");
-}
-
 function resolveLang(className?: string): CodeLang {
   const match = /language-(\w+)/.exec(className ?? "");
   const raw = match?.[1];
@@ -41,16 +30,18 @@ function resolveLang(className?: string): CodeLang {
  * This adapter, passed to the compiled MDX component as its `components.pre` prop (see Post.tsx —
  * MDX here is compiled without `providerImportSource`, so it reads overrides from `props.components`,
  * not from `MDXProvider` context), redirects that markup through CodeBlock for highlighting + copy
- * support. Falls back to a plain `<pre>` for a `language-math` fence (see isMathFence above) or for
- * any `pre` that doesn't have the expected single `<code>` child (defensive — MDX always produces
- * this shape for fenced blocks, but `pre` can in principle appear standalone in hand-written MDX/HTML).
+ * support. Falls back to a plain `<pre>` for any `pre` that doesn't have the expected single
+ * `<code>` child (defensive — MDX always produces this shape for fenced blocks, but `pre` can in
+ * principle appear standalone in hand-written MDX/HTML). Math blocks never reach here at all —
+ * rehypeKatex (vite.config.ts) has already turned them into `<span class="katex">` before MdxPre
+ * ever sees the tree.
  */
 export function MdxPre({ children, ...rest }: React.HTMLAttributes<HTMLPreElement>) {
   const child = React.isValidElement(children) ? children : null;
   const childProps = child?.props as { className?: string; children?: React.ReactNode } | undefined;
   const code = childProps?.children;
 
-  if (!child || typeof code !== "string" || isMathFence(childProps?.className)) {
+  if (!child || typeof code !== "string") {
     return <pre {...rest}>{children}</pre>;
   }
 

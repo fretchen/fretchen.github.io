@@ -57,6 +57,6 @@ export class MemoryHitStorage implements HitStorage {
 }
 
 /** Seeds one hour bucket, in the layout `hit.ts` writes. */
-export function hourBucket(hits: number, pages: Record<string, number>) {
-  return { hits, pages };
+export function hourBucket(hits: number, pages: Record<string, number>, landings = 0) {
+  return { hits, landings, pages };
 }

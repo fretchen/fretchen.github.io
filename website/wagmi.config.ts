@@ -12,6 +12,15 @@ const projectId = "dc4827db33b6cb0234280a0ca3521e5c";
 export const config = createConfig({
   chains: [mainnet, sepolia, optimism, optimismSepolia, base, baseSepolia],
   connectors: [walletConnect({ projectId })],
+  // Without this, wagmi's internal <Hydrate> (node_modules/wagmi/src/hydrate.ts) runs its
+  // reconnect-on-mount dispatch SYNCHRONOUSLY DURING RENDER instead of in a useEffect —
+  // any component that reads wagmi state while mounting in that same pass (OwnerNavLinks in
+  // layouts/LayoutDefault.tsx, via useAccount()) then trips React's "Cannot update a
+  // component while rendering a different component" warning. `ssr: true` moves reconnection
+  // into an effect. It does NOT need cookieStorage/cookieToInitialState alongside it — this
+  // app already treats SSR as always-disconnected by design (see the hasMounted comment in
+  // hooks/useWalletConnection.ts), so there's no persisted state to make available server-side.
+  ssr: true,
   batch: { multicall: { wait: 16 } },
   transports: {
     [mainnet.id]: http(),

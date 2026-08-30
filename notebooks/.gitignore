@@ -1,1 +1,5 @@
 .env
+
+# raw GSHHG download for box_dimension_coastlines.py — multi-hundred MB, re-downloaded on demand
+.data/
+

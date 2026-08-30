@@ -14,7 +14,6 @@ describe("blogLoader - Pure Functions", () => {
     const createBlog = (overrides: Partial<BlogPost> = {}): BlogPost => ({
       title: "Test Blog",
       content: "",
-      type: "react",
       ...overrides,
     });
 
@@ -102,23 +101,6 @@ describe("blogLoader - Pure Functions", () => {
       expect(result?.publishing_date).toBe("2025-01-15");
       expect(result?.tokenID).toBe(42);
       expect(result?.description).toBe("A test blog post");
-      expect(result?.type).toBe("react");
-    });
-
-    it("should extract metadata from TSX module with meta", () => {
-      const module = {
-        meta: {
-          title: "Interactive Post",
-          publishing_date: "2025-02-01",
-          tokenID: 99,
-        },
-      };
-
-      const result = extractMetadataFromModule(module, "../blog/interactive.tsx");
-
-      expect(result).not.toBeNull();
-      expect(result?.title).toBe("Interactive Post");
-      expect(result?.tokenID).toBe(99);
     });
 
     it("should generate fallback title from MDX filename", () => {
@@ -131,16 +113,6 @@ describe("blogLoader - Pure Functions", () => {
       const result = extractMetadataFromModule(module, "../blog/my_awesome_post.mdx");
 
       expect(result?.title).toBe("my_awesome_post");
-    });
-
-    it("should generate fallback title from TSX filename with formatting", () => {
-      const module = {
-        meta: {},
-      };
-
-      const result = extractMetadataFromModule(module, "../blog/my_cool_component.tsx");
-
-      expect(result?.title).toBe("My Cool Component");
     });
 
     it("should return null for invalid module", () => {
@@ -180,7 +152,6 @@ describe("blogLoader - Pure Functions", () => {
     const createBlog = (tokenID?: number): BlogPost => ({
       title: `Blog ${tokenID || "none"}`,
       content: "",
-      type: "react",
       tokenID,
     });
 
@@ -248,7 +219,6 @@ describe("blogLoader - Pure Functions", () => {
     const createBlog = (tokenID?: number): BlogPost => ({
       title: `Blog ${tokenID || "none"}`,
       content: "",
-      type: "react",
       tokenID,
     });
 

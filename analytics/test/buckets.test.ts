@@ -65,8 +65,30 @@ describe("readDayFromHourly", () => {
 
     const day = await readDayFromHourly(store, SITE, "2026-08-10");
 
-    expect(day).toEqual({ hits: 7, pages: { "/": 4, "/blog/": 2, "/x402/": 1 }, source: "beacon" });
+    expect(day).toEqual({ hits: 7, landings: 0, pages: { "/": 4, "/blog/": 2, "/x402/": 1 }, source: "beacon" });
     expect(Object.keys(day!.pages)).toEqual(["/", "/blog/", "/x402/"]);
+  });
+
+  it("sums landings across the day's buckets alongside hits", async () => {
+    const store = new MemoryHitStorage({
+      "counts/fretchen.eu/2026-08-10T00.json": hourBucket(5, { "/": 5 }, 3),
+      "counts/fretchen.eu/2026-08-10T13.json": hourBucket(2, { "/": 2 }, 1),
+    });
+
+    const day = await readDayFromHourly(store, SITE, "2026-08-10");
+
+    expect(day).toMatchObject({ hits: 7, landings: 4 });
+  });
+
+  it("treats an hourly bucket written before landings existed as landings: 0", async () => {
+    const store = new MemoryHitStorage({
+      // No `landings` key at all — simulates a real pre-migration S3 object.
+      "counts/fretchen.eu/2026-08-10T00.json": { hits: 5, pages: { "/": 5 } },
+    });
+
+    const day = await readDayFromHourly(store, SITE, "2026-08-10");
+
+    expect(day).toMatchObject({ hits: 5, landings: 0 });
   });
 
   it("returns null for a day with no objects, so no-traffic is distinguishable from not-compacted", async () => {

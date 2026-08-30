@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAccount } from "wagmi";
 import { readContract } from "wagmi/actions";
 import { config, asConfiguredChainId } from "../wagmi.config";
+import { useIsWalletConnected } from "./useIsWalletConnected";
 import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS, fromCAIP2, isTestnet } from "@fretchen/chain-utils";
 
 export interface MultiChainNFTToken {
@@ -60,7 +61,8 @@ async function fetchAllUserNFTs(networks: string[], address: `0x${string}`): Pro
 
 export function useMultiChainUserNFTs(options: UseMultiChainUserNFTsOptions = {}): UseMultiChainUserNFTsResult {
   const { includeTestnets = false } = options;
-  const { address, isConnected } = useAccount();
+  const { address } = useAccount();
+  const isConnected = useIsWalletConnected();
 
   const networks = useMemo(() => GENAI_NFT_NETWORKS.filter((n) => includeTestnets || !isTestnet(n)), [includeTestnets]);
 

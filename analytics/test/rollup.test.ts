@@ -21,6 +21,7 @@ describe("rollupRecentDays", () => {
     expect(summary.written).toEqual(["2026-08-09"]);
     expect(store.read<MonthRollup>(rollupKey(SITE, "2026-08"))?.days["2026-08-09"]).toEqual({
       hits: 4,
+      landings: 0,
       pages: { "/blog/": 2, "/": 2 },
       source: "beacon",
     });

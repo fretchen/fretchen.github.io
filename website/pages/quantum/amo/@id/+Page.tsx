@@ -24,7 +24,6 @@ const App: React.FC = function () {
         content={blog.content}
         publishing_date={blog.publishing_date}
         tokenID={blog.tokenID}
-        type={blog.type}
         componentPath={blog.componentPath}
         prevPost={prevPost}
         nextPost={nextPost}

@@ -3,5 +3,5 @@ import { trackHit } from "../utils/hitTracker";
 
 export function onPageTransitionEnd(pageContext: PageContext) {
   document.querySelector("body")?.classList.remove("page-is-transitioning");
-  trackHit(pageContext.urlPathname);
+  trackHit(pageContext.urlPathname, false);
 }

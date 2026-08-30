@@ -151,6 +151,9 @@ class Performance(BaseModel):
     """Aggregated engagement metrics for all published posts."""
 
     posts: list[PostMetrics] = Field(default_factory=list)
+    # Page path -> hits in the trailing 30 days, from the analytics service's
+    # monthly rollups. See agent/nodes/ingest.py's _collect_page_traffic.
+    page_traffic: dict[str, int] = Field(default_factory=dict)
 
 
 class DraftCritique(BaseModel):

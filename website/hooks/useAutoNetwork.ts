@@ -11,9 +11,10 @@
  * - Beginners don't need to understand chains
  */
 
-import { useAccount, useChainId, useSwitchChain } from "wagmi";
+import { useChainId, useSwitchChain } from "wagmi";
 import { useCallback, useState } from "react";
 import { toCAIP2, fromCAIP2 } from "@fretchen/chain-utils";
+import { useIsWalletConnected } from "./useIsWalletConnected";
 
 interface UseAutoNetworkResult {
   /** Target CAIP-2 network for transactions */
@@ -56,7 +57,7 @@ interface UseAutoNetworkResult {
  */
 export function useAutoNetwork(supportedNetworks: readonly string[]): UseAutoNetworkResult {
   const chainId = useChainId();
-  const { isConnected } = useAccount();
+  const isConnected = useIsWalletConnected();
   const { switchChainAsync } = useSwitchChain();
   const [switchError, setSwitchError] = useState<string | null>(null);
 

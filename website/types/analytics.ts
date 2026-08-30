@@ -2,6 +2,13 @@
 
 export interface DayBucket {
   hits: number;
+  /**
+   * Fresh page loads only, not in-app navigations — a proxy for how many
+   * pages a visit covered. Absent on any day written before this field
+   * existed (every "umami" day, and any older "beacon" day) — not
+   * retrofittable, so treat a missing value as unknown, not zero.
+   */
+  landings?: number;
   /** Path → count for that day. Summed client-side over whatever range is shown. */
   pages: Record<string, number>;
   /**

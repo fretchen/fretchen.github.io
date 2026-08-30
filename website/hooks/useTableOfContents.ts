@@ -33,8 +33,7 @@ function slugify(text: string): string {
  *
  * @param contentRef - Ref to the content container element
  * @param isReady - Gate for containers whose content arrives asynchronously
- *   (e.g. lazily loaded post components): the scan only runs once true,
- *   mirroring useKaTeXRenderer's isReady parameter
+ *   (e.g. lazily loaded post components): the scan only runs once true
  * @returns Array of TocItem objects
  *
  * @example

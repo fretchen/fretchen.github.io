@@ -73,6 +73,10 @@ function TocItem({ heading, isActive, onItemClick }: TocItemProps) {
  * Automatically hides on screens smaller than 1200px.
  * Only renders if there are at least `minHeadings` headings.
  *
+ * Widget components embedded in post content (components/blog/*) must therefore use
+ * h4 or lower for their own titles, never h3 — otherwise their chrome gets picked up
+ * here as if it were one of the post's real document sections.
+ *
  * @example
  * ```tsx
  * const contentRef = useRef<HTMLDivElement>(null);

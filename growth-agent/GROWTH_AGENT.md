@@ -2,6 +2,13 @@
 
 ## Implementation Plan & Architecture
 
+> **Note:** this plan predates the migration off Umami Cloud. Umami has been
+> fully replaced by the self-hosted `analytics` service (see
+> `../analytics/README.md`); every reference to Umami below is historical.
+> Page traffic is now collected via `_collect_page_traffic` in
+> `agent/nodes/ingest.py`, reading the `analytics` service's own S3 rollups —
+> `agent/umami_client.py` no longer exists.
+
 ---
 
 # 1. Objective
@@ -177,7 +184,6 @@ growth-agent/
 │   ├── __init__.py
 │   ├── models.py           # Pydantic state models (Insights, Strategy, Draft, LLMAnalysis, PageMeta, ...)
 │   ├── llm_client.py       # IONOS LLM client (langchain-openai ChatOpenAI)
-│   ├── umami_client.py     # Umami Cloud REST API client
 │   ├── page_meta.py        # HTTP-based page metadata fetcher (title, description from meta tags)
 │   ├── storage.py          # LocalStorage (notebooks) + S3Storage (production) + load_model helper
 │   ├── publisher.py        # Publish approved drafts to platforms
@@ -186,7 +192,7 @@ growth-agent/
 │   │   └── bluesky.py      # AT Protocol client (httpx)
 │   ├── nodes/               # LangGraph node modules
 │   │   ├── __init__.py
-│   │   ├── ingest.py       # ingest_analytics() — Umami + social metrics
+│   │   ├── ingest.py       # ingest_analytics() — page traffic + social metrics
 │   │   ├── insights.py     # generate_insights() — LLM analysis + prompt templates
 │   │   ├── strategy.py     # adjust_strategy() — LLM strategy adjustments + audit log
 │   │   ├── plan.py         # create_plan() — page selection, scheduling, pipeline depth
@@ -196,7 +202,7 @@ growth-agent/
 │   └── graph.py            # LangGraph StateGraph — OODA loop compilation
 │
 ├── notebooks/
-│   ├── 01_umami_ingest.ipynb
+│   ├── 01_analytics_ingest.ipynb
 │   ├── 02_llm_insights.ipynb
 │   ├── 03_content_creation.ipynb
 │   ├── 04_s3_state.ipynb

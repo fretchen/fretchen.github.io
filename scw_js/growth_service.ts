@@ -67,6 +67,9 @@ export interface PostMetrics {
 
 export interface Performance {
   posts: PostMetrics[];
+  // Page path -> hits in the trailing 30 days, from the analytics service's
+  // monthly rollups. Absent on performance.json written before this field existed.
+  page_traffic?: Record<string, number>;
 }
 
 // ===== S3 helpers =====

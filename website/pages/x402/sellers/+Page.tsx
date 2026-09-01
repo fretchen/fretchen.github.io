@@ -9,7 +9,33 @@ import { TableOfContents } from "../../../components/TableOfContents";
 import { PageHeader } from "../../../components/PageHeader";
 import { prose, table } from "../shared.styles";
 
-// ─── Mermaid diagram ───────────────────────────────────────────────────────
+// ─── Mermaid diagrams ───────────────────────────────────────────────────────
+
+const x402FlowDiagram = `
+sequenceDiagram
+    participant Buyer as Buyer / Wallet
+    participant Server as Resource Server<br/>(Seller)
+    participant Facilitator as Facilitator
+    participant Chain as Blockchain<br/>(USDC)
+
+    Buyer->>Server: 1. HTTP request (no payment)
+    Server-->>Buyer: 2. 402 Payment Required<br/>+ payment requirements
+
+    Note over Buyer: 3. User signs EIP-3009<br/>payment authorization
+
+    Buyer->>Server: 4. Same request<br/>+ PAYMENT-SIGNATURE header
+    Server->>Facilitator: 5. POST /verify
+    Facilitator-->>Server: 6. Payment valid ✓
+
+    Note over Server: 7. Deliver resource
+
+    Server->>Facilitator: 8. POST /settle
+    Facilitator->>Chain: 9. transferWithAuthorization
+    Chain-->>Facilitator: 10. Confirmed
+    Facilitator-->>Server: 11. Settlement complete
+
+    Server-->>Buyer: 12. 200 OK + resource
+`;
 
 const feeFlowDiagram = `
 sequenceDiagram
@@ -290,9 +316,10 @@ return new Response(JSON.stringify(result), { status: 200 });`}</CodeBlock>
               HTTP 402 Payment Required
             </a>{" "}
             status code. A resource server (you) responds with payment requirements, the buyer signs a payment, and the
-            facilitator handles verification and on-chain settlement. See the <a href="/x402">x402 hub</a> for the full
-            request/response flow.
+            facilitator handles verification and on-chain settlement:
           </p>
+
+          <MermaidDiagram definition={x402FlowDiagram} title="x402 Payment Flow" />
 
           <p>Key properties:</p>
           <ul>

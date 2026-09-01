@@ -8,34 +8,26 @@ import { css } from "../../styled-system/css";
 import { prose } from "./shared.styles";
 
 // This page is deliberately short — a hub in the shape of /quantum and /lab, not a third
-// copy of the reference material. It answers "what is this" and sends a seller or a buyer
-// on to the page written for them. Any fact that could drift (fee amount, endpoint URLs,
-// approval mechanics) belongs on exactly one of the two deep pages, never restated here.
+// copy of the reference material. It teaches the concept (three roles, permissionless)
+// and sends a seller or a buyer on to the page written for them. The facilitator is one
+// instance of one role here, not the subject of the page — the detailed protocol trace
+// (headers, /verify, /settle) lives with the sellers guide, where it's implementation
+// detail for someone integrating, not an introduction. Any fact that could drift (fee
+// amount, endpoint URLs, approval mechanics) belongs on exactly one of the two deep
+// pages, never restated here.
 
-const x402FlowDiagram = `
+const rolesDiagram = `
 sequenceDiagram
-    participant Buyer as Buyer / Wallet
-    participant Server as Resource Server<br/>(Seller)
-    participant Facilitator as Facilitator
-    participant Chain as Blockchain<br/>(USDC)
+    participant Buyer
+    participant Seller as Seller<br/>(resource server)
+    participant Facilitator
 
-    Buyer->>Server: 1. HTTP request (no payment)
-    Server-->>Buyer: 2. 402 Payment Required<br/>+ payment requirements
-
-    Note over Buyer: 3. User signs EIP-3009<br/>payment authorization
-
-    Buyer->>Server: 4. Same request<br/>+ PAYMENT-SIGNATURE header
-    Server->>Facilitator: 5. POST /verify
-    Facilitator-->>Server: 6. Payment valid ✓
-
-    Note over Server: 7. Deliver resource
-
-    Server->>Facilitator: 8. POST /settle
-    Facilitator->>Chain: 9. transferWithAuthorization
-    Chain-->>Facilitator: 10. Confirmed
-    Facilitator-->>Server: 11. Settlement complete
-
-    Server-->>Buyer: 12. 200 OK + resource
+    Buyer->>Seller: Request
+    Seller-->>Buyer: 402 Payment Required
+    Buyer->>Seller: Retry, payment attached
+    Seller->>Facilitator: Verify & settle
+    Facilitator-->>Seller: Confirmed on-chain
+    Seller-->>Buyer: Deliver resource
 `;
 
 // ─── Live /supported fetch ───────────────────────────────────────────────────
@@ -128,12 +120,39 @@ export default function Page() {
 
       <div className={prose}>
         <p>
-          An independent <a href="https://github.com/coinbase/x402">x402</a> facilitator on Optimism and Base — it
-          verifies and settles crypto payments on-chain, for anyone accepting or paying with the protocol. Status:{" "}
-          <SupportedStatus />
+          <a href="https://github.com/coinbase/x402">x402</a> revives the long-dormant HTTP{" "}
+          <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/402">402 Payment Required</a>{" "}
+          status code as a real payment protocol: pay per request, in stablecoin, verified and settled on-chain — no
+          accounts, no API keys, no invoices.
         </p>
 
-        <MermaidDiagram definition={x402FlowDiagram} title="x402 Payment Flow" />
+        <p>Every x402 exchange has three roles:</p>
+        <ul>
+          <li>
+            <strong>Buyer</strong> — pays for a resource, signing an authorization rather than sending a transaction
+            themselves.
+          </li>
+          <li>
+            <strong>Seller</strong> (the resource server) — sets a price, gets paid, delivers the resource.
+          </li>
+          <li>
+            <strong>Facilitator</strong> — verifies the buyer&apos;s payment and settles it on-chain, so the buyer and
+            seller never have to trust each other directly.
+          </li>
+        </ul>
+
+        <MermaidDiagram definition={rolesDiagram} title="The three x402 roles" />
+
+        <p>
+          This site runs all three: a facilitator (below), two paid services acting as sellers, and the buyer-side
+          integrations that call them. Facilitator status: <SupportedStatus />
+        </p>
+
+        <p>
+          The protocol is <strong>permissionless</strong> — there is no allowlist, no registration. Anyone can run a
+          seller against this facilitator, or write a buyer client against these endpoints, or against any other x402
+          facilitator entirely.
+        </p>
 
         <CardList>
           <Card

@@ -99,12 +99,13 @@ $$
 b_{1,2}^{c} \approx b_{1,2} \left(1-\gamma\right) + b_{2,1} \gamma
 $$
 
-So we can already see that we really start to care about the number of boats that the other neighbor has sent out. Let us see 
+So we can already see that we really start to care about the number of boats that the other neighbor has sent out. Let us see
 what happens in the extreme case $\gamma \rightarrow \infty$. Then we have:
 
 $$
 b_{1,2}^{c} \approx = \frac{b_1 + b_2}{2}
 $$
+
 This is exactly the situation of the planner as we care about both boats equally. So we can directly expect that the squeezing leads
 to cooperation and solve the tragedy in a similiar fashion as a planner did. However, not by some external institution but by simply sharing
 the ressources in a controlled way.
@@ -114,73 +115,73 @@ the ressources in a controlled way.
 We can now look how each individual island would optimize its discounted payoffs for a given squeezing parameter and we get:
 
 $$
-u^c_{1,2} = \frac{b^c_{1,2}}{B} u(B,s) = e^{-\gamma} \left(u_{1,2} \cosh\gamma + u_{2,1} \sinh\gamma\right)
-$$
-So the payoff is distributed. Each player now has to optimize the individual $u_{j}^c$ as a function of his decision parameter $b_{j}$, so he looks for:
-
-$$
-\partial_{b_j} u^c_{j} = \partial_{b_j}(b^c_{j}) \frac{u}{B}+b^c_{j} \partial_{b_j}\left(\frac{u}{B}\right)
+u^c_{1,2} = \frac{b^c_{1,2}}{B} u = e^{-\gamma} \left(u_{1,2} \cosh\gamma + u_{2,1} \sinh\gamma\right)
 $$
 
-This works out too:
+So the payoff is distributed. Note that the licensed fleets sum to the declared total,
+$b_1^{c} + b_2^{c} = b_1 + b_2 = B$, so the fleet on the water is unchanged and only its
+attribution moves. Write $\alpha = \frac{1+e^{-2\gamma}}{2}$ for the weight each island keeps on
+its own declaration, so that $\partial_{b_1} b_1^{c} = \alpha$ and $\partial_{b_1} B = 1$. Each
+island now optimizes its own $u_{j}^{c}$ over its declaration $b_j$:
+
 $$
-\partial_{b_1} u^c_{1} = e^{-\gamma} \cosh\gamma \frac{u(B,s)}{B}+\frac{b^c_{1}}{B} \left(\partial_{B}u-\frac{u}{B}\right)
+\partial_{b_1} u^c_{1} = (\partial_{b_1} b^c_{1}) \frac{u}{B} + b^c_{1}\,\partial_{B}\!\left(\frac{u}{B}\right)
+= \alpha\,\frac{u}{B} - \frac{b^c_{1}}{B}\,D ,
 $$
 
-So we now find the optimal condition:
+with the damage $D = \frac{u}{B} - \partial_B u$ as in the companion post. Setting this to zero,
+and using that the two islands are symmetric so that $b_1^{c} = B/2$:
 
 $$
-\frac{u(B,s)}{B} = \frac{b^c_{1}}{B} D \frac{1}{e^{-\gamma}\cosh{\gamma}}
+\frac{u(B,s)}{B} = \frac{D}{2\alpha} = \frac{D}{N_{\text{eff}}}
+\qquad \text{with} \qquad N_{\text{eff}} = 2\alpha = 1 + e^{-2\gamma} .
 $$
-The prefactor is once again roughly 1/2 (because the two islands are supposed to be equal) and we can now write:
-$$
-\frac{u(B,s)}{B} = \frac{D}{N_{eff}} \text{ with } N_{eff} = 1+e^{-2\gamma}
-$$
-So the squeezing heals the tragedy as it effectively reduces the number of independent island through the squeezing parameter. The tragedy disappears for 
-$N=1$ as we have effectively only one island left and the optimal condition becomes $\partial_B u = 0$, so we optimize total profits.
+
+Nothing was approximated on the way.
+
+So the squeezing heals the tragedy as it effectively reduces the number of independent islands
+through the squeezing parameter. The tragedy disappears at $N_{\text{eff}} = 1$, where only one
+island is effectively left and the condition becomes $\partial_B u = 0$, so we optimize total
+profits.
+
 Nothing in that used the square root, the logistic curve, or a single parameter value. $u(B,s)$
 was arbitrary throughout, so this is a statement about common-pool problems, not about fish.
 
-
-
 ## The equivalent classical game
 
-The quantum game and a much simpler classical game have the same payoffs —
-and therefore the same best replies and the same equilibria. That classical game is: **each
-island maximises its own profit plus a share $\lambda$ of the other's**, with $\lambda$ running
-from 0 at $\gamma = 0$ to 1 as the squeezing goes up.
-
-Which is a rule a harbour clerk could write on a noticeboard. Your licensed fleet is your own
-boats plus a fraction of your neighbour's; you are paid and billed on that number. Nothing in it
-needs a laser. This is the continuous-variable version of a point
-[van Enk and Pike](https://doi.org/10.1103/PhysRevA.66.024306) made about EWL: the quantum game
+The quantum game and a classical one have the same payoffs, hence the same best replies and the
+same equilibria. That classical game is: **each user maximises its own profit plus a share
+$\lambda$ of its neighbour's.** This is the continuous-variable version of a point
+[van Enk and Pike](https://doi.org/10.1103/PhysRevA.66.024306) made about EWL — the quantum game
 has a fully classical description, and writing it down is not hard.
 
+It also has a name. An owner holding a stake $\lambda$ in a rival's profits is **partial
+cross-ownership**, studied in industrial organisation since
+[Reynolds and Snapp](<https://doi.org/10.1016/0167-7187(86)90027-5>) and
+[Bresnahan and Salop](<https://doi.org/10.1016/0167-7187(86)90028-7>), whose modified concentration
+index is an effective number of competitors built from the same algebra. $N_{\text{eff}}$ is the
+common-pool twin of a known result, not an ad-hoc construction: stakes in each other reduce the
+count of independent players.
 
-Deflating as that is for the physics, look at what the clerk is doing, because it is a real
-institution and a good one.
+For a commons the concrete version is a revenue pool. Let each user keep a fraction $1-\theta$ of
+what it earns and put the rest into a pot split equally. User 1 then takes
+$(1-\frac{\theta}{2})u_1 + \frac{\theta}{2}u_2$, which is the payoff above exactly when
 
-Say Moana runs one island and Chief Kai the other. Moana is wondering whether to send one more
-boat. Without the rule she weighs the extra catch against the crowding — but only the crowding on
-**her own** boats. What it costs Kai is not her problem, and that gap is the whole tragedy.
+$$
+\theta = \frac{2\lambda}{1+\lambda} = 1 - e^{-2\gamma} , \qquad N_{\text{eff}} = 2 - \theta .
+$$
 
-The clerk closes it by making her a part-owner of Kai's catch. She is paid on a slice of whatever
-he lands, so her extra boat now costs her twice: once through the crowding on her own catch, once
-through the crowding on the slice of his that she owns. At full squeezing she feels the entire
-damage her boat does — and the fleet she then picks, out of nothing but self-interest, is the
-16 boats the planner would have imposed. That is the second benchmark, reached without anybody
-imposing anything.
+Every unit of pooling removes that much of a player.
 
-There is no agreement between Moana and Kai here. Neither promised anything, nobody is watching,
-and there is nothing to enforce. This is not cooperation. Moana is exactly as selfish as before —
-the sum in front of her has changed, that is all.
+Note what this is not. Nobody promised anything, nobody is monitoring, and there is nothing to
+enforce. Each user is exactly as selfish as before; the sum in front of it has changed, that is
+all.
 
-And now compare what the clerk had to know against the model above. Not $q$, not $r$ or $K$, not
-$c$, not $\beta$. He never works out how many fish there are, how fast they breed, or what the
-right fleet would be. He publishes $\gamma$, applies it to two declared numbers, and the islands
-find the 16 themselves. The planner's answer, without the planner's knowledge — and without the
-planner.
-
+This is a rule a harbour clerk could post on a noticeboard, and note what he needs to know:
+nothing about the resource. He publishes $\gamma$ and applies it to two declared numbers, and the
+users find the planner's fleet themselves. A revenue pool, by contrast, has to observe what each user
+actually landed in order to redistribute. That is the protocol's real advantage — it works on
+declarations, before anyone goes fishing.
 
 ## Where this sits
 
@@ -211,12 +212,14 @@ institution nobody designed, and in both that institution had an entirely classi
 a filing cabinet, a clerk with a ledger. Here it reaches the planner's outcome on the planner's
 own terms, and it does so knowing one number instead of five.
 
-What it cannot reach is time. An entangling operation acts within a round, and a commons is a
-problem about rounds. My guess is that the boundary can be moved — by pricing fish left in the
+What it cannot reach is time, and that is not an accident of the model: $\beta$ appears nowhere in
+$N_{\text{eff}}$. The protocol removes the externality _between_ the users and leaves the
+single-owner problem that remains at whatever patience they had to start with — it reaches the
+patient planner if they are patient, and the myopic one if they are not. An entangling operation
+acts within a round, and a commons is a problem about rounds. My guess is that the boundary can be moved — by pricing fish left in the
 water rather than boats sent out — but only classically, bolted onto the ledger rather than the
 circuit.
 
 If you have thought about that, or about which of Ostrom's principles could be given a
 mathematical form, I would like to hear from you. My working notes and reading list are
 [here](/blog/32/).
-

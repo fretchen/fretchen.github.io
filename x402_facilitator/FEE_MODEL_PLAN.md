@@ -25,27 +25,6 @@ present in the repo without any marking.
 Terminology: *merchant*, *seller*, *recipient* and `payTo` all refer to the same party —
 the operator of the resource server who receives the payment.
 
----
-
-## Phase 0 — Measure first
-
-**Blocking.** Everything below is calibrated against numbers we do not have yet.
-
-- [ ] Pull the last ~50 `settle` transactions and ~50 fee `transferFrom` transactions
-      from the facilitator wallet, on Optimism and Base separately.
-- [ ] For each, compute `gasUsed × effectiveGasPrice`, in ETH and in USD at the time
-      of the transaction.
-- [ ] Produce, per network: median settle cost, median fee-collection cost.
-- [ ] Compare against the configured fee (`FACILITATOR_FEE_AMOUNT`, default `10000` =
-      0.01 USDC).
-
-**Output:** a table stating whether `exact` is currently profitable per network.
-
-**Decision gate:** if Optimism is underwater and Base is positive, treat "which
-networks carry a fee" as an explicit product decision rather than leaving it implicit
-(see Phase 4).
-
----
 
 ## Phase 1 — Fix fee collection
 

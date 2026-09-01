@@ -112,6 +112,7 @@ export async function collectFeeWithLedger(
   seller: string,
   network: string,
   feeAmount: bigint,
+  allowance?: bigint,
 ): Promise<FeeOutcome> {
   const entry = await getFeeLedger(seller, network);
   const reconciled = await reconcilePending(seller, network, entry);
@@ -125,8 +126,21 @@ export async function collectFeeWithLedger(
 
   // Without the ledger (no S3 credentials) there is no accrued total to sweep, so fall
   // back to the flat per-settlement fee — exactly the pre-ledger behaviour.
-  const swept = updated ? BigInt(updated.accrued) : feeAmount;
+  const owed = updated ? BigInt(updated.accrued) : feeAmount;
+
+  // Cap at the seller's allowance: one transferFrom for more than they approved reverts
+  // in full, so an uncapped sweep of a backlog would collect nothing at all rather than
+  // as much as possible. A partial sweep leaves the remainder accrued for next time.
+  //
+  // An UNKNOWN allowance (undefined) must not cap — capping to 0n would silently halt
+  // all collection during a transient RPC failure.
+  const swept = allowance === undefined ? owed : owed < allowance ? owed : allowance;
+
   if (swept === 0n) {
+    logger.info(
+      { seller, network, owed: owed.toString(), allowance: allowance?.toString() },
+      "Nothing collectable this round — allowance exhausted or nothing owed",
+    );
     return { success: true, assessed: feeAmount, swept: 0n };
   }
 

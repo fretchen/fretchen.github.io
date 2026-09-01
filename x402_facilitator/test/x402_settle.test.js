@@ -709,6 +709,31 @@ describe("x402_settle with mocked facilitator", () => {
     expect(pendingSpy).not.toHaveBeenCalled();
   });
 
+  it("forwards the verify-time allowance so the sweep can be capped", async () => {
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue({
+      settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xsettletxhash" }),
+    });
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
+      isValid: true,
+      payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      feeRequired: true,
+      recipient: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+      feeAllowance: 25000n,
+    });
+    const collectFeeSpy = vi
+      .spyOn(feeModule, "collectFee")
+      .mockResolvedValue({ success: true, txHash: "0xfeetxhash123" });
+
+    await settlePayment(validPaymentPayload, validPaymentRequirements);
+
+    // Reusing verify's reading avoids a second RPC round-trip just to cap the sweep.
+    expect(collectFeeSpy).toHaveBeenCalledWith(
+      "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+      "eip155:11155420",
+      10000n,
+    );
+  });
+
   it("still settles when collection is blocked by an unresolved pending tx", async () => {
     mockFeeBearingSettlement();
 

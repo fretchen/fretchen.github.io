@@ -145,17 +145,40 @@ behaviour.
 
 ### 1.4 Allowance check fails open
 
-`checkMerchantAllowance()` returns `sufficient: true` on any RPC error. Combined with
-no persistence, this loses fees silently.
+`checkMerchantAllowance()` returned `{ allowance: 0n, sufficient: true }` on any RPC
+error — indistinguishable from a genuine reading. The caller could not tell "we could
+not check" from "the allowance is fine".
 
-Once 1.2 exists, failing open is acceptable _because the debt is recorded_. Tighten the
-distinction:
+- [x] RPC/read error → fail open, log at `warn`, still accrue.
+- [x] Surface `remainingSettlements` in the verify response so sellers get warning
+      before they hit zero.
+- [x] Cap the sweep at the seller's allowance (replaces the "accrued debt + new fee"
+      bullet — see below).
 
-- [ ] RPC/read error → fail open, log at `warn`, still accrue.
-- [ ] Allowance genuinely insufficient to cover accrued debt + new fee → fail closed
-      for new payments from that seller.
-- [ ] Surface `remainingSettlements` (already computed) in the verify response so
-      sellers get warning before they hit zero.
+`AllowanceInfo.sufficient` became `status: "ok" | "insufficient" | "unknown"`, with
+`allowance` now **optional** and left undefined when unreadable. Changing the type was
+the point: the compiler found every call site and forced each to handle the third case.
+
+**Fail-closed already existed** (`facilitator_instance.ts`) and is unchanged — a payment
+whose seller has not approved enough for one fee is still rejected. The original bullet
+proposed escalating that threshold to _accrued debt + new fee_; that was dropped:
+
+- the flat check is already self-limiting — collecting drains the allowance, so an
+  under-approving seller is blocked naturally once it runs down;
+- it punishes the **buyer** for the **seller's** backlog, rejecting a valid payment over
+  the facilitator's own bookkeeping.
+
+**Instead, the sweep is capped** at `min(accrued, allowance)`. This fixes a defect 1.3
+introduced: one `transferFrom` for more than the seller approved reverts _in full_, so an
+uncapped sweep of a backlog collected nothing at all rather than as much as possible. A
+partial sweep leaves the remainder accrued.
+
+An **unknown** allowance deliberately does not cap — capping to `0n` would silently halt
+all collection during a transient RPC blip. This is the reason `allowance` is optional
+rather than defaulting to zero.
+
+The allowance is read once during verify and carried through to settle on `VerifyResult`,
+so capping costs no extra RPC round-trip.
 
 ### 1.5 Receipt semantics under accrual
 

@@ -145,7 +145,7 @@ describe("x402_fee", () => {
   describe("checkMerchantAllowance", () => {
     const merchant = "0x209693Bc6afc0C5328bA36FaF03C514EF312287C";
 
-    it("returns sufficient=true when allowance exceeds fee", async () => {
+    it("returns status=ok when allowance exceeds fee", async () => {
       const { getContract } = await import("viem");
       vi.mocked(getContract).mockReturnValue(
         mockContract({
@@ -157,12 +157,12 @@ describe("x402_fee", () => {
 
       const result = await checkMerchantAllowance(merchant, "eip155:11155420");
 
-      expect(result.sufficient).toBe(true);
+      expect(result.status).toBe("ok");
       expect(result.allowance).toBe(100000n);
       expect(result.remainingSettlements).toBe(10); // 100000 / 10000
     });
 
-    it("returns sufficient=false when allowance is zero", async () => {
+    it("returns status=insufficient when allowance is zero", async () => {
       const { getContract } = await import("viem");
       vi.mocked(getContract).mockReturnValue(
         mockContract({
@@ -174,12 +174,12 @@ describe("x402_fee", () => {
 
       const result = await checkMerchantAllowance(merchant, "eip155:11155420");
 
-      expect(result.sufficient).toBe(false);
+      expect(result.status).toBe("insufficient");
       expect(result.allowance).toBe(0n);
       expect(result.remainingSettlements).toBe(0);
     });
 
-    it("returns sufficient=false when allowance is less than fee", async () => {
+    it("returns status=insufficient when allowance is less than fee", async () => {
       const { getContract } = await import("viem");
       vi.mocked(getContract).mockReturnValue(
         mockContract({
@@ -191,16 +191,16 @@ describe("x402_fee", () => {
 
       const result = await checkMerchantAllowance(merchant, "eip155:11155420");
 
-      expect(result.sufficient).toBe(false);
+      expect(result.status).toBe("insufficient");
       expect(result.allowance).toBe(5000n);
     });
 
-    it("returns sufficient=true when fee is 0 (fees disabled)", async () => {
+    it("returns status=ok when fee is 0 (fees disabled)", async () => {
       process.env.FACILITATOR_FEE_AMOUNT = "0";
 
       const result = await checkMerchantAllowance(merchant, "eip155:11155420");
 
-      expect(result.sufficient).toBe(true);
+      expect(result.status).toBe("ok");
       expect(result.remainingSettlements).toBe(Infinity);
     });
 
@@ -209,11 +209,11 @@ describe("x402_fee", () => {
 
       const result = await checkMerchantAllowance(merchant, "eip155:11155420");
 
-      expect(result.sufficient).toBe(false);
+      expect(result.status).toBe("insufficient");
       expect(result.allowance).toBe(0n);
     });
 
-    it("handles RPC errors gracefully (fails open — does not block payment)", async () => {
+    it("reports an RPC error as unknown, with the allowance left undefined", async () => {
       const { getContract } = await import("viem");
       vi.mocked(getContract).mockReturnValue(
         mockContract({
@@ -225,10 +225,12 @@ describe("x402_fee", () => {
 
       const result = await checkMerchantAllowance(merchant, "eip155:11155420");
 
-      // Fail open: sufficient=true so verify doesn't reject the payment.
-      // If allowance is truly missing, fee collection will fail gracefully at settle time.
-      expect(result.sufficient).toBe(true);
-      expect(result.allowance).toBe(0n);
+      // "unknown", not "insufficient": verify must not reject a valid payment over a
+      // reading we could not take.
+      expect(result.status).toBe("unknown");
+      // Deliberately NOT 0n — a caller capping a transfer at the allowance would
+      // otherwise halt collection entirely during a transient RPC failure.
+      expect(result.allowance).toBeUndefined();
     });
 
     it("correctly calculates remaining settlements", async () => {
@@ -243,7 +245,7 @@ describe("x402_fee", () => {
 
       const result = await checkMerchantAllowance(merchant, "eip155:11155420");
 
-      expect(result.sufficient).toBe(true);
+      expect(result.status).toBe("ok");
       expect(result.remainingSettlements).toBe(3); // Floor(35000 / 10000)
     });
   });

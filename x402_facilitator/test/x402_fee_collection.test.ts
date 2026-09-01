@@ -264,6 +264,64 @@ describe("x402_fee_collection", () => {
   });
 
   // ═══════════════════════════════════════════════════════════
+  // Allowance capping
+  // ═══════════════════════════════════════════════════════════
+
+  describe("allowance cap", () => {
+    it("caps the sweep at the seller's allowance", async () => {
+      mocks.accrueFee.mockResolvedValue(entry({ accrued: "40000" }));
+
+      // One transferFrom for more than approved reverts in full, so an uncapped sweep
+      // of this backlog would collect nothing at all.
+      const result = await collectFeeWithLedger(SELLER, NETWORK, FEE, 25000n);
+
+      expect(mocks.collectFee).toHaveBeenCalledWith(SELLER, NETWORK, 25000n);
+      expect(result.swept).toBe(25000n);
+    });
+
+    it("leaves the remainder accrued after a partial sweep", async () => {
+      mocks.accrueFee.mockResolvedValue(entry({ accrued: "40000" }));
+
+      await collectFeeWithLedger(SELLER, NETWORK, FEE, 25000n);
+
+      // Only the swept amount is decremented; 15000 stays owed for next time.
+      expect(mocks.recordCollectionSuccess).toHaveBeenCalledWith(
+        SELLER,
+        NETWORK,
+        25000n,
+        "0xfeetx",
+      );
+    });
+
+    it("does not cap when the allowance covers the whole balance", async () => {
+      mocks.accrueFee.mockResolvedValue(entry({ accrued: "40000" }));
+
+      await collectFeeWithLedger(SELLER, NETWORK, FEE, 100000n);
+
+      expect(mocks.collectFee).toHaveBeenCalledWith(SELLER, NETWORK, 40000n);
+    });
+
+    it("does NOT cap when the allowance is unknown", async () => {
+      mocks.accrueFee.mockResolvedValue(entry({ accrued: "40000" }));
+
+      // undefined means "could not read", not "zero". Capping here would silently halt
+      // all collection during a transient RPC failure.
+      await collectFeeWithLedger(SELLER, NETWORK, FEE, undefined);
+
+      expect(mocks.collectFee).toHaveBeenCalledWith(SELLER, NETWORK, 40000n);
+    });
+
+    it("skips collection when the allowance is exhausted", async () => {
+      mocks.accrueFee.mockResolvedValue(entry({ accrued: "40000" }));
+
+      const result = await collectFeeWithLedger(SELLER, NETWORK, FEE, 0n);
+
+      expect(mocks.collectFee).not.toHaveBeenCalled();
+      expect(result.swept).toBe(0n);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════
   // Ledger-disabled fallback
   // ═══════════════════════════════════════════════════════════
 

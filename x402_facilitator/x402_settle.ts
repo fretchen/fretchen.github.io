@@ -103,9 +103,10 @@ async function safeCollectFee(
   recipient: string,
   network: string,
   feeAmount: bigint,
+  allowance?: bigint,
 ): Promise<FeeOutcome> {
   try {
-    return await collectFeeWithLedger(recipient, network, feeAmount);
+    return await collectFeeWithLedger(recipient, network, feeAmount, allowance);
   } catch (err) {
     logger.error(
       { err, recipient, network },
@@ -256,7 +257,14 @@ export async function settlePayment(
       // Reconcile any earlier pending collection, accrue this fee, then sweep the
       // seller's whole accrued balance. See x402_fee_collection.ts.
       const feeAmount = getFeeAmount();
-      const feeResult = await safeCollectFee(recipient, network, feeAmount);
+      // The allowance was already read during verify — reuse it rather than paying a
+      // second RPC round-trip to cap the sweep.
+      const feeResult = await safeCollectFee(
+        recipient,
+        network,
+        feeAmount,
+        verifyResult.feeAllowance,
+      );
 
       if (feeResult.success) {
         logger.info(

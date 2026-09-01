@@ -254,12 +254,14 @@ export function createFacilitator(requirePrivateKey = true): InstanceType<typeof
     // Check merchant's USDC allowance for fee payment
     const allowanceInfo = await checkMerchantAllowance(recipient as `0x${string}`, network);
 
-    if (!allowanceInfo.sufficient) {
+    // Fail closed only on a reading that genuinely came back too low. An unreadable
+    // allowance must not reject an otherwise-valid payment.
+    if (allowanceInfo.status === "insufficient") {
       logger.warn(
         {
           recipient,
           network,
-          allowance: allowanceInfo.allowance.toString(),
+          allowance: allowanceInfo.allowance?.toString(),
           feeAmount: feeAmount.toString(),
           facilitatorAddress,
         },
@@ -269,22 +271,36 @@ export function createFacilitator(requirePrivateKey = true): InstanceType<typeof
       result.invalidReason = "insufficient_fee_allowance";
       (result as Record<string, unknown>).recipient = recipient;
       (result as Record<string, unknown>).requiredAllowance = feeAmount.toString();
-      (result as Record<string, unknown>).currentAllowance = allowanceInfo.allowance.toString();
+      (result as Record<string, unknown>).currentAllowance = (
+        allowanceInfo.allowance ?? 0n
+      ).toString();
       (result as Record<string, unknown>).facilitatorAddress = facilitatorAddress;
       return;
     }
 
-    // Fee allowance sufficient — mark for fee collection at settle time
-    logger.info(
-      {
-        recipient,
-        network,
-        remainingSettlements: allowanceInfo.remainingSettlements,
-      },
-      "Recipient approved via fee allowance",
-    );
+    if (allowanceInfo.status === "unknown") {
+      // Proceed by policy, not by accident: the payment is worth more than the fee.
+      // Collection stays uncapped downstream, since we have no allowance to cap against.
+      logger.warn(
+        { recipient, network },
+        "Fee allowance unreadable — proceeding, fee collection will be attempted uncapped",
+      );
+    } else {
+      logger.info(
+        {
+          recipient,
+          network,
+          remainingSettlements: allowanceInfo.remainingSettlements,
+        },
+        "Recipient approved via fee allowance",
+      );
+    }
+
     (result as Record<string, unknown>).feeRequired = true;
     (result as Record<string, unknown>).recipient = recipient;
+    // Carried through to settle so the sweep can be capped without a second RPC read.
+    (result as Record<string, unknown>).feeAllowance = allowanceInfo.allowance;
+    (result as Record<string, unknown>).remainingSettlements = allowanceInfo.remainingSettlements;
   });
 
   logger.info(

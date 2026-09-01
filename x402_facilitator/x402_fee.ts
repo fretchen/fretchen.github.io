@@ -38,9 +38,20 @@ export interface FeeResult {
 }
 
 export interface AllowanceInfo {
-  allowance: bigint;
+  /**
+   * Undefined when the allowance could not be read.
+   *
+   * Never conflate "unreadable" with `0n`: a caller that caps a transfer at the
+   * allowance would silently stop collecting entirely during a transient RPC failure.
+   */
+  allowance?: bigint;
   remainingSettlements: number;
-  sufficient: boolean;
+  /**
+   * "ok"           — allowance covers at least one fee
+   * "insufficient" — read succeeded, allowance is genuinely too low (fail closed)
+   * "unknown"      — could not be read; callers proceed rather than block a payment
+   */
+  status: "ok" | "insufficient" | "unknown";
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -141,13 +152,13 @@ export async function checkMerchantAllowance(
   const facilitatorAddress = getFacilitatorAddress();
   if (!facilitatorAddress) {
     logger.warn("Cannot check allowance: facilitator address not configured");
-    return { allowance: 0n, remainingSettlements: 0, sufficient: false };
+    return { allowance: 0n, remainingSettlements: 0, status: "insufficient" };
   }
 
   const feeAmount = getFeeAmount();
   if (feeAmount === 0n) {
-    // No fee configured — always sufficient
-    return { allowance: 0n, remainingSettlements: Infinity, sufficient: true };
+    // No fee configured — nothing to collect, nothing to approve
+    return { remainingSettlements: Infinity, status: "ok" };
   }
 
   try {
@@ -166,7 +177,7 @@ export async function checkMerchantAllowance(
     const allowance = await usdc.read.allowance([merchantAddress, facilitatorAddress]);
 
     const remainingSettlements = feeAmount > 0n ? Number(allowance / feeAmount) : Infinity;
-    const sufficient = allowance >= feeAmount;
+    const status = allowance >= feeAmount ? "ok" : "insufficient";
 
     logger.debug(
       {
@@ -175,22 +186,26 @@ export async function checkMerchantAllowance(
         allowance: allowance.toString(),
         feeAmount: feeAmount.toString(),
         remainingSettlements,
-        sufficient,
+        status,
         network,
       },
       "Merchant allowance check",
     );
 
-    return { allowance, remainingSettlements, sufficient };
+    return { allowance, remainingSettlements, status };
   } catch (error) {
-    logger.error(
+    // Fail open on RPC/read errors — don't block otherwise-valid payments over a
+    // reading we could not take. `warn`, not `error`: proceeding is the policy here,
+    // not a malfunction.
+    //
+    // `allowance` is deliberately left undefined rather than 0n. Reporting 0n would be
+    // a lie that reads as "no allowance", and any caller capping a transfer at it would
+    // silently stop collecting during a transient RPC blip.
+    logger.warn(
       { err: error, merchant: merchantAddress, network },
-      "Error checking merchant allowance",
+      "Could not read merchant allowance — proceeding without it",
     );
-    // Fail open on RPC/read errors — don't block otherwise-valid payments.
-    // If there's truly no allowance, fee collection will fail gracefully
-    // at settle time (settlement still succeeds, fee flagged for retry).
-    return { allowance: 0n, remainingSettlements: 0, sufficient: true };
+    return { remainingSettlements: 0, status: "unknown" };
   }
 }
 

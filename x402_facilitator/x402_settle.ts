@@ -6,20 +6,32 @@
 
 import { getFacilitator } from "./facilitator_instance";
 import { verifyPayment } from "./x402_verify";
-import { getFeeAmount } from "./x402_fee";
-import { collectFeeWithLedger, type FeeOutcome } from "./x402_fee_collection";
+import { collectFee, getFeeAmount, type FeeResult } from "./x402_fee";
+import type { Address } from "viem";
 import { getChainConfig } from "./chain_utils";
 import { isRecipientWhitelisted } from "./x402_whitelist";
 import pino from "pino";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
+/** How this payment's fee stands once the settlement returns. */
+export type FeeStatus = "collected" | "pending" | "failed";
+
 /** Facilitator fee receipt per x402 Fee Disclosure proposal (coinbase/x402#1016) */
 export interface FacilitatorFeePaid {
   version: string;
+  /** Fee ASSESSED for this payment. Never varies with the collection outcome. */
   facilitatorFeePaid: string;
   asset: string;
   model: string;
+  /**
+   * Whether that assessed fee has actually been transferred yet. Additive to the #1016
+   * shape — consumers reading the fields above are unaffected.
+   */
+  collection: {
+    status: FeeStatus;
+    txHash?: string;
+  };
 }
 
 export interface SettleResult {
@@ -38,7 +50,9 @@ export interface SettleResult {
   errorMessage?: string;
   /** Fee collection info (present when fee is configured) */
   fee?: {
+    /** Derived from `status`; kept so existing consumers keep working. */
     collected: boolean;
+    status: FeeStatus;
     txHash?: string;
     error?: string;
   };
@@ -92,28 +106,17 @@ function getBatchSettlementReceivers(
  * If fee is configured, collect fee after successful settlement.
  */
 /**
- * Run the fee collection flow without letting it affect the settlement.
+ * Describe a fee collection outcome for the receipt.
  *
- * The flow and the ledger beneath it already swallow their own errors, but this makes
- * the invariant structural rather than a convention they could quietly break:
- * bookkeeping must never cost the buyer their receipt for a payment that already
- * landed on-chain.
+ * "pending" is distinct from "failed": the transfer was sent but its receipt wait timed
+ * out (see FEE_RECEIPT_TIMEOUT_MS in x402_fee.ts), so it may still land. The tx hash is
+ * returned alongside it, which is how the seller resolves it themselves.
  */
-async function safeCollectFee(
-  recipient: string,
-  network: string,
-  feeAmount: bigint,
-  allowance?: bigint,
-): Promise<FeeOutcome> {
-  try {
-    return await collectFeeWithLedger(recipient, network, feeAmount, allowance);
-  } catch (err) {
-    logger.error(
-      { err, recipient, network },
-      "Fee collection threw unexpectedly — settlement unaffected",
-    );
-    return { success: false, error: "fee_collection_failed", assessed: feeAmount };
+function feeStatusOf(result: FeeResult): FeeStatus {
+  if (result.success) {
+    return "collected";
   }
+  return result.error === "fee_collection_pending" ? "pending" : "failed";
 }
 
 export async function settlePayment(
@@ -254,56 +257,51 @@ export async function settlePayment(
       // Post-settlement fee collection
       logger.info({ recipient, network }, "Settlement succeeded, collecting fee");
 
-      // Reconcile any earlier pending collection, accrue this fee, then sweep the
-      // seller's whole accrued balance. See x402_fee_collection.ts.
       const feeAmount = getFeeAmount();
-      // The allowance was already read during verify — reuse it rather than paying a
-      // second RPC round-trip to cap the sweep.
-      const feeResult = await safeCollectFee(
-        recipient,
-        network,
-        feeAmount,
-        verifyResult.feeAllowance,
-      );
+      const feeResult = await collectFee(recipient as Address, network);
+      const feeStatus = feeStatusOf(feeResult);
 
-      if (feeResult.success) {
+      if (feeStatus === "collected") {
         logger.info(
-          { recipient, network, feeTxHash: feeResult.txHash, swept: feeResult.swept?.toString() },
+          { recipient, network, feeTxHash: feeResult.txHash },
           "Fee collected successfully after settlement",
         );
-      } else if (feeResult.error === "fee_collection_pending") {
+      } else if (feeStatus === "pending") {
         // Fee tx was sent but not confirmed within its bounded wait. It may still land,
-        // so this is not a failure — it is an unknown outcome carrying a tx hash.
+        // so this is not a failure — it is an unknown outcome carrying a tx hash, which
+        // is returned in the receipt so the seller can resolve it themselves.
         logger.warn(
           { recipient, network, feeTxHash: feeResult.txHash },
-          "Fee tx pending at response time — outcome unknown, not yet reconciled",
-        );
-      } else if (feeResult.error === "fee_collection_blocked_pending") {
-        // An earlier collection is still unresolved. Collecting now risks double-charging
-        // the seller, so this fee is accrued and left for a later settlement.
-        logger.warn(
-          { recipient, network },
-          "Fee collection blocked by an unresolved pending tx — accrued for retry",
+          "Fee tx pending at response time — outcome unknown",
         );
       } else {
-        // Fee collection failed — settlement still succeeded!
-        // The accrued balance stands, which is the whole point of the ledger.
+        // Fee collection failed — settlement still succeeded. The fee is not retried:
+        // at 0.01 USDC the bookkeeping to recover it costs far more than the fee.
         logger.warn(
           { recipient, network, feeError: feeResult.error },
-          "Fee collection failed after successful settlement — accrued for retry",
+          "Fee collection failed after successful settlement",
         );
       }
 
       // Build facilitatorFees receipt (per x402 Fee Disclosure proposal #1016)
-      const feeAmountStr = feeAmount.toString();
+      //
+      // `facilitatorFeePaid` always reports the fee ASSESSED for this payment, never a
+      // collection outcome. Zeroing it because collection failed would understate what
+      // the payment actually cost and make the facilitator look cheaper than it is —
+      // the worse distortion for a transparency extension. The outcome lives in
+      // `collection.status` instead.
       const chainConfig = getChainConfig(network);
       const facilitatorFeesExtension: SettleResult["extensions"] = {
         facilitatorFees: {
           info: {
             version: "1",
-            facilitatorFeePaid: feeResult.success ? feeAmountStr : "0",
+            facilitatorFeePaid: feeAmount.toString(),
             asset: `${network}/erc20:${chainConfig.USDC_ADDRESS}`,
             model: "flat",
+            collection: {
+              status: feeStatus,
+              ...(feeResult.txHash && { txHash: feeResult.txHash }),
+            },
           },
         },
       };
@@ -314,7 +312,8 @@ export async function settlePayment(
         transaction: result.transaction,
         network: accepted?.network as string,
         fee: {
-          collected: feeResult.success,
+          collected: feeStatus === "collected",
+          status: feeStatus,
           txHash: feeResult.txHash,
           error: feeResult.error,
         },

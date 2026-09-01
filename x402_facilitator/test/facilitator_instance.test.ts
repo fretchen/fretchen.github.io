@@ -430,12 +430,9 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
     // Fail open: a reading we could not take must not reject a valid payment.
     expect(args.result.isValid).toBe(true);
     expect(args.result.feeRequired).toBe(true);
-    // Undefined, not 0n — settle uses this to decide whether to cap the sweep, and
-    // capping to zero would silently halt collection during an RPC blip.
-    expect(args.result.feeAllowance).toBeUndefined();
   });
 
-  it("carries the allowance and remaining settlements through to settle", async () => {
+  it("surfaces remaining settlements so sellers see their approval running down", async () => {
     vi.mocked(checkMerchantAllowance).mockResolvedValue({
       allowance: 100000n,
       remainingSettlements: 10,
@@ -445,7 +442,6 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
     const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
     await hookHolder.current!(args);
 
-    expect(args.result.feeAllowance).toBe(100000n);
     expect(args.result.remainingSettlements).toBe(10);
   });
 

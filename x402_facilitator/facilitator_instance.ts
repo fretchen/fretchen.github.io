@@ -280,10 +280,9 @@ export function createFacilitator(requirePrivateKey = true): InstanceType<typeof
 
     if (allowanceInfo.status === "unknown") {
       // Proceed by policy, not by accident: the payment is worth more than the fee.
-      // Collection stays uncapped downstream, since we have no allowance to cap against.
       logger.warn(
         { recipient, network },
-        "Fee allowance unreadable — proceeding, fee collection will be attempted uncapped",
+        "Fee allowance unreadable — proceeding, fee collection attempted anyway",
       );
     } else {
       logger.info(
@@ -298,8 +297,7 @@ export function createFacilitator(requirePrivateKey = true): InstanceType<typeof
 
     (result as Record<string, unknown>).feeRequired = true;
     (result as Record<string, unknown>).recipient = recipient;
-    // Carried through to settle so the sweep can be capped without a second RPC read.
-    (result as Record<string, unknown>).feeAllowance = allowanceInfo.allowance;
+    // Surfaced in the verify response so sellers see their approval running down.
     (result as Record<string, unknown>).remainingSettlements = allowanceInfo.remainingSettlements;
   });
 

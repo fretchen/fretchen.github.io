@@ -30,26 +30,19 @@ present in the repo without any marking.
 Terminology: _merchant_, _seller_, _recipient_ and `payTo` all refer to the same party —
 the operator of the resource server who receives the payment.
 
-## Phase 1 — Make fee collection reliable
+## Phase 1 — Make fee collection reliable ✅ complete
 
 **Scope: reliability only.** Latency and unit economics are explicitly deferred —
 see _Deferred from Phase 1_ at the end of this phase. The goal is that a fee owed is
 never silently lost and never collected twice, with **no new infrastructure**: no
 cron, no queue, no new deployed function.
 
-Fee collection stays inline on the request path. Every settlement:
+Fee collection stays inline on the request path: one `transferFrom` for the flat fee,
+with a bounded wait (1.1), reported honestly in the receipt (1.5).
 
-1. Reconciles the seller's outstanding pending collection, if any (1.3).
-2. Accrues the fee owed for this payment (1.2).
-3. Fires one `transferFrom` for the whole accrued total, with a bounded wait (1.1).
-
-Retry falls out for free — the next payment from that seller picks up the previous
-failure. No scheduled job is needed to make this correct.
-
-**Accepted tradeoff:** a seller who stops trading leaves an uncollected dust balance
-indefinitely, because nothing runs off the request path to collect it. This is an
-economics concern, not a reliability one, and it is exactly what the deferred sweep
-would fix if it ever becomes worth building.
+**Accepted tradeoff:** a fee whose collection fails is logged and lost — not retried.
+An accrual ledger to recover it was built and removed; see below for why. At 0.01 USDC
+the bookkeeping costs far more than the fee.
 
 ### 1.1 Fee collection can consume the settle handler's timeout budget
 
@@ -75,73 +68,47 @@ Fee collection must never be able to cost the buyer a receipt for a settled paym
 Note: the `transferFrom` _send_ was already bounded — viem's http transport defaults to
 a 10s per-request timeout. Only the receipt polling loop was unbounded.
 
-**Still open until 1.2/1.3:** `fee_collection_pending` is currently a dead end. The tx
-hash is returned and logged, but nothing persists or reconciles it, so a timed-out fee
-is still lost in practice. 1.1 only guarantees it is not lost _at the buyer's expense_.
+A timed-out collection is not reconciled by the facilitator; its **tx hash is returned
+in the receipt** so the seller can resolve it themselves. 1.1 guarantees the ambiguity
+is never resolved _at the buyer's expense_.
 
-### 1.2 No persistence for uncollected fees
+### 1.2 / 1.3 / 1.6 — Fee ledger: built, then removed
 
-The current code logs `"flagging for retry"` but nothing is flagged anywhere; a failed
-fee is simply lost. This is the substantive change of the phase.
+**Status: rejected. Do not rebuild without new evidence.**
 
-- [x] Add a store with one entry per `(seller, network)`, holding `accrued`,
-      a nullable `pending` (`txHash` + `amount`, cleared on reconcile in 1.3),
-      and `lastSuccess` (`txHash` + `at`).
-- [x] Every settlement that owes a fee increments `accrued`.
-- [x] Collection decrements it only on confirmed success.
+These three items were fully implemented (an S3-backed accrual ledger, idempotent
+reconcile-then-sweep collection, and a stuck-balance failure counter) and then removed
+after review. The reasoning is recorded here so the decision is not relitigated.
 
-Implemented in `x402_fee_ledger.ts` on `@fretchen/s3-utils` — no new infrastructure,
-just one JSON object per seller at `fees/{network}/{seller}.json`. Scaleway Serverless
-SQL and Redis were both considered and rejected: `shared/s3-utils` already provides
-ETag compare-and-swap (`putS3ObjectConditional` with `ifMatch`/`ifNoneMatch`), which is
-all the atomicity a per-seller counter needs, and `scw_js/x402_channel_storage.ts`
-already proves the pattern in production.
+**What they did.** One JSON object per `(seller, network)` on `@fretchen/s3-utils`
+tracking `accrued`, a `pending` tx hash, `lastSuccess` and `consecutiveFailures`. Every
+settlement reconciled any pending collection, accrued the new fee, then swept the whole
+accrued balance in one `transferFrom`.
 
-Two normalisations are load-bearing: the seller address is lowercased (EIP-55 checksum
-casing would otherwise split one seller across two entries) and the CAIP-2 colon is
-replaced in the key.
+**Why removed:**
 
-**Failure policy:** every ledger operation swallows its errors, and the settle path
-wraps them again in `safeLedgerWrite()`. An S3 outage degrades fee bookkeeping; it must
-never stop payments. This is the same fail-open stance as 1.4, for the same reason —
-the buyer's payment is worth far more than a 0.01 USDC fee.
+1. **The economics do not support it.** At current traffic the ledger recovered on the
+   order of **5 cents a month**, for ~700 lines of production code plus a new secret and
+   bucket to configure.
 
-This store is the foundation for 1.3, 1.4 and all of Phase 3.
+2. **It regressed the bug 1.1 was written to fix.** The ledger put **5-13 S3
+   round-trips on the payment path**. With `s3-utils` at `REQUEST_TIMEOUT_MS = 10_000`
+   and `MAX_ATTEMPTS = 3`, worst case exceeds the 60s handler budget — so under S3
+   slowness the handler dies _after_ settlement lands and the buyer loses their receipt.
+   That is a strictly worse outcome than the lost fee it was protecting.
 
-### 1.3 Collection must be idempotent
+3. **Most of it existed to service itself.** 1.3 (idempotency) was needed only because
+   1.2 introduced retry; 1.4's sweep cap only because 1.3 introduced sweeping; 1.6 only
+   because 1.3 could wedge a seller behind an unresolved pending hash. Removing the
+   ledger removes the double-charge risk entirely — it never existed in `main`.
 
-Once the wait is bounded (1.1), a timeout means we genuinely **do not know** whether
-the `transferFrom` landed. Retrying blindly double-charges the seller; assuming failure
-and re-accruing does the same. This is the real remaining hazard once persistence
-exists.
+**What replaces it:** nothing. A failed fee is logged and lost. The `pending` outcome
+from 1.1 returns its **tx hash in the receipt**, so a seller can resolve an ambiguous
+collection themselves — the same information the reconcile loop computed, delivered to
+the party who cares, at zero infrastructure cost.
 
-- [x] Fire `transferFrom(accrued_total)`, record the pending hash and amount, then wait
-      only briefly.
-- [x] On that seller's **next** settlement, resolve the pending hash _first_ —
-      confirmed success decrements `accrued` by the pending amount, clears pending and
-      records `lastSuccess`; reverted or still-not-found clears pending and leaves
-      `accrued` intact so it retries naturally.
-- [x] Never fire a new collection while a pending hash is unresolved.
-
-Implemented in `x402_fee_collection.ts`, which owns the whole flow so `x402_settle.ts`
-makes one call. Every fee-bearing settlement runs: reconcile → accrue → sweep. The
-ordering is load-bearing — reconciling first clears the old debt before this payment's
-fee is added, so the sweep total is right.
-
-`getTransactionStatus()` (`x402_fee.ts`) resolves a pending hash with a point query.
-It returns `"unknown"` for both "no receipt yet" and any RPC failure, and an unknown
-outcome **blocks** collection rather than guessing: guessing "reverted" re-collects a
-fee that already landed, guessing "success" drops one that never did.
-
-**Stale pending:** an unresolved hash older than `PENDING_STALE_MS` (30 min) is written
-off — pending cleared, debt left standing. Tradeoff: a tx landing after that window is
-collected twice. On an L2 with ~2s blocks a tx unmined for 30 minutes has almost
-certainly been dropped, and wedging a seller's collection forever on one lost tx is
-worse. Revisit if it ever fires in practice.
-
-**Ledger-disabled fallback preserved:** with no S3 credentials there is no accrued total,
-so the sweep falls back to the flat per-settlement fee — byte-for-byte the pre-ledger
-behaviour.
+**If this is ever revisited**, the trigger should be a volume where lost fees are
+material, and the design must bound its own cost on the request path.
 
 ### 1.4 Allowance check fails open
 
@@ -149,15 +116,12 @@ behaviour.
 error — indistinguishable from a genuine reading. The caller could not tell "we could
 not check" from "the allowance is fine".
 
-- [x] RPC/read error → fail open, log at `warn`, still accrue.
+- [x] RPC/read error → fail open, log at `warn`.
 - [x] Surface `remainingSettlements` in the verify response so sellers get warning
       before they hit zero.
-- [x] Cap the sweep at the seller's allowance (replaces the "accrued debt + new fee"
-      bullet — see below).
-
-`AllowanceInfo.sufficient` became `status: "ok" | "insufficient" | "unknown"`, with
-`allowance` now **optional** and left undefined when unreadable. Changing the type was
-the point: the compiler found every call site and forced each to handle the third case.
+      `AllowanceInfo.sufficient` became `status: "ok" | "insufficient" | "unknown"`, with
+      `allowance` now **optional** and left undefined when unreadable. Changing the type was
+      the point: the compiler found every call site and forced each to handle the third case.
 
 **Fail-closed already existed** (`facilitator_instance.ts`) and is unchanged — a payment
 whose seller has not approved enough for one fee is still rejected. The original bullet
@@ -168,48 +132,36 @@ proposed escalating that threshold to _accrued debt + new fee_; that was dropped
 - it punishes the **buyer** for the **seller's** backlog, rejecting a valid payment over
   the facilitator's own bookkeeping.
 
-**Instead, the sweep is capped** at `min(accrued, allowance)`. This fixes a defect 1.3
-introduced: one `transferFrom` for more than the seller approved reverts _in full_, so an
-uncapped sweep of a backlog collected nothing at all rather than as much as possible. A
-partial sweep leaves the remainder accrued.
+The original bullet also proposed capping collection at the allowance. That went with the
+sweep it was written for — without a ledger there is no backlog to exceed the allowance,
+so the flat fee either fits or the payment was already rejected.
 
-An **unknown** allowance deliberately does not cap — capping to `0n` would silently halt
-all collection during a transient RPC blip. This is the reason `allowance` is optional
-rather than defaulting to zero.
+### 1.5 Receipt semantics
 
-The allowance is read once during verify and carried through to settle on `VerifyResult`,
-so capping costs no extra RPC round-trip.
+`facilitatorFeePaid` used to be zeroed whenever collection did not succeed, conflating
+_what this payment was charged_ with _whether we managed to collect it_. With a bounded
+wait (1.1) a collection can legitimately be unresolved at response time, so those two
+facts diverge.
 
-### 1.5 Receipt semantics under accrual
-
-A single `transferFrom` covers the seller's whole accrued balance, which may span
-several past payments — so the amount collected never maps cleanly onto the payment
-whose receipt is being written. With a bounded wait it may also still be pending when
-the receipt is returned. Reporting only what was collected would make
-`facilitatorFeePaid` misleading on almost every receipt.
-
-- [ ] Report the fee **assessed** for this payment in the `facilitatorFees` extension.
-- [ ] Report collection status as a separate field, not by zeroing the amount.
-- [ ] Keep the `#1016` disclosure shape so this stays compatible with the Sei fee
+- [x] Report the fee **assessed** for this payment in the `facilitatorFees` extension.
+- [x] Report collection status as a separate field, not by zeroing the amount.
+- [x] Keep the `#1016` disclosure shape so this stays compatible with the Sei fee
       transparency proposal.
 
-### 1.6 Surface repeated collection failure
+`facilitatorFeePaid` now always carries this payment's assessed fee and never varies with
+the collection outcome. The outcome moved to a nested `collection: { status, txHash }` —
+additive, so consumers reading `facilitatorFeePaid` / `asset` / `model` are unaffected.
 
-1.4 decides when to fail open and when to fail closed, but nothing tells a human that a
-seller's balance has been stuck across many attempts. Persistence makes the debt
-_recorded_; it does not make it _visible_.
+`FeeStatus` is `"collected" | "pending" | "failed"`, derived in `x402_settle.ts` from the
+`FeeResult`. `"pending"` is distinct from `"failed"` on purpose: the transfer was sent
+and may still land, and its **tx hash travels with it** so the seller can check.
+`SettleResult.fee` carries `status`, keeping `collected` as a derived boolean.
 
-- [x] Track a consecutive-failure counter on the row.
-- [x] Log at `error` once it crosses a small threshold, reusing the existing logger.
-
-Done alongside 1.3, which sharpened the need for it: "never collect while a pending hash
-is unresolved" means one dropped transaction can wedge a seller's collection, and
-without this that would be entirely silent. `recordCollectionFailure()` increments
-`consecutiveFailures`; a success resets it to 0, and a pending outcome leaves it alone
-(unknown is not failure). Crossing `FAILURE_ALERT_THRESHOLD` (5) logs at `error` with
-the seller and accrued total. Deliberately just a log line.
-
-Deliberately minimal — this is not a new alerting system.
+**Known imperfection:** reporting an assessed amount in a field named
+`facilitatorFeePaid` is a compromise. Reporting `"0"` because collection failed would
+understate what the payment cost and make the facilitator look cheaper than it is — the
+worse distortion for a transparency extension. `collection.status` removes the ambiguity
+the field name creates. Worth raising if #1016 stabilises.
 
 ### Deferred from Phase 1
 
@@ -220,10 +172,11 @@ path. Revisit only with evidence.
 per-settlement `transferFrom` with a scheduled sweep triggered by accrued balance ≥
 threshold or age ≥ 24h, one `transferFrom` per seller per sweep, run off the request
 path (`wallet_report_cron.ts` is the pattern to model it on). This is what drives
-fee-collection gas per payment toward zero. Note that inline collection of the _whole
-accrued balance_ (1.3) already amortises naturally whenever a seller has a backlog, so
-the threshold/age machinery buys less than it first appears. The settle transaction
-remains an irreducible floor for `exact` either way — one on-chain transfer per payment.
+fee-collection gas per payment toward zero. The settle transaction remains an
+irreducible floor for `exact` either way — one on-chain transfer per payment.
+
+Note this now presupposes the rejected accrual ledger: a sweep needs a durable balance to
+sweep. Anyone reviving this must first make the ledger pay for itself.
 
 **Nonce contention on the facilitator wallet** _(robustness under load)_. Each request
 can fire two sequential transactions from a single EOA; concurrent settlements risk
@@ -287,7 +240,10 @@ experience from having built both, which no one else in that thread has.
 
 ## Phase 3 — Fees on batch-settlement
 
-Depends on the Phase 1 accrual store.
+**Blocked.** This depended on the Phase 1 accrual store, which was built and then removed
+(see 1.2/1.3/1.6 above). Charging fees on batch-settlement claims would first have to
+rebuild per-seller accrual — so the ledger's cost/benefit has to be settled before any of
+this is worth starting.
 
 ### 3.1 Charge per claim, not per voucher
 
@@ -347,22 +303,24 @@ economics, so re-measuring straight after it would only re-confirm Phase 0.
 ## Sequencing
 
 ```
-Phase 0  ──►  1.2  ──►  1.3  ──►  1.1  ──►  1.4, 1.5, 1.6  ──►  Phase 3  ──►  Phase 4
-              store   idempot.  bounded
-                                  wait
-Phase 2  ──────────────────────────────────────────────►  (independent, any time)
+Phase 0  ──►  1.1  ──►  1.4, 1.5  ──►  ✅ Phase 1 done
+              bounded   allowance +
+              wait      receipt
 
-Deferred (off the critical path): batching/sweeps · nonce serialization
+Phase 2  ──────────────────────────►  (independent, any time)
+
+Rejected:  1.2 / 1.3 / 1.6 — fee ledger (built, removed)
+Deferred:  batching/sweeps · nonce serialization  (both presuppose the ledger)
+Blocked:   Phase 3, Phase 4 — need the ledger question settled first
 ```
 
-**Checkpoint after Phase 1:** Phase 1 is reliability-only and does not move unit
-economics, so there is nothing new to measure. What it does deliver is the accrual
-store that Phase 3 depends on.
+**After Phase 1:** nothing new to measure — Phase 1 is reliability-only and does not move
+unit economics.
 
-The economics gate still stands, but it now sits on the deferred batching work rather
-than on Phase 1: do not start Phase 3 until `exact` unit margin is positive on at least
-one network — otherwise batch-settlement inherits the same broken economics at greater
-volume.
+Phase 3 and Phase 4 are both blocked on the same question, not on Phase 1: whether
+per-seller accrual can be made to pay for itself. Until then, do not start Phase 3 —
+batch-settlement would inherit the same economics at greater volume, plus rebuild the
+ledger that was just removed.
 
 ---
 

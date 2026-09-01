@@ -15,11 +15,6 @@ export interface VerifyResult {
   recipient?: string;
   /** Whether fee collection is required at settle time */
   feeRequired?: boolean;
-  /**
-   * The seller's USDC allowance for the facilitator, as read during verify.
-   * Undefined when it could not be read — settle then sweeps uncapped.
-   */
-  feeAllowance?: bigint;
   /** How many more settlements the current allowance covers. Surfaced to the seller. */
   remainingSettlements?: number;
   /** Scheme-specific extras from the facilitator (e.g. batch-settlement's channelState). Already
@@ -107,7 +102,6 @@ export async function verifyPayment(
       ...result,
       feeRequired: resultWithExtras.feeRequired as boolean | undefined,
       recipient: resultWithExtras.recipient as string | undefined,
-      feeAllowance: resultWithExtras.feeAllowance as bigint | undefined,
       remainingSettlements: resultWithExtras.remainingSettlements as number | undefined,
     };
   } catch (error) {

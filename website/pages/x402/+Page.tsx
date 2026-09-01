@@ -1,5 +1,10 @@
 import React, { useEffect, useState } from "react";
-import MermaidDiagram from "../../components/MermaidDiagram";
+import {
+  SequenceDiagram,
+  SequenceMessage,
+  SequenceNote,
+  SequenceParticipant,
+} from "../../components/blog/SequenceDiagram";
 import { Card } from "../../components/Card";
 import { CardList } from "../../components/CardList";
 import * as styles from "../../layouts/shared";
@@ -16,19 +21,20 @@ import { prose } from "./shared.styles";
 // amount, endpoint URLs, approval mechanics) belongs on exactly one of the two deep
 // pages, never restated here.
 
-const rolesDiagram = `
-sequenceDiagram
-    participant Buyer
-    participant Seller as Seller<br/>(resource server)
-    participant Facilitator
+const rolesParticipants: SequenceParticipant[] = [
+  { id: "buyer", label: "Buyer" },
+  { id: "seller", labelLines: ["Seller", "(resource server)"] },
+  { id: "facilitator", label: "Facilitator" },
+];
 
-    Buyer->>Seller: Request
-    Seller-->>Buyer: 402 Payment Required
-    Buyer->>Seller: Retry, payment attached
-    Seller->>Facilitator: Verify & settle
-    Facilitator-->>Seller: Confirmed on-chain
-    Seller-->>Buyer: Deliver resource
-`;
+const rolesSteps: (SequenceMessage | SequenceNote)[] = [
+  { kind: "message", from: "buyer", to: "seller", label: "Request" },
+  { kind: "message", from: "seller", to: "buyer", label: "402 Payment Required", style: "dashed" },
+  { kind: "message", from: "buyer", to: "seller", label: "Retry, payment attached" },
+  { kind: "message", from: "seller", to: "facilitator", label: "Verify & settle" },
+  { kind: "message", from: "facilitator", to: "seller", label: "Confirmed on-chain", style: "dashed" },
+  { kind: "message", from: "seller", to: "buyer", label: "Deliver resource", style: "dashed" },
+];
 
 // ─── Live /supported fetch ───────────────────────────────────────────────────
 
@@ -116,7 +122,7 @@ export default function Page() {
   return (
     <div className={styles.container}>
       {/* No intro here: this page's lead paragraph belongs to the prose surface below. */}
-      <PageHeader title="x402 Facilitator" territory="explore" />
+      <PageHeader title="x402" territory="explore" />
 
       <div className={prose}>
         <p>
@@ -141,7 +147,7 @@ export default function Page() {
           </li>
         </ul>
 
-        <MermaidDiagram definition={rolesDiagram} title="The three x402 roles" />
+        <SequenceDiagram participants={rolesParticipants} steps={rolesSteps} title="The three x402 roles" />
 
         <p>
           This site runs all three: a facilitator (below), two paid services acting as sellers, and the buyer-side

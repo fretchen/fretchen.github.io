@@ -1,5 +1,5 @@
 ---
-publishing_date: 2026-08-09
+publishing_date: 2026-08-28
 title: Can quantum physics save a fishery?
 category: "quantum"
 secondaryCategory: "others"
@@ -43,364 +43,34 @@ You write down the standard entangling operation, allow the natural moves, and a
 falls out of the machinery. In the previous post I exemplified it with a crooked lawyer with a
 filing cabinet.
 
-## The commons, and its two benchmarks
+## The commons, in one page
 
-We now formalize the fishery problem, to roll out the quantum approach quantitatively on it.
-I use the fishery from the [earlier post](/blog/14/), which is the textbook one — John Leach sets
-it up in §8.1 of _A Course in Public Economics_.
-Island 1 sends out $b_1$ boats and island 2
-sends $b_2$ — that is the whole decision either of them makes. The fleet on the water in season
-$t$ is $B_t = b_1 + b_2$ and the fish stock is $s_t$. Three equations close the system:
+The general common-pool model — and the textbook fishery I use for numbers, which John Leach sets
+up in §8.1 of _A Course in Public Economics_ — is worked through in a
+[companion post](/blog/35/). Here is only the notation the rest of this one needs.
 
-- **Catch.** $y_t = q\,s_t\sqrt{B_t}$ — more boats land more fish, but with diminishing returns,
-  and a richer stock is easier to fish. The catchability $q$ says how good the gear is.
-- **Renewal.** $g(s) = r\,s\,(1 - s/K)$ — the usual logistic regrowth, with intrinsic rate $r$
-  and carrying capacity $K$. Fastest at half of $K$, zero at both ends.
-- **What is left.** $s_{t+1} = s_t + g(s_t) - y_t$ — this season's catch sets next season's
-  starting point.
+Island $j$ sends $b_j$ boats onto a shared ground; the fleet on the water is $B = b_1 + b_2$ and
+the stock is $s$. Write $u(B,s)$ for what the whole fishery earns in one season, and give each
+island the share matching how hard it worked,
 
-The catch is shared in proportion to boats and each boat costs $c$ to send, so a season's profit
-for island $j$ is
-
-$$
-u_j(b_1, b_2) = b_j\,(v - c), \qquad v \equiv \frac{y}{B} = \frac{q\,s}{\sqrt{B}},
-$$
-
-where $v$ is what one boat-trip is worth — it falls as the ground gets crowded, which is the only
-reason any of this is interesting. Writing $u_{j,t}$ for what that comes to in season $t$,
-what island $j$ actually wants to maximise is its **discounted payoff** over all seasons,
-
-$$
-U_j = \sum_{t=0}^{\infty} \beta^{t}\,u_{j,t}.
-$$
-
-A geometric weight in time, exactly like a damping factor. In economics $\beta$ tells us how much
-next year counts compared to this one, so $\beta$ near 1 is a patient
-islander and $\beta = 0$ is one who does not think about next season at all. This parameter will matter
-enormously in the following.
-
-Three decorations recur below: a subscript $t$ means "in season $t$", a superscript $c$ means "as
-cleared by the referee", and a tilde means "rescaled". The symbol $t$ is always the season.
-
-We can now derive the two benchmarks from the introduction directly.
-
-**Independent fisheries.** Boats keep going out while there is anything left to gain, so entry
-stops where a boat's catch only just covers what it costs to send: $v = c$, or $y/B = c$, or
-
-$$
-B_{\text{open}} = \left(\frac{q\,s_0}{c}\right)^2 .
-$$
-
-With an initial stock $s_0 = 100$, $q = 0.01$ and $c = 0.125$ that is **64 boats**, earning exactly
-nothing between them — the entire value of the catch is spent on the boats that caught it. And
-notice what the equation does not contain: the growth rate. Nobody deciding whether to sail is
-thinking about next year's stock at all, so the ground is fished down and stays depleted.
-
-**The planner.** The other answer is to hand the fishery to one manager who chooses the fleet for
-every season at once, maximising the two islands' discounted profits together. Their profits add
-to $B_t(v_t - c)$, so the objective is discounted catch minus discounted cost:
-
-$$
-\max_{\{B_t\}_{t=0}^{\infty}}\; U = U_1 + U_2 = \sum_{t=0}^{\infty} \beta^{t}\Big(q\,s_t\sqrt{B_t} - c\,B_t\Big)
-$$
-
-$$
-\text{subject to}\qquad s_{t+1} = s_t + g(s_t) - q\,s_t\sqrt{B_t}, \qquad t = 0, 1, 2, \dots
-$$
-
-with $s_0$ given. We will not solve this in general, but perturbatively in $\beta \ll 1$. We will further write down the
-boats as a polynomial in $\beta$.
-
-$$
-B_t = B_t^{(0)}+\beta B_t^{(1)}+\cdots
-$$
-
-And we also have
-
-$$
-U= U^{(0)}+ \beta U^{(1)}+\cdots
-$$
-
-We can now plug in and find:
-
-$$
-U =  \sum_{t=0}^{\infty} \beta^{t}\Big(q\,s_t\sqrt{B_t} - c\,B_t\Big)
-$$
-
-$$
-U =  \left(q s_0\sqrt{B_0} - c B_0\right)+\beta\left(q s_1\sqrt{B_1} - c B_1\right)
-$$
-
-We now need to develop $\sqrt{B} = \sqrt{B^{(0)}+\beta B^{(1)}} \approx \sqrt{B^{(0)}} (1+\frac{B^{(1)}}{B^{(0)}}\beta)$.
-Let us plug in:
-
-$$
-U =  \left(q\,s_0\sqrt{B_0} - c\,B_0\right)+\beta\left(q s_1\sqrt{B_1} - c B_1\right)
-$$
-
-It is really easy for zeroth order in $\beta$. We get:
-
-$$
-U^{(0)} =  \left(q\,s_0\sqrt{B^{(0)}_0} - c\,B^{(0)}_0\right)
-$$
-
-And we try to optimize these profits:
-
-$$
-\frac{\partial U^{(0)}}{\partial B_0^{(0)}} =  \frac{q\,s_0}{2\sqrt{B^{(0)}_0}} - c
-$$
-
-This gives us:
-
-$$
-B_0^{(0)} =\left(\frac{q s_0}{2 c}\right)^2 \\
-U^{(0)} = \frac{q^2 s_0^2}{4c}
-$$
-
-### First order
-
-Now let us go to first order in $\beta$:
-
-$$
-U = q s_0\sqrt{B_0^{(0)}}\left(1+\frac{\beta B_0^{(1)}}{2B_0^{(0)}}\right) - c B_0^{(0)} -c \beta B_0^{(1)}+\beta\left(q s_1\sqrt{B^{(0)}_1} - c B^{(0)}_1\right)\\
-U = U^{(0)} + \beta\left(s_0\sqrt{B_0^{(0)}}\left(\frac{B_0^{(1)}}{2B_0^{(0)}}\right) -c B_0^{(1)}+ \left(q s_1\sqrt{B^{(0)}_1} - c B^{(0)}_1\right)\right)
-$$
-
-This gets us:
-
-$$
-U^{(1)} = \frac{s_0 B_0^{(1)}}{2\sqrt{B_0^{(0)}}} -c (B_0^{(1)}+ B^{(0)}_1)+ q s_1\sqrt{B^{(0)}_1} \\
-U^{(1)} = B_0^{(1)}\left[\frac{q s_0}{2\sqrt{B_0^{(0)}}} - c\right] + \left(q s_1\sqrt{B_1^{(0)}} - cB_1^{(0)}\right)
-$$
-
-This first part cancels as it is just the derivative of $U^{0}$ in the expansion and we get:
-
-$$
-U^{(1)} = q s_1\sqrt{B_1^{(0)}} - cB_1^{(0)}
-$$
-
-Optimizing for $B_1^{(0)}$ gives us:
-
-$$
-B_1^{(0)} =\left(\frac{q s_1}{2 c}\right)^2 \\
-U^{(1)} = \frac{q^2 s_1^2}{4c}
-$$
-
-We now get to first order the result:
-
-$$
-U = \frac{q^2}{4c}\left( s_0^2 + \beta s_1^2\right)
-$$
-
-And here we now have the stock in the next season, which starts to be important. Let us plug in:
-
-$$
-s_1 = s_0 (1+r-q \sqrt{B^{(0)}_0})\\
-s_1 = s_0 (1+r-\frac{q^2 s_0}{2c})
-$$
-
-### Second order
-
-This is the one, where it gets technical as a number of terms show up:
-
-$$
-B_t = B_t^{(0)}+\beta B_t^{(1)}+\beta^2 B_t^{(2)}+\cdots
 $$
-
-We then have:
-
-$$
-U =  \left(q s_0 \sqrt{B_0} - c B_0\right)+\beta \left(q s_1 \sqrt{B_1} - c B_1\right)+\beta^2 \left(q s_2 \sqrt{B_2} - c B_2\right)
-$$
-
-We now need to develop the first term to second order in $\beta$
-
-$$
-\sqrt{B} = \sqrt{B^{(0)}+\beta B^{(1)}+\beta^2 B^{(2)}} \approx \sqrt{B^{(0)}} \left(1 + \frac{\beta B^{(1)}+\beta^2 B^{(2)}}{2B^{(0)}}- \frac{ \beta^2 B_{(1)}^2}{8 B_{(0)}^2}\right)\\
-\sqrt{B} \approx \sqrt{B^{(0)}} \left(1 + \beta \frac{ B^{(1)}}{2B^{(0)}}+ \frac{\beta^2}{2B^{(0)}} \left[B^{(2)}- \frac{ B_{(1)}^2}{4 B^{(0)}}\right]\right)
-$$
-
-And this also means:
-
-$$
-s_{1} = s_0 + rs_0 - qs_0 \sqrt{B^{(0)}_0} \left(1 + \beta \frac{ B^{(1)}_0}{2B^{(0)}_0}\right)\\
-s_{1} = s_1^{(0)} + \beta s_1^{(1)}\\
-s_1^{(1)} = -  \frac{ qs_0}{2\sqrt{B^{(0)}_0}}B^{(1)}_0
-$$
-
-Let us go to second order:
-
-$$
-\left(q s_0 \sqrt{B_0} - c B_0\right) = q s_0 \sqrt{B^{(0)}} \left(1 + \beta \frac{ B^{(1)}}{2B^{(0)}}+ \frac{\beta^2}{2B^{(0)}} \left[B^{(2)}- \frac{ B_{(1)}^2}{4 B^{(0)}}\right]\right) - c \left(B^{(0)}_0+\beta B^{(1)}_0+\beta^2 B^{(2)}_0\right) \\
-= U^{(0)}- \beta^2 \frac{q s_0}{8\sqrt{B^{(0)}_0}} \frac{ B_{(1)}^2}{ B^{(0)}}\\
-= U^{(0)}- \beta^2 c^3 \frac{ B_{(1),0}^2}{ q^2 s_0^2 }\\
-$$
-
-On the second term we get:
-
-$$
-\left(q s_1 \sqrt{B_1} - c B_1\right) = q s_1 \sqrt{B^{(0)}} \left(1 + \beta \frac{ B^{(1)}}{2B^{(0)}}\right) - c (B^{(0)}_1+\beta B^{(1)}_1)\\
-= U^{(1)}
-$$
-
-$$
-q s_1 \sqrt{B_1} - c B_1 = q\left(s_1^{(0)} + \beta s_1^{(1)}\right)\sqrt{B_1^{(0)}}\left(1 + \beta \frac{B_1^{(1)}}{2B_1^{(0)}}\right) - c\left(B_1^{(0)} + \beta B_1^{(1)}\right) \\
-= \underbrace{\left(q s_1^{(0)}\sqrt{B_1^{(0)}} - c B_1^{(0)}\right)}_{U^{(1)}} + \beta \underbrace{B_1^{(1)}\left[\frac{q s_1^{(0)}}{2\sqrt{B_1^{(0)}}} - c\right]}_{\text{cancels}} + \beta \underbrace{q s_1^{(1)} \sqrt{B_1^{(0)}}}_{\text{survives}} + O(\beta^2)
-$$
-
-And the third term gives directly:
-
-$$
-\left(q s_2 \sqrt{B_2} - c B_2\right) = \left(q s_2 \sqrt{B^{(0)}_2} - c B^{(0)}_2\right)
-$$
-
-Putting it all together we have:
-
-$$
-U^{(2)} =\underbrace{- c^3 \frac{ B_{(1),0}^2}{ q^2 s_0^2 }}_{t=0}+ \underbrace{-\frac{q^2 s^{(0)}_1}{2} B^{(1)}_0}_{t=1}+ \underbrace{\left(q s_2 \sqrt{B^{(0)}_2} - c B^{(0)}_2\right)}_{t=2}
-$$
-
-We can use this to take the two derivatives:
-
-$$
-\frac{\partial U^{(2)}}{\partial B_{(1),0}} = - 2 c^3 \frac{ B_{(1),0}}{ q^2 s_0^2 }-\frac{q^2 s^{(0)}_1}{2}\\
-\frac{\partial U^{(2)}}{\partial B^{(0)}_{2}} = \frac{q s_2}{2\sqrt{B^{(0)}_2}}  - c
-$$
-
-Now let us set to zero to find:
-
-$$
-B^{(0)}_{2} = \left(\frac{qs_2}{2c}\right)^2\\
-B^{(1)}_0  = - \frac{q^4 s_0^2 s^{(0)}_1}{4c^3}
-$$
-
-That second result is the one we were after, and it says something simple once the clutter is
-divided out. Measured against the impatient fleet $B^{(0)}_0 = (q s_0 / 2c)^2$, the correction is
-
+u_j = \frac{b_j}{B}\,u(B,s) .
 $$
-\frac{B^{(1)}_0}{B^{(0)}_0} = -\frac{q^2 s^{(0)}_1}{c} = -2\,V_0'\big(s^{(0)}_1\big),
-\qquad V_0'(s) \equiv \frac{q^2 s}{2c},
-$$
-
-where $V_0'$ is the shadow price of the stock — what one more fish left in the water is worth next
-season. Patience does not change the planner's rule; it puts a price tag on the catch. Every fish
-landed today is a fish missing tomorrow, so a boat-trip is worth not $v$ but $v(1 - \beta V_0')$,
-and that one substitution is the whole first-order result. It is also the only door the growth
-rate ever comes through: $r$ sits inside $s^{(0)}_1$ and nowhere else, which is why the impatient
-fleet contains no $r$ at all.
-
-Why _twice_ the price, though? Because the catch goes as $\sqrt{B}$. Boats crowd each other, so
-the fleet scales as the square of what a trip is worth: shave one percent off the value of the
-catch and you shave two percent off the fleet. Writing $\pi \equiv \beta V_0'(s^{(0)}_1)$ for the
-dimensionless price of a fish still swimming, everything above resums into the form worth
-remembering,
-
-$$
-B_0(\beta) = B^{(0)}_0\,\big(1 - \pi\big)^2 ,
-\qquad \pi = \beta\,\frac{q^2 s^{(0)}_1}{2c} ,
-$$
-
-which expands back to the coefficient above. A physicist can read $\pi$ as a coupling and the
-myopic answer as the free theory: patience renormalises the cost of a boat, $c \to c/(1-\pi)$, and
-the planner then runs the same one-season sum they always did. Here $\pi = 0.0395\,\beta$, so the
-fleet comes off its impatient value by about eight percent per unit of patience.
-
-### The sustainable regime
-
-We can now analyse how much patience would be needed to move
-towards a sustainable regime. First note, that the growth rate is not explicitly in the 
-correction of the boats. The patient fisher cares about the total stock tomorrow, but not
-really about its growth rate explicitly. This is a different question. We can use now the condition:
-
-$$
-q \sqrt{B_0} < r
-$$
-
-We can now use the usual expension to have:
-$$
-q \sqrt{B_0^{(0)}} \left(1 + \frac{\beta}{2} \frac{B_0^{(1)}}{B_0^{(0)}}\right) < r\\
-q^2 \frac{s_0}{2c} \left(1 - \frac{\beta}{2} \frac{q^2 s^{(0)}_1}{c}\right) < r\\
-$$
-
-## Further text
-
-
-
-There is one constraint per season, and they are the only thing tying the
-seasons together — without them the sum would fall apart into independent one-year problems. The
-chain runs
-
-$$
-B_t \;\longmapsto\; y_t = q\,s_t\sqrt{B_t} \;\longmapsto\; s_{t+1} = s_t + g(s_t) - y_t \;\longmapsto\; B_{t+1}
-$$
-
-so this season's fleet never reaches next season's directly. It reaches it only by moving the
-stock in between. This is Leach's problem exactly — his §8.2 writes the same sum with
-$(1+r)^{-t}$ in place of $\beta^t$ — and his verdict is worth quoting: _complicated, but well
-defined and solvable_.
-
-Rather than solve that in general — the appendix does — it is worth expanding in $\beta$, because
-the first two orders already show what patience does.
-
-**No patience at all.** At $\beta = 0$ only the first term of the sum survives and the planner
-maximises this season's profit, $q s\sqrt{B} - cB$. Setting the derivative to zero gives
-$v/2 = c$, so
-
-$$
-B_0(s) = \left(\frac{q\,s}{2c}\right)^2, \qquad V_0(s) = \frac{q^2 s^2}{4c} .
-$$
-
-At $s_0 = 100$ that is **16 boats**, earning $V_0 = 2.00$ between them — the number already in the
-table, now as a function of the stock.
-
-It is worth asking whether that fleet is sustainable, and it is not. Those 16 boats take
-$y_0 = q^2 s^2 / 2c = 4.00$ out of the water, while the ground grows back by only
-$g(s) = 2.70$ — a catch half again as large as the growth. So the stock falls, and it keeps
-falling until the two finally balance at $q^2 s / 2c = r(1 - s/K)$:
 
-$$
-s^{*} = \frac{r}{\dfrac{q^{2}}{2c} + \dfrac{r}{K}} \approx 69.8
-$$
-
-by which point the fleet is down to 7.8 boats. An impatient manager runs the ground down by thirty
-percent _with both islands doing exactly as they are told_. Coordination alone does not save a
-fishery; the manager also has to care about next year.
-
-**A little patience.** Turn $\beta$ up slightly. The planner now cares what next season starts
-with, and to first order the worth of next season is still $V_0$. So a fish left in the water has
-a price, $V_0'(s) = q^2 s / 2c$, and the fleet picks up a correction linear in $\beta$:
-
-$$
-B(s;\beta) = B_0(s) + \beta\,B_1(s) + O(\beta^2), \qquad B_1 = -2\,V_0'(s')\,B_0
-$$
+Over many seasons an island wants its discounted total $U_j = \sum_t \beta^{t} u_{j,t}$, with
+$\beta$ near 1 a patient islander and $\beta = 0$ one who does not think about next season at all.
 
-with $s' = s + g(s) - y_0$ the stock the impatient policy leaves behind. Writing that out gives
-the coefficient in full, and it is worth seeing what it is made of:
+That is enough to state the tragedy. With $N$ islands drawing independently, the companion post
+shows the symmetric equilibrium sitting at
 
 $$
-\frac{B_1}{B_0} = -\frac{q^2}{c}\Big(\underbrace{s}_{\text{still there}} \;+\; \underbrace{g(s)}_{\text{they bred}} \;-\; \underbrace{y_0}_{\text{you caught}}\Big)
+\frac{u}{B} \;=\; \frac{D}{N} , \qquad D \;\equiv\; \frac{u}{B} - \partial_B u ,
 $$
-
-Read the correction: the extra boat still lands $v/2$ of marginal catch, but every fish in that
-catch would have been worth $\beta V_0'(s')$ had it been left alone. The fleet shrinks. **Patience
-is a price on fish in the water**, and the size of the price is the stock you are handing to next
-season — the three terms in the bracket being what is left, what it breeds, and what you took.
-
-And there is the growth rate, back in the problem. It was missing from the open-access condition
-entirely — nobody deciding whether to sail cared how fast the fish breed — and here it sits in the
-middle term, so a quicker-breeding ground draws a deeper cut. Honesty compels a caveat: at this
-fishery's $r = 0.03$ that middle term is only about 3% against the leading $1$. To first order,
-most of what a fish left behind is worth is simply that it is still there next season.
-
-All of which holds for $\beta \ll 1$. The patient case is the appendix's problem.
-
-|                       | boats on the water | profit |
-| --------------------- | ------------------ | ------ |
-| independent fisheries | 64                 | 0      |
-| the planner           | 16                 | 2.00   |
 
-Four times the fleet, for nothing at all. That gap is the tragedy of the commons, and it is the
-distance any institution has to close.
+which reads: you collect the average $u/B$ for your extra boat, but pay only $1/N$ of the damage
+$D$ it does. The two ends of that are the benchmarks everything below is measured against.
+$N = 1$ gives $\partial_B u = 0$ — one owner, feeling the whole cost of crowding, which is the
+planner. $N \to \infty$ gives $u = 0$ — open access, every scrap of rent competed away.
 
 ## The circuit, and what it implements
 
@@ -418,31 +88,64 @@ detectors — their Eq. (11), where the operator algebra is worked through in fu
 **licensed fleet** $b_j^{c}$ that island $j$ is actually credited with:
 
 $$
-b_1^{c} = b_1 \cosh\gamma + b_2 \sinh\gamma, \qquad b_2^{c} = b_2 \cosh\gamma + b_1 \sinh\gamma .
+b_1^{c} = e^{-\gamma}\left(b_1 \cosh\gamma + b_2 \sinh\gamma\right), \qquad b_2^{c} = b_2 e^{-\gamma}\cosh\gamma + b_1 \sinh\gamma\\
+b_{1}^{c} = b_1 \frac{1+e^{-2\gamma}}{2} + b_2 \frac{1-e^{-2\gamma}}{2}\\
+b_2^{c} = b_2 \frac{1+e^{-2\gamma}}{2} + b_1 \frac{1-e^{-2\gamma}}{2}
 $$
 
-In words: the number of boats you are credited with is your own declaration mixed with your
-neighbour's. That mixed number is what you get paid on, and what you get billed for.
-
-Now pull the common factor out of that measurement and give the leftover share a name,
-$\lambda = \tanh\gamma$:
+We can analyze the two interesting limits, starting with $\gamma \rightarrow 0$ first. Then we have:
 
 $$
-b_1^{c} = \cosh\gamma\,\big(b_1 + \lambda\, b_2\big), \qquad \lambda = \tanh\gamma ,
+b_{1,2}^{c} \approx b_{1,2} \left(1-\gamma\right) + b_{2,1} \gamma
 $$
 
-and the same with the labels swapped. The $\cosh\gamma$ is the same for both islands, so it is a
-change of units and cannot affect anyone's decision. Feed the rest into the payoffs. Writing
-$\tilde b_j = e^{\gamma}b_j$ for the rescaled fleet, island 1's profit under the protocol — call
-it $u_1^{Q}$ — comes out as
+So we can already see that we really start to care about the number of boats that the other neighbor has sent out. Let us see 
+what happens in the extreme case $\gamma \rightarrow \infty$. Then we have:
 
 $$
-u_1^{Q} = e^{-\gamma}\cosh\gamma\,\big[\,u_1(\tilde b) + \lambda\,u_2(\tilde b)\,\big],
+b_{1,2}^{c} \approx = \frac{b_1 + b_2}{2}
+$$
+This is exactly the situation of the planner as we care about both boats equally. So we can directly expect that the squeezing leads
+to cooperation and solve the tragedy in a similiar fashion as a planner did. However, not by some external institution but by simply sharing
+the ressources in a controlled way.
+
+### Solving the tragedy of the commons
+
+We can now look how each individual island would optimize its discounted payoffs for a given squeezing parameter and we get:
+
+$$
+u^c_{1,2} = \frac{b^c_{1,2}}{B} u(B,s) = e^{-\gamma} \left(u_{1,2} \cosh\gamma + u_{2,1} \sinh\gamma\right)
+$$
+So the payoff is distributed. Each player now has to optimize the individual $u_{j}^c$ as a function of his decision parameter $b_{j}$, so he looks for:
+
+$$
+\partial_{b_j} u^c_{j} = \partial_{b_j}(b^c_{j}) \frac{u}{B}+b^c_{j} \partial_{b_j}\left(\frac{u}{B}\right)
 $$
 
-where $u_1$ and $u_2$ are the ordinary one-season profits from §1, evaluated at the rescaled
-fleets. The prefactor is positive and common to both, and the rescaling is just a relabelling of
-the declared fleet. So the quantum game and a much simpler classical game have the same payoffs —
+This works out too:
+$$
+\partial_{b_1} u^c_{1} = e^{-\gamma} \cosh\gamma \frac{u(B,s)}{B}+\frac{b^c_{1}}{B} \left(\partial_{B}u-\frac{u}{B}\right)
+$$
+
+So we now find the optimal condition:
+
+$$
+\frac{u(B,s)}{B} = \frac{b^c_{1}}{B} D \frac{1}{e^{-\gamma}\cosh{\gamma}}
+$$
+The prefactor is once again roughly 1/2 (because the two islands are supposed to be equal) and we can now write:
+$$
+\frac{u(B,s)}{B} = \frac{D}{N_{eff}} \text{ with } N_{eff} = 1+e^{-2\gamma}
+$$
+So the squeezing heals the tragedy as it effectively reduces the number of independent island through the squeezing parameter. The tragedy disappears for 
+$N=1$ as we have effectively only one island left and the optimal condition becomes $\partial_B u = 0$, so we optimize total profits.
+Nothing in that used the square root, the logistic curve, or a single parameter value. $u(B,s)$
+was arbitrary throughout, so this is a statement about common-pool problems, not about fish.
+
+
+
+## The equivalent classical game
+
+The quantum game and a much simpler classical game have the same payoffs —
 and therefore the same best replies and the same equilibria. That classical game is: **each
 island maximises its own profit plus a share $\lambda$ of the other's**, with $\lambda$ running
 from 0 at $\gamma = 0$ to 1 as the squeezing goes up.
@@ -453,7 +156,6 @@ needs a laser. This is the continuous-variable version of a point
 [van Enk and Pike](https://doi.org/10.1103/PhysRevA.66.024306) made about EWL: the quantum game
 has a fully classical description, and writing it down is not hard.
 
-## What the clerk actually does
 
 Deflating as that is for the physics, look at what the clerk is doing, because it is a real
 institution and a good one.
@@ -473,7 +175,7 @@ There is no agreement between Moana and Kai here. Neither promised anything, nob
 and there is nothing to enforce. This is not cooperation. Moana is exactly as selfish as before —
 the sum in front of her has changed, that is all.
 
-And now compare what the clerk had to know against the list from §1. Not $q$, not $r$ or $K$, not
+And now compare what the clerk had to know against the model above. Not $q$, not $r$ or $K$, not
 $c$, not $\beta$. He never works out how many fish there are, how fast they breed, or what the
 right fleet would be. He publishes $\gamma$, applies it to two declared numbers, and the islands
 find the 16 themselves. The planner's answer, without the planner's knowledge — and without the
@@ -481,26 +183,22 @@ planner.
 
 ## What the rule buys
 
-One thing to settle before turning it up. §1 bracketed the problem between independent fisheries
-and the planner, 64 boats against 16. The clerk works on a narrower gap than that, because **two
-islands are not a crowd**. Open access has so many boats that no single owner feels the crowding
-it causes; with only two, each one already owns half the fleet and so already feels half the
-damage it does. Left alone at $\gamma = 0$ they send 36 boats, not 64 — part of the tragedy is
-solved simply by there being two of them rather than a hundred. That is where the dial starts,
-and the planner's 16 is where it ends.
+Put numbers on it. For the textbook fishery — catchability $q = 0.01$, a cost of $c = 0.125$ per
+boat, stock $s = 100$ — the companion post's $N$-user condition closes to
+$B^{*}(N) = (q s/c)^{2}\big(1 - \tfrac{1}{2N}\big)^{2}$. Substituting $N_{\text{eff}}$ collapses
+that to $\sqrt{B} = (3-\lambda)\,q s/4c$: **36 boats** at $\gamma = 0$, falling to **16** as the
+squeezing goes up.
 
 <FisheryDial />
+
+Notice where the dial starts. Open access would put 64 boats on the water, but two islands left
+alone send only 36, because **two islands are not a crowd** — each already owns half the fleet and
+so already feels half the damage it does. Part of the tragedy is solved simply by there being two
+of them rather than a hundred. The clerk closes the rest.
 
 The trade is not even painful. Fewer boats means less crowding, and less crowding means each
 remaining boat is worth more. The islands end up sending under half the fleet and earning about a
 third more.
-
-The curve behind that slider is the same stopping condition, with the clerk's share written in.
-An island counts its own half of the crowding plus $\lambda$ of its neighbour's, so it stops at
-$\sqrt{B} = (3-\lambda)\,q s/4c$ — 36 boats at $\lambda = 0$, and 16 as $\lambda \to 1$. Push it
-to $\lambda = -1$, where an island would have to actively disregard its own crowding, and you
-recover the 64 of open access. The protocol reaches $\lambda \in [0,1)$, so it starts from two
-selfish islands and ends at the planner.
 
 That dial holds the stock fixed at 100. It shows the mechanism, but a fishery whose stock never
 moves is not a fishery. So the real question is whether the clerk still lands on the planner's
@@ -509,7 +207,7 @@ answer when the stock rises and falls from one season to the next.
 It does, for a fairly boring reason. Adding up discounted seasons is a linear operation. So is
 "your own profit plus a share $\lambda$ of the other island's". Two linear operations can be
 applied in either order, which is all this says — with $u_{1,t}$ island 1's profit in season $t$,
-and $U_1$ its discounted lifetime total from §1:
+and $U_1$ its discounted lifetime total, as defined above:
 
 $$
 \sum_{t} \beta^{t}\big(u_{1,t} + \lambda\, u_{2,t}\big) \;=\; U_1 + \lambda\, U_2.
@@ -519,7 +217,7 @@ Left to right, that is the clerk's rule applied every season and then summed; ri
 is each island's lifetime earnings summed first and the clerk's rule applied to those. Same
 number. So the share does not stay trapped inside one season — it lands on the lifetime payoffs,
 and at full squeezing each island is maximising $U_1 + U_2$, the lifetime earnings of the entire
-fishery. Which is precisely what the planner in §1 was maximising.
+fishery. Which is precisely the planner's objective above.
 
 Solving the fishery as a proper dynamic game confirms it. Under full squeezing, two selfish
 islands settle on the same stock as a planner with the same patience, at every patience level I
@@ -594,8 +292,9 @@ The one-season figures behind the dial are a closed form, and the arithmetic sit
 [component itself](https://github.com/fretchen/fretchen.github.io/blob/main/website/components/blog/FisheryDial.tsx).
 The multi-season ones need more work, so here is what was actually solved.
 
-Beyond small $\beta$ the expansion in §1 is no use, and the sequence has to be given up on
-altogether in favour of a rule. Nothing carries between seasons except the stock, so the best
+Solving the planner's problem above in closed form is not possible — the companion post pushes a
+perturbative approach as far as it goes — so the sequence has to be given up on altogether in
+favour of a rule. Nothing carries between seasons except the stock, so the best
 fleet can depend only on today's stock — not on the date, not on history. Writing $V(s)$ for the
 best discounted profit obtainable from today on, the whole infinite problem folds into one
 equation,
@@ -611,7 +310,7 @@ $$
 \frac{v}{2}\Big(1 - \beta\,V'(s')\Big) = c .
 $$
 
-This is §1's rule with the exact shadow price $V'(s')$ in place of the first-order $V_0'(s')$, and
+This is the same one-season rule as above, $v/2=c$, with the exact shadow price $V'(s')$ built in, and
 it is implicit: $V'$ depends on the path, which depends on the policy, which depends on $V'$.
 Hence the numerics.
 
@@ -630,7 +329,7 @@ be damped.
 Two checks keep it honest. At $\beta = 0$ the solver reproduces the static Nash closed form and
 the long-run stock of 47.6 that follows from it. And for the linear (Cournot) case it reproduces
 Li–Du–Massar's own published Eq. (13) and Eq. (14) exactly, at every $\gamma$ tested — which
-checks the reduction in §3, not just the solver. The
+checks the payoff reduction above, not just the solver. The
 [notebook](https://github.com/fretchen/fretchen.github.io/blob/main/notebooks/quantum_cpr_v2.ipynb)
 runs both checks as assertions. It writes the four constants as `y0, g0, g1, c0`, which are the
 $q$, $r$, $1/K$ and $c$ used here.

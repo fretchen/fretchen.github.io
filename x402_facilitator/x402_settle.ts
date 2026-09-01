@@ -7,6 +7,7 @@
 import { getFacilitator } from "./facilitator_instance";
 import { verifyPayment } from "./x402_verify";
 import { collectFee, getFeeAmount } from "./x402_fee";
+import { accrueFee, recordCollectionSuccess, recordCollectionPending } from "./x402_fee_ledger";
 import { getChainConfig } from "./chain_utils";
 import { isRecipientWhitelisted } from "./x402_whitelist";
 import type { Address } from "viem";
@@ -91,6 +92,21 @@ function getBatchSettlementReceivers(
  * Settle a payment by executing transferWithAuthorization on-chain.
  * If fee is configured, collect fee after successful settlement.
  */
+/**
+ * Run a fee-ledger write without letting it affect the settlement.
+ *
+ * The ledger already swallows its own errors, but this makes the invariant structural
+ * rather than a convention the ledger module could quietly break: bookkeeping must
+ * never cost the buyer their receipt for a payment that already landed on-chain.
+ */
+async function safeLedgerWrite(operation: string, fn: () => Promise<void>): Promise<void> {
+  try {
+    await fn();
+  } catch (err) {
+    logger.error({ err, operation }, "Fee ledger write threw unexpectedly — settlement unaffected");
+  }
+}
+
 export async function settlePayment(
   paymentPayload: Record<string, unknown>,
   paymentRequirements: Record<string, unknown>,
@@ -229,14 +245,25 @@ export async function settlePayment(
       // Post-settlement fee collection
       logger.info({ recipient, network }, "Settlement succeeded, collecting fee");
 
+      // Record the debt BEFORE attempting collection: a crash mid-collection then
+      // leaves the fee recorded rather than lost.
+      const feeAmount = getFeeAmount();
+      await safeLedgerWrite("accrue", () => accrueFee(recipient, network, feeAmount));
+
       const feeResult = await collectFee(recipient as Address, network);
 
       if (feeResult.success) {
+        await safeLedgerWrite("collection_success", () =>
+          recordCollectionSuccess(recipient, network, feeAmount, feeResult.txHash),
+        );
         logger.info(
           { recipient, network, feeTxHash: feeResult.txHash },
           "Fee collected successfully after settlement",
         );
       } else if (feeResult.error === "fee_collection_pending") {
+        await safeLedgerWrite("collection_pending", () =>
+          recordCollectionPending(recipient, network, feeAmount, feeResult.txHash as string),
+        );
         // Fee tx was sent but not confirmed within its bounded wait. It may still land,
         // so this is not a failure — it is an unknown outcome carrying a tx hash.
         logger.warn(
@@ -245,15 +272,15 @@ export async function settlePayment(
         );
       } else {
         // Fee collection failed — settlement still succeeded!
-        // Log warning but don't fail the response
+        // The accrued balance stands, which is the whole point of the ledger.
         logger.warn(
           { recipient, network, feeError: feeResult.error },
-          "Fee collection failed after successful settlement — flagging for retry",
+          "Fee collection failed after successful settlement — accrued for retry",
         );
       }
 
       // Build facilitatorFees receipt (per x402 Fee Disclosure proposal #1016)
-      const feeAmountStr = getFeeAmount().toString();
+      const feeAmountStr = feeAmount.toString();
       const chainConfig = getChainConfig(network);
       const facilitatorFeesExtension: SettleResult["extensions"] = {
         facilitatorFees: {

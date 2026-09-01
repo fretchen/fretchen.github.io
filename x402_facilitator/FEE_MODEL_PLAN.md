@@ -17,7 +17,7 @@ Two problems motivate this plan:
    likely loss-making per settlement; on Base it is around break-even.
 2. **Reliability.** Fee collection has no persistence, so any failure loses the fee
    silently. It also runs inline with an unbounded wait for a second confirmation, so a
-   slow fee transaction can time out the handler *after* settlement has landed — losing
+   slow fee transaction can time out the handler _after_ settlement has landed — losing
    the buyer's receipt for a payment that succeeded.
 
 These are independent, and Phase 1 addresses only the second. The economics work is
@@ -27,14 +27,13 @@ A third, smaller item: the buyer-pays splitter experiment (`x402_splitter_*.js`,
 `EIP3009SplitterV1`) has been superseded by the merchant-pays model but is still
 present in the repo without any marking.
 
-Terminology: *merchant*, *seller*, *recipient* and `payTo` all refer to the same party —
+Terminology: _merchant_, _seller_, _recipient_ and `payTo` all refer to the same party —
 the operator of the resource server who receives the payment.
-
 
 ## Phase 1 — Make fee collection reliable
 
 **Scope: reliability only.** Latency and unit economics are explicitly deferred —
-see *Deferred from Phase 1* at the end of this phase. The goal is that a fee owed is
+see _Deferred from Phase 1_ at the end of this phase. The goal is that a fee owed is
 never silently lost and never collected twice, with **no new infrastructure**: no
 cron, no queue, no new deployed function.
 
@@ -58,7 +57,7 @@ would fix if it ever becomes worth building.
 timeout**, and `x402_settle.ts` awaits `collectFee()` inline before returning — inside
 a handler configured `timeout: 60s` (`serverless.yml`).
 
-The latency cost (the buyer waits for two confirmations) is real but is *not* what
+The latency cost (the buyer waits for two confirmations) is real but is _not_ what
 makes this a defect. The defect is the failure mode: if the fee transaction is slow to
 confirm, the handler is killed **after the settle transaction has already landed**, and
 the buyer gets no receipt for a payment that succeeded. Money moved; the buyer cannot
@@ -69,32 +68,49 @@ prove it.
       (`FEE_RECEIPT_TIMEOUT_MS = 10_000` in `x402_fee.ts`.)
 - [x] On timeout, do not fail the settlement: return the buyer's receipt, and return
       the fee tx hash with `error: "fee_collection_pending"` so the outcome is
-      recorded as *unknown* rather than *failed*.
+      recorded as _unknown_ rather than _failed_.
 
 Fee collection must never be able to cost the buyer a receipt for a settled payment.
 
-Note: the `transferFrom` *send* was already bounded — viem's http transport defaults to
+Note: the `transferFrom` _send_ was already bounded — viem's http transport defaults to
 a 10s per-request timeout. Only the receipt polling loop was unbounded.
 
 **Still open until 1.2/1.3:** `fee_collection_pending` is currently a dead end. The tx
 hash is returned and logged, but nothing persists or reconciles it, so a timed-out fee
-is still lost in practice. 1.1 only guarantees it is not lost *at the buyer's expense*.
+is still lost in practice. 1.1 only guarantees it is not lost _at the buyer's expense_.
 
 ### 1.2 No persistence for uncollected fees
 
 The current code logs `"flagging for retry"` but nothing is flagged anywhere; a failed
 fee is simply lost. This is the substantive change of the phase.
 
-- [ ] Add a store (Scaleway Serverless SQL, or Redis) with one row per
-      `(seller, network)`:
-      - `accrued` — atomic units owed
-      - `pending_tx_hash` + `pending_amount` — nullable; set when a collection is
-        fired, cleared on reconcile (1.3)
-      - `last_success_tx_hash` + `last_success_at`
-- [ ] Every settlement that owes a fee increments `accrued`.
-- [ ] Collection decrements it only on confirmed success.
+- [x] Add a store with one entry per `(seller, network)`, holding `accrued`,
+      a nullable `pending` (`txHash` + `amount`, cleared on reconcile in 1.3),
+      and `lastSuccess` (`txHash` + `at`).
+- [x] Every settlement that owes a fee increments `accrued`.
+- [x] Collection decrements it only on confirmed success.
 
-This table is the foundation for 1.3, 1.4 and all of Phase 3.
+Implemented in `x402_fee_ledger.ts` on `@fretchen/s3-utils` — no new infrastructure,
+just one JSON object per seller at `fees/{network}/{seller}.json`. Scaleway Serverless
+SQL and Redis were both considered and rejected: `shared/s3-utils` already provides
+ETag compare-and-swap (`putS3ObjectConditional` with `ifMatch`/`ifNoneMatch`), which is
+all the atomicity a per-seller counter needs, and `scw_js/x402_channel_storage.ts`
+already proves the pattern in production.
+
+Two normalisations are load-bearing: the seller address is lowercased (EIP-55 checksum
+casing would otherwise split one seller across two entries) and the CAIP-2 colon is
+replaced in the key.
+
+**Failure policy:** every ledger operation swallows its errors, and the settle path
+wraps them again in `safeLedgerWrite()`. An S3 outage degrades fee bookkeeping; it must
+never stop payments. This is the same fail-open stance as 1.4, for the same reason —
+the buyer's payment is worth far more than a 0.01 USDC fee.
+
+This store is the foundation for 1.3, 1.4 and all of Phase 3.
+
+**Still open until 1.3:** the `transferFrom` still pulls the flat fee, not the accrued
+total, so a seller with past failures keeps a balance that nothing drains, and nothing
+reconciles `pending`. The debt is now durable and visible — not yet recoverable.
 
 ### 1.3 Collection must be idempotent
 
@@ -105,11 +121,10 @@ exists, and the current design does not address it at all.
 
 - [ ] Fire `transferFrom(accrued_total)`, record `pending_tx_hash` and
       `pending_amount`, then wait only briefly.
-- [ ] On that seller's **next** settlement, resolve the pending hash *first*:
-      - confirmed success → decrement `accrued` by `pending_amount`, clear pending,
-        record `last_success_*`
-      - reverted, or still not found → clear pending, leave `accrued` intact so it
-        retries naturally
+- [ ] On that seller's **next** settlement, resolve the pending hash _first_ —
+      confirmed success decrements `accrued` by the pending amount, clears pending and
+      records `lastSuccess`; reverted or still-not-found clears pending and leaves
+      `accrued` intact so it retries naturally.
 - [ ] Never fire a new collection while a pending hash is unresolved.
 
 ### 1.4 Allowance check fails open
@@ -117,7 +132,7 @@ exists, and the current design does not address it at all.
 `checkMerchantAllowance()` returns `sufficient: true` on any RPC error. Combined with
 no persistence, this loses fees silently.
 
-Once 1.2 exists, failing open is acceptable *because the debt is recorded*. Tighten the
+Once 1.2 exists, failing open is acceptable _because the debt is recorded_. Tighten the
 distinction:
 
 - [ ] RPC/read error → fail open, log at `warn`, still accrue.
@@ -143,7 +158,7 @@ the receipt is returned. Reporting only what was collected would make
 
 1.4 decides when to fail open and when to fail closed, but nothing tells a human that a
 seller's balance has been stuck across many attempts. Persistence makes the debt
-*recorded*; it does not make it *visible*.
+_recorded_; it does not make it _visible_.
 
 - [ ] Track a consecutive-failure counter on the row.
 - [ ] Log at `error` once it crosses a small threshold, reusing the existing logger.
@@ -155,19 +170,19 @@ Deliberately minimal — this is not a new alerting system.
 Both items are real, neither is a reliability problem, and neither is on the critical
 path. Revisit only with evidence.
 
-**Batching fee collection into periodic sweeps** *(economics)*. Replace the
+**Batching fee collection into periodic sweeps** _(economics)_. Replace the
 per-settlement `transferFrom` with a scheduled sweep triggered by accrued balance ≥
 threshold or age ≥ 24h, one `transferFrom` per seller per sweep, run off the request
 path (`wallet_report_cron.ts` is the pattern to model it on). This is what drives
-fee-collection gas per payment toward zero. Note that inline collection of the *whole
-accrued balance* (1.3) already amortises naturally whenever a seller has a backlog, so
+fee-collection gas per payment toward zero. Note that inline collection of the _whole
+accrued balance_ (1.3) already amortises naturally whenever a seller has a backlog, so
 the threshold/age machinery buys less than it first appears. The settle transaction
 remains an irreducible floor for `exact` either way — one on-chain transfer per payment.
 
-**Nonce contention on the facilitator wallet** *(robustness under load)*. Each request
+**Nonce contention on the facilitator wallet** _(robustness under load)_. Each request
 can fire two sequential transactions from a single EOA; concurrent settlements risk
 nonce collisions and stuck transactions. Keeping collection inline means the fee
-transaction stays on the concurrent request path, so this is *not* reduced by anything
+transaction stays on the concurrent request path, so this is _not_ reduced by anything
 in Phase 1 — but the settle transaction is concurrent regardless, so moving fee
 collection off the request path was never a real fix for it either. At current traffic
 this is not worth pre-solving. If stuck or colliding transactions are actually
@@ -203,7 +218,7 @@ Deleting it would leave that open issue pointing at nothing.
 > **Fee model history**
 >
 > Two fee models were implemented. Neither is friction-free without protocol support;
-> the choice is about *where* the friction lands.
+> the choice is about _where_ the friction lands.
 >
 > - **Buyer-pays split** (`x402_splitter_*.js`, `EIP3009SplitterV1`, retained but not
 >   deployed): the buyer signs a single authorization to a splitter contract, which
@@ -237,9 +252,7 @@ Charging per voucher would reintroduce exactly the gas problem that makes `exact
 marginal, on a scheme that does not have it.
 
 - [ ] In `x402_settle.ts`, replace the blanket `!isBatchSettlement` fee exclusion with
-      a branch:
-      - voucher payloads → accrue nothing
-      - `claim` / `settle` payloads → assess a fee
+      a branch: - voucher payloads → accrue nothing - `claim` / `settle` payloads → assess a fee
 
 ### 3.2 Scale the fee to the claim
 
@@ -310,7 +323,7 @@ volume.
 ## Non-goals
 
 - Reviving the buyer-pays splitter as a production path.
-- Proposing a new x402 *scheme*. Nothing in this plan requires a protocol change;
+- Proposing a new x402 _scheme_. Nothing in this plan requires a protocol change;
   as of 2026-09-01 the upstream repo still has no fee extension or split scheme
   merged, and none is assumed here.
 - Competing on price with subsidised facilitators. At realistic volumes the absolute

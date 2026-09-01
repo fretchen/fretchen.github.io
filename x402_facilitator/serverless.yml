@@ -25,12 +25,22 @@ provider:
     # Weekly wallet report (walletreportcron): warn when native gas balance drops below
     # this many ETH. Public value — the actual send is gated on the TEM secrets below.
     LOW_GAS_THRESHOLD_ETH: ${env:LOW_GAS_THRESHOLD_ETH, '0.005'}
+    # Object Storage bucket holding the fee ledger (fees/{network}/{seller}.json).
+    # Public value; the credentials that reach it are secrets below.
+    # NB: defaults must be real values, not '' — s3-utils uses `?? "my-imagestore"`,
+    # and an empty string is not nullish, so '' would yield a hostless bucket URL.
+    SCW_S3_BUCKET: ${env:SCW_S3_BUCKET, 'my-imagestore'}
+    SCW_S3_REGION: ${env:SCW_S3_REGION, 'nl-ams'}
   # Secrets (set via Scaleway Console or CLI)
   secret:
     FACILITATOR_WALLET_PRIVATE_KEY: ${env:FACILITATOR_WALLET_PRIVATE_KEY}
     # Scaleway Transactional Email — used by walletreportcron to send the weekly report.
     # SCW_SECRET_KEY doubles as the TEM X-Auth-Token (same value comment_service uses).
+    # It is ALSO the S3 secret key for the fee ledger, paired with SCW_ACCESS_KEY.
     SCW_SECRET_KEY: ${env:SCW_SECRET_KEY, ''}
+    # S3 access key for the fee ledger. Without both S3 keys the ledger silently
+    # no-ops (isLedgerEnabled) and settlements continue unaffected.
+    SCW_ACCESS_KEY: ${env:SCW_ACCESS_KEY, ''}
     TEM_PROJECT_ID: ${env:TEM_PROJECT_ID, ''}
     NOTIFICATION_EMAIL: ${env:NOTIFICATION_EMAIL, ''}
     # Per-network RPC endpoints (see getRpcUrl in chain_utils.ts). Unset => viem falls

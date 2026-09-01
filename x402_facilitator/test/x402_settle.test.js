@@ -5,6 +5,7 @@ import { settlePayment } from "../x402_settle.js";
 import * as facilitatorInstance from "../facilitator_instance.js";
 import * as verifyModule from "../x402_verify.js";
 import * as feeModule from "../x402_fee.js";
+import * as ledgerModule from "../x402_fee_ledger.js";
 
 // Mock viem
 vi.mock("viem", async () => {
@@ -590,6 +591,135 @@ describe("x402_settle with mocked facilitator", () => {
     expect(result.extensions).toBeDefined();
     expect(result.extensions.facilitatorFees.info.facilitatorFeePaid).toBe("0");
     expect(result.extensions.facilitatorFees.info.model).toBe("flat");
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // Fee ledger wiring
+  // ═══════════════════════════════════════════════════════════
+
+  /** Shared setup for the ledger-wiring tests: a settlement that owes a fee. */
+  function mockFeeBearingSettlement() {
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue({
+      settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xsettletxhash" }),
+    });
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
+      isValid: true,
+      payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      feeRequired: true,
+      recipient: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+    });
+  }
+
+  it("accrues the fee before attempting collection", async () => {
+    mockFeeBearingSettlement();
+
+    const order = [];
+    const accrueSpy = vi
+      .spyOn(ledgerModule, "accrueFee")
+      .mockImplementation(async () => void order.push("accrue"));
+    vi.spyOn(ledgerModule, "recordCollectionSuccess").mockResolvedValue(undefined);
+    vi.spyOn(feeModule, "collectFee").mockImplementation(async () => {
+      order.push("collect");
+      return { success: true, txHash: "0xfeetxhash123" };
+    });
+
+    await settlePayment(validPaymentPayload, validPaymentRequirements);
+
+    expect(accrueSpy).toHaveBeenCalledWith(
+      "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+      "eip155:11155420",
+      10000n,
+    );
+    // Ordering is the point: a crash mid-collection must leave the debt recorded.
+    expect(order).toEqual(["accrue", "collect"]);
+  });
+
+  it("records a confirmed collection against the ledger", async () => {
+    mockFeeBearingSettlement();
+
+    vi.spyOn(ledgerModule, "accrueFee").mockResolvedValue(undefined);
+    const successSpy = vi
+      .spyOn(ledgerModule, "recordCollectionSuccess")
+      .mockResolvedValue(undefined);
+    vi.spyOn(feeModule, "collectFee").mockResolvedValue({
+      success: true,
+      txHash: "0xfeetxhash123",
+    });
+
+    await settlePayment(validPaymentPayload, validPaymentRequirements);
+
+    expect(successSpy).toHaveBeenCalledWith(
+      "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+      "eip155:11155420",
+      10000n,
+      "0xfeetxhash123",
+    );
+  });
+
+  it("records a timed-out collection as pending, not as success", async () => {
+    mockFeeBearingSettlement();
+
+    vi.spyOn(ledgerModule, "accrueFee").mockResolvedValue(undefined);
+    const successSpy = vi
+      .spyOn(ledgerModule, "recordCollectionSuccess")
+      .mockResolvedValue(undefined);
+    const pendingSpy = vi
+      .spyOn(ledgerModule, "recordCollectionPending")
+      .mockResolvedValue(undefined);
+    vi.spyOn(feeModule, "collectFee").mockResolvedValue({
+      success: false,
+      txHash: "0xpendingtx",
+      error: "fee_collection_pending",
+    });
+
+    const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
+
+    expect(pendingSpy).toHaveBeenCalledWith(
+      "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+      "eip155:11155420",
+      10000n,
+      "0xpendingtx",
+    );
+    expect(successSpy).not.toHaveBeenCalled();
+    expect(result.success).toBe(true);
+  });
+
+  it("leaves the accrued balance standing when collection hard-fails", async () => {
+    mockFeeBearingSettlement();
+
+    vi.spyOn(ledgerModule, "accrueFee").mockResolvedValue(undefined);
+    const successSpy = vi
+      .spyOn(ledgerModule, "recordCollectionSuccess")
+      .mockResolvedValue(undefined);
+    const pendingSpy = vi
+      .spyOn(ledgerModule, "recordCollectionPending")
+      .mockResolvedValue(undefined);
+    vi.spyOn(feeModule, "collectFee").mockResolvedValue({
+      success: false,
+      error: "insufficient_fee_allowance",
+    });
+
+    await settlePayment(validPaymentPayload, validPaymentRequirements);
+
+    // Nothing decrements the debt — leaving it accrued is the whole point.
+    expect(successSpy).not.toHaveBeenCalled();
+    expect(pendingSpy).not.toHaveBeenCalled();
+  });
+
+  it("still settles when the ledger itself throws", async () => {
+    mockFeeBearingSettlement();
+
+    vi.spyOn(ledgerModule, "accrueFee").mockRejectedValue(new Error("S3 unreachable"));
+    vi.spyOn(feeModule, "collectFee").mockResolvedValue({
+      success: true,
+      txHash: "0xfeetxhash123",
+    });
+
+    // The ledger swallows its own errors, but assert the invariant at this layer too:
+    // bookkeeping must never cost the buyer their receipt.
+    await expect(
+      settlePayment(validPaymentPayload, validPaymentRequirements),
+    ).resolves.toMatchObject({ success: true, transaction: "0xsettletxhash" });
   });
 
   it("does not collect fee when feeRequired is not set", async () => {

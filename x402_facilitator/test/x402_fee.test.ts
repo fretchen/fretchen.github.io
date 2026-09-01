@@ -366,7 +366,9 @@ describe("x402_fee", () => {
         transactionHash: mockTxHash,
       }));
 
-      vi.mocked(createPublicClient).mockReturnValue(mockPublicClient({ waitForTransactionReceipt }));
+      vi.mocked(createPublicClient).mockReturnValue(
+        mockPublicClient({ waitForTransactionReceipt }),
+      );
 
       vi.mocked(getContract).mockReturnValue(
         mockContract({

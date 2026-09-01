@@ -67,6 +67,26 @@ const CORS_HEADERS: Record<string, string> = {
   "Content-Type": "application/json",
 };
 
+/** Human-facing documentation for the facilitator — the root path redirects browsers here. */
+const DOCUMENTATION_URL = "https://www.fretchen.eu/x402/";
+
+/**
+ * Case-insensitive header lookup. Header casing on Scaleway's event object is not
+ * guaranteed, so a direct `headers["Accept"]` read can silently miss a real header.
+ */
+function getHeader(headers: Record<string, string> | undefined, name: string): string | undefined {
+  if (!headers) {
+    return undefined;
+  }
+  const lower = name.toLowerCase();
+  for (const [key, value] of Object.entries(headers)) {
+    if (key.toLowerCase() === lower) {
+      return value;
+    }
+  }
+  return undefined;
+}
+
 /**
  * Handle /verify endpoint - off-chain verification
  */
@@ -312,6 +332,34 @@ export async function handle(
   }
   if (path.includes("/verify")) {
     return handleVerify(event, context);
+  }
+
+  // Only the literal root ("/") — NOT the empty string. A real root request (browser,
+  // curl, an agent probing the domain) always carries path "/"; an event with neither
+  // `path` nor `rawUrl` set is a malformed/absent-info request, which stays a 404 below.
+  if (path === "/") {
+    const accept = getHeader(event.headers, "Accept") ?? "";
+    if (accept.includes("text/html")) {
+      // A human followed a link (e.g. from a facilitator listing) — send them to the
+      // docs instead of a JSON error object.
+      return {
+        statusCode: 302,
+        headers: { ...CORS_HEADERS, Location: DOCUMENTATION_URL },
+        body: "",
+      };
+    }
+    // No Accept: text/html — an agent, curl, or a machine client. Give it an onward
+    // path rather than nothing to act on.
+    return {
+      statusCode: 200,
+      headers: CORS_HEADERS,
+      body: JSON.stringify({
+        service: "x402 facilitator",
+        documentation: DOCUMENTATION_URL,
+        supported: "/supported",
+        endpoints: ["/verify", "/settle", "/supported"],
+      }),
+    };
   }
 
   // Default 404

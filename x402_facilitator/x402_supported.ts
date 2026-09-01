@@ -62,7 +62,20 @@ interface SupportedCapabilities {
   signers: Record<string, string[]>;
   /** Present only when a fee is configured (feeAmount > 0 and a facilitator key exists). */
   facilitatorFees?: FacilitatorFeesDisclosure;
+  /**
+   * Onward paths for a caller that has just discovered `/supported` and has nowhere else
+   * to go — an agent doing facilitator discovery, or a human who followed a link from a
+   * listing. Always present, unlike `facilitatorFees`: it doesn't depend on a fee being
+   * configured.
+   */
+  links: {
+    documentation: string;
+    source: string;
+  };
 }
+
+const DOCUMENTATION_URL = "https://www.fretchen.eu/x402/";
+const SOURCE_URL = "https://github.com/fretchen/fretchen.github.io/tree/main/x402_facilitator";
 
 /**
  * Get supported payment schemes and networks.
@@ -76,6 +89,7 @@ export function getSupportedCapabilities(): SupportedCapabilities {
   const supported: SupportedCapabilities = {
     ...base,
     extensions: [...(base.extensions ?? [])],
+    links: { documentation: DOCUMENTATION_URL, source: SOURCE_URL },
   };
 
   const feeAmount = getFeeAmount();

@@ -46,7 +46,7 @@ sequenceDiagram
     Facilitator->>Chain: transferFrom(merchant, facilitator, fee)
     Chain-->>Facilitator: Fee collected
 
-    Note over Merchant: Requires one-time<br/>USDC approve() for<br/>facilitator address
+    Note over Merchant: Approve ~1 USDC (~100<br/>settlements); re-approve as<br/>remainingSettlements runs low
 `;
 
 // ─── Live /supported fetch ───────────────────────────────────────────────────
@@ -303,8 +303,12 @@ export default function Page() {
             <span className={stepNumber}>2</span> Approve the facilitator for fee collection
           </h3>
           <p>
-            The facilitator collects a 0.01 USDC fee per settlement via ERC-20 <code>transferFrom</code>. You need a
-            one-time USDC approval. Connect your seller wallet below to check your current approval and set it:
+            The facilitator collects a 0.01 USDC fee per settlement via ERC-20 <code>transferFrom</code>. The
+            recommended approval is deliberately small — about 1 USDC, covering roughly 100 settlements — because the
+            spender is the facilitator's hot settlement wallet, and a large standing allowance is a standing risk.
+            Re-approve as it runs down: every <code>/verify</code> response includes <code>remainingSettlements</code>{" "}
+            (see the API reference further down this page), so you can watch it and top up before it hits zero. Connect
+            your seller wallet below to check your current approval and set it:
           </p>
           <FacilitatorApproval />
         </div>
@@ -467,7 +471,10 @@ return new Response(JSON.stringify(result), { status: 200 });`}</CodeBlock>
     }
   }'`}</CodeBlock>
           <p>
-            Response: <code>{`{ "valid": true }`}</code> or <code>{`{ "valid": false, "invalidReason": "..." }`}</code>
+            Response: <code>{`{ "isValid": true, "remainingSettlements": 87 }`}</code> or{" "}
+            <code>{`{ "isValid": false, "invalidReason": "..." }`}</code>. When a fee applies,{" "}
+            <code>remainingSettlements</code> tells the seller how many settlements their current USDC approval still
+            covers.
           </p>
         </div>
 
@@ -503,8 +510,9 @@ return new Response(JSON.stringify(result), { status: 200 });`}</CodeBlock>
           <CodeBlock lang="bash">{`curl https://facilitator.fretchen.eu/supported`}</CodeBlock>
           <p>
             Returns a JSON object with <code>kinds</code> (supported network/scheme pairs), <code>extensions</code>{" "}
-            (advertised extension keys), <code>signers</code> (facilitator addresses per network), and{" "}
-            <code>facilitatorFees</code> (fee amount and recipient, when a fee is configured).
+            (advertised extension keys), <code>signers</code> (facilitator addresses per network),{" "}
+            <code>facilitatorFees</code> (fee amount and recipient, when a fee is configured), and <code>links</code>{" "}
+            (documentation and source, always present).
           </p>
         </div>
 

@@ -393,5 +393,42 @@ describe("x402_facilitator handlers", () => {
 
       expect(result.statusCode).toBe(404);
     });
+
+    it("redirects a browser hitting the root to the documentation page", async () => {
+      const event = { httpMethod: "GET", path: "/", headers: { Accept: "text/html" } };
+      const result = await handle(event, {});
+
+      expect(result.statusCode).toBe(302);
+      expect(result.headers.Location).toBe("https://www.fretchen.eu/x402/");
+    });
+
+    it("matches the Accept header case-insensitively", async () => {
+      const event = {
+        httpMethod: "GET",
+        path: "/",
+        headers: { accept: "text/html,application/xhtml+xml" },
+      };
+      const result = await handle(event, {});
+
+      expect(result.statusCode).toBe(302);
+    });
+
+    it("gives a machine client at the root a JSON body with an onward path", async () => {
+      const event = { httpMethod: "GET", path: "/" };
+      const result = await handle(event, {});
+
+      expect(result.statusCode).toBe(200);
+      const body = JSON.parse(result.body);
+      expect(body.documentation).toBe("https://www.fretchen.eu/x402/");
+      expect(body.supported).toBe("/supported");
+    });
+
+    it("does not redirect a JSON Accept header at the root", async () => {
+      const event = { httpMethod: "GET", path: "/", headers: { Accept: "application/json" } };
+      const result = await handle(event, {});
+
+      expect(result.statusCode).toBe(200);
+      expect(result.headers.Location).toBeUndefined();
+    });
   });
 });

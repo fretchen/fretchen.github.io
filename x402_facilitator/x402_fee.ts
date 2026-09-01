@@ -16,6 +16,7 @@ import {
   http,
   getContract,
   WaitForTransactionReceiptTimeoutError,
+  TransactionReceiptNotFoundError,
   type Address,
   type Abi,
 } from "viem";
@@ -198,15 +199,53 @@ export async function checkMerchantAllowance(
 // ═══════════════════════════════════════════════════════════════
 
 /**
+ * Resolve the on-chain outcome of a previously sent transaction.
+ *
+ * A point query (`getTransactionReceipt`), not a wait — used to reconcile a collection
+ * whose receipt wait timed out, on the seller's next settlement.
+ *
+ * Returns "unknown" for BOTH "no receipt yet" and any RPC failure. Never guess here:
+ * reporting a missing receipt as "reverted" would re-collect a fee that already landed,
+ * and reporting it as "success" would drop a fee that never did.
+ */
+export async function getTransactionStatus(
+  txHash: string,
+  network: string,
+): Promise<"success" | "reverted" | "unknown"> {
+  try {
+    const config = getChainConfig(network);
+    const publicClient = createPublicClient({ chain: config.chain, transport: http() });
+
+    const receipt = await publicClient.getTransactionReceipt({ hash: txHash as `0x${string}` });
+    return receipt.status === "success" ? "success" : "reverted";
+  } catch (error) {
+    if (error instanceof TransactionReceiptNotFoundError) {
+      // Still in flight, or dropped — the caller decides based on age.
+      logger.debug({ txHash, network }, "Fee tx receipt not found yet");
+      return "unknown";
+    }
+    logger.warn({ err: error, txHash, network }, "Could not resolve fee tx status");
+    return "unknown";
+  }
+}
+
+/**
  * Collect fee from merchant via ERC-20 transferFrom.
  * Called AFTER successful settlement only.
  *
  * @param merchantAddress - The merchant who received payment (fee source)
  * @param network - The CAIP-2 network identifier
+ * @param amount - Atomic units to pull. Defaults to the flat per-settlement fee; the
+ *                 ledger passes the seller's whole accrued balance so one transfer
+ *                 clears any backlog left by earlier failures.
  * @returns FeeResult with success status and optional tx hash
  */
-export async function collectFee(merchantAddress: Address, network: string): Promise<FeeResult> {
-  const feeAmount = getFeeAmount();
+export async function collectFee(
+  merchantAddress: Address,
+  network: string,
+  amount?: bigint,
+): Promise<FeeResult> {
+  const feeAmount = amount ?? getFeeAmount();
 
   // No fee configured — skip silently
   if (feeAmount === 0n) {

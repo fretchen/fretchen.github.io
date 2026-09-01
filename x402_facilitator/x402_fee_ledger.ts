@@ -27,6 +27,12 @@ const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 const PREFIX = "fees/";
 const MAX_CAS_ATTEMPTS = 3;
 
+/**
+ * Consecutive hard failures before the stuck balance is logged at `error`.
+ * Deliberately just a log line — not an alerting system.
+ */
+const FAILURE_ALERT_THRESHOLD = 5;
+
 // ═══════════════════════════════════════════════════════════════
 // Types
 // ═══════════════════════════════════════════════════════════════
@@ -58,6 +64,11 @@ export interface FeeLedgerEntry {
   accrued: string;
   pending?: PendingCollection;
   lastSuccess?: SuccessfulCollection;
+  /**
+   * Consecutive hard collection failures. Reset on success; left alone by a pending
+   * outcome, which is unknown rather than failed. Drives the stuck-balance alert.
+   */
+  consecutiveFailures?: number;
   updatedAt: string;
 }
 
@@ -142,21 +153,22 @@ async function updateEntry(
  * Every caller is on the settlement request path, where the ledger is the least
  * valuable thing in flight. S3 being unreachable must degrade bookkeeping, not payments.
  */
-async function withLedger(
+async function withLedger<T>(
   operation: string,
   seller: string,
   network: string,
-  fn: () => Promise<unknown>,
-): Promise<void> {
+  fn: () => Promise<T>,
+): Promise<T | null> {
   if (!isLedgerEnabled()) {
     logger.debug({ operation, seller, network }, "Fee ledger disabled (no S3 credentials)");
-    return;
+    return null;
   }
 
   try {
-    await fn();
+    return await fn();
   } catch (err) {
     logger.error({ err, operation, seller, network }, "Fee ledger operation failed");
+    return null;
   }
 }
 
@@ -196,12 +208,16 @@ export async function getFeeLedger(
  * Record that a fee is owed. Called BEFORE collection is attempted, so that a crash
  * mid-collection leaves the debt recorded rather than lost.
  */
-export async function accrueFee(seller: string, network: string, amount: bigint): Promise<void> {
+export async function accrueFee(
+  seller: string,
+  network: string,
+  amount: bigint,
+): Promise<FeeLedgerEntry | null> {
   if (amount === 0n) {
-    return;
+    return null;
   }
 
-  await withLedger("accrue", seller, network, () =>
+  return withLedger("accrue", seller, network, () =>
     updateEntry(seller, network, (current) => {
       const base = current ?? emptyEntry(seller, network);
       return {
@@ -231,6 +247,7 @@ export async function recordCollectionSuccess(
         ...base,
         accrued: (remaining > 0n ? remaining : 0n).toString(),
         lastSuccess: { txHash, amount: amount.toString(), at: new Date().toISOString() },
+        consecutiveFailures: 0,
         updatedAt: new Date().toISOString(),
       };
       delete next.pending;
@@ -260,4 +277,61 @@ export async function recordCollectionPending(
       };
     }),
   );
+}
+
+/**
+ * Drop the pending marker without touching the accrued balance.
+ *
+ * Used when a pending collection resolved as reverted, or went stale without ever
+ * producing a receipt. The debt deliberately stands: it was never actually collected,
+ * so it must remain owed and retryable.
+ */
+export async function clearPending(seller: string, network: string): Promise<void> {
+  await withLedger("clear_pending", seller, network, () =>
+    updateEntry(seller, network, (current) => {
+      if (!current?.pending) {
+        return undefined;
+      }
+      const next: FeeLedgerEntry = { ...current, updatedAt: new Date().toISOString() };
+      delete next.pending;
+      return next;
+    }),
+  );
+}
+
+/**
+ * Record a hard collection failure and surface a balance that keeps failing.
+ *
+ * Persistence (1.2) made the debt recorded; this is what makes a stuck one *visible*,
+ * which matters more now that an unresolved pending marker can block collection.
+ */
+export async function recordCollectionFailure(
+  seller: string,
+  network: string,
+  error?: string,
+): Promise<void> {
+  await withLedger("collection_failure", seller, network, async () => {
+    const updated = await updateEntry(seller, network, (current) => {
+      const base = current ?? emptyEntry(seller, network);
+      return {
+        ...base,
+        consecutiveFailures: (base.consecutiveFailures ?? 0) + 1,
+        updatedAt: new Date().toISOString(),
+      };
+    });
+
+    if (updated && (updated.consecutiveFailures ?? 0) >= FAILURE_ALERT_THRESHOLD) {
+      logger.error(
+        {
+          seller,
+          network,
+          consecutiveFailures: updated.consecutiveFailures,
+          accrued: updated.accrued,
+          error,
+        },
+        "Fee collection stuck — consecutive failures crossed alert threshold",
+      );
+    }
+    return updated;
+  });
 }

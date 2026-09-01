@@ -6,8 +6,8 @@
 
 import { getFacilitator } from "./facilitator_instance";
 import { verifyPayment } from "./x402_verify";
-import { collectFee, getFeeAmount } from "./x402_fee";
-import { accrueFee, recordCollectionSuccess, recordCollectionPending } from "./x402_fee_ledger";
+import { getFeeAmount } from "./x402_fee";
+import { collectFeeWithLedger, type FeeOutcome } from "./x402_fee_collection";
 import { getChainConfig } from "./chain_utils";
 import { isRecipientWhitelisted } from "./x402_whitelist";
 import type { Address } from "viem";
@@ -93,17 +93,26 @@ function getBatchSettlementReceivers(
  * If fee is configured, collect fee after successful settlement.
  */
 /**
- * Run a fee-ledger write without letting it affect the settlement.
+ * Run the fee collection flow without letting it affect the settlement.
  *
- * The ledger already swallows its own errors, but this makes the invariant structural
- * rather than a convention the ledger module could quietly break: bookkeeping must
- * never cost the buyer their receipt for a payment that already landed on-chain.
+ * The flow and the ledger beneath it already swallow their own errors, but this makes
+ * the invariant structural rather than a convention they could quietly break:
+ * bookkeeping must never cost the buyer their receipt for a payment that already
+ * landed on-chain.
  */
-async function safeLedgerWrite(operation: string, fn: () => Promise<void>): Promise<void> {
+async function safeCollectFee(
+  recipient: string,
+  network: string,
+  feeAmount: bigint,
+): Promise<FeeOutcome> {
   try {
-    await fn();
+    return await collectFeeWithLedger(recipient, network, feeAmount);
   } catch (err) {
-    logger.error({ err, operation }, "Fee ledger write threw unexpectedly — settlement unaffected");
+    logger.error(
+      { err, recipient, network },
+      "Fee collection threw unexpectedly — settlement unaffected",
+    );
+    return { success: false, error: "fee_collection_failed", assessed: feeAmount };
   }
 }
 
@@ -245,30 +254,29 @@ export async function settlePayment(
       // Post-settlement fee collection
       logger.info({ recipient, network }, "Settlement succeeded, collecting fee");
 
-      // Record the debt BEFORE attempting collection: a crash mid-collection then
-      // leaves the fee recorded rather than lost.
+      // Reconcile any earlier pending collection, accrue this fee, then sweep the
+      // seller's whole accrued balance. See x402_fee_collection.ts.
       const feeAmount = getFeeAmount();
-      await safeLedgerWrite("accrue", () => accrueFee(recipient, network, feeAmount));
-
-      const feeResult = await collectFee(recipient as Address, network);
+      const feeResult = await safeCollectFee(recipient, network, feeAmount);
 
       if (feeResult.success) {
-        await safeLedgerWrite("collection_success", () =>
-          recordCollectionSuccess(recipient, network, feeAmount, feeResult.txHash),
-        );
         logger.info(
-          { recipient, network, feeTxHash: feeResult.txHash },
+          { recipient, network, feeTxHash: feeResult.txHash, swept: feeResult.swept?.toString() },
           "Fee collected successfully after settlement",
         );
       } else if (feeResult.error === "fee_collection_pending") {
-        await safeLedgerWrite("collection_pending", () =>
-          recordCollectionPending(recipient, network, feeAmount, feeResult.txHash as string),
-        );
         // Fee tx was sent but not confirmed within its bounded wait. It may still land,
         // so this is not a failure — it is an unknown outcome carrying a tx hash.
         logger.warn(
           { recipient, network, feeTxHash: feeResult.txHash },
           "Fee tx pending at response time — outcome unknown, not yet reconciled",
+        );
+      } else if (feeResult.error === "fee_collection_blocked_pending") {
+        // An earlier collection is still unresolved. Collecting now risks double-charging
+        // the seller, so this fee is accrued and left for a later settlement.
+        logger.warn(
+          { recipient, network },
+          "Fee collection blocked by an unresolved pending tx — accrued for retry",
         );
       } else {
         // Fee collection failed — settlement still succeeded!

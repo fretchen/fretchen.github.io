@@ -298,7 +298,10 @@ export function createFacilitator(requirePrivateKey = true): InstanceType<typeof
     (result as Record<string, unknown>).feeRequired = true;
     (result as Record<string, unknown>).recipient = recipient;
     // Surfaced in the verify response so sellers see their approval running down.
-    (result as Record<string, unknown>).remainingSettlements = allowanceInfo.remainingSettlements;
+    // Left undefined when the allowance was unreadable — never reported as 0.
+    if (allowanceInfo.remainingSettlements !== undefined) {
+      (result as Record<string, unknown>).remainingSettlements = allowanceInfo.remainingSettlements;
+    }
   });
 
   logger.info(

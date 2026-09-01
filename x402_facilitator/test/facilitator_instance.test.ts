@@ -420,7 +420,6 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
 
   it("proceeds when the allowance is unreadable, without capping collection", async () => {
     vi.mocked(checkMerchantAllowance).mockResolvedValue({
-      remainingSettlements: 0,
       status: "unknown" as const,
     });
 
@@ -430,6 +429,8 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
     // Fail open: a reading we could not take must not reject a valid payment.
     expect(args.result.isValid).toBe(true);
     expect(args.result.feeRequired).toBe(true);
+    // Never surface 0 for an unreadable allowance — that reads as "exhausted".
+    expect(args.result.remainingSettlements).toBeUndefined();
   });
 
   it("surfaces remaining settlements so sellers see their approval running down", async () => {

@@ -44,7 +44,12 @@ export interface AllowanceInfo {
    * allowance would silently stop collecting entirely during a transient RPC failure.
    */
   allowance?: bigint;
-  remainingSettlements: number;
+  /**
+   * Undefined when the allowance could not be read ("unknown" status). Never
+   * report 0 here for an unreadable allowance — it reads as "approval exhausted"
+   * and pushes sellers to re-approve unnecessarily.
+   */
+  remainingSettlements?: number;
   /**
    * "ok"           — allowance covers at least one fee
    * "insufficient" — read succeeded, allowance is genuinely too low (fail closed)
@@ -204,7 +209,7 @@ export async function checkMerchantAllowance(
       { err: error, merchant: merchantAddress, network },
       "Could not read merchant allowance — proceeding without it",
     );
-    return { remainingSettlements: 0, status: "unknown" };
+    return { status: "unknown" };
   }
 }
 

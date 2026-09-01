@@ -85,12 +85,7 @@ describe("x402_fee_collection", () => {
 
     await collectFeeWithLedger(SELLER, NETWORK, FEE);
 
-    expect(mocks.recordCollectionSuccess).toHaveBeenCalledWith(
-      SELLER,
-      NETWORK,
-      40000n,
-      "0xfeetx",
-    );
+    expect(mocks.recordCollectionSuccess).toHaveBeenCalledWith(SELLER, NETWORK, 40000n, "0xfeetx");
   });
 
   it("accrues before collecting", async () => {

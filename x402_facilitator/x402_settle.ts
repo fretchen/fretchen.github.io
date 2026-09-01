@@ -10,7 +10,6 @@ import { getFeeAmount } from "./x402_fee";
 import { collectFeeWithLedger, type FeeOutcome } from "./x402_fee_collection";
 import { getChainConfig } from "./chain_utils";
 import { isRecipientWhitelisted } from "./x402_whitelist";
-import type { Address } from "viem";
 import pino from "pino";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });

@@ -108,24 +108,40 @@ the buyer's payment is worth far more than a 0.01 USDC fee.
 
 This store is the foundation for 1.3, 1.4 and all of Phase 3.
 
-**Still open until 1.3:** the `transferFrom` still pulls the flat fee, not the accrued
-total, so a seller with past failures keeps a balance that nothing drains, and nothing
-reconciles `pending`. The debt is now durable and visible — not yet recoverable.
-
 ### 1.3 Collection must be idempotent
 
 Once the wait is bounded (1.1), a timeout means we genuinely **do not know** whether
 the `transferFrom` landed. Retrying blindly double-charges the seller; assuming failure
 and re-accruing does the same. This is the real remaining hazard once persistence
-exists, and the current design does not address it at all.
+exists.
 
-- [ ] Fire `transferFrom(accrued_total)`, record `pending_tx_hash` and
-      `pending_amount`, then wait only briefly.
-- [ ] On that seller's **next** settlement, resolve the pending hash _first_ —
+- [x] Fire `transferFrom(accrued_total)`, record the pending hash and amount, then wait
+      only briefly.
+- [x] On that seller's **next** settlement, resolve the pending hash _first_ —
       confirmed success decrements `accrued` by the pending amount, clears pending and
       records `lastSuccess`; reverted or still-not-found clears pending and leaves
       `accrued` intact so it retries naturally.
-- [ ] Never fire a new collection while a pending hash is unresolved.
+- [x] Never fire a new collection while a pending hash is unresolved.
+
+Implemented in `x402_fee_collection.ts`, which owns the whole flow so `x402_settle.ts`
+makes one call. Every fee-bearing settlement runs: reconcile → accrue → sweep. The
+ordering is load-bearing — reconciling first clears the old debt before this payment's
+fee is added, so the sweep total is right.
+
+`getTransactionStatus()` (`x402_fee.ts`) resolves a pending hash with a point query.
+It returns `"unknown"` for both "no receipt yet" and any RPC failure, and an unknown
+outcome **blocks** collection rather than guessing: guessing "reverted" re-collects a
+fee that already landed, guessing "success" drops one that never did.
+
+**Stale pending:** an unresolved hash older than `PENDING_STALE_MS` (30 min) is written
+off — pending cleared, debt left standing. Tradeoff: a tx landing after that window is
+collected twice. On an L2 with ~2s blocks a tx unmined for 30 minutes has almost
+certainly been dropped, and wedging a seller's collection forever on one lost tx is
+worse. Revisit if it ever fires in practice.
+
+**Ledger-disabled fallback preserved:** with no S3 credentials there is no accrued total,
+so the sweep falls back to the flat per-settlement fee — byte-for-byte the pre-ledger
+behaviour.
 
 ### 1.4 Allowance check fails open
 
@@ -160,8 +176,15 @@ the receipt is returned. Reporting only what was collected would make
 seller's balance has been stuck across many attempts. Persistence makes the debt
 _recorded_; it does not make it _visible_.
 
-- [ ] Track a consecutive-failure counter on the row.
-- [ ] Log at `error` once it crosses a small threshold, reusing the existing logger.
+- [x] Track a consecutive-failure counter on the row.
+- [x] Log at `error` once it crosses a small threshold, reusing the existing logger.
+
+Done alongside 1.3, which sharpened the need for it: "never collect while a pending hash
+is unresolved" means one dropped transaction can wedge a seller's collection, and
+without this that would be entirely silent. `recordCollectionFailure()` increments
+`consecutiveFailures`; a success resets it to 0, and a pending outcome leaves it alone
+(unknown is not failure). Crossing `FAILURE_ALERT_THRESHOLD` (5) logs at `error` with
+the seller and accrued total. Deliberately just a log line.
 
 Deliberately minimal — this is not a new alerting system.
 

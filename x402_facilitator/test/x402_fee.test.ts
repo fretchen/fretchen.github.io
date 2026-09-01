@@ -4,6 +4,7 @@ import {
   getFacilitatorAddress,
   checkMerchantAllowance,
   collectFee,
+  getTransactionStatus,
 } from "../x402_fee.js";
 import type { createPublicClient, getContract } from "viem";
 
@@ -457,6 +458,85 @@ describe("x402_fee", () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBe("fee_collection_failed");
+    });
+
+    it("collects an explicit amount instead of the flat fee", async () => {
+      const mockTxHash = "0xsweep34567890abcdef1234567890abcdef1234567890abcdef1234567890ab";
+      const { getContract, createPublicClient } = await import("viem");
+
+      const transferFrom = vi.fn().mockResolvedValue(mockTxHash);
+
+      vi.mocked(createPublicClient).mockReturnValue(
+        mockPublicClient({
+          waitForTransactionReceipt: vi.fn(async () => ({
+            status: "success",
+            transactionHash: mockTxHash,
+          })),
+        }),
+      );
+      vi.mocked(getContract).mockReturnValue(mockContract({ write: { transferFrom } }));
+
+      // The ledger sweeps a backlog, not the per-settlement fee.
+      const result = await collectFee(merchant, "eip155:11155420", 40000n);
+
+      expect(result.success).toBe(true);
+      expect(transferFrom).toHaveBeenCalledWith([merchant, expect.any(String), 40000n]);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // getTransactionStatus
+  // ═══════════════════════════════════════════════════════════
+
+  describe("getTransactionStatus", () => {
+    const txHash = "0xabc1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab";
+
+    it("reports a confirmed transaction as success", async () => {
+      const { createPublicClient } = await import("viem");
+      vi.mocked(createPublicClient).mockReturnValue(
+        mockPublicClient({
+          getTransactionReceipt: vi.fn(async () => ({ status: "success" })),
+        }),
+      );
+
+      await expect(getTransactionStatus(txHash, "eip155:11155420")).resolves.toBe("success");
+    });
+
+    it("reports a reverted transaction as reverted", async () => {
+      const { createPublicClient } = await import("viem");
+      vi.mocked(createPublicClient).mockReturnValue(
+        mockPublicClient({
+          getTransactionReceipt: vi.fn(async () => ({ status: "reverted" })),
+        }),
+      );
+
+      await expect(getTransactionStatus(txHash, "eip155:11155420")).resolves.toBe("reverted");
+    });
+
+    it("reports a missing receipt as unknown", async () => {
+      const { createPublicClient, TransactionReceiptNotFoundError } = await import("viem");
+      vi.mocked(createPublicClient).mockReturnValue(
+        mockPublicClient({
+          getTransactionReceipt: vi
+            .fn()
+            .mockRejectedValue(new TransactionReceiptNotFoundError({ hash: txHash })),
+        }),
+      );
+
+      await expect(getTransactionStatus(txHash, "eip155:11155420")).resolves.toBe("unknown");
+    });
+
+    it("reports an RPC failure as unknown rather than guessing", async () => {
+      const { createPublicClient } = await import("viem");
+      vi.mocked(createPublicClient).mockReturnValue(
+        mockPublicClient({
+          getTransactionReceipt: vi.fn().mockRejectedValue(new Error("RPC connection lost")),
+        }),
+      );
+
+      // Guessing either way is unsafe: "reverted" re-collects a landed fee,
+      // "success" drops one that never landed.
+      await expect(getTransactionStatus(txHash, "eip155:11155420")).resolves.toBe("unknown");
     });
   });
 });

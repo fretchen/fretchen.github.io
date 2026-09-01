@@ -15,8 +15,10 @@ import {
   isLedgerEnabled,
   getFeeLedger,
   accrueFee,
+  clearPending,
   recordCollectionSuccess,
   recordCollectionPending,
+  recordCollectionFailure,
   type FeeLedgerEntry,
 } from "../x402_fee_ledger.js";
 
@@ -131,6 +133,19 @@ describe("x402_fee_ledger", () => {
       await accrueFee(SELLER, NETWORK, 0n);
       expect(mockPutS3ObjectConditional).not.toHaveBeenCalled();
     });
+
+    it("returns the updated entry so the caller knows the accrued total", async () => {
+      mockGetS3ObjectWithMeta.mockResolvedValue(existing({ accrued: "30000" }));
+
+      const updated = await accrueFee(SELLER, NETWORK, 10000n);
+
+      expect(updated?.accrued).toBe("40000");
+    });
+
+    it("returns null when the ledger is disabled", async () => {
+      delete process.env.SCW_ACCESS_KEY;
+      await expect(accrueFee(SELLER, NETWORK, 10000n)).resolves.toBeNull();
+    });
   });
 
   // ═══════════════════════════════════════════════════════════
@@ -189,6 +204,81 @@ describe("x402_fee_ledger", () => {
   });
 
   // ═══════════════════════════════════════════════════════════
+  // clearPending
+  // ═══════════════════════════════════════════════════════════
+
+  describe("clearPending", () => {
+    it("drops the pending marker but leaves the debt standing", async () => {
+      mockGetS3ObjectWithMeta.mockResolvedValue(
+        existing({
+          accrued: "10000",
+          pending: { txHash: "0xold", amount: "10000", sentAt: "2026-01-01T00:00:00.000Z" },
+        }),
+      );
+
+      await clearPending(SELLER, NETWORK);
+
+      const written = lastWritten();
+      expect(written.pending).toBeUndefined();
+      // The fee was never actually collected, so it must remain owed.
+      expect(written.accrued).toBe("10000");
+    });
+
+    it("writes nothing when there is no pending marker", async () => {
+      mockGetS3ObjectWithMeta.mockResolvedValue(existing({ accrued: "10000" }));
+
+      await clearPending(SELLER, NETWORK);
+
+      expect(mockPutS3ObjectConditional).not.toHaveBeenCalled();
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // recordCollectionFailure (stuck-balance visibility)
+  // ═══════════════════════════════════════════════════════════
+
+  describe("recordCollectionFailure", () => {
+    it("increments the consecutive failure counter", async () => {
+      mockGetS3ObjectWithMeta.mockResolvedValue(
+        existing({ accrued: "10000", consecutiveFailures: 2 }),
+      );
+
+      await recordCollectionFailure(SELLER, NETWORK, "insufficient_fee_allowance");
+
+      expect(lastWritten().consecutiveFailures).toBe(3);
+    });
+
+    it("starts the counter at 1 on a first failure", async () => {
+      mockGetS3ObjectWithMeta.mockResolvedValue(existing({ accrued: "10000" }));
+
+      await recordCollectionFailure(SELLER, NETWORK);
+
+      expect(lastWritten().consecutiveFailures).toBe(1);
+    });
+
+    it("is reset by a successful collection", async () => {
+      mockGetS3ObjectWithMeta.mockResolvedValue(
+        existing({ accrued: "10000", consecutiveFailures: 4 }),
+      );
+
+      await recordCollectionSuccess(SELLER, NETWORK, 10000n, "0xfee");
+
+      expect(lastWritten().consecutiveFailures).toBe(0);
+    });
+
+    it("is left untouched by a pending outcome", async () => {
+      mockGetS3ObjectWithMeta.mockResolvedValue(
+        existing({ accrued: "10000", consecutiveFailures: 2 }),
+      );
+
+      await recordCollectionPending(SELLER, NETWORK, 10000n, "0xpending");
+
+      // An unknown outcome is not a failure.
+      expect(lastWritten().consecutiveFailures).toBe(2);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════
   // CAS behaviour
   // ═══════════════════════════════════════════════════════════
 
@@ -213,7 +303,7 @@ describe("x402_fee_ledger", () => {
       mockGetS3ObjectWithMeta.mockResolvedValue(existing({ accrued: "10000" }));
       mockPutS3ObjectConditional.mockResolvedValue({ ok: false, status: 412 });
 
-      await expect(accrueFee(SELLER, NETWORK, 10000n)).resolves.toBeUndefined();
+      await expect(accrueFee(SELLER, NETWORK, 10000n)).resolves.toBeNull();
       expect(mockPutS3ObjectConditional).toHaveBeenCalledTimes(3);
     });
   });
@@ -225,12 +315,12 @@ describe("x402_fee_ledger", () => {
   describe("failure policy", () => {
     it("swallows S3 read failures", async () => {
       mockGetS3ObjectWithMeta.mockRejectedValue(new Error("S3 unreachable"));
-      await expect(accrueFee(SELLER, NETWORK, 10000n)).resolves.toBeUndefined();
+      await expect(accrueFee(SELLER, NETWORK, 10000n)).resolves.toBeNull();
     });
 
     it("swallows S3 write failures", async () => {
       mockPutS3ObjectConditional.mockRejectedValue(new Error("S3 unreachable"));
-      await expect(accrueFee(SELLER, NETWORK, 10000n)).resolves.toBeUndefined();
+      await expect(accrueFee(SELLER, NETWORK, 10000n)).resolves.toBeNull();
     });
 
     it("no-ops entirely when credentials are absent", async () => {

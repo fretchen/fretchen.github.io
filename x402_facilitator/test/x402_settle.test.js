@@ -551,9 +551,12 @@ describe("x402_settle with mocked facilitator", () => {
       "eip155:11155420/erc20:0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
     );
     expect(result.extensions.facilitatorFees.info.model).toBe("flat");
+    // Third arg is the swept amount — with no ledger configured it falls back to the
+    // flat per-settlement fee.
     expect(feeModule.collectFee).toHaveBeenCalledWith(
       "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
       "eip155:11155420",
+      10000n,
     );
   });
 
@@ -704,6 +707,31 @@ describe("x402_settle with mocked facilitator", () => {
     // Nothing decrements the debt — leaving it accrued is the whole point.
     expect(successSpy).not.toHaveBeenCalled();
     expect(pendingSpy).not.toHaveBeenCalled();
+  });
+
+  it("still settles when collection is blocked by an unresolved pending tx", async () => {
+    mockFeeBearingSettlement();
+
+    // A prior collection is still in flight: collecting again could double-charge.
+    vi.spyOn(ledgerModule, "getFeeLedger").mockResolvedValue({
+      version: 1,
+      seller: "0x209693bc6afc0c5328ba36faf03c514ef312287c",
+      network: "eip155:11155420",
+      accrued: "10000",
+      pending: { txHash: "0xpendingtx", amount: "10000", sentAt: new Date().toISOString() },
+      updatedAt: new Date().toISOString(),
+    });
+    vi.spyOn(feeModule, "getTransactionStatus").mockResolvedValue("unknown");
+    vi.spyOn(ledgerModule, "accrueFee").mockResolvedValue(null);
+    const collectFeeSpy = vi.spyOn(feeModule, "collectFee");
+
+    const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
+
+    expect(collectFeeSpy).not.toHaveBeenCalled();
+    // The buyer's settlement is unaffected by the blocked fee.
+    expect(result.success).toBe(true);
+    expect(result.transaction).toBe("0xsettletxhash");
+    expect(result.fee.collected).toBe(false);
   });
 
   it("still settles when the ledger itself throws", async () => {

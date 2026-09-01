@@ -16,7 +16,12 @@ Two problems motivate this plan:
    transaction, whose gas is of the same order as the fee itself. On Optimism this is
    likely loss-making per settlement; on Base it is around break-even.
 2. **Reliability.** Fee collection has no persistence, so any failure loses the fee
-   silently, and it blocks the settle response while waiting for a second confirmation.
+   silently. It also runs inline with an unbounded wait for a second confirmation, so a
+   slow fee transaction can time out the handler *after* settlement has landed — losing
+   the buyer's receipt for a payment that succeeded.
+
+These are independent, and Phase 1 addresses only the second. The economics work is
+deferred until the reliability work is in and there is traffic to justify it.
 
 A third, smaller item: the buyer-pays splitter experiment (`x402_splitter_*.js`,
 `EIP3009SplitterV1`) has been superseded by the merchant-pays model but is still
@@ -26,53 +31,77 @@ Terminology: *merchant*, *seller*, *recipient* and `payTo` all refer to the same
 the operator of the resource server who receives the payment.
 
 
-## Phase 1 — Fix fee collection
+## Phase 1 — Make fee collection reliable
 
-Five defects, in severity order. 1.2 and 1.3 are the substantive ones; the rest depend
-on them.
+**Scope: reliability only.** Latency and unit economics are explicitly deferred —
+see *Deferred from Phase 1* at the end of this phase. The goal is that a fee owed is
+never silently lost and never collected twice, with **no new infrastructure**: no
+cron, no queue, no new deployed function.
 
-### 1.1 Fee collection blocks the settle response
+Fee collection stays inline on the request path. Every settlement:
 
-`collectFee()` awaits `waitForTransactionReceipt`, and `x402_settle.ts` awaits
-`collectFee()` inline before returning. The buyer therefore waits for **two** on-chain
-confirmations to receive a resource that only the first one paid for.
+1. Reconciles the seller's outstanding pending collection, if any (1.3).
+2. Accrues the fee owed for this payment (1.2).
+3. Fires one `transferFrom` for the whole accrued total, with a bounded wait (1.1).
 
-- [ ] Remove fee collection from the request path.
-- [ ] Settlement records the fee owed (see 1.2) and returns immediately.
-- [ ] Actual collection happens in a scheduled job.
+Retry falls out for free — the next payment from that seller picks up the previous
+failure. No scheduled job is needed to make this correct.
 
-Note: Scaleway Functions gives no reliable post-response execution window, so
-"fire-and-forget in-process" is not an option — this necessarily becomes
-record-now/collect-later. `wallet_report_cron.ts` is an existing scheduled-job pattern
-to model the sweep on.
+**Accepted tradeoff:** a seller who stops trading leaves an uncollected dust balance
+indefinitely, because nothing runs off the request path to collect it. This is an
+economics concern, not a reliability one, and it is exactly what the deferred sweep
+would fix if it ever becomes worth building.
+
+### 1.1 Fee collection can consume the settle handler's timeout budget
+
+`collectFee()` awaits `waitForTransactionReceipt` (`x402_fee.ts:247`) with **no
+timeout**, and `x402_settle.ts` awaits `collectFee()` inline before returning — inside
+a handler configured `timeout: 60s` (`serverless.yml`).
+
+The latency cost (the buyer waits for two confirmations) is real but is *not* what
+makes this a defect. The defect is the failure mode: if the fee transaction is slow to
+confirm, the handler is killed **after the settle transaction has already landed**, and
+the buyer gets no receipt for a payment that succeeded. Money moved; the buyer cannot
+prove it.
+
+- [ ] Bound the fee-collection wait — pass an explicit `timeout` to
+      `waitForTransactionReceipt`, sized well inside the 60s handler budget.
+- [ ] On timeout, do not fail the settlement: record the collection as pending (1.3)
+      and return the buyer's receipt.
+
+Fee collection must never be able to cost the buyer a receipt for a settled payment.
 
 ### 1.2 No persistence for uncollected fees
 
 The current code logs `"flagging for retry"` but nothing is flagged anywhere; a failed
-fee is simply lost.
+fee is simply lost. This is the substantive change of the phase.
 
 - [ ] Add a store (Scaleway Serverless SQL, or Redis) with one row per
       `(seller, network)`:
-      - accrued atomic units owed
-      - last collection attempt timestamp
-      - last successful collection timestamp + tx hash
-- [ ] Every settlement that owes a fee increments the accrued balance.
+      - `accrued` — atomic units owed
+      - `pending_tx_hash` + `pending_amount` — nullable; set when a collection is
+        fired, cleared on reconcile (1.3)
+      - `last_success_tx_hash` + `last_success_at`
+- [ ] Every settlement that owes a fee increments `accrued`.
 - [ ] Collection decrements it only on confirmed success.
 
 This table is the foundation for 1.3, 1.4 and all of Phase 3.
 
-### 1.3 Fee collected per payment
+### 1.3 Collection must be idempotent
 
-This is the change that moves unit economics.
+Once the wait is bounded (1.1), a timeout means we genuinely **do not know** whether
+the `transferFrom` landed. Retrying blindly double-charges the seller; assuming failure
+and re-accruing does the same. This is the real remaining hazard once persistence
+exists, and the current design does not address it at all.
 
-- [ ] Replace the per-settlement `transferFrom` with periodic sweeps.
-- [ ] Sweep trigger: accrued balance ≥ threshold (suggested: 20× unit fee) **or**
-      age ≥ 24h, whichever comes first.
-- [ ] One `transferFrom` per seller per sweep, covering the whole accrued balance.
-- [ ] Sweep runs as a scheduled job, not on the request path.
-
-Effect: fee-collection gas per payment drops toward zero. The settle transaction
-remains an irreducible floor for `exact` — one on-chain transfer per payment.
+- [ ] Fire `transferFrom(accrued_total)`, record `pending_tx_hash` and
+      `pending_amount`, then wait only briefly.
+- [ ] On that seller's **next** settlement, resolve the pending hash *first*:
+      - confirmed success → decrement `accrued` by `pending_amount`, clear pending,
+        record `last_success_*`
+      - reverted, or still not found → clear pending, leave `accrued` intact so it
+        retries naturally
+- [ ] Never fire a new collection while a pending hash is unresolved.
 
 ### 1.4 Allowance check fails open
 
@@ -88,22 +117,52 @@ distinction:
 - [ ] Surface `remainingSettlements` (already computed) in the verify response so
       sellers get warning before they hit zero.
 
-### 1.5 Nonce contention on the facilitator wallet
+### 1.5 Receipt semantics under accrual
 
-Each request can currently fire two sequential transactions from a single EOA;
-concurrent settlements risk nonce collisions and stuck transactions.
-
-- [ ] Batching (1.3) removes roughly half the transaction volume — re-measure after.
-- [ ] If contention persists, serialize sends through a single nonce-managing path.
-
-### 1.6 Receipt semantics under accrual
-
-With accrual, `facilitatorFeePaid` would read `"0"` on every receipt until a sweep runs.
+A single `transferFrom` covers the seller's whole accrued balance, which may span
+several past payments — so the amount collected never maps cleanly onto the payment
+whose receipt is being written. With a bounded wait it may also still be pending when
+the receipt is returned. Reporting only what was collected would make
+`facilitatorFeePaid` misleading on almost every receipt.
 
 - [ ] Report the fee **assessed** for this payment in the `facilitatorFees` extension.
 - [ ] Report collection status as a separate field, not by zeroing the amount.
 - [ ] Keep the `#1016` disclosure shape so this stays compatible with the Sei fee
       transparency proposal.
+
+### 1.6 Surface repeated collection failure
+
+1.4 decides when to fail open and when to fail closed, but nothing tells a human that a
+seller's balance has been stuck across many attempts. Persistence makes the debt
+*recorded*; it does not make it *visible*.
+
+- [ ] Track a consecutive-failure counter on the row.
+- [ ] Log at `error` once it crosses a small threshold, reusing the existing logger.
+
+Deliberately minimal — this is not a new alerting system.
+
+### Deferred from Phase 1
+
+Both items are real, neither is a reliability problem, and neither is on the critical
+path. Revisit only with evidence.
+
+**Batching fee collection into periodic sweeps** *(economics)*. Replace the
+per-settlement `transferFrom` with a scheduled sweep triggered by accrued balance ≥
+threshold or age ≥ 24h, one `transferFrom` per seller per sweep, run off the request
+path (`wallet_report_cron.ts` is the pattern to model it on). This is what drives
+fee-collection gas per payment toward zero. Note that inline collection of the *whole
+accrued balance* (1.3) already amortises naturally whenever a seller has a backlog, so
+the threshold/age machinery buys less than it first appears. The settle transaction
+remains an irreducible floor for `exact` either way — one on-chain transfer per payment.
+
+**Nonce contention on the facilitator wallet** *(robustness under load)*. Each request
+can fire two sequential transactions from a single EOA; concurrent settlements risk
+nonce collisions and stuck transactions. Keeping collection inline means the fee
+transaction stays on the concurrent request path, so this is *not* reduced by anything
+in Phase 1 — but the settle transaction is concurrent regardless, so moving fee
+collection off the request path was never a real fix for it either. At current traffic
+this is not worth pre-solving. If stuck or colliding transactions are actually
+observed, serialize sends through a single nonce-managing path.
 
 ---
 
@@ -204,7 +263,9 @@ model.
 
 ## Phase 4 — Network policy (decision, not code)
 
-Depends on Phase 0 and a re-measurement after Phase 1.
+Depends on Phase 0 and on batching actually landing. Since batching is deferred out of
+Phase 1, the re-measurement step below is **on hold** — Phase 1 does not change unit
+economics, so re-measuring straight after it would only re-confirm Phase 0.
 
 - [ ] Re-run the Phase 0 measurement after batching lands.
 - [ ] If unit margin on Base is not clearly positive, the fee level or the sweep
@@ -219,13 +280,21 @@ Depends on Phase 0 and a re-measurement after Phase 1.
 
 ```
 Phase 0  ──►  1.2  ──►  1.3  ──►  1.1  ──►  1.4, 1.5, 1.6  ──►  Phase 3  ──►  Phase 4
-                                                          
+              store   idempot.  bounded
+                                  wait
 Phase 2  ──────────────────────────────────────────────►  (independent, any time)
+
+Deferred (off the critical path): batching/sweeps · nonce serialization
 ```
 
-**Checkpoint after Phase 1:** re-run Phase 0 measurement. Do not start Phase 3 until
-`exact` unit margin is positive on at least one network — otherwise batch-settlement
-inherits the same broken economics at greater volume.
+**Checkpoint after Phase 1:** Phase 1 is reliability-only and does not move unit
+economics, so there is nothing new to measure. What it does deliver is the accrual
+store that Phase 3 depends on.
+
+The economics gate still stands, but it now sits on the deferred batching work rather
+than on Phase 1: do not start Phase 3 until `exact` unit margin is positive on at least
+one network — otherwise batch-settlement inherits the same broken economics at greater
+volume.
 
 ---
 

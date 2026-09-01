@@ -236,7 +236,7 @@ describe("x402_facilitator handlers", () => {
         payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         transaction: "0xabc123",
         network: "eip155:10",
-        fee: { collected: true, txHash: "0xfee123" },
+        fee: { collected: true, status: "collected", txHash: "0xfee123" },
         extensions: {
           facilitatorFees: {
             info: {
@@ -244,6 +244,7 @@ describe("x402_facilitator handlers", () => {
               facilitatorFeePaid: "10000",
               asset: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
               model: "flat",
+              collection: { status: "collected", txHash: "0xfee123" },
             },
           },
         },

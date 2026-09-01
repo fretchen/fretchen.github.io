@@ -337,7 +337,7 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
     vi.mocked(checkMerchantAllowance).mockResolvedValue({
       allowance: 100000n,
       remainingSettlements: 10,
-      sufficient: true,
+      status: "ok" as const,
     });
 
     const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
@@ -382,7 +382,7 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
     vi.mocked(checkMerchantAllowance).mockResolvedValue({
       allowance: 100000n,
       remainingSettlements: 10,
-      sufficient: true,
+      status: "ok" as const,
     });
 
     const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
@@ -405,7 +405,7 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
     vi.mocked(checkMerchantAllowance).mockResolvedValue({
       allowance: 5000n,
       remainingSettlements: 0,
-      sufficient: false,
+      status: "insufficient" as const,
     });
 
     const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
@@ -418,11 +418,39 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
     expect(args.result.facilitatorAddress).toBe("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
   });
 
+  it("proceeds when the allowance is unreadable, without capping collection", async () => {
+    vi.mocked(checkMerchantAllowance).mockResolvedValue({
+      status: "unknown" as const,
+    });
+
+    const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
+    await hookHolder.current!(args);
+
+    // Fail open: a reading we could not take must not reject a valid payment.
+    expect(args.result.isValid).toBe(true);
+    expect(args.result.feeRequired).toBe(true);
+    // Never surface 0 for an unreadable allowance — that reads as "exhausted".
+    expect(args.result.remainingSettlements).toBeUndefined();
+  });
+
+  it("surfaces remaining settlements so sellers see their approval running down", async () => {
+    vi.mocked(checkMerchantAllowance).mockResolvedValue({
+      allowance: 100000n,
+      remainingSettlements: 10,
+      status: "ok" as const,
+    });
+
+    const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
+    await hookHolder.current!(args);
+
+    expect(args.result.remainingSettlements).toBe(10);
+  });
+
   it("rejects recipient with zero allowance", async () => {
     vi.mocked(checkMerchantAllowance).mockResolvedValue({
       allowance: 0n,
       remainingSettlements: 0,
-      sufficient: false,
+      status: "insufficient" as const,
     });
 
     const args = hookArgs("0x2222222222222222222222222222222222222222", "eip155:10");
@@ -491,7 +519,7 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
     vi.mocked(checkMerchantAllowance).mockResolvedValue({
       allowance: 100000n,
       remainingSettlements: 10,
-      sufficient: true,
+      status: "ok" as const,
     });
 
     const args = permit2HookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");

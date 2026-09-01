@@ -252,6 +252,11 @@ async function handlePaymentRequest(
         body: JSON.stringify({
           isValid: true,
           payer: result.payer,
+          // Early warning for the seller: how many more settlements their current USDC
+          // approval covers. Omitted when there is no fee or it could not be read.
+          ...(result.remainingSettlements !== undefined && {
+            remainingSettlements: result.remainingSettlements,
+          }),
         }),
       };
     } else {

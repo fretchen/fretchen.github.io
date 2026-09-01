@@ -11,6 +11,7 @@ import { CodeBlock } from "../../components/CodeBlock";
 import MermaidDiagram from "../../components/MermaidDiagram";
 import { useOpenApiSpec } from "../../hooks/useOpenApiSpec";
 import { PageHeader } from "../../components/PageHeader";
+import { Link } from "../../components/Link";
 
 const LLM_ORIGIN = "https://llm-agent.fretchen.eu";
 const SPEC_URL = `${LLM_ORIGIN}/openapi.json`;
@@ -191,7 +192,7 @@ export default function Page() {
       {/* The same shell blog posts use — see components/ArticleShell. The header takes no
           intro: this page's lead paragraph belongs to the prose surface below. */}
       <ArticleShell
-        header={<PageHeader title="Build your own agent" territory="explore" />}
+        header={<PageHeader title="Selling LLM access with x402 batch-settlement" territory="explore" />}
         toc={<TableOfContents contentRef={contentRef} />}
       >
         {/* No padding: the shell owns the column, so the body shares the header's edges. */}
@@ -209,9 +210,10 @@ export default function Page() {
             })}
           >
             <span className={css({ fontSize: "sm", color: "alphaBanner.text", lineHeight: "relaxed" })}>
-              <span className={css({ color: "alphaBanner.icon" })}>🧪</span> <strong>Alpha, and still moving.</strong>{" "}
-              This guide does exactly one thing, end to end: it puts an OpenAI-shaped API behind x402 and gets it paid
-              in stablecoin. Not a platform, not a standard — a working proof you can run today, check with the{" "}
+              <span className={css({ color: "alphaBanner.icon" })}>🧪</span>{" "}
+              <strong>Alpha, and still moving — last checked September 2026.</strong> This guide does exactly one thing,
+              end to end: it puts an OpenAI-shaped API behind x402 and gets it paid in stablecoin. Not a platform, not a
+              standard — a working proof you can run today, check with the{" "}
               <a href="#checker" className={css({ color: "alphaBanner.icon", textDecoration: "underline" })}>
                 checker
               </a>
@@ -242,9 +244,18 @@ export default function Page() {
           <section className={section}>
             <h2>Who this is for</h2>
             <p>
-              A backend developer comfortable with <strong>Node and TypeScript</strong> who already has (or can put
-              together) an LLM endpoint. <strong>No prior x402 or crypto-payments experience assumed</strong> — the one
-              concept you need is explained below, and everything deeper is linked out rather than re-taught here.
+              Two kinds of reader end up here. Someone using <Link href="/assistent">the AI Assistant</Link> who clicked{" "}
+              <em>&quot;How to bring your own agent&quot;</em> and wants to plug their own LLM into the same chat
+              interface. Or a backend developer who wants to sell access to an LLM endpoint over x402, independent of
+              this site, and is comfortable with <strong>Node and TypeScript</strong>. Either way, you already have (or
+              can put together) an LLM endpoint. <strong>No prior x402 or crypto-payments experience assumed</strong> —
+              the one concept you need is explained below, and everything deeper is linked out rather than re-taught
+              here.
+            </p>
+            <p>
+              This page is not about accepting payments through <em>this</em> facilitator specifically — it works with
+              any x402 facilitator that supports batch-settlement, a public one or your own. For the facilitator that
+              runs the rest of this site, see <Link href="/x402">the x402 hub</Link>.
             </p>
 
             <h3>What you&apos;ll need</h3>

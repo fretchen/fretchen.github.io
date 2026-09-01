@@ -27,13 +27,13 @@ const LabPage: React.FC = () => {
 
         <Card
           title="x402 Facilitator"
-          description="Accept crypto payments on your API. Independent facilitator on Optimism and Base — 0.01 USDC flat fee, open source, quick start guide."
+          description="Independent facilitator on Optimism and Base — accept crypto payments as a seller, or pay for services as a buyer."
           link="/x402"
         />
 
         <Card
-          title="Build Your Own Agent"
-          description="Connect your own AI service to on-chain payments. Registration guide and API documentation."
+          title="Selling LLM Access with x402"
+          description="Put your own LLM endpoint behind x402 batch-settlement — wire format, interop contract, and a runnable guide."
           link="/agent-onboarding"
         />
       </CardList>

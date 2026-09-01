@@ -1,3 +1,3 @@
 export function description() {
-  return "Independent x402 facilitator on Optimism and Base. 0.01 USDC flat fee per settlement. Quick start guide, API reference, and interactive USDC approval for sellers. Open source.";
+  return "Independent x402 facilitator on Optimism and Base. Accept crypto payments as a seller, or pay for services as a buyer — pick your side to get started.";
 }

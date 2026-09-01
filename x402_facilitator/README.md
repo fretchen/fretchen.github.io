@@ -171,10 +171,10 @@ facilitator runs without a fee (no `FACILITATOR_WALLET_PRIVATE_KEY`, or fee amou
       "collection": "post_settlement_transferFrom"
     },
     "setup": {
-      "description": "One-time USDC approval required. Call approve() on the USDC contract for the facilitator's address.",
+      "description": "Recurring USDC approval. Call approve() on the USDC contract for the facilitator's address. The recommended amount is deliberately small: the spender is a hot wallet, so a large standing allowance is a standing risk. Re-approve when remainingSettlements (in the /verify response) runs low; revoke any time with approve(spender, 0).",
       "function": "approve(address spender, uint256 amount)",
       "spender": "0xFacilitatorAddress...",
-      "recommended_amount": "100000000"
+      "recommended_amount": "1000000"
     }
   }
 }

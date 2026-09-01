@@ -74,5 +74,9 @@
     "vite": "^8.2.2",
     "vitest": "^4.0.18"
   },
+  "//overrides": "rehype-katex@7.0.1 still declares katex ^0.16.0 and would otherwise install its own nested copy. KaTeX 0.17 prefixed ~20 internal layout classes with `katex-` (.newline -> .katex-newline, plus .base, .strut, .vbox, .rule, ...), so a nested 0.16 renderer emits markup that the 0.18 katex.min.css imported by components/Post.tsx does not style -- silently, and visibly enough to drop every `\\` line break in display math. `$katex` tracks the dependency above, so future bumps stay consistent by construction.",
+  "overrides": {
+    "katex": "$katex"
+  },
   "type": "module"
 }

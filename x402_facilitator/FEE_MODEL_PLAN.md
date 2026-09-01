@@ -1,6 +1,7 @@
 # Fee Model: Implementation Plan
 
-Status: Phase 1 deployed. Next up is Phase 5 (approval blast radius) — see _Sequencing_.
+Status: Phase 1 deployed. Phase 5 code complete; 5.3 (ask existing merchants to
+re-approve) is the only outstanding item that reduces live exposure — see _Sequencing_.
 Scope: `x402_facilitator/` (fee collection, splitter retirement, batch-settlement fees)
 
 ## Context
@@ -23,10 +24,10 @@ Two problems motivate this plan:
 These are independent. Phase 1 (deployed) addressed only the second. The economics work is
 deferred until there is traffic to justify it — see Phase 3.
 
-A third concern surfaced later, from external review, and now outranks both: merchants
-approve a **100 USDC allowance to the same hot key that signs every settlement**, so a key
-compromise drains every merchant. That is the only exposure here involving other people's
-money. See Phase 5.
+A third concern surfaced later, from external review: merchants approve a standing USDC
+allowance to the **same hot key that signs every settlement**, so a key compromise drains
+every merchant. That is the only exposure here involving other people's money. Addressed in
+Phase 5 by cutting the recommended approval 100× rather than by adding a contract.
 
 A fourth, smaller item: the buyer-pays splitter experiment (`x402_splitter_*.js`,
 `EIP3009SplitterV1`) has been superseded by the merchant-pays model but is still
@@ -295,77 +296,83 @@ model.
 - [ ] Preserve the `#1016` shape for forward compatibility.
 - [ ] Update the `setup` block — it currently describes only the `exact` approval flow.
 
----
-
-## Phase 4 — Network policy (decision, not code)
-
-Depends on Phase 0 and on batching actually landing. Since batching is deferred out of
-Phase 1, the re-measurement step below is **on hold** — Phase 1 does not change unit
-economics, so re-measuring straight after it would only re-confirm Phase 0.
-
-- [ ] Re-run the Phase 0 measurement after batching lands.
-- [ ] If unit margin on Base is not clearly positive, the fee level or the sweep
-      threshold is wrong — fix before opening batch-settlement publicly (3.3).
-- [ ] Decide explicitly whether fee-bearing `exact` traffic on Optimism is wanted at
-      all. Advertising `exact` fee-free on Optimism and fee-bearing on Base is a
-      coherent product, provided it is disclosed in `/supported`.
 
 ---
 
-## Phase 5 — Approval blast radius ⬅ next up
+## Phase 5 — Approval blast radius ✅ code complete
 
 Raised by external review. The only item in that review about **merchants' money** rather
-than our own 0.01 — which is why it outranks Phases 2-4.
+than our own 0.01 — which is why it outranked Phases 2-4.
 
 ### The exposure
 
-`/supported` tells merchants to `approve()` the facilitator for **100 USDC**
+`/supported` told merchants to `approve()` the facilitator for **100 USDC**
 (`recommended_amount`, = 10,000 settlements) with `spender = facilitatorAddress`.
 
 That spender is `FACILITATOR_WALLET_PRIVATE_KEY` — and the same key **signs every
-settlement** (`facilitator_instance.ts`). So the address holding a standing 100 USDC
-allowance from every merchant is not a rarely-touched wallet: it is a hot key exercised on
-every single request, living in a Scaleway secret. A compromise drains every merchant up
-to their approval.
+settlement** (`facilitator_instance.ts`). So the address holding a standing allowance from
+every merchant is not a rarely-touched wallet: it is a hot key exercised on every single
+request, living in a Scaleway secret. A compromise drains every merchant up to their
+approval.
 
-Current live exposure is a few merchants × 100 USDC. Small, but it scales linearly with
-onboarding, which is exactly when it stops being small.
+### 5.1 Right-size the recommended allowance
 
-### 5.1 Right-size the recommended allowance ⬅ do this first
+- [x] `recommended_amount` in `x402_supported.ts`: `100000000` → `1000000`
+      (100 USDC → 1 USDC, 10,000 → 100 settlements).
+- [x] Bounding test in `test/x402_supported.test.js` asserting the recommendation covers
+      ≤ 100 settlements — a bound, not an equality check, so it encodes the security
+      property ("stays small relative to the fee") rather than the literal number.
 
-- [ ] Drop `recommended_amount` in `x402_supported.ts` from `100000000` (100 USDC) to
-      ~`2000000` (2 USDC, 200 settlements). Tune to actual traffic.
+**One constant, 100× smaller blast radius, no contract, no deployment.**
 
-**One line, ~50× blast-radius reduction, no contract, no deployment.** At current volume a
-100 USDC approval is wildly oversized for the usage it covers.
+**Accepted tradeoff — availability.** 100 settlements per approval instead of 10,000. When
+an allowance runs out the hook **fails closed**: `invalidReason:
+"insufficient_fee_allowance"` — the merchant's _payments_ are rejected, not just their
+fees. So this trades 100× less exposure for a 100× higher chance of hitting a
+payment-blocking state. At current volume 100 settlements is ample runway, and
+`remainingSettlements` (1.4, returned by `/verify`) is what makes it visible — that Phase 1
+feature became load-bearing here rather than nice-to-have. If a merchant is ever rejected
+for this, raise the constant; it is a one-line reversal.
 
-It pairs with work already shipped: `remainingSettlements` (1.4) is returned in the verify
-response, so merchants get warning as the smaller approval runs down and can re-approve.
-Smaller allowance + visible runway is a better trade than a large allowance nobody watches.
+### 5.2 Make the disclosure honest
 
-### 5.2 FeeCollector contract — blocked, and honestly evaluated
+5.1 falsified the existing `setup.description`, which read _"One-time USDC approval
+required."_ Re-approval is now expected.
+
+- [x] Rewrite `setup.description` to state the recurrence, why the amount is deliberately
+      small (the spender is a hot wallet), and how to revoke (`approve(spender, 0)`).
+- [x] Update the sample `/supported` response in `README.md` to match.
+
+Turning the recommendation into informed consent is most of the trust improvement the
+review was reaching for, at zero risk.
+
+### 5.4 FeeCollector contract — out of scope
 
 The review's actual proposal was to replace the approval target with a small immutable
 `FeeCollector` contract, so merchants approve auditable code instead of trusting our keys.
 
-**This only works with a cold recipient, and there isn't one.** If the collector's
-recipient is the same hot EOA, a stolen key just calls the collector repeatedly and the
-funds land at the address the attacker already controls. The mitigation is circular. What
-makes it real is an **immutable recipient the runtime key cannot reach** — then a
-compromise degrades from _theft_ to _griefing_ (forced early collection to our own
-address).
+**Not doing it.** After 5.1 the contract closes the gap between "an attacker steals ~1 USDC
+per merchant" and "an attacker steals nothing" — which does not justify a Solidity
+contract, a deployment per network, a facilitator refactor (`checkMerchantAllowance` and
+`collectFee` both key off `getFacilitatorAddress()`), a deliberate exception to the repo's
+UUPS-everywhere convention, and a merchant migration.
 
-- [ ] **Precondition:** a dedicated cold address for fee revenue, never present in the
-      Scaleway environment. Cheap to create; without it, do not build the contract.
-- [ ] Then: immutable `FeeCollector`, immutable recipient, facilitator-triggerable, pulls
-      at most `feeAmount` per call. Point `setup.spender` at it.
+The reasoning worth keeping, because it is not obvious:
 
-Deliberately **not** doing the review's "only once per settled payment reference" idea: it
-needs on-chain state per payment, and those storage writes cost more than the 0.01 fee
-they protect.
+- **An ERC-20 allowance constrains _how much_, never _where_.** `approve(spender, amount)`
+  lets the spender call `transferFrom(from, to, amount)` with any `to`. So pointing our own
+  code at a cold recipient achieves nothing — an attacker with the hot key writes their own
+  transaction. Only making a **contract** the spender fixes the destination, because then
+  the hot key can only invoke the contract's function.
+- **And that only helps if the recipient is cold.** With the hot EOA as recipient, a stolen
+  key triggers the collector repeatedly and the funds land where the attacker already is.
+  The two pieces are complementary, not alternatives.
+- The review's "only once per settled payment reference" refinement needs on-chain state
+  per payment; those storage writes cost more than the 0.01 fee they protect.
 
-Gate: build when a cold address exists **and** merchant count grows enough that 5.1's
-right-sizing is no longer sufficient on its own.
+**Trigger to revisit:** when per-merchant allowances must be large enough that a hot-key
+compromise would actually hurt — i.e. when settlement volume makes 100-settlement
+re-approval genuinely painful. Requires a cold address first.
 
 ---
 
@@ -400,29 +407,26 @@ question and not a fee concern.
 Phase 1  ✅ deployed   (1.1 bounded wait · 1.4 allowance · 1.5 receipt)
    │
    ▼
-Phase 5.1  ⬅ NEXT      right-size recommended_amount   (one line, ~50× less exposure)
+Phase 5  ✅ code done  (5.1 allowance 100→1 USDC · 5.2 honest disclosure)
    │
-   ├─ Phase 2          retire the splitter  (docs only, independent, any time)
+   ├─ 5.3  ⬅ NEXT      ask existing merchants to re-approve  (email, not code)
    │
-   └─ Phase 5.2        FeeCollector contract
-                       gated on: a cold recipient address + more merchants
+   └─ Phase 2          retire the splitter  (docs only, independent, any time)
 
 Rejected:  1.2 / 1.3 / 1.6 — fee ledger (built, removed)
+           5.4 FeeCollector contract  (disproportionate after 5.1)
            /quote endpoint · offer-receipt migration  (see Reviewed and declined)
 Deferred:  batching/sweeps · nonce serialization  (both presuppose the ledger)
 Blocked:   Phase 3, Phase 4 — need the ledger question settled first
 ```
 
-**Why 5.1 goes first:** it is the only outstanding item touching _merchants'_ funds rather
-than our own fee revenue, and the fix is a single constant. Everything else is either
-documentation (Phase 2) or blocked on volume (Phases 3-4).
+**5.3 is the only remaining item that reduces live exposure.** 5.1 changed what
+`/supported` advises; it cannot touch approvals already on-chain. Everything else
+outstanding is either documentation (Phase 2) or blocked on volume (Phases 3-4).
 
 **Phase 3 and Phase 4** are blocked on the same question, not on Phase 1: whether
 per-seller accrual can be made to pay for itself. Until then batch-settlement would
 inherit the same economics at greater volume, plus rebuild the ledger just removed.
-
-**Phase 5.2** is blocked on something cheaper to obtain: a cold address. Without one the
-contract does not mitigate the threat it exists for.
 
 ---
 

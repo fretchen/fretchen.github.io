@@ -1,6 +1,7 @@
 # Fee Model: Implementation Plan
 
-Status: proposed
+Status: Phase 1 deployed. Phase 5 code complete; 5.3 (ask existing merchants to
+re-approve) is the only outstanding item that reduces live exposure — see _Sequencing_.
 Scope: `x402_facilitator/` (fee collection, splitter retirement, batch-settlement fees)
 
 ## Context
@@ -20,10 +21,15 @@ Two problems motivate this plan:
    slow fee transaction can time out the handler _after_ settlement has landed — losing
    the buyer's receipt for a payment that succeeded.
 
-These are independent, and Phase 1 addresses only the second. The economics work is
-deferred until the reliability work is in and there is traffic to justify it.
+These are independent. Phase 1 (deployed) addressed only the second. The economics work is
+deferred until there is traffic to justify it — see Phase 3.
 
-A third, smaller item: the buyer-pays splitter experiment (`x402_splitter_*.js`,
+A third concern surfaced later, from external review: merchants approve a standing USDC
+allowance to the **same hot key that signs every settlement**, so a key compromise drains
+every merchant. That is the only exposure here involving other people's money. Addressed in
+Phase 5 by cutting the recommended approval 100× rather than by adding a contract.
+
+A fourth, smaller item: the buyer-pays splitter experiment (`x402_splitter_*.js`,
 `EIP3009SplitterV1`) has been superseded by the merchant-pays model but is still
 present in the repo without any marking.
 
@@ -119,9 +125,10 @@ not check" from "the allowance is fine".
 - [x] RPC/read error → fail open, log at `warn`.
 - [x] Surface `remainingSettlements` in the verify response so sellers get warning
       before they hit zero.
-      `AllowanceInfo.sufficient` became `status: "ok" | "insufficient" | "unknown"`, with
-      `allowance` now **optional** and left undefined when unreadable. Changing the type was
-      the point: the compiler found every call site and forced each to handle the third case.
+
+`AllowanceInfo.sufficient` became `status: "ok" | "insufficient" | "unknown"`, with
+`allowance` now **optional** and left undefined when unreadable. Changing the type was
+the point: the compiler found every call site and forced each to handle the third case.
 
 **Fail-closed already existed** (`facilitator_instance.ts`) and is unchanged — a payment
 whose seller has not approved enough for one fee is still rejected. The original bullet
@@ -189,52 +196,45 @@ observed, serialize sends through a single nonce-managing path.
 
 ---
 
-## Phase 2 — Retire the splitter
+## Phase 2 — Retire the splitter ✅ complete
 
-Independent of Phases 1 and 3; can run in parallel.
+The buyer-pays splitter is superseded by the merchant-pays model in `x402_fee.ts`. Nothing
+in the repo said so, and a reader could not tell which of the two was live.
 
-The splitter is **already absent from `serverless.yml`** — it is dead code, not a live
-endpoint. This is documentation work, not deletion.
+**Correction found during implementation.** This section previously claimed the splitter
+was _"already absent from `serverless.yml` — dead code, not a live endpoint."_ Only half
+true: no function routed to it, but `tsup.config.js` listed
+`x402_splitter_facilitator.js` as a **build entry**, and `serverless.yml` packages
+`dist/**` — so it was bundled and uploaded to Scaleway on every deploy, in a package block
+whose own comment notes upload size has previously breached Scaleway's limit.
 
-**Do not delete the contract or its deployment.** `EIP3009SplitterV1` at
-`0x7e67bf96ADbf4a813DD7b0A3Ca3060a937018946` (Optimism Sepolia) is the reference
-implementation cited in [issue #937](https://github.com/x402-foundation/x402/issues/937).
-Deleting it would leave that open issue pointing at nothing.
+- [x] Drop `x402_splitter_facilitator.js` from the tsup `entry` list. The only item here
+      with runtime effect: "not deployed" is now actually true, and the dead bundle is out
+      of the deploy archive.
+- [x] Header block on all four `x402_splitter_*.js` files — superseded, not deployed, not
+      built, retained; points at README → Fee model history.
+- [x] `README.md`: added **Fee model history**, and refreshed **Project Structure**, which
+      was independently stale (it listed `.js` for files that are `.ts` now, and omitted
+      `x402_fee.ts`, `facilitator_instance.ts`, `wallet_report_cron.ts`).
+- [x] Retirement banner on `notebooks/x402_facilitator_demo_with_fees.ipynb`.
+- [x] Coverage exclude for `x402_splitter_*.js` in `vitest.config.js`. Overall coverage now
+      reads 95.4% instead of 85.3% — retired code no longer misrepresents the health of
+      code that serves traffic.
+- [x] `eth/contracts/EIP3009SplitterV1.sol` and its deployment untouched. The contract at
+      `0x7e67bf96ADbf4a813DD7b0A3Ca3060a937018946` (Optimism Sepolia) is referenced from
+      [x402#937](https://github.com/x402-foundation/x402/issues/937), so tearing it down
+      would leave that issue pointing at nothing.
 
-- [ ] Add a header block to each of `x402_splitter_facilitator.js`,
-      `x402_splitter_settle.js`, `x402_splitter_supported.js`,
-      `x402_splitter_verify.js`: superseded by the merchant-pays model in
-      `x402_fee.ts`; retained as the reference implementation for #937; not deployed.
-- [ ] Add the same note at the top of `notebooks/x402_facilitator_demo_with_fees.ipynb`
-      and `notebooks/x402_fee_facilitator_demo.ipynb`.
-- [ ] Add a **"Fee model history"** section to `README.md` (draft below).
-- [ ] Leave `eth/contracts/EIP3009SplitterV1.sol` and its deployment untouched.
-- [ ] Add a lint-ignore / coverage-exclude entry so the retained files do not rot
-      silently or distort coverage.
+**Not done, deliberately:** `notebooks/x402_fee_facilitator_demo.ipynb` was on the original
+list but demos the **current merchant-pays model** — it says "NOT splitter!" in as many
+words. Marking it retired would have been actively wrong. Its stale "one-time `approve()`"
+wording was corrected instead, since Phase 5 made re-approval expected.
 
-### Draft README section
+No lint-ignore entry was needed — the splitter files pass lint as they are.
 
-> **Fee model history**
->
-> Two fee models were implemented. Neither is friction-free without protocol support;
-> the choice is about _where_ the friction lands.
->
-> - **Buyer-pays split** (`x402_splitter_*.js`, `EIP3009SplitterV1`, retained but not
->   deployed): the buyer signs a single authorization to a splitter contract, which
->   atomically pays seller and facilitator. The seller needs no setup, but the buyer
->   needs a non-stock client, and `payTo` shows the splitter rather than the actual
->   recipient — so the buyer cannot see who they are paying from the payment
->   requirements alone.
-> - **Merchant-pays post-settlement** (`x402_fee.ts`, current): the buyer is entirely
->   untouched and stock `@x402/fetch` works. The seller must `approve()` the
->   facilitator wallet for USDC and trust it not to over-pull.
->
-> The current model matches the industry norm (Stripe, Coinbase CDP bill the merchant,
-> not the payer). It does not eliminate onboarding friction — it moves it from the
-> buyer to the seller.
-
-This section is also the raw material for a substantive comment on #937: field
-experience from having built both, which no one else in that thread has.
+The three `x402_splitter_*.test.js` suites still run. They cost nothing and stop the
+retained code rotting silently, which is what the original "lint-ignore / coverage-exclude"
+bullet was reaching for.
 
 ---
 
@@ -244,6 +244,12 @@ experience from having built both, which no one else in that thread has.
 (see 1.2/1.3/1.6 above). Charging fees on batch-settlement claims would first have to
 rebuild per-seller accrual — so the ledger's cost/benefit has to be settled before any of
 this is worth starting.
+
+External review independently proposed both the accrual store and batched collection,
+arguing a 10-50× reduction in fee-collection gas. The ratio is probably right; the
+absolute figure is not the point. At current volume the swing is on the order of **a
+dollar a month**, against ~700 lines and a regression risk on the payment path. The
+blocker is volume, not the idea — revisit when lost fees are material enough to measure.
 
 ### 3.1 Charge per claim, not per voucher
 
@@ -285,42 +291,134 @@ model.
 
 ---
 
-## Phase 4 — Network policy (decision, not code)
+## Phase 5 — Approval blast radius ✅ code complete
 
-Depends on Phase 0 and on batching actually landing. Since batching is deferred out of
-Phase 1, the re-measurement step below is **on hold** — Phase 1 does not change unit
-economics, so re-measuring straight after it would only re-confirm Phase 0.
+Raised by external review. The only item in that review about **merchants' money** rather
+than our own 0.01 — which is why it outranked Phases 2-4.
 
-- [ ] Re-run the Phase 0 measurement after batching lands.
-- [ ] If unit margin on Base is not clearly positive, the fee level or the sweep
-      threshold is wrong — fix before opening batch-settlement publicly (3.3).
-- [ ] Decide explicitly whether fee-bearing `exact` traffic on Optimism is wanted at
-      all. Advertising `exact` fee-free on Optimism and fee-bearing on Base is a
-      coherent product, provided it is disclosed in `/supported`.
+### The exposure
+
+`/supported` told merchants to `approve()` the facilitator for **100 USDC**
+(`recommended_amount`, = 10,000 settlements) with `spender = facilitatorAddress`.
+
+That spender is `FACILITATOR_WALLET_PRIVATE_KEY` — and the same key **signs every
+settlement** (`facilitator_instance.ts`). So the address holding a standing allowance from
+every merchant is not a rarely-touched wallet: it is a hot key exercised on every single
+request, living in a Scaleway secret. A compromise drains every merchant up to their
+approval.
+
+### 5.1 Right-size the recommended allowance
+
+- [x] `recommended_amount` in `x402_supported.ts`: `100000000` → `1000000`
+      (100 USDC → 1 USDC, 10,000 → 100 settlements).
+- [x] Bounding test in `test/x402_supported.test.js` asserting the recommendation covers
+      ≤ 100 settlements — a bound, not an equality check, so it encodes the security
+      property ("stays small relative to the fee") rather than the literal number.
+
+**One constant, 100× smaller blast radius, no contract, no deployment.**
+
+**Accepted tradeoff — availability.** 100 settlements per approval instead of 10,000. When
+an allowance runs out the hook **fails closed**: `invalidReason:
+"insufficient_fee_allowance"` — the merchant's _payments_ are rejected, not just their
+fees. So this trades 100× less exposure for a 100× higher chance of hitting a
+payment-blocking state. At current volume 100 settlements is ample runway, and
+`remainingSettlements` (1.4, returned by `/verify`) is what makes it visible — that Phase 1
+feature became load-bearing here rather than nice-to-have. If a merchant is ever rejected
+for this, raise the constant; it is a one-line reversal.
+
+### 5.2 Make the disclosure honest
+
+5.1 falsified the existing `setup.description`, which read _"One-time USDC approval
+required."_ Re-approval is now expected.
+
+- [x] Rewrite `setup.description` to state the recurrence, why the amount is deliberately
+      small (the spender is a hot wallet), and how to revoke (`approve(spender, 0)`).
+- [x] Update the sample `/supported` response in `README.md` to match.
+
+Turning the recommendation into informed consent is most of the trust improvement the
+review was reaching for, at zero risk.
+
+### 5.4 FeeCollector contract — out of scope
+
+The review's actual proposal was to replace the approval target with a small immutable
+`FeeCollector` contract, so merchants approve auditable code instead of trusting our keys.
+
+**Not doing it.** After 5.1 the contract closes the gap between "an attacker steals ~1 USDC
+per merchant" and "an attacker steals nothing" — which does not justify a Solidity
+contract, a deployment per network, a facilitator refactor (`checkMerchantAllowance` and
+`collectFee` both key off `getFacilitatorAddress()`), a deliberate exception to the repo's
+UUPS-everywhere convention, and a merchant migration.
+
+The reasoning worth keeping, because it is not obvious:
+
+- **An ERC-20 allowance constrains _how much_, never _where_.** `approve(spender, amount)`
+  lets the spender call `transferFrom(from, to, amount)` with any `to`. So pointing our own
+  code at a cold recipient achieves nothing — an attacker with the hot key writes their own
+  transaction. Only making a **contract** the spender fixes the destination, because then
+  the hot key can only invoke the contract's function.
+- **And that only helps if the recipient is cold.** With the hot EOA as recipient, a stolen
+  key triggers the collector repeatedly and the funds land where the attacker already is.
+  The two pieces are complementary, not alternatives.
+- The review's "only once per settled payment reference" refinement needs on-chain state
+  per payment; those storage writes cost more than the 0.01 fee they protect.
+
+**Trigger to revisit:** when per-merchant allowances must be large enough that a hot-key
+compromise would actually hurt — i.e. when settlement volume makes 100-settlement
+re-approval genuinely painful. Requires a cold address first.
+
+---
+
+## Reviewed and declined
+
+External review also proposed two items that were checked and rejected. Recorded so they
+are not re-raised.
+
+**A `/quote` endpoint.** The argument was that it completes Sei's three-part fee proposal
+(quote / receipt / client-side max-fee) and gives a live reference implementation to cite
+in standardization. Verified against the
+[x402 extensions registry](https://docs.x402.org/extensions/overview): there is **no fee
+quote, fee disclosure, or fee transparency extension upstream at all**. So this means
+implementing an unmerged proposal, and the justification was explicitly
+standardization-credibility — not a goal here. A client can already compute a flat fee from
+`/supported`'s `flatFee`. Cheap (~30 lines) if a real client ever needs it; nothing is
+asking for it now.
+
+**Migrating the receipt to the `offer-receipt` extension.** The review claimed this carries
+"same information, spec-conformant shape." It does not. `offer-receipt` ("Signed Offers &
+Receipts") signs offers on 402 responses and receipts on 200 responses to produce
+**cryptographic proof that an interaction happened**. Our `facilitatorFees` block discloses
+**what the facilitator charged**. Different information; migrating would lose the
+disclosure. Adopting `offer-receipt` additionally, for its own purpose, is an unrelated
+question and not a fee concern.
 
 ---
 
 ## Sequencing
 
 ```
-Phase 0  ──►  1.1  ──►  1.4, 1.5  ──►  ✅ Phase 1 done
-              bounded   allowance +
-              wait      receipt
-
-Phase 2  ──────────────────────────►  (independent, any time)
+Phase 1  ✅ deployed   (1.1 bounded wait · 1.4 allowance · 1.5 receipt)
+   │
+   ▼
+Phase 5  ✅ code done  (5.1 allowance 100→1 USDC · 5.2 honest disclosure)
+   │
+   ├─ 5.3  ⬅ NEXT      ask existing merchants to re-approve  (email, not code)
+   │
+   └─ Phase 2          retire the splitter  (docs only, independent, any time)
 
 Rejected:  1.2 / 1.3 / 1.6 — fee ledger (built, removed)
+           5.4 FeeCollector contract  (disproportionate after 5.1)
+           /quote endpoint · offer-receipt migration  (see Reviewed and declined)
 Deferred:  batching/sweeps · nonce serialization  (both presuppose the ledger)
 Blocked:   Phase 3, Phase 4 — need the ledger question settled first
 ```
 
-**After Phase 1:** nothing new to measure — Phase 1 is reliability-only and does not move
-unit economics.
+**5.3 is the only remaining item that reduces live exposure.** 5.1 changed what
+`/supported` advises; it cannot touch approvals already on-chain. Everything else
+outstanding is either documentation (Phase 2) or blocked on volume (Phases 3-4).
 
-Phase 3 and Phase 4 are both blocked on the same question, not on Phase 1: whether
-per-seller accrual can be made to pay for itself. Until then, do not start Phase 3 —
-batch-settlement would inherit the same economics at greater volume, plus rebuild the
-ledger that was just removed.
+**Phase 3 and Phase 4** are blocked on the same question, not on Phase 1: whether
+per-seller accrual can be made to pay for itself. Until then batch-settlement would
+inherit the same economics at greater volume, plus rebuild the ledger just removed.
 
 ---
 

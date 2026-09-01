@@ -196,52 +196,45 @@ observed, serialize sends through a single nonce-managing path.
 
 ---
 
-## Phase 2 — Retire the splitter
+## Phase 2 — Retire the splitter ✅ complete
 
-Independent of Phases 1 and 3; can run in parallel.
+The buyer-pays splitter is superseded by the merchant-pays model in `x402_fee.ts`. Nothing
+in the repo said so, and a reader could not tell which of the two was live.
 
-The splitter is **already absent from `serverless.yml`** — it is dead code, not a live
-endpoint. This is documentation work, not deletion.
+**Correction found during implementation.** This section previously claimed the splitter
+was _"already absent from `serverless.yml` — dead code, not a live endpoint."_ Only half
+true: no function routed to it, but `tsup.config.js` listed
+`x402_splitter_facilitator.js` as a **build entry**, and `serverless.yml` packages
+`dist/**` — so it was bundled and uploaded to Scaleway on every deploy, in a package block
+whose own comment notes upload size has previously breached Scaleway's limit.
 
-**Do not delete the contract or its deployment.** `EIP3009SplitterV1` at
-`0x7e67bf96ADbf4a813DD7b0A3Ca3060a937018946` (Optimism Sepolia) is the reference
-implementation cited in [issue #937](https://github.com/x402-foundation/x402/issues/937).
-Deleting it would leave that open issue pointing at nothing.
+- [x] Drop `x402_splitter_facilitator.js` from the tsup `entry` list. The only item here
+      with runtime effect: "not deployed" is now actually true, and the dead bundle is out
+      of the deploy archive.
+- [x] Header block on all four `x402_splitter_*.js` files — superseded, not deployed, not
+      built, retained; points at README → Fee model history.
+- [x] `README.md`: added **Fee model history**, and refreshed **Project Structure**, which
+      was independently stale (it listed `.js` for files that are `.ts` now, and omitted
+      `x402_fee.ts`, `facilitator_instance.ts`, `wallet_report_cron.ts`).
+- [x] Retirement banner on `notebooks/x402_facilitator_demo_with_fees.ipynb`.
+- [x] Coverage exclude for `x402_splitter_*.js` in `vitest.config.js`. Overall coverage now
+      reads 95.4% instead of 85.3% — retired code no longer misrepresents the health of
+      code that serves traffic.
+- [x] `eth/contracts/EIP3009SplitterV1.sol` and its deployment untouched. The contract at
+      `0x7e67bf96ADbf4a813DD7b0A3Ca3060a937018946` (Optimism Sepolia) is referenced from
+      [x402#937](https://github.com/x402-foundation/x402/issues/937), so tearing it down
+      would leave that issue pointing at nothing.
 
-- [ ] Add a header block to each of `x402_splitter_facilitator.js`,
-      `x402_splitter_settle.js`, `x402_splitter_supported.js`,
-      `x402_splitter_verify.js`: superseded by the merchant-pays model in
-      `x402_fee.ts`; retained as the reference implementation for #937; not deployed.
-- [ ] Add the same note at the top of `notebooks/x402_facilitator_demo_with_fees.ipynb`
-      and `notebooks/x402_fee_facilitator_demo.ipynb`.
-- [ ] Add a **"Fee model history"** section to `README.md` (draft below).
-- [ ] Leave `eth/contracts/EIP3009SplitterV1.sol` and its deployment untouched.
-- [ ] Add a lint-ignore / coverage-exclude entry so the retained files do not rot
-      silently or distort coverage.
+**Not done, deliberately:** `notebooks/x402_fee_facilitator_demo.ipynb` was on the original
+list but demos the **current merchant-pays model** — it says "NOT splitter!" in as many
+words. Marking it retired would have been actively wrong. Its stale "one-time `approve()`"
+wording was corrected instead, since Phase 5 made re-approval expected.
 
-### Draft README section
+No lint-ignore entry was needed — the splitter files pass lint as they are.
 
-> **Fee model history**
->
-> Two fee models were implemented. Neither is friction-free without protocol support;
-> the choice is about _where_ the friction lands.
->
-> - **Buyer-pays split** (`x402_splitter_*.js`, `EIP3009SplitterV1`, retained but not
->   deployed): the buyer signs a single authorization to a splitter contract, which
->   atomically pays seller and facilitator. The seller needs no setup, but the buyer
->   needs a non-stock client, and `payTo` shows the splitter rather than the actual
->   recipient — so the buyer cannot see who they are paying from the payment
->   requirements alone.
-> - **Merchant-pays post-settlement** (`x402_fee.ts`, current): the buyer is entirely
->   untouched and stock `@x402/fetch` works. The seller must `approve()` the
->   facilitator wallet for USDC and trust it not to over-pull.
->
-> The current model matches the industry norm (Stripe, Coinbase CDP bill the merchant,
-> not the payer). It does not eliminate onboarding friction — it moves it from the
-> buyer to the seller.
-
-This section is also the raw material for a substantive comment on #937: field
-experience from having built both, which no one else in that thread has.
+The three `x402_splitter_*.test.js` suites still run. They cost nothing and stop the
+retained code rotting silently, which is what the original "lint-ignore / coverage-exclude"
+bullet was reaching for.
 
 ---
 
@@ -295,7 +288,6 @@ model.
       per-voucher-at-claim for `batch-settlement`.
 - [ ] Preserve the `#1016` shape for forward compatibility.
 - [ ] Update the `setup` block — it currently describes only the `exact` approval flow.
-
 
 ---
 

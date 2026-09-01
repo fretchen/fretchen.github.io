@@ -11,17 +11,17 @@ import { PageHeader } from "../../components/PageHeader";
 
 const x402FlowDiagram = `
 sequenceDiagram
-    participant Client as Client / Wallet
+    participant Buyer as Buyer / Wallet
     participant Server as Resource Server<br/>(Seller)
     participant Facilitator as Facilitator
     participant Chain as Blockchain<br/>(USDC)
 
-    Client->>Server: 1. HTTP request (no payment)
-    Server-->>Client: 2. 402 Payment Required<br/>+ payment requirements
+    Buyer->>Server: 1. HTTP request (no payment)
+    Server-->>Buyer: 2. 402 Payment Required<br/>+ payment requirements
 
-    Note over Client: 3. User signs EIP-3009<br/>payment authorization
+    Note over Buyer: 3. User signs EIP-3009<br/>payment authorization
 
-    Client->>Server: 4. Same request<br/>+ PAYMENT-SIGNATURE header
+    Buyer->>Server: 4. Same request<br/>+ PAYMENT-SIGNATURE header
     Server->>Facilitator: 5. POST /verify
     Facilitator-->>Server: 6. Payment valid ✓
 
@@ -32,21 +32,21 @@ sequenceDiagram
     Chain-->>Facilitator: 10. Confirmed
     Facilitator-->>Server: 11. Settlement complete
 
-    Server-->>Client: 12. 200 OK + resource
+    Server-->>Buyer: 12. 200 OK + resource
 `;
 
 const feeFlowDiagram = `
 sequenceDiagram
     participant Facilitator as Facilitator
     participant Chain as USDC Contract
-    participant Merchant as Merchant Wallet
+    participant Seller as Seller Wallet
 
     Note over Facilitator: After settlement completes
 
-    Facilitator->>Chain: transferFrom(merchant, facilitator, fee)
+    Facilitator->>Chain: transferFrom(seller, facilitator, fee)
     Chain-->>Facilitator: Fee collected
 
-    Note over Merchant: Approve ~1 USDC (~100<br/>settlements); re-approve as<br/>remainingSettlements runs low
+    Note over Seller: Approve ~1 USDC (~100<br/>settlements); re-approve as<br/>remainingSettlements runs low
 `;
 
 // ─── Live /supported fetch ───────────────────────────────────────────────────
@@ -278,9 +278,9 @@ export default function Page() {
             <span className={stepNumber}>1</span> Return a 402 response from your server
           </h3>
           <p>
-            When a client requests a paid resource without payment, respond with HTTP 402 and your payment requirements.
-            Replace <code>0xYourMerchantAddress</code> with your wallet address and set <code>amount</code> to your
-            price in USDC (6 decimals — <code>100000</code> = $0.10).
+            When a buyer requests a paid resource without payment, respond with HTTP 402 and your payment requirements.
+            Replace <code>0xYourSellerAddress</code> with your wallet address and set <code>amount</code> to your price
+            in USDC (6 decimals — <code>100000</code> = $0.10).
           </p>
           <CodeBlock lang="json">{`// HTTP 402 response body:
 {
@@ -290,7 +290,7 @@ export default function Page() {
     "network": "eip155:10",
     "amount": "70000",
     "asset": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-    "payTo": "0xYourMerchantAddress",
+    "payTo": "0xYourSellerAddress",
     "maxTimeoutSeconds": 60,
     "extra": { "name": "USD Coin", "version": "2" }
   }],
@@ -318,7 +318,7 @@ export default function Page() {
             <span className={stepNumber}>3</span> Verify and settle payments
           </h3>
           <p>
-            When a client sends a request with a <code>PAYMENT-SIGNATURE</code> header, verify the payment before
+            When a buyer sends a request with a <code>PAYMENT-SIGNATURE</code> header, verify the payment before
             delivering the resource, then settle it on-chain:
           </p>
           <CodeBlock lang="javascript">{`// 1. Verify payment (before delivering resource)
@@ -416,7 +416,7 @@ return new Response(JSON.stringify(result), { status: 200 });`}</CodeBlock>
         <p>
           <a href="https://github.com/coinbase/x402">x402</a> implements the long-dormant{" "}
           <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/402">HTTP 402 Payment Required</a>{" "}
-          status code. A resource server (you) responds with payment requirements, the client signs a payment, and the
+          status code. A resource server (you) responds with payment requirements, the buyer signs a payment, and the
           facilitator handles verification and on-chain settlement.
         </p>
 
@@ -467,7 +467,7 @@ return new Response(JSON.stringify(result), { status: 200 });`}</CodeBlock>
       "network": "eip155:10",
       "amount": "100000",
       "asset": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-      "payTo": "0xYourMerchantAddress"
+      "payTo": "0xYourSellerAddress"
     }
   }'`}</CodeBlock>
           <p>
@@ -496,7 +496,7 @@ return new Response(JSON.stringify(result), { status: 200 });`}</CodeBlock>
       "network": "eip155:10",
       "amount": "100000",
       "asset": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-      "payTo": "0xYourMerchantAddress"
+      "payTo": "0xYourSellerAddress"
     }
   }'`}</CodeBlock>
           <p>
@@ -530,7 +530,7 @@ return new Response(JSON.stringify(result), { status: 200 });`}</CodeBlock>
 
         <h3>Buyer-side (TypeScript)</h3>
         <p>
-          Using the official <code>@x402/fetch</code> SDK, a client can pay for any x402 resource automatically:
+          Using the official <code>@x402/fetch</code> SDK, a buyer can pay for any x402 resource automatically:
         </p>
         <CodeBlock lang="typescript">{`import { x402Client, wrapFetchWithPayment } from "@x402/fetch";
 import { registerExactEvmScheme } from "@x402/evm/exact/client";
@@ -571,7 +571,7 @@ app.post("/api/resource", async (req, res) => {
         network: "eip155:10",
         amount: "70000",  // 0.07 USDC
         asset: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-        payTo: "0xYourMerchantAddress",
+        payTo: "0xYourSellerAddress",
         maxTimeoutSeconds: 60,
         extra: { name: "USD Coin", version: "2" }
       }],
@@ -584,7 +584,7 @@ app.post("/api/resource", async (req, res) => {
   const details = { scheme: "exact", network: "eip155:10",
     amount: "70000",
     asset: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-    payTo: "0xYourMerchantAddress" };
+    payTo: "0xYourSellerAddress" };
 
   const verifyRes = await fetch("https://facilitator.fretchen.eu/verify", {
     method: "POST",
@@ -660,13 +660,13 @@ app.post("/api/resource", async (req, res) => {
         </table>
 
         <p>
-          All wallets that support WalletConnect work — MetaMask, Coinbase Wallet, Rainbow, and others. Your customers
-          need a small amount of USDC on any supported network.
+          All wallets that support WalletConnect work — MetaMask, Coinbase Wallet, Rainbow, and others. Your buyers need
+          a small amount of USDC on any supported network.
         </p>
 
-        {/* ── 8. For your customers ────────────────────────────────────── */}
+        {/* ── 8. For your buyers ───────────────────────────────────────── */}
 
-        <h2>What your customers experience</h2>
+        <h2>What your buyers experience</h2>
 
         <p>When a user interacts with your x402-protected service, the payment flow is invisible and instant:</p>
         <ol>
@@ -680,7 +680,7 @@ app.post("/api/resource", async (req, res) => {
         <p>
           Each payment is individually signed via <a href="https://eips.ethereum.org/EIPS/eip-3009">EIP-3009</a>. The
           authorization is bound to a specific amount, recipient, and expiration. The protocol never has blanket access
-          to your customer&apos;s funds. See the <Link href="/imagegen">AI Image Generator</Link> for a live example.
+          to your buyer&apos;s funds. See the <Link href="/imagegen">AI Image Generator</Link> for a live example.
         </p>
 
         {/* ── 9. Links ─────────────────────────────────────────────────── */}

@@ -64,12 +64,21 @@ confirm, the handler is killed **after the settle transaction has already landed
 the buyer gets no receipt for a payment that succeeded. Money moved; the buyer cannot
 prove it.
 
-- [ ] Bound the fee-collection wait — pass an explicit `timeout` to
+- [x] Bound the fee-collection wait — pass an explicit `timeout` to
       `waitForTransactionReceipt`, sized well inside the 60s handler budget.
-- [ ] On timeout, do not fail the settlement: record the collection as pending (1.3)
-      and return the buyer's receipt.
+      (`FEE_RECEIPT_TIMEOUT_MS = 10_000` in `x402_fee.ts`.)
+- [x] On timeout, do not fail the settlement: return the buyer's receipt, and return
+      the fee tx hash with `error: "fee_collection_pending"` so the outcome is
+      recorded as *unknown* rather than *failed*.
 
 Fee collection must never be able to cost the buyer a receipt for a settled payment.
+
+Note: the `transferFrom` *send* was already bounded — viem's http transport defaults to
+a 10s per-request timeout. Only the receipt polling loop was unbounded.
+
+**Still open until 1.2/1.3:** `fee_collection_pending` is currently a dead end. The tx
+hash is returned and logged, but nothing persists or reconciles it, so a timed-out fee
+is still lost in practice. 1.1 only guarantees it is not lost *at the buyer's expense*.
 
 ### 1.2 No persistence for uncollected fees
 

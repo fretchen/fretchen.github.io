@@ -15,6 +15,7 @@ import {
   createWalletClient,
   http,
   getContract,
+  WaitForTransactionReceiptTimeoutError,
   type Address,
   type Abi,
 } from "viem";
@@ -75,6 +76,17 @@ const ERC20_FEE_ABI = [
 
 /** Default fee: 0.01 USDC = 10000 (6 decimals) */
 const DEFAULT_FEE_AMOUNT = 10000n;
+
+/**
+ * Cap on how long fee collection may wait for its receipt.
+ *
+ * The settle handler has a 60s budget (serverless.yml) and has already spent part of it
+ * confirming the settlement transaction before fee collection starts. Fee collection
+ * must never be able to consume the rest: if the handler dies here, the buyer gets no
+ * receipt for a payment that already landed on-chain. A settled payment's receipt is
+ * worth far more than a 0.01 USDC fee.
+ */
+const FEE_RECEIPT_TIMEOUT_MS = 10_000;
 
 /**
  * Get the fee amount from environment or default.
@@ -243,8 +255,32 @@ export async function collectFee(merchantAddress: Address, network: string): Pro
 
     const txHash = await usdc.write.transferFrom([merchantAddress, account.address, feeAmount]);
 
-    // Wait for confirmation
-    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+    // Wait for confirmation — bounded, so a slow fee tx can never eat the settle
+    // handler's remaining timeout budget and cost the buyer their receipt.
+    let receipt;
+    try {
+      receipt = await publicClient.waitForTransactionReceipt({
+        hash: txHash,
+        timeout: FEE_RECEIPT_TIMEOUT_MS,
+      });
+    } catch (error) {
+      if (error instanceof WaitForTransactionReceiptTimeoutError) {
+        // The tx is still in flight and may well succeed. Reporting it as failed would
+        // be wrong, and retrying against a fee that actually landed would double-charge
+        // the merchant. Return the hash so it can be reconciled later.
+        logger.warn(
+          {
+            txHash,
+            merchant: merchantAddress,
+            network,
+            timeoutMs: FEE_RECEIPT_TIMEOUT_MS,
+          },
+          "Fee tx not confirmed within budget — returning settlement receipt, fee outcome unknown",
+        );
+        return { success: false, txHash, error: "fee_collection_pending" };
+      }
+      throw error; // any other wait failure keeps existing outer-catch handling
+    }
 
     if (receipt.status === "success") {
       logger.info(

@@ -236,6 +236,13 @@ export async function settlePayment(
           { recipient, network, feeTxHash: feeResult.txHash },
           "Fee collected successfully after settlement",
         );
+      } else if (feeResult.error === "fee_collection_pending") {
+        // Fee tx was sent but not confirmed within its bounded wait. It may still land,
+        // so this is not a failure — it is an unknown outcome carrying a tx hash.
+        logger.warn(
+          { recipient, network, feeTxHash: feeResult.txHash },
+          "Fee tx pending at response time — outcome unknown, not yet reconciled",
+        );
       } else {
         // Fee collection failed — settlement still succeeded!
         // Log warning but don't fail the response

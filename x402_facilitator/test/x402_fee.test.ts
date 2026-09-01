@@ -327,6 +327,88 @@ describe("x402_fee", () => {
       expect(result.error).toBe("fee_transaction_reverted");
     });
 
+    it("returns fee_collection_pending when the receipt wait times out", async () => {
+      const mockTxHash = "0xpend234567890abcdef1234567890abcdef1234567890abcdef1234567890ab";
+      const { getContract, createPublicClient, WaitForTransactionReceiptTimeoutError } =
+        await import("viem");
+
+      vi.mocked(createPublicClient).mockReturnValue(
+        mockPublicClient({
+          waitForTransactionReceipt: vi
+            .fn()
+            .mockRejectedValue(new WaitForTransactionReceiptTimeoutError({ hash: mockTxHash })),
+        }),
+      );
+
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          write: {
+            transferFrom: vi.fn().mockResolvedValue(mockTxHash),
+          },
+        }),
+      );
+
+      const result = await collectFee(merchant, "eip155:11155420");
+
+      // Not "failed": the tx is still in flight and the hash must survive for
+      // later reconciliation, otherwise a retry could double-charge the merchant.
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("fee_collection_pending");
+      expect(result.txHash).toBe(mockTxHash);
+    });
+
+    it("bounds the receipt wait with a timeout", async () => {
+      const mockTxHash = "0xbound34567890abcdef1234567890abcdef1234567890abcdef1234567890ab";
+      const { getContract, createPublicClient } = await import("viem");
+
+      const waitForTransactionReceipt = vi.fn(async () => ({
+        status: "success",
+        transactionHash: mockTxHash,
+      }));
+
+      vi.mocked(createPublicClient).mockReturnValue(mockPublicClient({ waitForTransactionReceipt }));
+
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          write: {
+            transferFrom: vi.fn().mockResolvedValue(mockTxHash),
+          },
+        }),
+      );
+
+      await collectFee(merchant, "eip155:11155420");
+
+      // Regression guard: an unbounded wait can outlive the settle handler's 60s
+      // budget and cost the buyer their receipt for an already-settled payment.
+      expect(waitForTransactionReceipt).toHaveBeenCalledWith(
+        expect.objectContaining({ hash: mockTxHash, timeout: expect.any(Number) }),
+      );
+    });
+
+    it("treats non-timeout receipt wait errors as fee_collection_failed", async () => {
+      const mockTxHash = "0xrpcer34567890abcdef1234567890abcdef1234567890abcdef1234567890ab";
+      const { getContract, createPublicClient } = await import("viem");
+
+      vi.mocked(createPublicClient).mockReturnValue(
+        mockPublicClient({
+          waitForTransactionReceipt: vi.fn().mockRejectedValue(new Error("RPC connection lost")),
+        }),
+      );
+
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          write: {
+            transferFrom: vi.fn().mockResolvedValue(mockTxHash),
+          },
+        }),
+      );
+
+      const result = await collectFee(merchant, "eip155:11155420");
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("fee_collection_failed");
+    });
+
     it("returns insufficient_fee_allowance error", async () => {
       const { getContract } = await import("viem");
       vi.mocked(getContract).mockReturnValue(

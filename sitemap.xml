@@ -650,11 +650,27 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.fretchen.eu/lab/"/>
   </url>
   <url>
+    <loc>https://www.fretchen.eu/x402/buyers/</loc>
+    <lastmod>2026-09-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.fretchen.eu/de/x402/buyers/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.fretchen.eu/x402/buyers/"/>
+  </url>
+  <url>
     <loc>https://www.fretchen.eu/x402/</loc>
     <lastmod>2026-09-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
     <xhtml:link rel="alternate" hreflang="de" href="https://www.fretchen.eu/de/x402/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.fretchen.eu/x402/"/>
+  </url>
+  <url>
+    <loc>https://www.fretchen.eu/x402/sellers/</loc>
+    <lastmod>2026-09-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+    <xhtml:link rel="alternate" hreflang="de" href="https://www.fretchen.eu/de/x402/sellers/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.fretchen.eu/x402/sellers/"/>
   </url>
 </urlset>

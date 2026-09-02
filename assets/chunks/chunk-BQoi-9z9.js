@@ -1,0 +1,1 @@
+import{t as e}from"./chunk-DFgJr5bH.js";var t=e(`colors.explore`);export{t};

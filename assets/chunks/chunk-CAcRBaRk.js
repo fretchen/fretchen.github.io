@@ -1,0 +1,1 @@
+import{i as e}from"./chunk-B3c6Nd_W.js";var t=e({textStyle:`prose`,maxWidth:`measure`}),n=e({width:`100%`,borderCollapse:`collapse`,marginBottom:`6`,fontSize:`sm`,"& th, & td":{padding:`8px 12px`,borderBottom:`1px solid token(colors.border, #e5e7eb)`,textAlign:`left`},"& th":{fontWeight:`semibold`,backgroundColor:`codeBg`},"& tr:last-child td":{borderBottom:`none`}});export{n,t};

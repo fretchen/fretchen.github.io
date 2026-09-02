@@ -70,6 +70,38 @@ looks like in practice.
 **Prose gets a bounded measure**, set in characters rather than pixels so it survives a
 size change. Figures and tools may exceed it — they are the content, not decoration.
 
+## Figures
+
+Reasons only — the contract lives in `README.md`.
+
+**Figures sit on the page ground.** No box, no tint, no framing rule. A container carries
+no information about what it contains; it is the `decorated` failure, and the Principle
+deletes it. Separation is whitespace, which costs nothing and says the same thing. This
+follows from the Claim more than from taste: if the built thing *is* the content, boxing it
+says the opposite — that it is an exhibit set apart from the writing.
+
+The failure mode is specific and worth naming, because it has shipped here. A tint too faint
+to read as a deliberate hue does not read as subtle, it reads as dirty — the surface looks
+grubby rather than coloured. There is no good setting of that dial. Either the colour is
+strong enough to be visibly a choice, which is `decorated`, or it should not be there.
+
+**Captions go below**, because a figure is read after it is seen. One caption treatment
+across blog posts, quantum notes and lab pages is what makes figures read as a single kind
+of object rather than as whatever each component invented.
+
+**A caption earns its place or it goes** — the Principle applied to the figure's own label.
+A caption that renames what the paragraph above just said is not a caption, it is an echo,
+and it makes the figure feel bolted on rather than belonging. So the caption is where you
+say the thing the surrounding prose *cannot*: what to notice, what the shape means, why the
+order matters. When the prose has already done that work, the figure needs no caption at
+all. This is why captions here are sentences rather than titles — and why they read in the
+serif with the rest of the writing, not least because several of them carry equations.
+
+**Inside a diagram, only the content is loud.** Three tiers: the messages are the content,
+the actors name them, the structural lines are scaffolding. Rank them by value rather than
+by weight — a scaffold drawn as heavily as the content asserts that the grid matters as much
+as what sits on it. This is the same instinct as recessive gridlines on a chart.
+
 ## References
 
 **Aiming for** — distill.pub: use of space, essential information only, good visuals.
@@ -90,5 +122,6 @@ Everything below is expression, not identity — it gets decided against the sec
   marked provisional; they need a real reading test on the longest quantum note before they
   are fixed.
 - Layout: how much the page does around the content. distill.pub is admired visually, but
-  it publishes only finished, authorless papers — the fit here is unproven.
+  it publishes only finished, authorless papers — the fit here is unproven. **Figures came
+  off this list** (see above); how much chrome the *page* carries is still open.
 - Whether the colour system as it stands still follows from any of the above.

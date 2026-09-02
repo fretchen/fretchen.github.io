@@ -40,6 +40,11 @@ Repo-specific conventions (the two test categories, the deploy-script export gua
 
 Single Scaleway Function per package with **path-based routing** (`/verify`, `/settle`, `/supported`). Environment variables are split: `env:` in `serverless.yml` for public values, `secret:` configured via the Scaleway Console only.
 
+Use the **`x402`** skill before writing or reviewing anything that names an x402 role — it carries
+the official vocabulary, this repo's verified role map, and links to the spec. The role map is
+counterintuitive and has been published wrong: `/imagegen` and `/assistent` are **buyers**
+(they spend USDC), the `*-agent.fretchen.eu` Scaleway endpoints they call are the **sellers**.
+
 Two things that silently break payments if you get them wrong, both documented in detail where they belong:
 
 - **EIP-712 domain names differ by network** (mainnet USDC is `"USD Coin"`, testnet is `"USDC"`). Follow the checklist in [`scw_js/README.md`](scw_js/README.md) → *Adding New Networks*, which carries the verified per-network table.

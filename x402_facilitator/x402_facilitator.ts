@@ -6,6 +6,7 @@
 import { verifyPayment } from "./x402_verify";
 import { settlePayment } from "./x402_settle";
 import { getSupportedCapabilities } from "./x402_supported";
+import openapiSpec from "./openapi.json" with { type: "json" };
 import pino from "pino";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
@@ -67,6 +68,26 @@ const CORS_HEADERS: Record<string, string> = {
   "Content-Type": "application/json",
 };
 
+/** Human-facing documentation for the facilitator — the root path redirects browsers here. */
+const DOCUMENTATION_URL = "https://www.fretchen.eu/x402/";
+
+/**
+ * Case-insensitive header lookup. Header casing on Scaleway's event object is not
+ * guaranteed, so a direct `headers["Accept"]` read can silently miss a real header.
+ */
+function getHeader(headers: Record<string, string> | undefined, name: string): string | undefined {
+  if (!headers) {
+    return undefined;
+  }
+  const lower = name.toLowerCase();
+  for (const [key, value] of Object.entries(headers)) {
+    if (key.toLowerCase() === lower) {
+      return value;
+    }
+  }
+  return undefined;
+}
+
 /**
  * Handle /verify endpoint - off-chain verification
  */
@@ -117,6 +138,39 @@ export async function handleSupported(
     statusCode: 200,
     headers: CORS_HEADERS,
     body: JSON.stringify(capabilities),
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/require-await
+export async function handleOpenApiSpec(
+  event: ScalewayEvent,
+  _context: ScalewayContext,
+): Promise<ScalewayResponse> {
+  // Handle CORS preflight
+  if (event.httpMethod === "OPTIONS") {
+    return {
+      statusCode: 200,
+      headers: CORS_HEADERS,
+      body: "",
+    };
+  }
+
+  if (event.httpMethod !== "GET") {
+    return {
+      statusCode: 405,
+      headers: CORS_HEADERS,
+      body: JSON.stringify({ error: "Method not allowed. Use GET." }),
+    };
+  }
+
+  // No live values to patch in, unlike scw_js's openapi.json: /supported is already the
+  // live source of truth for the fee amount and recommended approval, so this document
+  // only ever describes shape. structuredClone still guards against any future caller
+  // mutating the shared import.
+  return {
+    statusCode: 200,
+    headers: CORS_HEADERS,
+    body: JSON.stringify(structuredClone(openapiSpec)),
   };
 }
 
@@ -304,6 +358,9 @@ export async function handle(
 ): Promise<ScalewayResponse> {
   const path = event.path || event.rawUrl || "";
 
+  if (path.includes("/openapi.json")) {
+    return handleOpenApiSpec(event, context);
+  }
   if (path.includes("/supported")) {
     return handleSupported(event, context);
   }
@@ -312,6 +369,35 @@ export async function handle(
   }
   if (path.includes("/verify")) {
     return handleVerify(event, context);
+  }
+
+  // Only the literal root ("/") — NOT the empty string. A real root request (browser,
+  // curl, an agent probing the domain) always carries path "/"; an event with neither
+  // `path` nor `rawUrl` set is a malformed/absent-info request, which stays a 404 below.
+  if (path === "/") {
+    const accept = getHeader(event.headers, "Accept") ?? "";
+    if (accept.includes("text/html")) {
+      // A human followed a link (e.g. from a facilitator listing) — send them to the
+      // docs instead of a JSON error object.
+      return {
+        statusCode: 302,
+        headers: { ...CORS_HEADERS, Location: DOCUMENTATION_URL },
+        body: "",
+      };
+    }
+    // No Accept: text/html — an agent, curl, or a machine client. Give it an onward
+    // path rather than nothing to act on.
+    return {
+      statusCode: 200,
+      headers: CORS_HEADERS,
+      body: JSON.stringify({
+        service: "x402 facilitator",
+        documentation: DOCUMENTATION_URL,
+        supported: "/supported",
+        openapi: "/openapi.json",
+        endpoints: ["/verify", "/settle", "/supported", "/openapi.json"],
+      }),
+    };
   }
 
   // Default 404

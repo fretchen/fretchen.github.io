@@ -180,4 +180,15 @@ describe("x402 /supported endpoint", () => {
     expect(capabilities.extensions).not.toContain("facilitatorFees");
     expect(capabilities.facilitatorFees).toBeUndefined();
   });
+
+  test("always includes onward links, independent of fee configuration", () => {
+    // Unlike facilitatorFees, links must not depend on a configured key: an agent that
+    // discovers /supported in read-only mode still needs somewhere to go.
+    delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
+    const capabilities = getSupportedCapabilities();
+
+    expect(capabilities.links.documentation).toMatch(/^https:\/\//);
+    expect(capabilities.links.source).toMatch(/^https:\/\//);
+    expect(capabilities.links.openapi).toMatch(/^https:\/\//);
+  });
 });

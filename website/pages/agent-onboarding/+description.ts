@@ -1,3 +1,3 @@
 export function description() {
-  return "Build an llm/v1 agent: the open, self-checkable contract for an x402 batch-settlement chat endpoint on fretchen.eu — wire format, interop floor, and the known challenges.";
+  return "Put an OpenAI-shaped LLM endpoint behind x402 batch-settlement and get paid per message in USDC — the open, self-checkable llm/v1 contract: wire format, interop floor, and known challenges.";
 }

@@ -6,6 +6,7 @@
 import { verifyPayment } from "./x402_verify";
 import { settlePayment } from "./x402_settle";
 import { getSupportedCapabilities } from "./x402_supported";
+import openapiSpec from "./openapi.json" with { type: "json" };
 import pino from "pino";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
@@ -137,6 +138,39 @@ export async function handleSupported(
     statusCode: 200,
     headers: CORS_HEADERS,
     body: JSON.stringify(capabilities),
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/require-await
+export async function handleOpenApiSpec(
+  event: ScalewayEvent,
+  _context: ScalewayContext,
+): Promise<ScalewayResponse> {
+  // Handle CORS preflight
+  if (event.httpMethod === "OPTIONS") {
+    return {
+      statusCode: 200,
+      headers: CORS_HEADERS,
+      body: "",
+    };
+  }
+
+  if (event.httpMethod !== "GET") {
+    return {
+      statusCode: 405,
+      headers: CORS_HEADERS,
+      body: JSON.stringify({ error: "Method not allowed. Use GET." }),
+    };
+  }
+
+  // No live values to patch in, unlike scw_js's openapi.json: /supported is already the
+  // live source of truth for the fee amount and recommended approval, so this document
+  // only ever describes shape. structuredClone still guards against any future caller
+  // mutating the shared import.
+  return {
+    statusCode: 200,
+    headers: CORS_HEADERS,
+    body: JSON.stringify(structuredClone(openapiSpec)),
   };
 }
 
@@ -324,6 +358,9 @@ export async function handle(
 ): Promise<ScalewayResponse> {
   const path = event.path || event.rawUrl || "";
 
+  if (path.includes("/openapi.json")) {
+    return handleOpenApiSpec(event, context);
+  }
   if (path.includes("/supported")) {
     return handleSupported(event, context);
   }
@@ -357,7 +394,8 @@ export async function handle(
         service: "x402 facilitator",
         documentation: DOCUMENTATION_URL,
         supported: "/supported",
-        endpoints: ["/verify", "/settle", "/supported"],
+        openapi: "/openapi.json",
+        endpoints: ["/verify", "/settle", "/supported", "/openapi.json"],
       }),
     };
   }

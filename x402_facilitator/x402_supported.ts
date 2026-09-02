@@ -71,11 +71,13 @@ interface SupportedCapabilities {
   links: {
     documentation: string;
     source: string;
+    openapi: string;
   };
 }
 
 const DOCUMENTATION_URL = "https://www.fretchen.eu/x402/";
 const SOURCE_URL = "https://github.com/fretchen/fretchen.github.io/tree/main/x402_facilitator";
+const OPENAPI_URL = "https://facilitator.fretchen.eu/openapi.json";
 
 /**
  * Get supported payment schemes and networks.
@@ -89,7 +91,7 @@ export function getSupportedCapabilities(): SupportedCapabilities {
   const supported: SupportedCapabilities = {
     ...base,
     extensions: [...(base.extensions ?? [])],
-    links: { documentation: DOCUMENTATION_URL, source: SOURCE_URL },
+    links: { documentation: DOCUMENTATION_URL, source: SOURCE_URL, openapi: OPENAPI_URL },
   };
 
   const feeAmount = getFeeAmount();

@@ -1,6 +1,10 @@
 import React, { useRef } from "react";
-import { css } from "../../../styled-system/css";
-import MermaidDiagram from "../../../components/MermaidDiagram";
+import {
+  SequenceDiagram,
+  SequenceMessage,
+  SequenceNote,
+  SequenceParticipant,
+} from "../../../components/blog/SequenceDiagram";
 import { FacilitatorApproval } from "../../../components/FacilitatorApproval";
 import { CodeBlock } from "../../../components/CodeBlock";
 import * as styles from "../../../layouts/shared";
@@ -9,124 +13,43 @@ import { TableOfContents } from "../../../components/TableOfContents";
 import { PageHeader } from "../../../components/PageHeader";
 import { prose, table } from "../shared.styles";
 
-// ─── Mermaid diagrams ───────────────────────────────────────────────────────
+// This page is for someone deciding whether to charge for their API with this facilitator, and
+// then doing it. It deliberately does NOT teach x402 — the hub does that, and docs.x402.org does
+// it better. Everything here is something a seller acts on: the price, the three calls, a safe
+// way to rehearse, and the exact request/response shapes.
+//
+// Those shapes are the one thing on this page that must never be guessed: they are read from
+// x402_facilitator/x402_facilitator.ts. The request takes `paymentPayload` + `paymentRequirements`;
+// /verify answers `isValid` (200 even when false); /settle answers `transaction`, not `txHash`.
 
-const x402FlowDiagram = `
-sequenceDiagram
-    participant Buyer as Buyer / Wallet
-    participant Server as Resource Server<br/>(Seller)
-    participant Facilitator as Facilitator
-    participant Chain as Blockchain<br/>(USDC)
+const USDC_OPTIMISM = "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85";
+const USDC_OP_SEPOLIA = "0x5fd84259d66Cd46123540766Be93DFE6D43130D7";
+const FACILITATOR = "https://facilitator.fretchen.eu";
 
-    Buyer->>Server: 1. HTTP request (no payment)
-    Server-->>Buyer: 2. 402 Payment Required<br/>+ payment requirements
+// Three participants, not four: the seller never touches the chain, so a Blockchain lane would
+// draw a round-trip they cannot act on. Unnumbered — reading order already carries sequence.
+const flowParticipants: SequenceParticipant[] = [
+  { id: "buyer", label: "Buyer" },
+  { id: "server", labelLines: ["Your server", "(seller)"] },
+  { id: "facilitator", label: "Facilitator" },
+];
 
-    Note over Buyer: 3. User signs EIP-3009<br/>payment authorization
-
-    Buyer->>Server: 4. Same request<br/>+ PAYMENT-SIGNATURE header
-    Server->>Facilitator: 5. POST /verify
-    Facilitator-->>Server: 6. Payment valid ✓
-
-    Note over Server: 7. Deliver resource
-
-    Server->>Facilitator: 8. POST /settle
-    Facilitator->>Chain: 9. transferWithAuthorization
-    Chain-->>Facilitator: 10. Confirmed
-    Facilitator-->>Server: 11. Settlement complete
-
-    Server-->>Buyer: 12. 200 OK + resource
-`;
-
-const feeFlowDiagram = `
-sequenceDiagram
-    participant Facilitator as Facilitator
-    participant Chain as USDC Contract
-    participant Seller as Seller Wallet
-
-    Note over Facilitator: After settlement completes
-
-    Facilitator->>Chain: transferFrom(seller, facilitator, fee)
-    Chain-->>Facilitator: Fee collected
-
-    Note over Seller: Approve ~1 USDC (~100<br/>settlements); re-approve as<br/>remainingSettlements runs low
-`;
-
-// ─── Styles local to this page ──────────────────────────────────────────────
-
-const valuePropList = css({
-  listStyle: "none",
-  padding: "0",
-  marginTop: "4",
-  marginBottom: "6",
-  "& li": {
-    padding: "6px 0",
-    paddingLeft: "6",
-    position: "relative",
-    marginBottom: "1",
-    "&::before": {
-      content: '"✓"',
-      position: "absolute",
-      left: "0",
-      color: "green.600",
-      fontWeight: "bold",
-    },
+const flowSteps: (SequenceMessage | SequenceNote)[] = [
+  { kind: "message", from: "buyer", to: "server", label: "Request, no payment" },
+  { kind: "message", from: "server", to: "buyer", label: "402 + payment requirements", style: "dashed" },
+  { kind: "message", from: "buyer", to: "server", label: "Same request + PAYMENT-SIGNATURE" },
+  { kind: "message", from: "server", to: "facilitator", label: "POST /verify" },
+  { kind: "message", from: "facilitator", to: "server", label: "isValid", style: "dashed" },
+  {
+    kind: "note",
+    from: "buyer",
+    to: "facilitator",
+    label: "You deliver the resource here — after verify, before settle",
   },
-});
-
-const stepNumber = css({
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: "28px",
-  height: "28px",
-  borderRadius: "full",
-  backgroundColor: "blue.600",
-  color: "white",
-  fontSize: "sm",
-  fontWeight: "bold",
-  marginRight: "2",
-  flexShrink: 0,
-});
-
-const stepContainer = css({
-  border: "1px solid token(colors.border, #e5e7eb)",
-  borderRadius: "lg",
-  padding: "5",
-  marginBottom: "4",
-  backgroundColor: "codeBg",
-});
-
-const endpointBox = css({
-  backgroundColor: "codeBg",
-  border: "1px solid token(colors.border, #e5e7eb)",
-  borderRadius: "lg",
-  padding: "4",
-  marginBottom: "4",
-});
-
-const feeComparisonTable = css({
-  width: "100%",
-  borderCollapse: "collapse",
-  marginBottom: "6",
-  fontSize: "sm",
-  "& th, & td": {
-    padding: "8px 12px",
-    borderBottom: "1px solid token(colors.border, #e5e7eb)",
-    textAlign: "right",
-  },
-  "& th:first-child, & td:first-child": {
-    textAlign: "left",
-  },
-  "& th": {
-    fontWeight: "semibold",
-    backgroundColor: "codeBg",
-  },
-  "& tr:last-child td": {
-    borderBottom: "none",
-  },
-});
-
-// ─── Page ────────────────────────────────────────────────────────────────────
+  { kind: "message", from: "server", to: "facilitator", label: "POST /settle" },
+  { kind: "message", from: "facilitator", to: "server", label: "success + transaction", style: "dashed" },
+  { kind: "message", from: "server", to: "buyer", label: "200 + resource", style: "dashed" },
+];
 
 export default function Page() {
   // The ToC finds its own headings by scanning this subtree — see components/TableOfContents.
@@ -139,128 +62,140 @@ export default function Page() {
         toc={<TableOfContents contentRef={contentRef} />}
       >
         <article ref={contentRef} className={prose}>
-          {/* ── 1. Hero ──────────────────────────────────────────────────── */}
-
           <p>
-            Accept crypto payments on your API or website with zero integration complexity. This is an independent{" "}
-            <a href="https://github.com/coinbase/x402">x402</a> facilitator — it handles payment verification and
-            on-chain settlement so you don&apos;t have to.
+            Charge for your API in USDC, per request, with no accounts and no signup. This is an independent{" "}
+            <a href="https://docs.x402.org">x402</a> facilitator: it verifies payments and settles them on-chain so your
+            server never has to touch a blockchain.
           </p>
 
-          <ul className={valuePropList}>
+          <ul>
             <li>
-              <strong>Only Optimism facilitator</strong> in the x402 ecosystem — if you sell on Optimism, this is your
-              facilitator
+              <strong>0.01 USDC flat per settlement</strong> — no percentage, no minimum, no monthly fee.
             </li>
             <li>
-              <strong>0.01 USDC flat fee</strong> per settlement — no percentage, no minimums
+              <strong>Optimism and Base</strong>, mainnet and testnet. Other chains on request.
             </li>
             <li>
-              <strong>Community-first experiment</strong> — can we make a sustainable, independent facilitator work?
-              Join us and find out
+              <strong>Open source and self-hostable</strong> — no lock-in. If this facilitator goes away, the code and
+              your integration both still work.
             </li>
             <li>
-              <strong>Open source</strong>, self-hostable, no vendor lock-in
-            </li>
-            <li>
-              <strong>Other chains on request</strong> — Base support is ready, more can be added if there is interest
+              <strong>An experiment</strong> — can an independent facilitator pay for itself? That is the open question,
+              and you are welcome to be part of the answer.
             </li>
           </ul>
 
-          {/* ── 2. Quick Start ───────────────────────────────────────────── */}
-
           <h2>Quick start</h2>
 
-          <p>Three steps to accept x402 payments on your service:</p>
+          <p>
+            Three things happen on your server: you quote a price, you verify, and you settle. The resource is delivered
+            in between — after the payment is known good, before it is taken.
+          </p>
 
-          <div className={stepContainer}>
-            <h3>
-              <span className={stepNumber}>1</span> Return a 402 response from your server
-            </h3>
-            <p>
-              When a buyer requests a paid resource without payment, respond with HTTP 402 and your payment
-              requirements. Replace <code>0xYourSellerAddress</code> with your wallet address and set{" "}
-              <code>amount</code> to your price in USDC (6 decimals — <code>100000</code> = $0.10).
-            </p>
-            <CodeBlock lang="json">{`// HTTP 402 response body:
-{
+          <SequenceDiagram participants={flowParticipants} steps={flowSteps} territory="explore" />
+
+          <h3>1. Return a 402 with your price</h3>
+          <p>
+            When a request arrives without payment, answer <code>402</code> and say what you want. Set{" "}
+            <code>payTo</code> to your wallet and <code>amount</code> in USDC units — 6 decimals, so <code>100000</code>{" "}
+            is $0.10.
+          </p>
+          <CodeBlock lang="json">{`{
   "x402Version": 2,
   "accepts": [{
     "scheme": "exact",
     "network": "eip155:10",
     "amount": "70000",
-    "asset": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+    "asset": "${USDC_OPTIMISM}",
     "payTo": "0xYourSellerAddress",
     "maxTimeoutSeconds": 60,
     "extra": { "name": "USD Coin", "version": "2" }
   }],
-  "facilitatorUrl": "https://facilitator.fretchen.eu"
+  "facilitatorUrl": "${FACILITATOR}"
 }`}</CodeBlock>
-          </div>
 
-          <div className={stepContainer}>
-            <h3>
-              <span className={stepNumber}>2</span> Approve the facilitator for fee collection
-            </h3>
-            <p>
-              The facilitator collects a 0.01 USDC fee per settlement via ERC-20 <code>transferFrom</code>. The
-              recommended approval is deliberately small — about 1 USDC, covering roughly 100 settlements — because the
-              spender is the facilitator&apos;s hot settlement wallet, and a large standing allowance is a standing
-              risk. Re-approve as it runs down: every <code>/verify</code> response includes{" "}
-              <code>remainingSettlements</code> (see the API reference further down this page), so you can watch it and
-              top up before it hits zero. Connect your seller wallet below to check your current approval and set it:
-            </p>
-            <FacilitatorApproval />
-          </div>
+          <h3>2. Approve the facilitator for the fee</h3>
+          <p>
+            The fee is collected after settlement with ERC-20 <code>transferFrom</code>, so the facilitator needs an
+            allowance. Keep it small — about 1 USDC, roughly 100 settlements. The spender is a hot settlement wallet,
+            and a large standing allowance is a standing risk. Every <code>/verify</code> response tells you how many
+            settlements you have left, so you can top up before it runs out.
+          </p>
+          <FacilitatorApproval showTestnets />
 
-          <div className={stepContainer}>
-            <h3>
-              <span className={stepNumber}>3</span> Verify and settle payments
-            </h3>
-            <p>
-              When a buyer sends a request with a <code>PAYMENT-SIGNATURE</code> header, verify the payment before
-              delivering the resource, then settle it on-chain:
-            </p>
-            <CodeBlock lang="javascript">{`// 1. Verify payment (before delivering resource)
-const verifyRes = await fetch("https://facilitator.fretchen.eu/verify", {
+          <h3>3. Verify, deliver, settle</h3>
+          <p>
+            <code>paymentPayload</code> is the decoded <code>PAYMENT-SIGNATURE</code> header from the buyer;{" "}
+            <code>paymentRequirements</code> is the same object you put in <code>accepts[0]</code> above.
+          </p>
+          <CodeBlock lang="javascript">{`// 1. Verify — before you spend anything on the resource
+const verifyRes = await fetch("${FACILITATOR}/verify", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ x402Version: 2, scheme: "exact",
-    network: "eip155:10", payload, details })
+  body: JSON.stringify({ paymentPayload, paymentRequirements })
 });
-const { valid } = await verifyRes.json();
-if (!valid) return new Response("Payment invalid", { status: 402 });
 
-// 2. Deliver your resource
-const result = await generateImage(prompt);
+// /verify answers 200 even when the payment is bad. Check isValid, not the status code.
+const { isValid, invalidReason } = await verifyRes.json();
+if (!isValid) return new Response(invalidReason, { status: 402 });
 
-// 3. Settle payment (after successful delivery)
-await fetch("https://facilitator.fretchen.eu/settle", {
+// 2. Deliver the resource
+const result = await generateYourResource(request);
+
+// 3. Settle — the money moves here
+const settleRes = await fetch("${FACILITATOR}/settle", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ x402Version: 2, scheme: "exact",
-    network: "eip155:10", payload, details })
+  body: JSON.stringify({ paymentPayload, paymentRequirements })
 });
+const { success, transaction } = await settleRes.json();
 
 return new Response(JSON.stringify(result), { status: 200 });`}</CodeBlock>
-            <p>That&apos;s it — your service now accepts crypto payments.</p>
-          </div>
 
-          {/* ── 3. Fee model ─────────────────────────────────────────────── */}
+          <p>That is the whole integration.</p>
+
+          <h2>Try it on testnet first</h2>
+
+          <p>
+            Rehearse the full flow on OP Sepolia before any real money is involved. The facilitator treats testnet
+            exactly like mainnet — including the fee and the approval — so a testnet run exercises the same code path
+            you will ship. Pick the testnet in the approval widget above.
+          </p>
+
+          <p>Three values change, and the third one is a trap worth knowing about:</p>
+          <CodeBlock lang="json">{`{
+  "network": "eip155:11155420",
+  "asset": "${USDC_OP_SEPOLIA}",
+  "extra": { "name": "USDC", "version": "2" }
+}`}</CodeBlock>
+
+          <p>
+            <strong>
+              On testnet the USDC contract&apos;s EIP-712 domain name is <code>USDC</code>, not <code>USD Coin</code>.
+            </strong>{" "}
+            The signature is bound to that name, so if you change only the network and the asset, every payment fails
+            verification — and it fails <em>after</em> your server has already done the expensive work. Both testnets
+            use <code>USDC</code>; both mainnets use <code>USD Coin</code>.
+          </p>
+
+          <p>
+            The <code>exact</code> scheme documented here works on all four networks. Batch-settlement, if you go beyond{" "}
+            <code>exact</code> later, is not deployed on OP Sepolia — use Base Sepolia to rehearse that one.
+          </p>
 
           <h2>Fee model</h2>
 
           <p>
-            The facilitator charges a <strong>flat 0.01 USDC per settlement</strong>, collected post-settlement via
-            ERC-20 <code>transferFrom</code>. There is no percentage fee, no monthly minimum, no hidden costs.
+            A <strong>flat 0.01 USDC per settlement</strong>, taken after the payment succeeds. No percentage, no
+            monthly minimum. The amount and the facilitator&apos;s address are advertised in <code>/supported</code>{" "}
+            under <code>facilitatorFees</code>, so a client can read them rather than trust this page.
           </p>
 
-          <h3>Cost comparison</h3>
-          <table className={feeComparisonTable}>
+          <table className={table}>
             <thead>
               <tr>
                 <th>Your price</th>
-                <th>Facilitator fee</th>
+                <th>Fee here</th>
                 <th>Effective rate</th>
                 <th>Stripe (2.9% + $0.30)</th>
               </tr>
@@ -270,7 +205,7 @@ return new Response(JSON.stringify(result), { status: 200 });`}</CodeBlock>
                 <td>$0.07</td>
                 <td>$0.01</td>
                 <td>14.3%</td>
-                <td>impossible (below minimum)</td>
+                <td>impossible — below the minimum</td>
               </tr>
               <tr>
                 <td>$0.50</td>
@@ -294,193 +229,72 @@ return new Response(JSON.stringify(result), { status: 200 });`}</CodeBlock>
           </table>
 
           <p>
-            The flat-fee model is especially competitive for micropayments — exactly the range where traditional payment
-            processors are prohibitively expensive or unavailable.
+            A flat fee is the wrong shape above roughly $10 and the right shape below $1 — which is the range where card
+            processors either refuse the payment or eat most of it.
           </p>
-
-          <MermaidDiagram definition={feeFlowDiagram} title="Fee Collection Flow" />
-
-          <p>
-            The fee amount and facilitator address are advertised in the <code>/supported</code> endpoint in the{" "}
-            <code>facilitatorFees</code> object (with the <code>facilitator_fee</code> and <code>facilitatorFees</code>{" "}
-            keys listed under <code>extensions</code>).
-          </p>
-
-          {/* ── 4. How it works ──────────────────────────────────────────── */}
-
-          <h2>How it works</h2>
-
-          <p>
-            <a href="https://github.com/coinbase/x402">x402</a> implements the long-dormant{" "}
-            <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/402">
-              HTTP 402 Payment Required
-            </a>{" "}
-            status code. A resource server (you) responds with payment requirements, the buyer signs a payment, and the
-            facilitator handles verification and on-chain settlement:
-          </p>
-
-          <MermaidDiagram definition={x402FlowDiagram} title="x402 Payment Flow" />
-
-          <p>Key properties:</p>
-          <ul>
-            <li>
-              <strong>Stateless</strong> — no accounts, sessions, or stored payment details
-            </li>
-            <li>
-              <strong>HTTP-native</strong> — uses standard headers and status codes
-            </li>
-            <li>
-              <strong>Machine-friendly</strong> — AI agents can pay autonomously
-            </li>
-            <li>
-              <strong>Micropayment-ready</strong> — sub-cent network fees on L2
-            </li>
-            <li>
-              <strong>Gasless for buyers</strong> — EIP-3009 authorization, facilitator submits the transaction
-            </li>
-          </ul>
-
-          {/* ── 5. API Reference ─────────────────────────────────────────── */}
 
           <h2>API reference</h2>
 
           <p>
-            The facilitator at <code>facilitator.fretchen.eu</code> exposes three endpoints:
+            Three endpoints at <code>facilitator.fretchen.eu</code>. Both POST endpoints take the same body:{" "}
+            <code>paymentPayload</code> and <code>paymentRequirements</code>.
           </p>
 
           <h3>POST /verify</h3>
-          <div className={endpointBox}>
-            <p>
-              Validates a signed payment off-chain. Checks signature validity, sufficient balance, correct recipient,
-              and expiration. Call this <strong>before</strong> delivering your resource.
-            </p>
-            <CodeBlock lang="bash">{`curl -X POST https://facilitator.fretchen.eu/verify \\
+          <p>
+            Checks the signature, the balance, the recipient and the expiry — off-chain, so it costs nothing. Call it
+            before you deliver.
+          </p>
+          <CodeBlock lang="bash">{`curl -X POST ${FACILITATOR}/verify \\
   -H "Content-Type: application/json" \\
   -d '{
-    "x402Version": 2,
-    "scheme": "exact",
-    "network": "eip155:10",
-    "payload": "<base64-encoded-payment>",
-    "details": {
+    "paymentPayload": { "...": "decoded PAYMENT-SIGNATURE header" },
+    "paymentRequirements": {
       "scheme": "exact",
       "network": "eip155:10",
       "amount": "100000",
-      "asset": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+      "asset": "${USDC_OPTIMISM}",
       "payTo": "0xYourSellerAddress"
     }
   }'`}</CodeBlock>
-            <p>
-              Response: <code>{`{ "isValid": true, "remainingSettlements": 87 }`}</code> or{" "}
-              <code>{`{ "isValid": false, "invalidReason": "..." }`}</code>. When a fee applies,{" "}
-              <code>remainingSettlements</code> tells the seller how many settlements their current USDC approval still
-              covers.
-            </p>
-          </div>
+          <p>
+            Answers <code>{`{ "isValid": true, "payer": "0x…", "remainingSettlements": 87 }`}</code>, or{" "}
+            <code>{`{ "isValid": false, "invalidReason": "…", "payer": "0x…" }`}</code>. Note that a rejected payment
+            still comes back as HTTP <code>200</code> — branch on <code>isValid</code>.{" "}
+            <code>remainingSettlements</code> is how many more settlements your current approval covers, and is omitted
+            when no fee applies.
+          </p>
 
           <h3>POST /settle</h3>
-          <div className={endpointBox}>
-            <p>
-              Executes the payment on-chain via EIP-3009 <code>transferWithAuthorization</code>. Call this{" "}
-              <strong>after</strong> successful verification and resource delivery.
-            </p>
-            <CodeBlock lang="bash">{`curl -X POST https://facilitator.fretchen.eu/settle \\
+          <p>
+            Submits the payment on-chain via EIP-3009 <code>transferWithAuthorization</code>. Call it after the resource
+            is delivered.
+          </p>
+          <CodeBlock lang="bash">{`curl -X POST ${FACILITATOR}/settle \\
   -H "Content-Type: application/json" \\
-  -d '{
-    "x402Version": 2,
-    "scheme": "exact",
-    "network": "eip155:10",
-    "payload": "<base64-encoded-payment>",
-    "details": {
-      "scheme": "exact",
-      "network": "eip155:10",
-      "amount": "100000",
-      "asset": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-      "payTo": "0xYourSellerAddress"
-    }
-  }'`}</CodeBlock>
-            <p>
-              Response: <code>{`{ "success": true, "txHash": "0x..." }`}</code>
-            </p>
-          </div>
+  -d '{ "paymentPayload": { }, "paymentRequirements": { } }'`}</CodeBlock>
+          <p>
+            Answers <code>{`{ "success": true, "payer": "0x…", "transaction": "0x…", "network": "eip155:10" }`}</code>,
+            plus a <code>fee</code> object when one was charged. The on-chain hash is <code>transaction</code>.
+          </p>
 
           <h3>GET /supported</h3>
-          <div className={endpointBox}>
-            <p>Returns supported networks, payment schemes, and fee configuration.</p>
-            <CodeBlock lang="bash">{`curl https://facilitator.fretchen.eu/supported`}</CodeBlock>
-            <p>
-              Returns a JSON object with <code>kinds</code> (supported network/scheme pairs), <code>extensions</code>{" "}
-              (advertised extension keys), <code>signers</code> (facilitator addresses per network),{" "}
-              <code>facilitatorFees</code> (fee amount and recipient, when a fee is configured), and <code>links</code>{" "}
-              (documentation and source, always present).
-            </p>
-          </div>
+          <p>
+            Networks, schemes and fees the facilitator currently accepts — the machine-readable version of this page.
+          </p>
+          <CodeBlock lang="bash">{`curl ${FACILITATOR}/supported`}</CodeBlock>
+          <p>
+            Answers <code>kinds</code> (network and scheme pairs), <code>extensions</code>, <code>signers</code> (the
+            facilitator address per network) and <code>facilitatorFees</code>.
+          </p>
 
           <h3>Payment scheme</h3>
           <p>
-            The facilitator supports the <strong>exact</strong> scheme with ERC-20 tokens (USDC) via{" "}
-            <a href="https://eips.ethereum.org/EIPS/eip-3009">EIP-3009</a> <code>transferWithAuthorization</code>. The
-            buyer signs an off-chain authorization — no gas required from the buyer. The facilitator submits the
-            transaction on-chain.
+            <strong>exact</strong>, with USDC, via <a href="https://eips.ethereum.org/EIPS/eip-3009">EIP-3009</a>{" "}
+            <code>transferWithAuthorization</code>. The buyer signs an authorization for one specific amount, recipient
+            and expiry, and pays no gas — the facilitator submits the transaction. Nothing here ever holds your
+            buyer&apos;s funds or gets blanket access to them.
           </p>
-
-          {/* ── 6. Full integration example ──────────────────────────────── */}
-
-          <h2>Server-side integration example</h2>
-
-          <p>Full example of a Node.js endpoint protected by x402. Adapt the resource generation to your use case:</p>
-          <CodeBlock lang="javascript">{`// Express / Node.js example
-app.post("/api/resource", async (req, res) => {
-  const paymentHeader = req.headers["payment-signature"];
-
-  // No payment → return 402 with requirements
-  if (!paymentHeader) {
-    return res.status(402).json({
-      x402Version: 2,
-      accepts: [{
-        scheme: "exact",
-        network: "eip155:10",
-        amount: "70000",  // 0.07 USDC
-        asset: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-        payTo: "0xYourSellerAddress",
-        maxTimeoutSeconds: 60,
-        extra: { name: "USD Coin", version: "2" }
-      }],
-      facilitatorUrl: "https://facilitator.fretchen.eu"
-    });
-  }
-
-  // Verify payment
-  const payload = paymentHeader;
-  const details = { scheme: "exact", network: "eip155:10",
-    amount: "70000",
-    asset: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-    payTo: "0xYourSellerAddress" };
-
-  const verifyRes = await fetch("https://facilitator.fretchen.eu/verify", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ x402Version: 2, scheme: "exact",
-      network: "eip155:10", payload, details })
-  });
-
-  const { valid, invalidReason } = await verifyRes.json();
-  if (!valid) return res.status(402).json({ error: invalidReason });
-
-  // Deliver resource
-  const result = await generateYourResource(req.body);
-
-  // Settle payment
-  await fetch("https://facilitator.fretchen.eu/settle", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ x402Version: 2, scheme: "exact",
-      network: "eip155:10", payload, details })
-  });
-
-  return res.json(result);
-});`}</CodeBlock>
-
-          {/* ── 7. Supported networks ────────────────────────────────────── */}
 
           <h2>Supported networks</h2>
 
@@ -490,68 +304,64 @@ app.post("/api/resource", async (req, res) => {
                 <th>Network</th>
                 <th>Chain ID</th>
                 <th>USDC address</th>
-                <th>Environment</th>
+                <th>EIP-712 name</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td>Optimism</td>
-                <td>eip155:10</td>
+                <td>
+                  <code>eip155:10</code>
+                </td>
                 <td>
                   <code>0x0b2C…Ff85</code>
                 </td>
-                <td>Production</td>
+                <td>
+                  <code>USD Coin</code>
+                </td>
               </tr>
               <tr>
                 <td>Base</td>
-                <td>eip155:8453</td>
+                <td>
+                  <code>eip155:8453</code>
+                </td>
                 <td>
                   <code>0x8335…2913</code>
                 </td>
-                <td>Production</td>
+                <td>
+                  <code>USD Coin</code>
+                </td>
               </tr>
               <tr>
                 <td>OP Sepolia</td>
-                <td>eip155:11155420</td>
+                <td>
+                  <code>eip155:11155420</code>
+                </td>
                 <td>
                   <code>0x5fd8…30D7</code>
                 </td>
-                <td>Testnet</td>
+                <td>
+                  <code>USDC</code>
+                </td>
               </tr>
               <tr>
                 <td>Base Sepolia</td>
-                <td>eip155:84532</td>
+                <td>
+                  <code>eip155:84532</code>
+                </td>
                 <td>
                   <code>0x036C…CF7e</code>
                 </td>
-                <td>Testnet</td>
+                <td>
+                  <code>USDC</code>
+                </td>
               </tr>
             </tbody>
           </table>
 
           <p>
-            All wallets that support WalletConnect work — MetaMask, Coinbase Wallet, Rainbow, and others. Your buyers
-            need a small amount of USDC on any supported network.
-          </p>
-
-          {/* ── 8. What your buyers experience ───────────────────────────── */}
-
-          <h2>What your buyers experience</h2>
-
-          <p>When a user interacts with your x402-protected service, the payment flow is invisible and instant:</p>
-          <ol>
-            <li>They make a request — your server responds with the price.</li>
-            <li>Their wallet asks them to sign a payment authorization — no funds leave yet.</li>
-            <li>The signed authorization is sent with the request.</li>
-            <li>You deliver the resource.</li>
-            <li>The payment settles on-chain — they receive the result.</li>
-          </ol>
-
-          <p>
-            Each payment is individually signed via <a href="https://eips.ethereum.org/EIPS/eip-3009">EIP-3009</a>. The
-            authorization is bound to a specific amount, recipient, and expiration. The protocol never has blanket
-            access to your buyer&apos;s funds. See <a href="/x402/buyers">what buyers see and how they call</a> your
-            endpoints for the buyer-side view.
+            For the other side of the same exchange — what your buyers sign and how they call you — see{" "}
+            <a href="/x402/buyers">x402 for buyers</a>.
           </p>
         </article>
       </ArticleShell>

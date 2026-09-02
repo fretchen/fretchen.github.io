@@ -189,5 +189,6 @@ describe("x402 /supported endpoint", () => {
 
     expect(capabilities.links.documentation).toMatch(/^https:\/\//);
     expect(capabilities.links.source).toMatch(/^https:\/\//);
+    expect(capabilities.links.openapi).toMatch(/^https:\/\//);
   });
 });

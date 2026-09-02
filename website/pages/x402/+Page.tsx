@@ -153,10 +153,10 @@ export default function Page() {
         <SequenceDiagram participants={rolesParticipants} steps={rolesSteps} />
 
         <p>
-          This site runs all three: a facilitator, two paid endpoints acting as sellers, and the buyers that call them
-          — the <Link href="/imagegen">AI Image Generator</Link> and the <Link href="/assistent">assistant</Link>,
-          which pay for every request you make from them. Because nothing here is gated, you can point your own seller
-          at that facilitator instead of running one yourself. Status: <SupportedStatus />
+          This site runs all three: a facilitator, two paid endpoints acting as sellers, and the buyers that call them —
+          the <Link href="/imagegen">AI Image Generator</Link> and the <Link href="/assistent">assistant</Link>, which
+          pay for every request you make from them. Because nothing here is gated, you can point your own seller at that
+          facilitator instead of running one yourself. Status: <SupportedStatus />
         </p>
 
         <CardList>

@@ -6,6 +6,7 @@ import {
   SequenceParticipant,
 } from "../../components/blog/SequenceDiagram";
 import { Card } from "../../components/Card";
+import { Link } from "../../components/Link";
 import { CardList } from "../../components/CardList";
 import * as styles from "../../layouts/shared";
 import { PageHeader } from "../../components/PageHeader";
@@ -23,7 +24,7 @@ import { prose } from "./shared.styles";
 
 const rolesParticipants: SequenceParticipant[] = [
   { id: "buyer", label: "Buyer" },
-  { id: "seller", labelLines: ["Seller", "(resource server)"] },
+  { id: "seller", label: "Seller" },
   { id: "facilitator", label: "Facilitator" },
 ];
 
@@ -129,7 +130,8 @@ export default function Page() {
           <a href="https://github.com/coinbase/x402">x402</a> revives the long-dormant HTTP{" "}
           <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/402">402 Payment Required</a>{" "}
           status code as a real payment protocol: pay per request, in stablecoin, verified and settled on-chain — no
-          accounts, no API keys, no invoices.
+          accounts, no API keys, no invoices. And it is <strong>permissionless</strong> — no allowlist, no registration:
+          anyone can run a seller, write a buyer client, or stand up a facilitator of their own.
         </p>
 
         <p>Every x402 exchange has three roles:</p>
@@ -139,7 +141,7 @@ export default function Page() {
             themselves.
           </li>
           <li>
-            <strong>Seller</strong> (the resource server) — sets a price, gets paid, delivers the resource.
+            <strong>Seller</strong> — sets a price, gets paid, delivers the resource.
           </li>
           <li>
             <strong>Facilitator</strong> — verifies the buyer&apos;s payment and settles it on-chain, so the buyer and
@@ -151,14 +153,10 @@ export default function Page() {
         <SequenceDiagram participants={rolesParticipants} steps={rolesSteps} />
 
         <p>
-          This site runs all three: a facilitator (below), two paid services acting as sellers, and the buyer-side
-          integrations that call them. Facilitator status: <SupportedStatus />
-        </p>
-
-        <p>
-          The protocol is <strong>permissionless</strong> — there is no allowlist, no registration. Anyone can run a
-          seller against this facilitator, or write a buyer client against these endpoints, or against any other x402
-          facilitator entirely.
+          This site runs all three: a facilitator, two paid services acting as sellers (the{" "}
+          <Link href="/imagegen">AI Image Generator</Link> and the <Link href="/assistent">assistant</Link>), and the
+          buyer-side integrations that call them. Because nothing here is gated, you can point your own seller at that
+          facilitator instead of running one yourself. Status: <SupportedStatus />
         </p>
 
         <CardList>

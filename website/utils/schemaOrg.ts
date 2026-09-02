@@ -1,4 +1,8 @@
+import type { PageContext } from "vike/types";
 import type { BlogPost } from "../types/BlogPost";
+import { extractLocale } from "../locales/extractLocale";
+import { defaultLocale } from "../locales/locales";
+import { getCanonicalUrl, getPageUrl } from "./pageContext";
 import { SITE, getPersonSchema } from "./siteData";
 
 /**
@@ -49,6 +53,95 @@ export function generateBreadcrumbSchema(items: Array<{ name: string; url: strin
       item: item.url,
     })),
   };
+}
+
+/**
+ * Display names for every path that can appear as a breadcrumb ancestor.
+ *
+ * Keyed by the locale-stripped path without a trailing slash. A path that is not
+ * listed here contributes no breadcrumb node unless it is the leaf, in which case
+ * `buildBreadcrumbTrail`'s `leafName` supplies the label — that is how `@id` pages
+ * (`/blog/14`, `/quantum/basics/3`) get named after their post title.
+ */
+const SECTION_LABELS: Record<string, string> = {
+  "/blog": "Blog",
+  "/lab": "Lab",
+  "/x402": "x402",
+  "/x402/buyers": "x402 for Buyers",
+  "/x402/sellers": "x402 for Sellers",
+  "/quantum": "Quantum Lectures",
+  "/quantum/basics": "Quantum Basics",
+  "/quantum/amo": "AMO - Atomic, Molecular & Optical Physics",
+  "/quantum/qml": "Quantum Machine Learning",
+  "/quantum/hardware": "Quantum Hardware",
+};
+
+/**
+ * Derives a page's full breadcrumb trail from its URL.
+ *
+ * Every ancestor node is built from the *ancestor's* own path, which is the point:
+ * the trails used to be hand-copied into each page's head, and drift had already
+ * produced a node labelled "x402" whose URL was the sellers page. The trail also
+ * follows the URL's locale, so a `/de/` page links to its German ancestors, and it
+ * reuses the trailing-slash normalisation from `extractLocale` so the URLs match the
+ * canonical tags (GitHub Pages only serves the trailing-slash form).
+ *
+ * @param urlPathname - Raw pathname including any locale prefix, from `getPageUrl()`
+ * @param leafName - Name for the final node when the path itself has no label (e.g. a post title)
+ * @returns Schema.org BreadcrumbList object
+ */
+export function buildBreadcrumbTrail(urlPathname: string, leafName?: string) {
+  const { locale, urlPathnameWithoutLocale } = extractLocale(urlPathname);
+  const localePrefix = locale === defaultLocale ? "" : `/${locale}`;
+
+  const segments = urlPathnameWithoutLocale.split("/").filter(Boolean);
+  const items = [{ name: "Home", url: `${SITE.url}${localePrefix}/` }];
+
+  let path = "";
+  segments.forEach((segment, index) => {
+    path += `/${segment}`;
+    const isLeaf = index === segments.length - 1;
+    const name = (isLeaf && leafName) || SECTION_LABELS[path];
+    if (!name) return;
+    items.push({ name, url: `${SITE.url}${localePrefix}${path}/` });
+  });
+
+  return generateBreadcrumbSchema(items);
+}
+
+/**
+ * Structured data for any single post or lecture page (`@id` routes).
+ *
+ * Every one of these pages wants the same two things — a BlogPosting for the post and a
+ * breadcrumb trail ending in its title — so they share one builder rather than five copies
+ * of the same `pageContext.data` guard.
+ */
+export function buildPostStructuredData(pageContext: PageContext) {
+  const data = pageContext.data;
+  if (!data || typeof data !== "object" || !("blog" in data) || !data.blog) return [];
+
+  const { blog } = data as { blog: BlogPost };
+
+  return [
+    generateBlogPostingSchema(blog, getCanonicalUrl(pageContext), blog.nftMetadata?.imageUrl),
+    buildBreadcrumbTrail(getPageUrl(pageContext), blog.title),
+  ];
+}
+
+/**
+ * Structured data for a page listing posts or lectures (`/blog`, `/quantum/basics`, …):
+ * a CollectionPage over the listed entries, plus the breadcrumb trail.
+ */
+export function buildCollectionStructuredData(pageContext: PageContext, name: string, description: string) {
+  const data = pageContext.data;
+  if (!data || typeof data !== "object" || !("blogs" in data) || !data.blogs) return [];
+
+  const { blogs } = data as { blogs: BlogPost[] };
+
+  return [
+    { ...generateBlogCollectionSchema(getCanonicalUrl(pageContext), blogs), name, description },
+    buildBreadcrumbTrail(getPageUrl(pageContext)),
+  ];
 }
 
 /**

@@ -26,8 +26,8 @@ const LabPage: React.FC = () => {
         />
 
         <Card
-          title="x402 Facilitator"
-          description="Independent facilitator on Optimism and Base — accept crypto payments as a seller, or pay for services as a buyer."
+          title="x402"
+          description="Pay per request, verified and settled on-chain — no accounts, no signup. This site runs all three roles: buyer, seller, and the facilitator connecting them."
           link="/x402"
         />
 

@@ -1,6 +1,6 @@
 import React, { useRef } from "react";
-import { css } from "../../../styled-system/css";
 import { CodeBlock } from "../../../components/CodeBlock";
+import { SpecParamTable } from "../../../components/SpecParamTable";
 import * as styles from "../../../layouts/shared";
 import { ArticleShell } from "../../../components/ArticleShell";
 import { TableOfContents } from "../../../components/TableOfContents";
@@ -8,13 +8,8 @@ import { Link } from "../../../components/Link";
 import { PageHeader } from "../../../components/PageHeader";
 import { prose, table } from "../shared.styles";
 
-const endpointBox = css({
-  backgroundColor: "codeBg",
-  border: "1px solid token(colors.border, #e5e7eb)",
-  borderRadius: "lg",
-  padding: "4",
-  marginBottom: "4",
-});
+const IMAGEGEN_SPEC_URL = "https://imagegen-agent.fretchen.eu/openapi.json";
+const LLM_SPEC_URL = "https://llm-agent.fretchen.eu/openapi.json";
 
 export default function Page() {
   const contentRef = useRef<HTMLElement>(null!);
@@ -27,17 +22,24 @@ export default function Page() {
       >
         <article ref={contentRef} className={prose}>
           <p>
-            Two services run behind this facilitator, each on a different x402 scheme. Both are called the same way — no
-            accounts, no API keys, no manual approval step before your first request. This page shows the client-side
-            TypeScript for both.
+            Two services run on this website , each on a different x402 scheme. Both are called through x402 and no
+            accounts, no API keys, no manual approval step before your first request. This page assumes you&apos;re
+            writing a Node or TypeScript client — a script or backend holding its own private key, not a browser wallet
+            flow — and shows the client-side code for both.
           </p>
 
           <h2>What you need</h2>
           <ul>
-            <li>An EVM wallet (or a private key, for a server-side/script client).</li>
-            <li>A small amount of USDC on Optimism or Base — a few cents covers many requests.</li>
             <li>
-              <code>npm install @x402/core @x402/evm @x402/fetch viem</code>
+              <strong>An EVM wallet</strong> — Optimism and Base are Ethereum layer-2 networks, so any Ethereum wallet
+              works — or just a private key, for a script.
+            </li>
+            <li>
+              <strong>A small amount of USDC</strong> (a dollar stablecoin) on Optimism or Base — a few cents covers
+              many requests. No ETH needed: you pay no gas, the facilitator submits every transaction.
+            </li>
+            <li>
+              <code>npm install @x402/evm @x402/fetch viem</code>
             </li>
           </ul>
 
@@ -86,11 +88,10 @@ export default function Page() {
           </p>
 
           <h2>TypeScript — exact scheme (image generation)</h2>
-          <div className={endpointBox}>
-            <p>
-              The official <code>@x402/fetch</code> SDK handles the 402 → sign → retry cycle for you:
-            </p>
-            <CodeBlock lang="typescript">{`import { x402Client, wrapFetchWithPayment } from "@x402/fetch";
+          <p>
+            The official <code>@x402/fetch</code> SDK handles the 402 → sign → retry cycle for you:
+          </p>
+          <CodeBlock lang="typescript">{`import { x402Client, wrapFetchWithPayment } from "@x402/fetch";
 import { registerExactEvmScheme } from "@x402/evm/exact/client";
 import { privateKeyToAccount } from "viem/accounts";
 
@@ -111,18 +112,24 @@ const response = await fetchWithPayment(
 );
 
 const result = await response.json();
-console.log("Image:", result.imageUrl);
-console.log("NFT:", result.tokenId);`}</CodeBlock>
-          </div>
+console.log("Image:", result.image_url);
+console.log("NFT mint tx:", result.transaction_hash);`}</CodeBlock>
+          <SpecParamTable specUrl={IMAGEGEN_SPEC_URL} schemaName="ImageGenerationResponse" caption="Response body" />
 
           <h2>TypeScript — batch-settlement (chat)</h2>
-          <div className={endpointBox}>
-            <p>
-              batch-settlement has no <code>registerExactEvmScheme</code>-style helper — the scheme is constructed
-              directly with a signer and a channel store. The first call opens the channel (one on-chain deposit); every
-              call after that signs an off-chain voucher and settles instantly:
-            </p>
-            <CodeBlock lang="typescript">{`import { x402Client, wrapFetchWithPayment } from "@x402/fetch";
+          <p>
+            Unlike <code>exact</code>, this needs one network picked up front —{" "}
+            <code>client.register(network, scheme)</code> below — because the channel it opens is specific to one chain.{" "}
+            <code>registerExactEvmScheme</code> above has no such call because it can act on whichever network the 402
+            response names.
+          </p>
+          <p>
+            batch-settlement has no <code>registerExactEvmScheme</code>-style helper — the scheme is constructed
+            directly with a signer and a channel store. The first call opens the channel: a deposit sized to cover
+            several messages, not just one, so it moves more than the per-message price. Every call after that signs an
+            off-chain voucher and settles instantly — no deposit, no wallet prompt:
+          </p>
+          <CodeBlock lang="typescript">{`import { x402Client, wrapFetchWithPayment } from "@x402/fetch";
 import { BatchSettlementEvmScheme, InMemoryClientChannelStorage }
   from "@x402/evm/batch-settlement/client";
 import { privateKeyToAccount } from "viem/accounts";
@@ -137,7 +144,7 @@ const storage = new InMemoryClientChannelStorage();
 const scheme = new BatchSettlementEvmScheme(signer, { storage });
 
 const client = new x402Client();
-client.register("eip155:8453", scheme); // Base — see the network table below
+client.register("eip155:8453", scheme); // Base, in CAIP-2 eip155:<chainId> form
 
 const fetchWithPayment = wrapFetchWithPayment(fetch, client);
 
@@ -153,13 +160,14 @@ const response = await fetchWithPayment("https://llm-agent.fretchen.eu", {
 
 const result = await response.json();
 console.log(result.choices[0].message.content);`}</CodeBlock>
-            <p>
-              The batch-settlement contract is deployed on <strong>Base</strong> (mainnet and Sepolia) and{" "}
-              <strong>Optimism mainnet</strong> — not Optimism Sepolia. Check{" "}
-              <code>llm-agent.fretchen.eu/openapi.json</code> for the live, authoritative list of what the agent
-              actually accepts.
-            </p>
-          </div>
+          <SpecParamTable specUrl={LLM_SPEC_URL} schemaName="LLMChatRequest" caption="Request body" />
+          <SpecParamTable specUrl={LLM_SPEC_URL} schemaName="LLMChatResponse" caption="Response body" />
+          <p>
+            The batch-settlement contract is deployed on <strong>Base</strong> (mainnet and Sepolia) and{" "}
+            <strong>Optimism mainnet</strong> — not Optimism Sepolia. Check{" "}
+            <code>llm-agent.fretchen.eu/openapi.json</code> for the live, authoritative list of what the agent actually
+            accepts.
+          </p>
 
           <h2>What&apos;s protected, what isn&apos;t</h2>
           <p>
@@ -167,6 +175,11 @@ console.log(result.choices[0].message.content);`}</CodeBlock>
             (exact) or the batch-settlement channel&apos;s voucher scheme. Every authorization is bound to a specific
             amount, recipient, and expiration — the protocol never has blanket access to your funds. A batch-settlement
             channel escrows only what you deposit; a voucher can never claim more than that.
+          </p>
+          <p>
+            Unspent escrow is not gone: a batch-settlement channel is withdrawable after a delay (currently ~24 hours in
+            this facilitator&apos;s deployment) if you stop using it. See <code>x402_batch_settlement_buyer.ipynb</code>{" "}
+            below for the withdrawal mechanics.
           </p>
 
           <h2>Try it without writing code</h2>

@@ -5,11 +5,10 @@ import { AgentChecker } from "../../components/AgentChecker";
 import { ArticleShell } from "../../components/ArticleShell";
 import { TableOfContents } from "../../components/TableOfContents";
 import { CommentsSection } from "../../components/CommentsSection";
-import { ParamTable } from "../../components/ParamTable";
+import { SpecParamTable } from "../../components/SpecParamTable";
 import { Foldable } from "../../components/Foldable";
 import { CodeBlock } from "../../components/CodeBlock";
 import MermaidDiagram from "../../components/MermaidDiagram";
-import { useOpenApiSpec } from "../../hooks/useOpenApiSpec";
 import { PageHeader } from "../../components/PageHeader";
 import { Link } from "../../components/Link";
 
@@ -142,32 +141,26 @@ function Challenge({ title, children }: { title: string; children: React.ReactNo
   );
 }
 
+// The LLM agent scales to zero, unlike the facilitator — worth telling a reader who
+// hits the load-failure state, so both tables below carry it.
+const SCALES_TO_ZERO_HINT = "the service scales to zero, so it may be waking up";
+
 /** Request/response parameter tables, rendered from the live spec. */
 function ApiReference() {
-  const { spec, isLoading, error } = useOpenApiSpec(SPEC_URL);
-  const schemas = spec?.components?.schemas;
-
-  if (isLoading) {
-    return <p className={css({ fontSize: "sm", color: "gray.500" })}>Loading the live spec…</p>;
-  }
-
-  if (error || !schemas) {
-    return (
-      <p className={css({ fontSize: "sm", color: "gray.600" })}>
-        Couldn&apos;t load the live spec right now (the service scales to zero, so it may be waking up). Read it
-        directly at{" "}
-        <a href={SPEC_URL} target="_blank" rel="noopener noreferrer">
-          {SPEC_URL}
-        </a>
-        .
-      </p>
-    );
-  }
-
   return (
     <div>
-      <ParamTable schema={schemas.LLMChatRequest} caption="Request body" />
-      <ParamTable schema={schemas.LLMChatResponse} caption="Response body (HTTP 200)" />
+      <SpecParamTable
+        specUrl={SPEC_URL}
+        schemaName="LLMChatRequest"
+        caption="Request body"
+        notLoadedHint={SCALES_TO_ZERO_HINT}
+      />
+      <SpecParamTable
+        specUrl={SPEC_URL}
+        schemaName="LLMChatResponse"
+        caption="Response body (HTTP 200)"
+        notLoadedHint={SCALES_TO_ZERO_HINT}
+      />
       <p className={css({ fontSize: "sm", color: "gray.500" })}>
         These tables are generated from the live{" "}
         <a href={SPEC_URL} target="_blank" rel="noopener noreferrer">

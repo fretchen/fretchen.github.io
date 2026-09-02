@@ -7,6 +7,7 @@ import {
 } from "../../../components/blog/SequenceDiagram";
 import { FacilitatorApproval } from "../../../components/FacilitatorApproval";
 import { CodeBlock } from "../../../components/CodeBlock";
+import { SpecParamTable } from "../../../components/SpecParamTable";
 import * as styles from "../../../layouts/shared";
 import { ArticleShell } from "../../../components/ArticleShell";
 import { TableOfContents } from "../../../components/TableOfContents";
@@ -25,6 +26,7 @@ import { prose, table } from "../shared.styles";
 const USDC_OPTIMISM = "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85";
 const USDC_OP_SEPOLIA = "0x5fd84259d66Cd46123540766Be93DFE6D43130D7";
 const FACILITATOR = "https://facilitator.fretchen.eu";
+const SPEC_URL = `${FACILITATOR}/openapi.json`;
 
 // Three participants, not four: the seller never touches the chain, so a Blockchain lane would
 // draw a round-trip they cannot act on. Unnumbered — reading order already carries sequence.
@@ -63,9 +65,10 @@ export default function Page() {
       >
         <article ref={contentRef} className={prose}>
           <p>
-            Charge for your API in USDC, per request, with no accounts and no signup. This is an independent{" "}
-            <a href="https://docs.x402.org">x402</a> facilitator: it verifies payments and settles them on-chain so your
-            server never has to touch a blockchain.
+            Charge for your API in USDC, per request, with no accounts and no signup. A facilitator running at{" "}
+            <code>facilitator.fretchen.eu</code> verifies each payment and settles it on-chain, so your server never has
+            to touch a blockchain directly. I run it, but as the whole protocol is open and permissionless you can use
+            it too.
           </p>
 
           <ul>
@@ -79,11 +82,31 @@ export default function Page() {
               <strong>Open source and self-hostable</strong> — no lock-in. If this facilitator goes away, the code and
               your integration both still work.
             </li>
-            <li>
-              <strong>An experiment</strong> — can an independent facilitator pay for itself? That is the open question,
-              and you are welcome to be part of the answer.
-            </li>
           </ul>
+
+          <h2>What you&apos;ll need</h2>
+
+          <ul>
+            <li>A server you can run code on, and an endpoint worth charging for.</li>
+            <li>
+              <strong>An EVM wallet</strong> — Optimism and Base are Ethereum layer-2 networks, so any Ethereum wallet
+              works. This address receives the payments.
+            </li>
+            <li>
+              <strong>A little ETH</strong> on that network, for one transaction: the approval below. Nothing after
+              that.
+            </li>
+            <li>
+              <strong>About 1 USDC</strong> of allowance for fees — USDC is a dollar stablecoin, pegged 1:1 to the US
+              dollar. That covers roughly 100 settlements.
+            </li>
+            <li>To rehearse on testnet: testnet ETH and a buyer holding testnet USDC — see below.</li>
+          </ul>
+
+          <p>
+            The buyer pays no gas — they sign, they do not transact. The facilitator pays the gas to settle. You pay gas
+            exactly once, for the approval below.
+          </p>
 
           <h2>Quick start</h2>
 
@@ -97,8 +120,10 @@ export default function Page() {
           <h3>1. Return a 402 with your price</h3>
           <p>
             When a request arrives without payment, answer <code>402</code> and say what you want. Set{" "}
-            <code>payTo</code> to your wallet and <code>amount</code> in USDC units — 6 decimals, so <code>100000</code>{" "}
-            is $0.10.
+            <code>scheme</code> to <code>exact</code> — x402&apos;s word for how the money moves; this one settles one
+            authorized amount, once, per request. Set <code>network</code> to <code>eip155:10</code> (Optimism, in the
+            standard <code>eip155:&lt;chainId&gt;</code> form), <code>payTo</code> to your wallet, and{" "}
+            <code>amount</code> in USDC units — 6 decimals, so <code>100000</code> is $0.10.
           </p>
           <CodeBlock lang="json">{`{
   "x402Version": 2,
@@ -116,10 +141,11 @@ export default function Page() {
 
           <h3>2. Approve the facilitator for the fee</h3>
           <p>
-            The fee is collected after settlement with ERC-20 <code>transferFrom</code>, so the facilitator needs an
-            allowance. Keep it small — about 1 USDC, roughly 100 settlements. The spender is a hot settlement wallet,
-            and a large standing allowance is a standing risk. Every <code>/verify</code> response tells you how many
-            settlements you have left, so you can top up before it runs out.
+            The fee is collected after settlement with <a href="https://eips.ethereum.org/EIPS/eip-20">ERC-20</a>{" "}
+            <code>transferFrom</code>, so the facilitator needs an allowance. Keep it small — about 1 USDC, roughly 100
+            settlements. The spender is a hot settlement wallet, and a large standing allowance is a standing risk.
+            Every <code>/verify</code> response tells you how many settlements you have left, so you can top up before
+            it runs out.
           </p>
           <FacilitatorApproval showTestnets />
 
@@ -162,7 +188,14 @@ return new Response(JSON.stringify(result), { status: 200 });`}</CodeBlock>
             you will ship. Pick the testnet in the approval widget above.
           </p>
 
-          <p>Three values change, and the third one is a trap worth knowing about:</p>
+          <p>
+            You will need <strong>testnet ETH</strong> to send the approval — get some from the{" "}
+            <a href="https://console.optimism.io/faucet">Superchain faucet</a>. Your test buyer needs{" "}
+            <strong>testnet USDC</strong> to pay you with — <a href="https://faucet.circle.com">Circle&apos;s faucet</a>{" "}
+            covers both OP Sepolia and Base Sepolia.
+          </p>
+
+          <p>Three values change:</p>
           <CodeBlock lang="json">{`{
   "network": "eip155:11155420",
   "asset": "${USDC_OP_SEPOLIA}",
@@ -186,115 +219,51 @@ return new Response(JSON.stringify(result), { status: 200 });`}</CodeBlock>
           <h2>Fee model</h2>
 
           <p>
-            A <strong>flat 0.01 USDC per settlement</strong>, taken after the payment succeeds. No percentage, no
-            monthly minimum. The amount and the facilitator&apos;s address are advertised in <code>/supported</code>{" "}
-            under <code>facilitatorFees</code>, so a client can read them rather than trust this page.
+            0.01 USDC per settlement, flat, taken after the payment succeeds — no percentage, no minimum. On a $0.07
+            request that is about 14%; on a $1 request, 1%. Card processors start around $0.30 per transaction, so they
+            can&apos;t price a seven-cent request at all — a flat fee can.
           </p>
 
-          <table className={table}>
-            <thead>
-              <tr>
-                <th>Your price</th>
-                <th>Fee here</th>
-                <th>Effective rate</th>
-                <th>Stripe (2.9% + $0.30)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>$0.07</td>
-                <td>$0.01</td>
-                <td>14.3%</td>
-                <td>impossible — below the minimum</td>
-              </tr>
-              <tr>
-                <td>$0.50</td>
-                <td>$0.01</td>
-                <td>2.0%</td>
-                <td>$0.31 (62.9%)</td>
-              </tr>
-              <tr>
-                <td>$1.00</td>
-                <td>$0.01</td>
-                <td>1.0%</td>
-                <td>$0.33 (32.9%)</td>
-              </tr>
-              <tr>
-                <td>$10.00</td>
-                <td>$0.01</td>
-                <td>0.1%</td>
-                <td>$0.59 (5.9%)</td>
-              </tr>
-            </tbody>
-          </table>
-
           <p>
-            A flat fee is the wrong shape above roughly $10 and the right shape below $1 — which is the range where card
-            processors either refuse the payment or eat most of it.
+            The amount and the facilitator&apos;s address are advertised in <code>/supported</code> under{" "}
+            <code>facilitatorFees</code>, so a client can read them rather than trust this page.
           </p>
 
           <h2>API reference</h2>
 
           <p>
             Three endpoints at <code>facilitator.fretchen.eu</code>. Both POST endpoints take the same body:{" "}
-            <code>paymentPayload</code> and <code>paymentRequirements</code>.
+            <code>paymentPayload</code> and <code>paymentRequirements</code>. The only scheme supported is{" "}
+            <strong>exact</strong>, with USDC, via <a href="https://eips.ethereum.org/EIPS/eip-3009">EIP-3009</a>{" "}
+            <code>transferWithAuthorization</code>: the buyer signs an authorization for one specific amount, recipient
+            and expiry, and pays no gas — the facilitator submits the transaction. Nothing here ever holds your
+            buyer&apos;s funds or gets blanket access to them.
           </p>
+
+          <SpecParamTable
+            specUrl={SPEC_URL}
+            schemaName="PaymentRequest"
+            caption="Request body — both /verify and /settle"
+          />
 
           <h3>POST /verify</h3>
           <p>
             Checks the signature, the balance, the recipient and the expiry — off-chain, so it costs nothing. Call it
-            before you deliver.
+            before you deliver. Note that a rejected payment still comes back as HTTP <code>200</code> — branch on{" "}
+            <code>isValid</code>, not the status code.
           </p>
-          <CodeBlock lang="bash">{`curl -X POST ${FACILITATOR}/verify \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "paymentPayload": { "...": "decoded PAYMENT-SIGNATURE header" },
-    "paymentRequirements": {
-      "scheme": "exact",
-      "network": "eip155:10",
-      "amount": "100000",
-      "asset": "${USDC_OPTIMISM}",
-      "payTo": "0xYourSellerAddress"
-    }
-  }'`}</CodeBlock>
-          <p>
-            Answers <code>{`{ "isValid": true, "payer": "0x…", "remainingSettlements": 87 }`}</code>, or{" "}
-            <code>{`{ "isValid": false, "invalidReason": "…", "payer": "0x…" }`}</code>. Note that a rejected payment
-            still comes back as HTTP <code>200</code> — branch on <code>isValid</code>.{" "}
-            <code>remainingSettlements</code> is how many more settlements your current approval covers, and is omitted
-            when no fee applies.
-          </p>
+          <SpecParamTable specUrl={SPEC_URL} schemaName="VerifyResponse" caption="Response body" />
 
           <h3>POST /settle</h3>
           <p>
             Submits the payment on-chain via EIP-3009 <code>transferWithAuthorization</code>. Call it after the resource
-            is delivered.
+            is delivered. The on-chain hash comes back as <code>transaction</code>.
           </p>
-          <CodeBlock lang="bash">{`curl -X POST ${FACILITATOR}/settle \\
-  -H "Content-Type: application/json" \\
-  -d '{ "paymentPayload": { }, "paymentRequirements": { } }'`}</CodeBlock>
-          <p>
-            Answers <code>{`{ "success": true, "payer": "0x…", "transaction": "0x…", "network": "eip155:10" }`}</code>,
-            plus a <code>fee</code> object when one was charged. The on-chain hash is <code>transaction</code>.
-          </p>
+          <SpecParamTable specUrl={SPEC_URL} schemaName="SettleResponse" caption="Response body" />
 
           <h3>GET /supported</h3>
-          <p>
-            Networks, schemes and fees the facilitator currently accepts — the machine-readable version of this page.
-          </p>
-          <CodeBlock lang="bash">{`curl ${FACILITATOR}/supported`}</CodeBlock>
-          <p>
-            Answers <code>kinds</code> (network and scheme pairs), <code>extensions</code>, <code>signers</code> (the
-            facilitator address per network) and <code>facilitatorFees</code>.
-          </p>
-
-          <h3>Payment scheme</h3>
-          <p>
-            <strong>exact</strong>, with USDC, via <a href="https://eips.ethereum.org/EIPS/eip-3009">EIP-3009</a>{" "}
-            <code>transferWithAuthorization</code>. The buyer signs an authorization for one specific amount, recipient
-            and expiry, and pays no gas — the facilitator submits the transaction. Nothing here ever holds your
-            buyer&apos;s funds or gets blanket access to them.
-          </p>
+          <p>Networks, schemes and fees the facilitator currently accepts.</p>
+          <SpecParamTable specUrl={SPEC_URL} schemaName="SupportedResponse" caption="Response body" />
 
           <h2>Supported networks</h2>
 

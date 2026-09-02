@@ -193,12 +193,6 @@ console.log(result.choices[0].message.content);`}</CodeBlock>
             <Link href="/assistent">AI Assistant</Link>.
           </p>
 
-          <h2>Other languages</h2>
-          <p>
-            TypeScript is what the official SDK (<code>@x402/fetch</code>, <code>@x402/evm</code>) supports today. A
-            Python client is on the list, not built yet — the raw protocol is plain HTTP and EIP-712 signing, so nothing
-            here is TypeScript-specific in principle.
-          </p>
         </article>
       </ArticleShell>
     </div>

@@ -34,12 +34,12 @@ export default function Head() {
       },
       {
         "@type": "WebPage",
-        name: "x402 Payments & Facilitator",
+        name: "x402",
         url: "https://www.fretchen.eu/x402",
       },
       {
         "@type": "WebPage",
-        name: "Agent Onboarding",
+        name: "Selling LLM Access with x402",
         url: "https://www.fretchen.eu/agent-onboarding",
       },
     ],

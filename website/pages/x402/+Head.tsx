@@ -10,10 +10,10 @@ export default function Head() {
   const title = getTitle();
   const description = getDescription();
 
-  const pageSchema = {
+  const collectionSchema = {
     "@context": "https://schema.org",
-    "@type": "TechArticle",
-    name: "x402 Facilitator — Accept Crypto Payments",
+    "@type": "CollectionPage",
+    name: "x402",
     description,
     url,
     author: {
@@ -21,16 +21,23 @@ export default function Head() {
       name: "fretchen",
       url: "https://www.fretchen.eu",
     },
-    about: {
-      "@type": "Thing",
-      name: "x402 Payment Protocol",
-      url: "https://github.com/coinbase/x402",
-    },
+    hasPart: [
+      {
+        "@type": "WebPage",
+        name: "x402 for Sellers",
+        url: "https://www.fretchen.eu/x402/sellers",
+      },
+      {
+        "@type": "WebPage",
+        name: "x402 for Buyers",
+        url: "https://www.fretchen.eu/x402/buyers",
+      },
+    ],
   };
 
   const breadcrumbSchema = generateBreadcrumbSchema([
     { name: "Home", url: "https://www.fretchen.eu" },
-    { name: "x402 Facilitator", url },
+    { name: "x402", url },
   ]);
 
   return (
@@ -38,14 +45,14 @@ export default function Head() {
       <meta name="description" content={description} />
       <link rel="canonical" href={url} />
 
-      <meta property="og:type" content="article" />
+      <meta property="og:type" content="website" />
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
       <meta property="og:url" content={url} />
 
       <meta name="twitter:card" content="summary_large_image" />
 
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(pageSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
     </>
   );

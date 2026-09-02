@@ -30,7 +30,7 @@ export default function Head() {
 
   const breadcrumbSchema = generateBreadcrumbSchema([
     { name: "Home", url: "https://www.fretchen.eu" },
-    { name: "x402 Facilitator", url: "https://www.fretchen.eu/x402" },
+    { name: "x402", url: "https://www.fretchen.eu/x402" },
     { name: "x402 for Buyers", url },
   ]);
 

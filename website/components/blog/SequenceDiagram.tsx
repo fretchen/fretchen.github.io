@@ -39,16 +39,25 @@ interface SequenceDiagramProps {
 }
 
 const VIEW_WIDTH = 640;
-const MARGIN_X = 70;
+const MARGIN_X = 80;
 const HEADER_H = 56;
 const FOOTER_PAD = 16;
 const MESSAGE_ROW_H = 46;
 const NOTE_ROW_H = 44;
 const BOX_H = 40;
+const BOX_MAX_W = 140;
 const NOTE_H = 30;
 const NOTE_PAD = 40;
+const EDGE_PAD = 10;
 const LABEL_OFFSET = 8;
 const ARROWHEAD_ID = "sequenceDiagramArrowhead";
+
+/** Clamps a box/note's [x, x+width] span to stay inside the viewBox, edges included. */
+function clampSpan(x1: number, x2: number): [number, number] {
+  const w = x2 - x1;
+  const clampedX1 = Math.max(EDGE_PAD, Math.min(x1, VIEW_WIDTH - EDGE_PAD - w));
+  return [clampedX1, clampedX1 + w];
+}
 
 /**
  * Minimal hand-rolled replacement for mermaid's `sequenceDiagram` — a plain participant/
@@ -71,7 +80,8 @@ export function SequenceDiagram({ participants, steps, title }: SequenceDiagramP
   const totalHeight = contentBottom + FOOTER_PAD;
 
   const stroke = token("colors.border");
-  const boxFill = token("colors.surface");
+  const boxFill = token("colors.background");
+  const boxStroke = token("colors.gray.400");
   const arrowStroke = token("colors.gray.700");
   const text = token("colors.text");
   const textMuted = token("colors.textMuted");
@@ -82,9 +92,12 @@ export function SequenceDiagram({ participants, steps, title }: SequenceDiagramP
       className={css({
         margin: "20px 0",
         padding: "5",
-        backgroundColor: "codeBg",
+        // Explore-territory wash, matching the interactive figure widgets
+        // (QuantumPDCircuit.tsx, DiversificationRandomWalk.tsx) rather than the neutral
+        // `codeBg` MermaidDiagram uses — this is a figure, not a code block.
+        backgroundColor: "rgba(123, 63, 160, 0.04)",
         borderRadius: "lg",
-        border: "1px solid {colors.border}",
+        border: "1px solid rgba(123, 63, 160, 0.15)",
         textAlign: "center",
       })}
     >
@@ -135,17 +148,11 @@ export function SequenceDiagram({ participants, steps, title }: SequenceDiagramP
         {participants.map((p) => {
           const lines = p.labelLines ?? [p.label ?? ""];
           const cx = idToX[p.id];
+          const boxW = Math.min(colGap - 16, BOX_MAX_W);
+          const [boxX] = clampSpan(cx - boxW / 2, cx + boxW / 2);
           return (
             <g key={p.id}>
-              <rect
-                x={cx - colGap / 2 + 8}
-                y={0}
-                width={colGap - 16}
-                height={BOX_H}
-                rx={4}
-                fill={boxFill}
-                stroke={stroke}
-              />
+              <rect x={boxX} y={0} width={boxW} height={BOX_H} rx={4} fill={boxFill} stroke={boxStroke} />
               <text
                 x={cx}
                 y={BOX_H / 2}
@@ -168,11 +175,13 @@ export function SequenceDiagram({ participants, steps, title }: SequenceDiagramP
         {/* Steps: messages and notes, in sequence order. */}
         {rows.map(({ step, y: rowY }, i) => {
           if (step.kind === "note") {
-            const x1 = Math.min(idToX[step.from], idToX[step.to]) - NOTE_PAD;
-            const x2 = Math.max(idToX[step.from], idToX[step.to]) + NOTE_PAD;
+            const [x1, x2] = clampSpan(
+              Math.min(idToX[step.from], idToX[step.to]) - NOTE_PAD,
+              Math.max(idToX[step.from], idToX[step.to]) + NOTE_PAD,
+            );
             return (
               <g key={i}>
-                <rect x={x1} y={rowY} width={x2 - x1} height={NOTE_H} rx={4} fill={boxFill} stroke={stroke} />
+                <rect x={x1} y={rowY} width={x2 - x1} height={NOTE_H} rx={4} fill={boxFill} stroke={boxStroke} />
                 <text
                   x={(x1 + x2) / 2}
                   y={rowY + NOTE_H / 2}

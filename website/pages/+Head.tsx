@@ -67,9 +67,16 @@ export default function HeadDefault() {
 
       <meta httpEquiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'" />
 
-      {/* Schema.org JSON-LD from the page's +structuredData.ts */}
+      {/* Schema.org JSON-LD from the page's +structuredData.ts.
+          Passed as a text child rather than through dangerouslySetInnerHTML: React does not
+          HTML-escape script children, so the JSON survives verbatim, and it rewrites the one
+          sequence that would end the tag early — a closing script tag inside a post title
+          comes out with its "s" as a s escape, which parses back to the same string.
+          dangerouslySetInnerHTML would emit it literally and truncate the document. */}
       {structuredData.map((schema, index) => (
-        <script key={index} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+        <script key={index} type="application/ld+json">
+          {JSON.stringify(schema)}
+        </script>
       ))}
 
       {/* umami analytics script - disabled when VITE_DISABLE_ANALYTICS is set */}

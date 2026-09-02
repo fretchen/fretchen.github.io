@@ -1,16 +1,22 @@
 /**
  * HeadDefault Component Tests
  *
- * Tests the <head> tag generation for SEO, specifically:
- * - Canonical tags point to the correct language version
- * - hreflang alternate tags only reference OTHER languages (no self-reference)
- * - x-default always points to English version
+ * Covers the <head> tags that decide how Google treats the /de/ URLs:
+ * - hreflang is declared ONLY for genuinely translated pages, and each version lists itself
+ * - an untranslated /de/ page canonicalises to its English original instead of competing
  *
- * This prevents Google Search Console errors like:
- * "Alternate page with proper canonical tag" caused by pages
- * marking themselves as alternates via self-referencing hreflang tags.
+ * The site renders /de/ for every route, but locales/de.ts only translates the imagegen and
+ * assistent namespaces — everywhere else the body stays English and only the chrome changes.
+ * Claiming a German alternate for all ~84 URLs is the boilerplate-translation pattern Google
+ * names explicitly, and it produced duplicate-content signals in Search Console.
+ *
+ * Note the self-reference: it was previously omitted on purpose, to chase the GSC status
+ * "Alternate page with proper canonical tag". That status is informational — it means Google
+ * understood the alternates — and Google's requirement is the opposite: "each language version
+ * must list itself as well as all other language versions".
  *
  * @see https://developers.google.com/search/docs/specialty/international/localized-versions
+ * @see locales/locales.ts — localizedPaths
  */
 
 import React from "react";
@@ -62,200 +68,96 @@ vi.mock("../pages/image_3_1fc7cfc7b9e9.jpg", () => ({
   default: "/mock-favicon.jpg",
 }));
 
+// locales/locales.ts is deliberately NOT mocked — these tests assert against the real
+// localizedPaths list, so adding a page there without translating it fails here.
+const render = (urlOriginal: string, config: Record<string, unknown> = {}) => {
+  mockUsePageContext.mockReturnValue({ urlOriginal, config });
+  return renderToString(<HeadDefault />);
+};
+
+const countHreflang = (html: string) => html.match(/hrefLang="/g)?.length ?? 0;
+
 describe("HeadDefault Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe("Canonical Tags", () => {
-    it("English page canonical should point to itself (no /en/ prefix)", () => {
-      mockUsePageContext.mockReturnValue({
-        urlOriginal: "/blog/19/",
-      });
-
-      const html = renderToString(<HeadDefault />);
-
-      expect(html).toContain('rel="canonical"');
-      expect(html).toContain('href="https://www.fretchen.eu/blog/19/"');
+  describe("Canonical tags", () => {
+    it("points a translated English page at itself", () => {
+      expect(render("/imagegen/")).toContain('rel="canonical" href="https://www.fretchen.eu/imagegen/"');
     });
 
-    it("German page canonical should point to itself (with /de/ prefix)", () => {
-      mockUsePageContext.mockReturnValue({
-        urlOriginal: "/de/blog/19/",
-      });
-
-      const html = renderToString(<HeadDefault />);
-
-      expect(html).toContain('rel="canonical"');
-      expect(html).toContain('href="https://www.fretchen.eu/de/blog/19/"');
+    it("points a translated German page at itself", () => {
+      expect(render("/de/imagegen/")).toContain('rel="canonical" href="https://www.fretchen.eu/de/imagegen/"');
     });
 
-    it("Root English page canonical should be root", () => {
-      mockUsePageContext.mockReturnValue({
-        urlOriginal: "/",
-      });
-
-      const html = renderToString(<HeadDefault />);
-
-      expect(html).toContain('rel="canonical"');
-      expect(html).toContain('href="https://www.fretchen.eu/"');
+    it("points an untranslated English page at itself", () => {
+      expect(render("/blog/19/")).toContain('rel="canonical" href="https://www.fretchen.eu/blog/19/"');
     });
 
-    it("Root German page canonical should be /de/", () => {
-      mockUsePageContext.mockReturnValue({
-        urlOriginal: "/de/",
-      });
+    it("points an untranslated German page at the ENGLISH original", () => {
+      // The German blog post is English prose with German chrome. Canonicalising it to the
+      // English URL consolidates the duplicate instead of letting the two compete.
+      expect(render("/de/blog/19/")).toContain('rel="canonical" href="https://www.fretchen.eu/blog/19/"');
+    });
 
-      const html = renderToString(<HeadDefault />);
+    it("does not pair the canonical with a noindex (contradictory signals)", () => {
+      expect(render("/de/blog/19/")).not.toContain("noindex");
+    });
 
-      expect(html).toContain('rel="canonical"');
-      expect(html).toContain('href="https://www.fretchen.eu/de/"');
+    it("canonicalises the untranslated German homepage to the English root", () => {
+      expect(render("/de/")).toContain('rel="canonical" href="https://www.fretchen.eu/"');
     });
   });
 
-  describe("hreflang Alternate Tags (No Self-Reference)", () => {
-    it("English page should NOT have hreflang='en' alternate (no self-reference)", () => {
-      mockUsePageContext.mockReturnValue({
-        urlOriginal: "/blog/19/",
-      });
+  describe("hreflang on translated pages", () => {
+    it("declares en, de and x-default — including the self-reference — on the English version", () => {
+      const html = render("/imagegen/");
 
-      const html = renderToString(<HeadDefault />);
-
-      // Count how many times hrefLang="en" appears
-      const enMatches = html.match(/hrefLang="en"/g);
-      // Should be 0 because English page should not reference itself
-      expect(enMatches).toBeNull();
+      expect(countHreflang(html)).toBe(3);
+      expect(html).toContain('hrefLang="en" href="https://www.fretchen.eu/imagegen/"');
+      expect(html).toContain('hrefLang="de" href="https://www.fretchen.eu/de/imagegen/"');
+      expect(html).toContain('hrefLang="x-default" href="https://www.fretchen.eu/imagegen/"');
     });
 
-    it("English page should have hreflang='de' alternate pointing to German version", () => {
-      mockUsePageContext.mockReturnValue({
-        urlOriginal: "/blog/19/",
-      });
+    it("declares the identical set on the German version", () => {
+      const html = render("/de/imagegen/");
 
-      const html = renderToString(<HeadDefault />);
-
-      expect(html).toContain('hrefLang="de"');
-      expect(html).toContain('href="https://www.fretchen.eu/de/blog/19/"');
+      expect(countHreflang(html)).toBe(3);
+      expect(html).toContain('hrefLang="en" href="https://www.fretchen.eu/imagegen/"');
+      expect(html).toContain('hrefLang="de" href="https://www.fretchen.eu/de/imagegen/"');
+      expect(html).toContain('hrefLang="x-default" href="https://www.fretchen.eu/imagegen/"');
     });
 
-    it("German page should NOT have hreflang='de' alternate (no self-reference)", () => {
-      mockUsePageContext.mockReturnValue({
-        urlOriginal: "/de/blog/19/",
-      });
-
-      const html = renderToString(<HeadDefault />);
-
-      // Count how many times hrefLang="de" appears
-      const deMatches = html.match(/hrefLang="de"/g);
-      // Should be 0 because German page should not reference itself
-      expect(deMatches).toBeNull();
-    });
-
-    it("German page should have hreflang='en' alternate pointing to English version", () => {
-      mockUsePageContext.mockReturnValue({
-        urlOriginal: "/de/blog/19/",
-      });
-
-      const html = renderToString(<HeadDefault />);
-
-      expect(html).toContain('hrefLang="en"');
-      expect(html).toContain('href="https://www.fretchen.eu/blog/19/"');
+    it("covers the assistent page too", () => {
+      expect(countHreflang(render("/assistent/"))).toBe(3);
     });
   });
 
-  describe("x-default hreflang Tag", () => {
-    it("English page should have x-default pointing to itself", () => {
-      mockUsePageContext.mockReturnValue({
-        urlOriginal: "/blog/19/",
-      });
-
-      const html = renderToString(<HeadDefault />);
-
-      expect(html).toContain('hrefLang="x-default"');
-      expect(html).toContain('href="https://www.fretchen.eu/blog/19/"');
-    });
-
-    it("German page should have x-default pointing to English version", () => {
-      mockUsePageContext.mockReturnValue({
-        urlOriginal: "/de/blog/19/",
-      });
-
-      const html = renderToString(<HeadDefault />);
-
-      expect(html).toContain('hrefLang="x-default"');
-      expect(html).toContain('href="https://www.fretchen.eu/blog/19/"');
-    });
+  describe("hreflang on untranslated pages", () => {
+    it.each(["/blog/19/", "/de/blog/19/", "/quantum/basics/2/", "/x402/sellers/", "/", "/de/"])(
+      "emits no alternates for %s",
+      (url) => {
+        expect(countHreflang(render(url))).toBe(0);
+      },
+    );
   });
 
-  describe("Complete hreflang Structure", () => {
-    it("English page should have exactly 2 hreflang alternates (de + x-default)", () => {
-      mockUsePageContext.mockReturnValue({
-        urlOriginal: "/blog/19/",
-      });
-
-      const html = renderToString(<HeadDefault />);
-
-      // Count hrefLang occurrences
-      const hreflangMatches = html.match(/hrefLang="/g);
-      expect(hreflangMatches?.length).toBe(2); // de + x-default (NOT en)
-
-      expect(html).toContain('hrefLang="de"');
-      expect(html).toContain('hrefLang="x-default"');
-      // Should NOT have hrefLang="en"
-      expect(html).not.toContain('hrefLang="en"');
+  /**
+   * `og:type` was hardcoded to "website" for a while, which mislabelled the article pages.
+   * It now reads the non-cumulative `ogType` setting, defaulting to "website" — so both the
+   * default and the override have to keep working.
+   */
+  describe("og:type", () => {
+    it("defaults to website when the page declares no +ogType", () => {
+      expect(render("/")).toContain('property="og:type" content="website"');
     });
 
-    it("German page should have exactly 2 hreflang alternates (en + x-default)", () => {
-      mockUsePageContext.mockReturnValue({
-        urlOriginal: "/de/blog/19/",
-      });
+    it("uses the page's +ogType when it declares one", () => {
+      const html = render("/blog/19/", { ogType: "article" });
 
-      const html = renderToString(<HeadDefault />);
-
-      // Count hrefLang occurrences
-      const hreflangMatches = html.match(/hrefLang="/g);
-      expect(hreflangMatches?.length).toBe(2); // en + x-default (NOT de)
-
-      expect(html).toContain('hrefLang="en"');
-      expect(html).toContain('hrefLang="x-default"');
-      // Should NOT have hrefLang="de"
-      expect(html).not.toContain('hrefLang="de"');
-    });
-  });
-
-  describe("Edge Cases", () => {
-    it("Blog list page should have correct alternates", () => {
-      mockUsePageContext.mockReturnValue({
-        urlOriginal: "/blog/",
-      });
-
-      const html = renderToString(<HeadDefault />);
-
-      expect(html).toContain('rel="canonical"');
-      expect(html).toContain('href="https://www.fretchen.eu/blog/"');
-
-      // Should NOT have hrefLang="en"
-      expect(html).not.toContain('hrefLang="en"');
-
-      expect(html).toContain('hrefLang="de"');
-      expect(html).toContain('href="https://www.fretchen.eu/de/blog/"');
-    });
-
-    it("German blog list page should have correct alternates", () => {
-      mockUsePageContext.mockReturnValue({
-        urlOriginal: "/de/blog/",
-      });
-
-      const html = renderToString(<HeadDefault />);
-
-      expect(html).toContain('rel="canonical"');
-      expect(html).toContain('href="https://www.fretchen.eu/de/blog/"');
-
-      // Should NOT have hrefLang="de"
-      expect(html).not.toContain('hrefLang="de"');
-
-      expect(html).toContain('hrefLang="en"');
-      expect(html).toContain('href="https://www.fretchen.eu/blog/"');
+      expect(html).toContain('property="og:type" content="article"');
+      expect(html.match(/property="og:type"/g)).toHaveLength(1);
     });
   });
 });

@@ -1,6 +1,7 @@
 import React, { useRef } from "react";
 import { CodeBlock } from "../../../components/CodeBlock";
 import { SpecParamTable } from "../../../components/SpecParamTable";
+import { CommentsSection } from "../../../components/CommentsSection";
 import * as styles from "../../../layouts/shared";
 import { ArticleShell } from "../../../components/ArticleShell";
 import { TableOfContents } from "../../../components/TableOfContents";
@@ -192,8 +193,11 @@ console.log(result.choices[0].message.content);`}</CodeBlock>
             (batch-settlement) — or use the live UIs directly: <Link href="/imagegen">AI Image Generator</Link> and{" "}
             <Link href="/assistent">AI Assistant</Link>.
           </p>
-
         </article>
+
+        {/* Outside <article>, so comments stay in the sans — same placement as
+            agent-onboarding and Post.tsx. */}
+        <CommentsSection />
       </ArticleShell>
     </div>
   );

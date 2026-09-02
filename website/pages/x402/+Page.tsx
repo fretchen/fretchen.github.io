@@ -8,6 +8,7 @@ import {
 import { Card } from "../../components/Card";
 import { Link } from "../../components/Link";
 import { CardList } from "../../components/CardList";
+import { CommentsSection } from "../../components/CommentsSection";
 import * as styles from "../../layouts/shared";
 import { PageHeader } from "../../components/PageHeader";
 import { prose } from "./shared.styles";
@@ -106,6 +107,10 @@ export default function Page() {
           </li>
         </ul>
       </div>
+
+      {/* Outside the prose div, so comments stay in the sans — same reasoning as the
+          sellers/buyers pages, which use ArticleShell to get the same placement. */}
+      <CommentsSection />
     </div>
   );
 }

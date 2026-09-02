@@ -8,6 +8,7 @@ import {
 import { FacilitatorApproval } from "../../../components/FacilitatorApproval";
 import { CodeBlock } from "../../../components/CodeBlock";
 import { SpecParamTable } from "../../../components/SpecParamTable";
+import { CommentsSection } from "../../../components/CommentsSection";
 import * as styles from "../../../layouts/shared";
 import { ArticleShell } from "../../../components/ArticleShell";
 import { TableOfContents } from "../../../components/TableOfContents";
@@ -333,6 +334,10 @@ return new Response(JSON.stringify(result), { status: 200 });`}</CodeBlock>
             <a href="/x402/buyers">x402 for buyers</a>.
           </p>
         </article>
+
+        {/* Outside <article>, so comments stay in the sans — same placement as
+            agent-onboarding and Post.tsx. */}
+        <CommentsSection />
       </ArticleShell>
     </div>
   );

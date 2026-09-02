@@ -169,6 +169,13 @@ the point. It is too light for anything inside a figure; using it there is the m
 exists to stop. Structural lines stay **solid** — a dash carries meaning in a diagram (a response,
 an async call), so spending it on scaffolding gives one signal two jobs.
 
+**A figure may wear its page's territory hue — on the elements that *name* things only.** Participant
+boxes and their labels take the hue; arrows, values and message text stay neutral, because the
+content is not what the colour is identifying. This is the one place hue appears outside the
+territory rule, and it is the same hue the page header already shows, so it reads as belonging
+rather than as a second colour system. Pass it explicitly — `<SequenceDiagram territory="explore">`
+matching the page's `<PageHeader territory="explore">`; omitted, a figure is entirely grey.
+
 Reference implementation: `components/blog/SequenceDiagram.tsx`.
 
 ## One button

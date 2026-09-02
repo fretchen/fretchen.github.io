@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   SequenceDiagram,
   SequenceMessage,
@@ -10,7 +10,6 @@ import { Link } from "../../components/Link";
 import { CardList } from "../../components/CardList";
 import * as styles from "../../layouts/shared";
 import { PageHeader } from "../../components/PageHeader";
-import { css } from "../../styled-system/css";
 import { prose } from "./shared.styles";
 
 // This page is deliberately short — a hub in the shape of /quantum and /lab, not a third
@@ -37,86 +36,6 @@ const rolesSteps: (SequenceMessage | SequenceNote)[] = [
   { kind: "message", from: "seller", to: "buyer", label: "Deliver resource", style: "dashed" },
 ];
 
-// ─── Live /supported fetch ───────────────────────────────────────────────────
-
-interface SupportedResponse {
-  kinds?: Array<{
-    x402Version: number;
-    scheme: string;
-    network: string;
-  }>;
-  extensions?: Array<Record<string, unknown>>;
-}
-
-function SupportedStatus() {
-  const [data, setData] = useState<SupportedResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetch("https://facilitator.fretchen.eu/supported", { signal: controller.signal })
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((json: SupportedResponse) => {
-        setData(json);
-        setLoading(false);
-      })
-      .catch((err: unknown) => {
-        if (err instanceof Error && err.name !== "AbortError") {
-          setError(err.message);
-          setLoading(false);
-        }
-      });
-    return () => controller.abort();
-  }, []);
-
-  if (loading) {
-    return <span className={statusBadge}>⏳ checking…</span>;
-  }
-  if (error) {
-    return <span className={statusBadgeError}>✗ offline ({error})</span>;
-  }
-  if (data?.kinds && data.kinds.length > 0) {
-    return <span className={statusBadgeOk}>✓ online — {data.kinds.length} networks</span>;
-  }
-  return <span className={statusBadge}>unknown</span>;
-}
-
-// ─── Styles ──────────────────────────────────────────────────────────────────
-
-const statusBadge = css({
-  display: "inline-block",
-  padding: "2px 10px",
-  borderRadius: "full",
-  fontSize: "sm",
-  fontWeight: "semibold",
-  backgroundColor: "gray.100",
-  color: "gray.500",
-});
-
-const statusBadgeOk = css({
-  display: "inline-block",
-  padding: "2px 10px",
-  borderRadius: "full",
-  fontSize: "sm",
-  fontWeight: "semibold",
-  backgroundColor: "green.100",
-  color: "green.800",
-});
-
-const statusBadgeError = css({
-  display: "inline-block",
-  padding: "2px 10px",
-  borderRadius: "full",
-  fontSize: "sm",
-  fontWeight: "semibold",
-  backgroundColor: "red.100",
-  color: "red.800",
-});
-
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function Page() {
@@ -127,11 +46,11 @@ export default function Page() {
 
       <div className={prose}>
         <p>
-          <a href="https://github.com/coinbase/x402">x402</a> revives the long-dormant HTTP{" "}
+          <a href="https://docs.x402.org">x402</a> revives the long-dormant HTTP{" "}
           <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/402">402 Payment Required</a>{" "}
           status code as a real payment protocol: pay per request, in stablecoin, verified and settled on-chain — no
-          accounts, no API keys, no invoices. And it is <strong>permissionless</strong> — no allowlist, no registration:
-          anyone can run a seller, write a buyer client, or stand up a facilitator of their own.
+          accounts, no API keys, no invoices. It is also <strong>permissionless</strong>: no allowlist, no registration,
+          nobody to ask. Anyone can charge for a service, and anyone can pay for one.
         </p>
 
         <p>Every x402 exchange has three roles:</p>
@@ -150,13 +69,13 @@ export default function Page() {
         </ul>
 
         {/* No caption: the paragraph and list above already name the figure. */}
-        <SequenceDiagram participants={rolesParticipants} steps={rolesSteps} />
+        <SequenceDiagram participants={rolesParticipants} steps={rolesSteps} territory="explore" />
 
         <p>
           This site runs all three: a facilitator, two paid endpoints acting as sellers, and the buyers that call them —
           the <Link href="/imagegen">AI Image Generator</Link> and the <Link href="/assistent">assistant</Link>, which
           pay for every request you make from them. Because nothing here is gated, you can point your own seller at that
-          facilitator instead of running one yourself. Status: <SupportedStatus />
+          facilitator instead of running one yourself.
         </p>
 
         <CardList>
@@ -175,14 +94,14 @@ export default function Page() {
         <h2>Links</h2>
         <ul>
           <li>
-            <a href="https://github.com/coinbase/x402">x402 specification (Coinbase)</a>
+            <a href="https://docs.x402.org">x402 documentation</a> — the standard, from the x402 Foundation
           </li>
           <li>
-            <a href="https://docs.cdp.coinbase.com/x402/welcome">x402 documentation</a>
+            <a href="https://github.com/coinbase/x402">Reference implementation</a>
           </li>
           <li>
             <a href="https://github.com/fretchen/fretchen.github.io/tree/main/x402_facilitator">
-              Facilitator source code
+              This site&apos;s facilitator, in full
             </a>
           </li>
         </ul>

@@ -37,6 +37,12 @@ interface SequenceDiagramProps {
   steps: (SequenceMessage | SequenceNote)[];
   /** Rendered as a `<figcaption>` below the diagram; styled globally in layouts/panda.css. */
   caption?: string;
+  /**
+   * Page territory, matching the `<PageHeader territory>` of the page this sits on. Tints the
+   * elements that *name* things — participant boxes and their labels. Arrows and message text
+   * stay neutral: the messages are the content. Omit for an all-grey diagram.
+   */
+  territory?: DiagramTerritory;
 }
 
 const VIEW_WIDTH = 640;
@@ -53,6 +59,18 @@ const EDGE_PAD = 10;
 const LABEL_OFFSET = 8;
 const ARROWHEAD_ID = "sequenceDiagramArrowhead";
 
+/**
+ * Territory hue -> the plain value an SVG attribute needs. Mirrors the `sectionRule` recipe's
+ * variants, but not its type: that one is a Panda `ConditionalValue` (it accepts responsive
+ * objects and arrays), and a diagram needs exactly one colour.
+ */
+const TERRITORY_ACCENT = {
+  voice: token("colors.brand"),
+  explore: token("colors.explore"),
+} as const;
+
+export type DiagramTerritory = keyof typeof TERRITORY_ACCENT;
+
 /** Clamps a box/note's [x, x+width] span to stay inside the viewBox, edges included. */
 function clampSpan(x1: number, x2: number): [number, number] {
   const w = x2 - x1;
@@ -68,7 +86,7 @@ function clampSpan(x1: number, x2: number): [number, number] {
  * Deliberately carries no container styling: figures sit on the page ground (see IDENTITY.md
  * → Figures), and `layouts/panda.css` owns figure margin, centering and caption typography.
  */
-export function SequenceDiagram({ participants, steps, caption }: SequenceDiagramProps) {
+export function SequenceDiagram({ participants, steps, caption, territory }: SequenceDiagramProps) {
   const colGap = (VIEW_WIDTH - 2 * MARGIN_X) / Math.max(participants.length - 1, 1);
   const idToX = Object.fromEntries(participants.map((p, i) => [p.id, MARGIN_X + i * colGap]));
 
@@ -88,9 +106,13 @@ export function SequenceDiagram({ participants, steps, caption }: SequenceDiagra
   // (#eeeeee) is for dividers between page blocks and is far too light for figure internals.
   const lifelineStroke = token("colors.gray.300");
   const boxFill = token("colors.background");
-  const boxStroke = token("colors.gray.400");
   const arrowStroke = token("colors.gray.700");
-  const text = token("colors.text");
+
+  // A figure may wear its page's territory hue on the elements that name things; the content
+  // stays neutral (README.md → Figures). Without a territory the diagram is entirely grey.
+  const accent = territory ? TERRITORY_ACCENT[territory] : null;
+  const boxStroke = accent ?? token("colors.gray.400");
+  const participantText = accent ?? token("colors.text");
   const textMuted = token("colors.textMuted");
   const fontUi = token("fonts.ui");
 
@@ -141,7 +163,7 @@ export function SequenceDiagram({ participants, steps, caption }: SequenceDiagra
                 y={BOX_H / 2}
                 textAnchor="middle"
                 dominantBaseline="central"
-                fill={text}
+                fill={participantText}
                 fontFamily={fontUi}
                 fontSize={12}
               >

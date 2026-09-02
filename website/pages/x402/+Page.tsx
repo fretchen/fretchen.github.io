@@ -147,7 +147,8 @@ export default function Page() {
           </li>
         </ul>
 
-        <SequenceDiagram participants={rolesParticipants} steps={rolesSteps} title="The three x402 roles" />
+        {/* No caption: the paragraph and list above already name the figure. */}
+        <SequenceDiagram participants={rolesParticipants} steps={rolesSteps} />
 
         <p>
           This site runs all three: a facilitator (below), two paid services acting as sellers, and the buyer-side

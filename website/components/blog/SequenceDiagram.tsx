@@ -35,7 +35,8 @@ interface SequenceDiagramProps {
   /** One ordered list — row position depends on messages and notes interleaved, matching
    * mermaid's own linear source order. */
   steps: (SequenceMessage | SequenceNote)[];
-  title?: string;
+  /** Rendered as a `<figcaption>` below the diagram; styled globally in layouts/panda.css. */
+  caption?: string;
 }
 
 const VIEW_WIDTH = 640;
@@ -63,8 +64,11 @@ function clampSpan(x1: number, x2: number): [number, number] {
  * Minimal hand-rolled replacement for mermaid's `sequenceDiagram` — a plain participant/
  * message/note layout with fixed row heights (not mermaid's content-proportional spacing).
  * No activations, loops, or alt/opt blocks: nothing on this site's diagrams uses them.
+ *
+ * Deliberately carries no container styling: figures sit on the page ground (see IDENTITY.md
+ * → Figures), and `layouts/panda.css` owns figure margin, centering and caption typography.
  */
-export function SequenceDiagram({ participants, steps, title }: SequenceDiagramProps) {
+export function SequenceDiagram({ participants, steps, caption }: SequenceDiagramProps) {
   const colGap = (VIEW_WIDTH - 2 * MARGIN_X) / Math.max(participants.length - 1, 1);
   const idToX = Object.fromEntries(participants.map((p, i) => [p.id, MARGIN_X + i * colGap]));
 
@@ -79,7 +83,10 @@ export function SequenceDiagram({ participants, steps, title }: SequenceDiagramP
   const lifelineBottom = contentBottom + FOOTER_PAD / 2;
   const totalHeight = contentBottom + FOOTER_PAD;
 
-  const stroke = token("colors.border");
+  // Ink hierarchy — three tiers ranked by value, not width (README.md → Figures):
+  // messages are the content, participants name it, lifelines are scaffolding. `border`
+  // (#eeeeee) is for dividers between page blocks and is far too light for figure internals.
+  const lifelineStroke = token("colors.gray.300");
   const boxFill = token("colors.background");
   const boxStroke = token("colors.gray.400");
   const arrowStroke = token("colors.gray.700");
@@ -88,31 +95,7 @@ export function SequenceDiagram({ participants, steps, title }: SequenceDiagramP
   const fontUi = token("fonts.ui");
 
   return (
-    <div
-      className={css({
-        margin: "20px 0",
-        padding: "5",
-        // Explore-territory wash, matching the interactive figure widgets
-        // (QuantumPDCircuit.tsx, DiversificationRandomWalk.tsx) rather than the neutral
-        // `codeBg` MermaidDiagram uses — this is a figure, not a code block.
-        backgroundColor: "rgba(123, 63, 160, 0.04)",
-        borderRadius: "lg",
-        border: "1px solid rgba(123, 63, 160, 0.15)",
-        textAlign: "center",
-      })}
-    >
-      {title && (
-        <h4
-          className={css({
-            fontSize: "md",
-            fontWeight: "semibold",
-            marginBottom: "4",
-            color: "gray.700",
-          })}
-        >
-          {title}
-        </h4>
-      )}
+    <figure>
       <svg
         viewBox={`0 0 ${VIEW_WIDTH} ${totalHeight}`}
         className={css({ width: "100%", height: "auto", display: "block" })}
@@ -139,8 +122,8 @@ export function SequenceDiagram({ participants, steps, title }: SequenceDiagramP
             x2={idToX[p.id]}
             y1={HEADER_H}
             y2={lifelineBottom}
-            stroke={stroke}
-            strokeWidth={1}
+            stroke={lifelineStroke}
+            strokeWidth={1.5}
           />
         ))}
 
@@ -226,7 +209,8 @@ export function SequenceDiagram({ participants, steps, title }: SequenceDiagramP
           );
         })}
       </svg>
-    </div>
+      {caption && <figcaption>{caption}</figcaption>}
+    </figure>
   );
 }
 

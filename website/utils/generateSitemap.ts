@@ -3,8 +3,11 @@
  *
  * Generates sitemap.xml after build by:
  * 1. Scanning all generated HTML files in build directory
- * 2. Adding hreflang alternates for i18n (en/de)
- * 3. Extracting lastmod from blog frontmatter where available
+ * 2. Adding reciprocal hreflang alternates for the pages that are really translated
+ *    (locales/localizedPaths) — untranslated /de/ pages canonicalise to English and are
+ *    left out entirely, rather than submitted as competing duplicates
+ * 3. Extracting lastmod from each page's own BlogPosting JSON-LD, omitting it where the
+ *    page has no publication date
  *
  * Run: tsx ./utils/generateSitemap.ts
  *
@@ -15,7 +18,7 @@
 import fs from "fs";
 import path from "path";
 import { SITE_CONFIG } from "./siteConfig";
-import { locales, defaultLocale } from "../locales/locales";
+import { locales, defaultLocale, isLocalizedPath } from "../locales/locales";
 
 const SITE_URL = SITE_CONFIG.url;
 
@@ -107,24 +110,42 @@ function getLocaleInfo(urlPath: string): {
     canonicalPath += "/";
   }
 
-  // Generate alternates for all locales EXCEPT the current one (avoid self-reference)
-  const alternates = locales
-    .filter((l) => l !== locale)
-    .map((l) => ({
-      hreflang: l,
-      href:
-        l === defaultLocale
-          ? `${SITE_URL}${canonicalPath}`
-          : `${SITE_URL}/${l}${canonicalPath === "/" ? "/" : canonicalPath}`,
-    }));
+  // Only genuinely translated pages form an hreflang cluster — see locales/localizedPaths.
+  // Everything else renders German chrome around English prose, and its /de/ variant
+  // canonicalises to the English page (pages/+Head.tsx) rather than claiming to be a
+  // language version of it.
+  if (!isLocalizedPath(canonicalPath)) {
+    return { canonicalPath, locale, alternates: [] };
+  }
 
-  // Add x-default pointing to the default locale version
+  // Every version lists ALL versions, itself included — Google requires the self-reference:
+  // "each language version must list itself as well as all other language versions".
+  const alternates = locales.map((l) => ({
+    hreflang: l,
+    href: l === defaultLocale ? `${SITE_URL}${canonicalPath}` : `${SITE_URL}/${l}${canonicalPath}`,
+  }));
+
+  // x-default points at the default locale version
   alternates.push({
     hreflang: "x-default",
     href: `${SITE_URL}${canonicalPath}`,
   });
 
   return { canonicalPath, locale, alternates };
+}
+
+/**
+ * Read a page's publication date out of its own rendered Schema.org JSON-LD.
+ *
+ * Every post and lecture already emits a BlogPosting with `datePublished` (see
+ * utils/schemaOrg.ts), so the built HTML carries the frontmatter date and no MDX parsing is
+ * needed here. Pages without one — landing pages, the index — get no `lastmod` at all, which
+ * is deliberate: this used to stamp *today* on all 84 URLs on every build, and Google ignores
+ * lastmod it finds to be consistently inaccurate. No date beats a wrong one.
+ */
+function extractLastmod(filePath: string): string | undefined {
+  const match = /"datePublished":"(\d{4}-\d{2}-\d{2})/.exec(fs.readFileSync(filePath, "utf-8"));
+  return match?.[1];
 }
 
 /**
@@ -155,15 +176,15 @@ function getChangeFreq(urlPath: string): SitemapUrl["changefreq"] {
 function generateSitemapXml(urls: SitemapUrl[]): string {
   const urlEntries = urls
     .map((url) => {
-      const alternateLinks = url.alternates
-        ?.map((alt) => `    <xhtml:link rel="alternate" hreflang="${alt.hreflang}" href="${alt.href}"/>`)
-        .join("\n");
+      // Most pages have no alternates at all now, so this must not leave a blank line behind.
+      const alternateLinks = (url.alternates ?? [])
+        .map((alt) => `\n    <xhtml:link rel="alternate" hreflang="${alt.hreflang}" href="${alt.href}"/>`)
+        .join("");
 
       return `  <url>
     <loc>${url.loc}</loc>${url.lastmod ? `\n    <lastmod>${url.lastmod}</lastmod>` : ""}
     <changefreq>${url.changefreq || "monthly"}</changefreq>
-    <priority>${url.priority?.toFixed(1) || "0.5"}</priority>
-${alternateLinks || ""}
+    <priority>${url.priority?.toFixed(1) || "0.5"}</priority>${alternateLinks}
   </url>`;
     })
     .join("\n");
@@ -199,18 +220,18 @@ function generateSitemap(): void {
     const urlPath = filePathToUrlPath(filePath);
     const { canonicalPath, locale, alternates } = getLocaleInfo(urlPath);
 
-    // Only add the canonical (default locale) version to avoid duplicates
-    if (locale === defaultLocale) {
-      const fullUrl = `${SITE_URL}${urlPath}`;
+    // A non-default-locale URL earns its own entry only where the page is really translated.
+    // Untranslated /de/ pages canonicalise to their English original, so listing them here
+    // would submit a URL we are simultaneously telling Google not to index in its own right.
+    if (locale !== defaultLocale && !isLocalizedPath(canonicalPath)) continue;
 
-      urlMap.set(canonicalPath, {
-        loc: fullUrl,
-        lastmod: new Date().toISOString().split("T")[0], // Today's date as fallback
-        changefreq: getChangeFreq(canonicalPath),
-        priority: getPriority(canonicalPath),
-        alternates,
-      });
-    }
+    urlMap.set(urlPath, {
+      loc: `${SITE_URL}${urlPath}`,
+      lastmod: extractLastmod(filePath),
+      changefreq: getChangeFreq(canonicalPath),
+      priority: getPriority(canonicalPath),
+      alternates,
+    });
   }
 
   // Convert map to array and sort by priority (highest first)

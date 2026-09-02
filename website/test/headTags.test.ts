@@ -44,4 +44,36 @@ describe("head tag conventions", () => {
     // Metadata here would be unreachable — +Head renders these as JSON-LD, nothing else.
     expect(offenders).toEqual([]);
   });
+
+  /**
+   * vike-react emits `og:image` and `twitter:card` only for a truthy `+image` value, and
+   * `+image` is non-cumulative — so a page whose `image()` can return `undefined` wins over
+   * `pages/+image.ts` and ships no social card at all, rather than falling through to the
+   * default. Every post/lecture `+image.ts` reads an optional `nftMetadata?.imageUrl`.
+   */
+  it("gives every optional +image a default fallback", () => {
+    const offenders = pageFiles
+      .filter((file) => file.endsWith("+image.ts"))
+      .filter((file) => {
+        const source = readFileSync(file, "utf-8");
+        return /nftMetadata\?\./.test(source) && !source.includes("DEFAULT_SOCIAL_IMAGE");
+      })
+      .map((file) => file.slice(pagesDir.length + 1));
+
+    expect(offenders).toEqual([]);
+  });
+
+  /**
+   * The social card asset carries a Vite content hash that changes on any Vite bump or edit
+   * to the image. Hand-copying the built URL 404s silently; `pages/+image.ts` imports the
+   * asset instead, and everything else re-exports from there.
+   */
+  it("keeps built asset URLs out of +image files", () => {
+    const offenders = pageFiles
+      .filter((file) => file.endsWith("+image.ts"))
+      .filter((file) => readFileSync(file, "utf-8").includes("assets/static/"))
+      .map((file) => file.slice(pagesDir.length + 1));
+
+    expect(offenders).toEqual([]);
+  });
 });

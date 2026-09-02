@@ -35,6 +35,14 @@ export default {
       env: { server: true },
       cumulative: false,
     },
+
+    // Open Graph `og:type`, rendered by pages/+Head.tsx. Non-cumulative with a "website"
+    // default: article-shaped pages (blog posts, quantum lectures, the x402 guides) add a
+    // `+ogType.ts` returning "article"; every other page inherits "website".
+    ogType: {
+      env: { server: true },
+      cumulative: false,
+    },
   },
 
   queryClientConfig: {

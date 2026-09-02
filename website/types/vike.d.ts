@@ -15,6 +15,12 @@ declare global {
        * pages/+Head.tsx. Non-cumulative, so the deepest +structuredData.ts wins.
        */
       structuredData?: (pageContext: VikePageContext) => object[];
+
+      /**
+       * Open Graph `og:type`, rendered by pages/+Head.tsx. Non-cumulative, so the deepest
+       * +ogType.ts wins; pages that declare none get "website".
+       */
+      ogType?: "website" | "article";
     }
   }
 }

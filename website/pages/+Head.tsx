@@ -3,6 +3,7 @@
 import React from "react";
 import { usePageContext } from "vike-react/usePageContext";
 import { extractLocale } from "../locales/extractLocale";
+import { isLocalizedPath } from "../locales/locales";
 import { getRelMeLinks, SITE } from "../utils/siteData";
 import { analyticsConfig } from "../utils/analyticsConfig";
 import { getPageUrl } from "../utils/pageContext";
@@ -35,9 +36,17 @@ export default function HeadDefault() {
   const enUrl = `${SITE.url}${urlPathnameWithoutLocale}`;
   const deUrl = `${SITE.url}/de${urlPathnameWithoutLocale}`;
 
-  // Canonical URL points to the CURRENT page's language version
-  // This tells search engines each language version is its own authoritative source
-  const canonicalUrl = locale === "de" ? deUrl : enUrl;
+  // Only a handful of pages are really translated — see `localizedPaths`. Everything else
+  // renders German chrome around English prose, so its /de/ variant is a near-duplicate.
+  const translated = isLocalizedPath(urlPathnameWithoutLocale);
+
+  // A translated page is its own authoritative version in each language. An untranslated /de/
+  // page is not a second version of anything — it canonicalises to the English original, which
+  // consolidates the duplicate instead of competing with it.
+  //
+  // Canonical *without* `noindex`, deliberately: the two are contradictory signals with no
+  // defined precedence, and Google's guidance is to pick one. Canonical is the right one here.
+  const canonicalUrl = translated && locale === "de" ? deUrl : enUrl;
 
   return (
     <>
@@ -46,17 +55,27 @@ export default function HeadDefault() {
       {/* Canonical URL - points to current page in its current language */}
       <link rel="canonical" href={canonicalUrl} />
 
-      {/* Language variants for SEO - only alternate languages (not self-reference) */}
-      {/* See: https://developers.google.com/search/docs/specialty/international/localized-versions */}
-      {locale !== "en" && <link rel="alternate" hrefLang="en" href={enUrl} />}
-      {locale !== "de" && <link rel="alternate" hrefLang="de" href={deUrl} />}
-      <link rel="alternate" hrefLang="x-default" href={enUrl} />
+      {/* Language variants — declared only for genuinely translated pages, and each version
+          lists *itself* as well as the others. Google requires that self-reference ("each
+          language version must list itself as well as all other language versions"); it was
+          previously omitted to chase the GSC status "Alternate page with proper canonical
+          tag", which is informational — it means Google understood the alternates — not an
+          error. An untranslated page has no alternate to declare and emits none.
+          https://developers.google.com/search/docs/specialty/international/localized-versions */}
+      {translated && (
+        <>
+          <link rel="alternate" hrefLang="en" href={enUrl} />
+          <link rel="alternate" hrefLang="de" href={deUrl} />
+          <link rel="alternate" hrefLang="x-default" href={enUrl} />
+        </>
+      )}
 
       {/* Open Graph. og:title/og:description/og:image come from +title/+description/+image,
           which vike-react renders and which pages can override; only these two need setting
-          by hand, and og:url must match the canonical above. */}
+          by hand. og:url must match the canonical above, and og:type defaults to "website"
+          unless the page declares a +ogType.ts (article-shaped pages do). */}
       <meta property="og:url" content={canonicalUrl} />
-      <meta property="og:type" content="website" />
+      <meta property="og:type" content={pageContext.config?.ogType ?? "website"} />
 
       {/* rel="me" links for identity verification (IndieWeb, Mastodon, Bluesky, etc.) */}
       {relMeLinks.map((link) => (

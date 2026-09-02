@@ -70,8 +70,8 @@ vi.mock("../pages/image_3_1fc7cfc7b9e9.jpg", () => ({
 
 // locales/locales.ts is deliberately NOT mocked — these tests assert against the real
 // localizedPaths list, so adding a page there without translating it fails here.
-const render = (urlOriginal: string) => {
-  mockUsePageContext.mockReturnValue({ urlOriginal });
+const render = (urlOriginal: string, config: Record<string, unknown> = {}) => {
+  mockUsePageContext.mockReturnValue({ urlOriginal, config });
   return renderToString(<HeadDefault />);
 };
 
@@ -141,5 +141,23 @@ describe("HeadDefault Component", () => {
         expect(countHreflang(render(url))).toBe(0);
       },
     );
+  });
+
+  /**
+   * `og:type` was hardcoded to "website" for a while, which mislabelled the article pages.
+   * It now reads the non-cumulative `ogType` setting, defaulting to "website" — so both the
+   * default and the override have to keep working.
+   */
+  describe("og:type", () => {
+    it("defaults to website when the page declares no +ogType", () => {
+      expect(render("/")).toContain('property="og:type" content="website"');
+    });
+
+    it("uses the page's +ogType when it declares one", () => {
+      const html = render("/blog/19/", { ogType: "article" });
+
+      expect(html).toContain('property="og:type" content="article"');
+      expect(html.match(/property="og:type"/g)).toHaveLength(1);
+    });
   });
 });

@@ -56,7 +56,9 @@ describe("head tag conventions", () => {
       .filter((file) => file.endsWith("+image.ts"))
       .filter((file) => {
         const source = readFileSync(file, "utf-8");
-        return /nftMetadata\?\./.test(source) && !source.includes("DEFAULT_SOCIAL_IMAGE");
+        // Matched at the use site, not on the import: a leftover `import { DEFAULT_SOCIAL_IMAGE }`
+        // must not vouch for a `return blog.nftMetadata?.imageUrl` that lost its `??`.
+        return /nftMetadata\?\./.test(source) && !/nftMetadata\?\.\w+\s*\?\?\s*DEFAULT_SOCIAL_IMAGE/.test(source);
       })
       .map((file) => file.slice(pagesDir.length + 1));
 
@@ -68,6 +70,27 @@ describe("head tag conventions", () => {
    * to the image. Hand-copying the built URL 404s silently; `pages/+image.ts` imports the
    * asset instead, and everything else re-exports from there.
    */
+  /**
+   * A page whose JSON-LD calls itself an Article subtype must say the same in Open Graph.
+   * `og:type` defaults to "website" in `+Head.tsx`, so a page that loses its `+ogType.ts`
+   * — or a new article page that never gets one — silently disagrees with its own schema,
+   * and nothing else notices.
+   */
+  it("declares og:type=article on every page whose JSON-LD is an Article", () => {
+    const articleSchema = /"@type":\s*"(?:\w*Article|BlogPosting)"|buildPostStructuredData/;
+
+    const offenders = pageFiles
+      .filter((file) => file.endsWith("+structuredData.ts"))
+      .filter((file) => articleSchema.test(readFileSync(file, "utf-8")))
+      .filter((file) => {
+        const ogType = file.replace(/\+structuredData\.ts$/, "+ogType.ts");
+        return !pageFiles.includes(ogType) || !readFileSync(ogType, "utf-8").includes('"article"');
+      })
+      .map((file) => file.slice(pagesDir.length + 1));
+
+    expect(offenders).toEqual([]);
+  });
+
   it("keeps built asset URLs out of +image files", () => {
     const offenders = pageFiles
       .filter((file) => file.endsWith("+image.ts"))

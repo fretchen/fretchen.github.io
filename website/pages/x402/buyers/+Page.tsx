@@ -23,8 +23,8 @@ export default function Page() {
       >
         <article ref={contentRef} className={prose}>
           <p>
-            Two services run on this website , each on a different x402 scheme. Both are called through x402 and no
-            accounts, no API keys, no manual approval step before your first request. This page assumes you&apos;re
+            Two services run on this website, each on a different x402 scheme. Both are called through x402, with no
+            accounts, no API keys, and no manual approval step before your first request. This page assumes you&apos;re
             writing a Node or TypeScript client — a script or backend holding its own private key, not a browser wallet
             flow — and shows the client-side code for both.
           </p>

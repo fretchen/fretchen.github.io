@@ -11,15 +11,15 @@
     "@nomicfoundation/hardhat-ethers": "^4.0.15",
     "@nomicfoundation/hardhat-keystore": "^3.0.13",
     "@nomicfoundation/hardhat-toolbox-viem": "^5.0.7",
-    "@nomicfoundation/hardhat-verify": "^3.0.22",
+    "@nomicfoundation/hardhat-verify": "^3.1.0",
     "@openzeppelin/hardhat-upgrades": "^4.1.0",
     "@solidstate/hardhat-abi-exporter": "^3.0.4",
     "chai": "^6.0.0",
-    "eslint": "^10.9.0",
+    "eslint": "^10.9.1",
     "eslint-plugin-chai-expect": "^4.1.0",
     "globals": "^17.11.0",
-    "hardhat": "^3.14.0",
-    "tsx": "^4.23.12",
+    "hardhat": "^3.15.0",
+    "tsx": "^4.23.13",
     "typescript": "^6.0.3"
   },
   "dependencies": {
@@ -28,7 +28,7 @@
     "@openzeppelin/merkle-tree": "^1.0.8",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
-    "typescript-eslint": "^8.67.0",
-    "zod": "^4.0.17"
+    "typescript-eslint": "^8.68.0",
+    "zod": "^4.5.4"
   }
 }

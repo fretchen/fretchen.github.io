@@ -34,37 +34,46 @@ $$
 Over many seasons an island wants its discounted total $U_j = \sum_t \beta^{t} u_{j,t}$, with
 $\beta$ near 1 a patient islander and $\beta = 0$ one who does not think about next season at all.
 
-That is enough to state the tragedy. With $N$ users drawing independently, the companion post
-shows the symmetric equilibrium sitting at
+With $N$ users drawing independently, the companion post shows the symmetric equilibrium sitting at
 
 $$
-\frac{u}{B} \;=\; \frac{D}{N} , \qquad D \;\equiv\; \frac{u}{B} - \partial_B u ,
+\frac{u}{B} \;=\; \frac{D}{N} , \qquad D \;\equiv\; \frac{u}{B} - \partial_B u .
 $$
 
-which reads: you collect the average $u/B$ for your extra boat, but pay only $1/N$ of the damage
-$D$ it does. The two ends of that bracket everything below. $N \to \infty$ gives $u = 0$ — open
-access, every scrap of rent competed away, and both islands poorer than they needed to be. $N = 1$
-gives $\partial_B u = 0$ — one owner feeling the whole cost of crowding, which is the **planner**
-in the economists' sense.
+The damage $D$ is worth unpacking, because it is a difference between an average and a derivative
+and that is not self-evidently a harm. Rearranged,
 
-The planner is the benchmark, and it works. But that someone has to know how fast the fish breed,
-how good the boats are, what a trip costs and how much the islanders care about next year; they
-have to redo the sum every time the stock moves; and they have to make the quota stick, which
-means watching people and punishing them. The knowledge is scattered across the very people being
-planned for, and the enforcement is coercive.
+$$
+D = -B\,\partial_B\!\left(\frac{u}{B}\right) ,
+$$
 
-So a good outcome exists. But the choice on offer runs along a tired axis — everyone for
-themselves at one end, central planning at the other — and neither end is somewhere you would want
-to live. You can read more about the problem in this [previous post](/blog/14/).
+so $D$ is the drop in the average boat's earnings caused by adding one more boat, times the $B$
+boats already out there to absorb it: the whole loss your extra boat inflicts on everyone else.
+Equivalently $\partial_B u = \frac{u}{B} - D$ — the fleet gains what your boat catches, minus what
+it takes from the others.
 
-I got interested in a third possibility from an odd direction. A while ago I wrote about the
+The equilibrium condition then reads: you collect the average $u/B$ for your extra boat, but are
+charged only $1/N$ of the damage it does. $N \to \infty$ gives $u = 0$ — open access, every scrap
+of rent competed away, and both islands poorer than they needed to be. $N = 1$ gives
+$\partial_B u = 0$ — one owner feeling the whole cost of crowding, which is the **planner** in the
+economists' sense.
+
+The planner reaches the right fleet, but has to know how fast the fish breed, how good the boats
+are, what a trip costs and how much the islanders care about next year; has to redo the sum every
+time the stock moves; and has to make the quota stick, which means watching people and punishing
+them. The knowledge is scattered across the very people being planned for, and the enforcement is
+coercive. So the choice on offer runs along a tired axis — everyone for themselves at one end,
+central planning at the other — and neither end is somewhere you would want to live. You can read
+more about the problem in this [previous post](/blog/14/).
+
+A quantum protocol gives a third option. A while ago I wrote about the
 [quantum prisoner's dilemma](/blog/31/): take the Eisert–Wilkens–Lewenstein scheme, entangle two
 qubits, let each player act on their own qubit, disentangle — and mutual cooperation becomes
 stable. Nobody designed an enforcement mechanism. You write down the standard entangling
 operation, allow the natural moves, and an institution falls out of the machinery. In the previous
 post I exemplified it with a crooked lawyer with a filing cabinet.
 
-## The circuit, and what it implements
+## The circuit
 
 The continuous-variable version of EWL is due to
 [Li, Du and Massar](<https://doi.org/10.1016/S0375-9601(02)01628-6>) — two field modes instead of
@@ -102,7 +111,7 @@ This is exactly the situation of the planner as we care about both boats equally
 to cooperation and solve the tragedy in a similiar fashion as a planner did. However, not by some external institution but by simply sharing
 the ressources in a controlled way.
 
-### Solving the tragedy of the commons
+## Solving the tragedy of the commons
 
 We can now look how each individual island would optimize its discounted payoffs for a given squeezing parameter and we get:
 
@@ -136,31 +145,31 @@ through the squeezing parameter. The tragedy disappears at $N_{\text{eff}} = 1$,
 island is effectively left and the condition becomes $\partial_B u = 0$, so we optimize total
 profits.
 
-Nothing in that used the square root, the logistic curve, or a single parameter value. $u(B,s)$
-was arbitrary throughout, so this is a statement about common-pool problems, not about fish.
+$u(B,s)$ was arbitrary throughout, so this is a statement about common-pool problems, not about
+fish.
 
 ## The equivalent classical game
 
-This mechanism is well-known in economics as *cross-ownership*. Each firm holds some equity in other one 
+This mechanism is well-known in economics as _cross-ownership_. Each firm holds some equity in other one
 and [Reynolds and Snapp](<https://doi.org/10.1016/0167-7187(86)90027-5>) wrote down
 how this solves the tragedy as described above. So we are really back to the situation we had in the Prisoners' dilemma.
-The quantum circuit created a mechanism that is well-known in economy and proven to enhance cooperation. It works in both cases, 
+The quantum circuit created a mechanism that is well-known in economy and proven to enhance cooperation. It works in both cases,
 and in both cases economics had already found the generated institution before.
 
 ## Outlook
 
-This leads out to two tests of the possibility to generate economic institution through quantum circuits. 
+This leads out to two tests of the possibility to generate economic institution through quantum circuits.
 In both, writing down a standard entangling operation produced a working
 institution, and in both that institution had an entirely classical description —
-a filing cabinet, a clerk with a ledger. Here it reaches the planner's outcome on the planner's
-own terms, and it does so knowing one number instead of five.
+a filing cabinet, a clerk with a ledger. Here it reaches the planner's outcome knowing only
+$\gamma$, and nothing about the resource.
 
 What it cannot change is patience because $\beta$ appears nowhere in
 $N_{\text{eff}}$. The protocol removes the externality _between_ the users and leaves the
 single-owner problem that remains at whatever patience they had to start with — it reaches the
 patient planner if they are patient, and the myopic one if they are not. An entangling operation
-acts within a round and therefore does only alter the situation within the rounds. So in the future, 
+acts within a round and therefore does only alter the situation within the rounds. So in the future,
 I am likely to look for further possibilities to use quantum circuits as a cooking recipe for games which require coordination.
 Maybe I will come across situations which were solved quite as nicely within economics.
 
-If you have thought about that I would like to hear from you. 
+If you have thought about that I would like to hear from you.

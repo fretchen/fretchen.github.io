@@ -27,6 +27,15 @@ export const ESSAY_ACCENT = token("colors.explore");
  *   prisoners_dilemma   Walter  blue.600 / blue.700 / indigo.800   fill blue.100
  *                       Jesse   violet.600 / purple.800           fill purple.50
  *
+ *   quantum game        player 1  blue.600     the same pair, because the islands of
+ *   circuits            player 2  violet.600   quantum_cpr are the sequel to Walter and
+ *                                              Jesse. In a circuit the hue marks players
+ *                                              only — wires, referee boxes and detectors
+ *                                              follow the figure ink hierarchy
+ *                                              (README.md → Figures), and a value mixing
+ *                                              both players' inputs goes neutral.
+ *                                              See LDMCircuit.tsx.
+ *
  *   diversification     bonds   #4e79a7   ┐ Tableau-10, defined in etfData.ts;
  *                       stocks  #e15759   ┤ chosen for colour-vision separation
  *                       extra   #f28e2b   ┘

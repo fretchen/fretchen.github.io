@@ -9,7 +9,7 @@ import { token } from "../../styled-system/tokens";
 // on either side; a read-out gives the *licensed* fleet bⱼᶜ that each island is
 // billed and paid on:
 //
-//     b₁ᶜ = e^(−γ) (b₁ cosh γ + b₂ sinh γ)   (LDM Eq. 11 / Grau-Climent Eq. 5)
+//     b₁ᶜ = e^(−γ) (b₁ cosh γ + b₂ sinh γ)   (LDM Eq. 11; Grau-Climent et al., Entropy 25 (2023) 1585, Eqs. 5-6)
 //
 // The diagram is deliberately labelled twice over: the operator names sit in the
 // boxes, and the plain-language reading of each step sits in the caption row

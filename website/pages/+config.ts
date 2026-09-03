@@ -19,6 +19,32 @@ export default {
   prerender: true,
   extends: [vikeReact, vikeReactQuery],
 
+  // Custom setting holding a page's Schema.org JSON-LD, rendered by pages/+Head.tsx.
+  //
+  // JSON-LD is per-page data, but `+Head` — where it used to live — is *cumulative*:
+  // it accumulates down the directory tree and cannot be overridden, so /x402/sellers
+  // rendered the /x402 head as well as its own and shipped two BreadcrumbLists, a stray
+  // CollectionPage, and three conflicting canonical tags. `cumulative: false` is the fix:
+  // only the deepest +structuredData.ts on the page's path applies, so a section's schema
+  // stops reaching its subpages without any guards or path checks.
+  //
+  // Server-only — head tags are emitted during SSR/pre-rendering, and crawlers read the
+  // pre-rendered HTML. https://vike.dev/meta
+  meta: {
+    structuredData: {
+      env: { server: true },
+      cumulative: false,
+    },
+
+    // Open Graph `og:type`, rendered by pages/+Head.tsx. Non-cumulative with a "website"
+    // default: article-shaped pages (blog posts, quantum lectures, the x402 guides) add a
+    // `+ogType.ts` returning "article"; every other page inherits "website".
+    ogType: {
+      env: { server: true },
+      cumulative: false,
+    },
+  },
+
   queryClientConfig: {
     defaultOptions: {
       queries: {

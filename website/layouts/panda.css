@@ -111,7 +111,7 @@
 
   figcaption {
     font-size: 0.875rem; /* slightly smaller than body text (14px) */
-    color: #666; /* muted but readable gray */
+    color: var(--colors-text-muted, #666666); /* the textMuted token, not a second spelling of it */
     text-align: center; /* centered under image */
     margin-top: 4px; /* very minimal gap from image */
     margin-bottom: 1.2em; /* reasonable space before next content */
@@ -119,6 +119,7 @@
     font-weight: 400; /* normal weight to keep it light */
     line-height: 1.4; /* slightly more open for readability */
     max-width: 100%; /* responsive behavior */
-    opacity: 0.9; /* very subtle transparency for softer appearance */
+    /* No opacity dimmer here: it composited textMuted down to ~4.6:1, scraping the AA floor.
+       The colour above is already the muted step — mute with the token, not with alpha. */
   }
 }

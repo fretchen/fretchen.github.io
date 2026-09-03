@@ -10,9 +10,9 @@ system.
 
 ## Styling rules (enforced by `test/styleConventions.test.ts`)
 
-Panda compiles `css({})` **statically at build time**. Five mistakes therefore break styling
-*silently* — the component still renders, the class name is still emitted, `tsc` and the
-component tests all pass, and only the CSS is wrong or missing. They have all shipped here
+Panda compiles `css({})` and recipe variants **statically at build time**. Six mistakes therefore
+break styling *silently* — the component still renders, the class name is still emitted, `tsc` and
+the component tests all pass, and only the CSS is wrong or missing. They have all shipped here
 before. The test file catches them; these are the rules it enforces.
 
 1. **Never pass a JS variable as a `css({})` value.** Panda cannot read it, so it emits no CSS.
@@ -59,6 +59,23 @@ before. The test file catches them; these are the rules it enforces.
    The preset's `sans`/`serif`/`mono` survive alongside the custom tokens, so a stale call
    site resolves to a real value and simply renders the wrong font. See
    [`README.md`](./README.md) → Typography.
+
+6. **A config recipe variant passed as a variable emits only the default.** Rule 1 one level up —
+   Panda resolves recipe variants statically too.
+   ```tsx
+   sectionRule({ territory })                 // ✗ only defaultVariants gets CSS
+   sectionRule({ territory: "explore" })      // ✓ literal, extractable
+   ```
+   The class name is still rendered, so the element gets the recipe's `base` and nothing else.
+   This shipped: the territory rule was an invisible 48×3px transparent block on all six
+   `territory="explore"` pages. The fix is not at the call site — list the recipe in `staticCss`:
+   ```ts
+   staticCss: { recipes: { sectionRule: [{ territory: ["*"] }] } }
+   ```
+   Only variants that *paint* need this. A variant whose style object is empty (`active: { true: {} }`
+   on the button recipe) styles via `compoundVariants`, which Panda emits as atomic utilities.
+   `test/territoryRule.test.ts` asserts the CSS is really generated; rule 6 in
+   `test/styleConventions.test.ts` catches the call site.
 
 ## Verifying a bulk style change
 

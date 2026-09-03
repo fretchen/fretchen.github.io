@@ -1,6 +1,22 @@
 // @ts-check
 
 /**
+ * ⚠️ RETIRED — superseded by the merchant-pays model in `x402_fee.ts`.
+ *
+ * Buyer-pays splitter: the buyer signs one EIP-3009 authorization to EIP3009SplitterV1,
+ * which atomically pays seller and facilitator. The seller needs no setup, but the buyer
+ * needs a non-stock client and `payTo` shows the splitter rather than the real recipient.
+ * See README → "Fee model history" for why the merchant-pays model won.
+ *
+ * Not deployed and not built: no function in `serverless.yml` routes here, and it is
+ * excluded from the tsup `entry` list so it does not ship in the deploy archive.
+ *
+ * Retained, not dead: this is a working implementation of the alternative, and the
+ * contract at 0x7e67bf96ADbf4a813DD7b0A3Ca3060a937018946 (Optimism Sepolia) is referenced
+ * from x402-foundation/x402#937, so that deployment stays up. Its tests still run.
+ */
+
+/**
  * x402 Splitter Facilitator - Settlement Logic
  * Executes payments via EIP3009SplitterV1 contract
  *

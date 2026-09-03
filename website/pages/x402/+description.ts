@@ -1,3 +1,3 @@
 export function description() {
-  return "Independent x402 facilitator on Optimism and Base. 0.01 USDC flat fee per settlement. Quick start guide, API reference, and interactive USDC approval for sellers. Open source.";
+  return "x402: pay per request in stablecoin, verified and settled on-chain. Buyer, seller, facilitator — this site runs all three, and the protocol is permissionless. Pick your side to get started.";
 }

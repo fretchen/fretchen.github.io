@@ -545,6 +545,11 @@ describe("x402_settle with mocked facilitator", () => {
     expect(result.extensions.facilitatorFees).toBeDefined();
     expect(result.extensions.facilitatorFees.info.version).toBe("1");
     expect(result.extensions.facilitatorFees.info.facilitatorFeePaid).toBe("10000");
+    expect(result.extensions.facilitatorFees.info.collection).toEqual({
+      status: "collected",
+      txHash: "0xfeetxhash123",
+    });
+    expect(result.fee.status).toBe("collected");
     // Asset uses CAIP-19 format: {network}/erc20:{address}
     expect(result.extensions.facilitatorFees.info.asset).toBe(
       "eip155:11155420/erc20:0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
@@ -585,11 +590,69 @@ describe("x402_settle with mocked facilitator", () => {
     expect(result.transaction).toBe("0xsettletxhash");
     expect(result.fee).toBeDefined();
     expect(result.fee.collected).toBe(false);
+    expect(result.fee.status).toBe("failed");
     expect(result.fee.error).toBe("insufficient_fee_allowance");
-    // Verify facilitatorFees extension shows 0 when fee collection failed
+    // The fee was still ASSESSED — zeroing it here would understate what the payment
+    // cost. The uncollected state is reported by collection.status instead.
     expect(result.extensions).toBeDefined();
-    expect(result.extensions.facilitatorFees.info.facilitatorFeePaid).toBe("0");
+    expect(result.extensions.facilitatorFees.info.facilitatorFeePaid).toBe("10000");
+    expect(result.extensions.facilitatorFees.info.collection.status).toBe("failed");
     expect(result.extensions.facilitatorFees.info.model).toBe("flat");
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // Receipt: assessed fee vs. collection outcome
+  // ═══════════════════════════════════════════════════════════
+
+  /** Shared setup for the receipt tests: a settlement that owes a fee. */
+  function mockFeeBearingSettlement() {
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue({
+      settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xsettletxhash" }),
+    });
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
+      isValid: true,
+      payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      feeRequired: true,
+      recipient: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+    });
+  }
+
+  it("reports the assessed fee for a pending collection, not zero", async () => {
+    mockFeeBearingSettlement();
+
+    vi.spyOn(feeModule, "collectFee").mockResolvedValue({
+      success: false,
+      txHash: "0xpendingtx",
+      error: "fee_collection_pending",
+    });
+
+    const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
+
+    // The tx hash is the seller's reconciliation mechanism: it was sent, they can
+    // look it up. Reporting the fee as "0" would understate what the payment cost.
+    expect(result.extensions.facilitatorFees.info.facilitatorFeePaid).toBe("10000");
+    expect(result.extensions.facilitatorFees.info.collection).toEqual({
+      status: "pending",
+      txHash: "0xpendingtx",
+    });
+    expect(result.fee.collected).toBe(false);
+  });
+
+  it("distinguishes a hard failure from a pending collection", async () => {
+    mockFeeBearingSettlement();
+
+    vi.spyOn(feeModule, "collectFee").mockResolvedValue({
+      success: false,
+      error: "insufficient_fee_allowance",
+    });
+
+    const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
+
+    expect(result.extensions.facilitatorFees.info.facilitatorFeePaid).toBe("10000");
+    expect(result.extensions.facilitatorFees.info.collection.status).toBe("failed");
+    expect(result.fee.status).toBe("failed");
+    // Settlement is unaffected either way.
+    expect(result.success).toBe(true);
   });
 
   it("does not collect fee when feeRequired is not set", async () => {

@@ -1,4 +1,7 @@
 import type { PageContext } from "vike/types";
+import { extractLocale } from "../locales/extractLocale";
+import { defaultLocale } from "../locales/locales";
+import { SITE_CONFIG } from "./siteConfig";
 
 /**
  * Gets the current page URL pathname in a consistent way across the application.
@@ -19,4 +22,20 @@ import type { PageContext } from "vike/types";
  */
 export function getPageUrl(pageContext: PageContext): string {
   return pageContext.urlOriginal || pageContext.urlPathname || "";
+}
+
+/**
+ * Builds the page's canonical absolute URL — locale prefix kept, trailing slash included.
+ *
+ * Use this, not `pageContext.urlPathname`, wherever a page needs to name itself. Vike's
+ * router runs on `urlLogical`, which `+onBeforeRoute.ts` has already stripped of the locale,
+ * so `urlPathname` silently yields the *English* URL on a `/de/` page. Structured data used
+ * to build URLs that way and pointed German pages at their English counterparts.
+ *
+ * Mirrors the canonical tag in `pages/+Head.tsx`.
+ */
+export function getCanonicalUrl(pageContext: PageContext): string {
+  const { locale, urlPathnameWithoutLocale } = extractLocale(getPageUrl(pageContext));
+  const localePrefix = locale === defaultLocale ? "" : `/${locale}`;
+  return `${SITE_CONFIG.url}${localePrefix}${urlPathnameWithoutLocale}`;
 }

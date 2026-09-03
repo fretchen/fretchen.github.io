@@ -384,6 +384,16 @@ export default defineConfig({
     ":is(h1, h2, h3, h4, h5, h6):first-child": { marginTop: 0 },
   },
 
+  // `PageHeader` calls `sectionRule({ territory })` with a *variable*, which Panda cannot
+  // resolve statically — so it emitted only the `voice` default and every `explore` page
+  // rendered the rule as a transparent 48x3px block. Forcing all variants here is what
+  // staticCss is for. Guarded by test/territoryRule.test.ts.
+  staticCss: {
+    recipes: {
+      sectionRule: [{ territory: ["*"] }],
+    },
+  },
+
   // The output directory for your css system
   outdir: "styled-system",
 });

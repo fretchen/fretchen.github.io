@@ -129,6 +129,55 @@ stacks. They remain valid tokens, so `fontFamily: "mono"` fails *silently*. Rule
 Prefer variable builds: one file per family, not one per weight. Headings take their hierarchy
 from weight and whitespace, not from a size ratio.
 
+## Figures
+
+Reasons in [`IDENTITY.md`](./IDENTITY.md). The contract here.
+
+**A figure is `<figure>` + `<figcaption>`, and the component styles neither.** `layouts/panda.css`
+already owns figure margin (`1.5em 0`), centering, and caption typography — emit the elements bare
+and inherit it. Every figure on the site then reads as the same kind of object, whether it is an
+image (`components/MyFigure.tsx`, used by ~20 quantum notes) or a drawn diagram.
+
+- **No container.** No background, no border, no radius, no padding. Whitespace separates a figure
+  from prose. A figure that seems to need local styling is a sign the global rule is wrong — fix
+  it there, for all figures, rather than boxing this one.
+- **The caption goes below**, and is the site's one caption treatment: 14px, `textMuted`, italic.
+- **`textAlign` is not the component's business** — `figure { text-align: center }` is global.
+
+**A caption is a descriptive sentence, not a title.** It says what the figure shows that the
+surrounding prose cannot — what to notice, why the order matters. Match the existing corpus in
+the quantum notes: *"A simple circuit diagram. It shows the initial state, an entanglement gate,
+a number of single qubit gates and the final readout."* **If the prose already names the figure,
+pass no caption at all** — a caption that restates the lead-in is an echo, and it is what makes a
+figure feel bolted on. `pages/x402/+Page.tsx` is the worked example: the list above it names all
+three roles, so the diagram carries none.
+
+The italic serif is deliberate, not inherited sloppiness. Captions are read, and several carry
+inline KaTeX — they have to sit *with* the equations rather than against them. Do not set them in
+the sans; that is the one place the "sans operates" rule does not reach.
+
+Diagrams rank their ink in three tiers, by value rather than weight:
+
+| Element | Role | Token | Width |
+| --- | --- | --- | --- |
+| Message arrows, arrowheads | the content — the only loud thing | `gray.700` | 1.5 |
+| Participant boxes | the actors | `gray.400` | 1 |
+| Lifelines, structural rules | scaffolding | `gray.300` | 1.5 |
+
+`border` (`#eeeeee`) is for hairline dividers **between page blocks**, where near-invisibility is
+the point. It is too light for anything inside a figure; using it there is the mistake this table
+exists to stop. Structural lines stay **solid** — a dash carries meaning in a diagram (a response,
+an async call), so spending it on scaffolding gives one signal two jobs.
+
+**A figure may wear its page's territory hue — on the elements that *name* things only.** Participant
+boxes and their labels take the hue; arrows, values and message text stay neutral, because the
+content is not what the colour is identifying. This is the one place hue appears outside the
+territory rule, and it is the same hue the page header already shows, so it reads as belonging
+rather than as a second colour system. Pass it explicitly — `<SequenceDiagram territory="explore">`
+matching the page's `<PageHeader territory="explore">`; omitted, a figure is entirely grey.
+
+Reference implementation: `components/blog/SequenceDiagram.tsx`.
+
 ## One button
 
 `panda.config.ts` defines a single `button` recipe. **No component defines its own button.**
@@ -195,3 +244,12 @@ Not everything is on a scale, and that is fine to know rather than discover:
   computed at runtime. Inline styles are plain CSS and cannot take token *names*, so raw units
   there are correct, not drift — reach for `token("radii.md")` if a real token is wanted.
 - The essay widgets carry their own type and colour scales, by design (see above).
+- **Diagram and widget containers still carry tinted washes**, predating the [Figures](#figures)
+  rule and violating both *no tinted surfaces* and *never write a hex in a component*:
+  `rgba(123,63,160,.04)` (`QuantumPDCircuit.tsx`, `DiversificationRandomWalk.tsx`),
+  `rgba(59,130,246,.05)` (`components/blog/widgetCard.ts`), `rgba(78,121,167,.04)`
+  (`RiskReality.tsx`, `PortfolioRiskAllocator.tsx`, `ShockCalculator.tsx`),
+  `rgba(34,197,94,.06)`, and `MermaidDiagram.tsx`'s `codeBg` box. This is the migration list:
+  each drops its container the next time it is touched. `SequenceDiagram.tsx` is the first done.
+  A `styleConventions` rule banning raw `rgba()` inside `css({})` would enforce this — worth
+  adding once the list is short, not while it would fail on eight call sites.

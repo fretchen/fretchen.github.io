@@ -15,6 +15,8 @@ export interface VerifyResult {
   recipient?: string;
   /** Whether fee collection is required at settle time */
   feeRequired?: boolean;
+  /** How many more settlements the current allowance covers. Surfaced to the seller. */
+  remainingSettlements?: number;
   /** Scheme-specific extras from the facilitator (e.g. batch-settlement's channelState). Already
    * passed through at runtime via the `...result` spread below — declared here for typing/documentation. */
   extra?: Record<string, unknown>;
@@ -100,6 +102,7 @@ export async function verifyPayment(
       ...result,
       feeRequired: resultWithExtras.feeRequired as boolean | undefined,
       recipient: resultWithExtras.recipient as string | undefined,
+      remainingSettlements: resultWithExtras.remainingSettlements as number | undefined,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

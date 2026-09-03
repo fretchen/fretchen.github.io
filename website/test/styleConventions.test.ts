@@ -35,6 +35,13 @@ import { token } from "../styled-system/tokens";
  *      and — the nastier one — Panda's *preset* names `sans` / `serif` / `mono` are still
  *      valid tokens resolving to the old system stacks. A call site left on `"mono"` after
  *      the Source rollout keeps the system font and reports no error anywhere.
+ *
+ *   6. A config recipe invoked with a *variable* variant — `sectionRule({ territory })`.
+ *      Rule 2 one level up: Panda resolves recipe variants statically too, so it emits only
+ *      the `defaultVariants` case. Every other variant renders its class name with no rule
+ *      behind it. This shipped as an invisible territory rule on all six lab pages — the
+ *      purple half of the colour system painted nothing. Fix by listing the recipe in
+ *      `staticCss`; `test/territoryRule.test.ts` then checks the CSS actually comes out.
  */
 
 const ROOT = join(import.meta.dirname, "..");
@@ -230,6 +237,54 @@ describe("style conventions", () => {
         'generic ("monospace") bypasses the tokens, and Panda\'s preset names sans/serif/mono ' +
         "are still valid tokens pointing at the OLD system stacks — so they fail silently " +
         "rather than erroring. See README.md → Typography.",
+    ).toEqual([]);
+  });
+
+  it("every painting recipe variant passed as a variable is covered by staticCss", async () => {
+    const config = (await import("../panda.config")).default;
+    const recipes = (config.theme?.extend?.recipes ?? {}) as Record<
+      string,
+      { variants?: Record<string, Record<string, object>> }
+    >;
+    const covered = new Set(Object.keys(config.staticCss?.recipes ?? {}));
+
+    /**
+     * Only a variant that carries declarations of its own needs its class generated.
+     * `button`'s `active: { true: {} }` is empty — it paints via compoundVariants, which
+     * Panda emits as atomic utilities — so a dynamic `active` is safe. `sectionRule`'s
+     * `territory` sets a backgroundColor, so an ungenerated variant paints nothing.
+     */
+    const paints = (recipe: string, variantKey: string) =>
+      Object.values(recipes[recipe]?.variants?.[variantKey] ?? {}).some((style) => Object.keys(style ?? {}).length > 0);
+
+    const LITERAL = /^(true|false|\d+|["'`])/;
+    const offenders: string[] = [];
+
+    for (const { path, source } of FILES) {
+      if (path === "panda.config.ts") continue;
+      for (const recipe of Object.keys(recipes)) {
+        if (covered.has(recipe)) continue;
+        for (const match of source.matchAll(new RegExp(`\\b${recipe}\\(\\{([^}]*)\\}\\)`, "g"))) {
+          for (const arg of match[1].split(",")) {
+            const [rawKey, rawValue] = arg.split(":").map((part) => part.trim());
+            if (!rawKey) continue;
+            // Shorthand `{ territory }` is always dynamic; `key: value` only when the
+            // value is an identifier rather than a literal.
+            const isDynamic = rawValue === undefined ? /^[a-zA-Z_$][\w$]*$/.test(rawKey) : !LITERAL.test(rawValue);
+            if (!isDynamic || !paints(recipe, rawKey)) continue;
+            const line = source.slice(0, match.index).split("\n").length;
+            offenders.push(`${path}:${line}: ${recipe}({ …${rawKey}… })`);
+          }
+        }
+      }
+    }
+
+    expect(
+      offenders,
+      "A config recipe variant passed as a variable emits only its defaultVariants case — " +
+        "every other value renders a class name with no CSS behind it. That is how the " +
+        "territory rule went invisible on all six lab pages. List the recipe under staticCss " +
+        'in panda.config.ts, e.g. `sectionRule: [{ territory: ["*"] }]`.',
     ).toEqual([]);
   });
 });

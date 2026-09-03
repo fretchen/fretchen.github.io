@@ -1,0 +1,239 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "fretchen x402 Facilitator",
+    "description": "x402 v2 facilitator: verifies and settles USDC payments on Optimism and Base. This is protocol infrastructure a seller (resource server) integrates against, not a paid resource — a buyer never calls these endpoints directly; the seller relays a buyer's signed payment payload here to verify and settle it. The facilitator never holds funds and is not a custodian.",
+    "version": "1.0.0",
+    "x-guidance": "Sellers: on receiving a request with a payment header, POST { paymentPayload, paymentRequirements } to /verify before delivering the resource, then POST the same body to /settle after delivery. GET /supported once to discover which networks, schemes, and fee model this facilitator advertises. There is no request body for /supported.",
+    "contact": {
+      "name": "fretchen",
+      "url": "https://www.fretchen.eu",
+      "email": "fretchen.dev@proton.me"
+    }
+  },
+  "servers": [{ "url": "https://facilitator.fretchen.eu" }],
+  "tags": [{ "name": "x402", "description": "x402 v2 payment verification and settlement" }],
+  "paths": {
+    "/verify": {
+      "post": {
+        "operationId": "verify",
+        "summary": "Verify a signed payment off-chain, before delivering the resource",
+        "description": "Called by a seller after receiving a payment header from a buyer. Checks signature validity, sufficient balance, correct recipient, and expiration. Does not move funds. Call this before delivering the resource; call /settle after.",
+        "tags": ["x402"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PaymentRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Verification result. A 200 status does not imply the payment was valid — check isValid.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/VerifyResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "Request body was not valid JSON, or was missing paymentPayload/paymentRequirements."
+          },
+          "405": { "description": "Method not allowed — use POST." }
+        }
+      }
+    },
+    "/settle": {
+      "post": {
+        "operationId": "settle",
+        "summary": "Settle a verified payment on-chain",
+        "description": "Called by a seller after delivering the resource. Executes the payment on-chain (EIP-3009 transferWithAuthorization for the exact scheme). Same request shape as /verify.",
+        "tags": ["x402"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PaymentRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Settlement result. A 200 status does not imply the settlement succeeded — check success.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SettleResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "Request body was not valid JSON, or was missing paymentPayload/paymentRequirements."
+          },
+          "405": { "description": "Method not allowed — use POST." }
+        }
+      }
+    },
+    "/supported": {
+      "get": {
+        "operationId": "supported",
+        "summary": "Discover the networks, schemes, and fee model this facilitator advertises",
+        "description": "Called once by a seller (or a buyer's client) to learn what this facilitator supports, before ever calling /verify or /settle. No request body.",
+        "tags": ["x402"],
+        "responses": {
+          "200": {
+            "description": "Supported capabilities.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SupportedResponse" }
+              }
+            }
+          },
+          "405": { "description": "Method not allowed — use GET." }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "operationId": "openapiSpec",
+        "summary": "This document",
+        "tags": ["x402"],
+        "responses": {
+          "200": {
+            "description": "This OpenAPI document.",
+            "content": { "application/json": { "schema": { "type": "object" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "PaymentRequest": {
+        "type": "object",
+        "required": ["paymentPayload", "paymentRequirements"],
+        "description": "Identical shape for /verify and /settle.",
+        "properties": {
+          "paymentPayload": {
+            "type": "object",
+            "description": "The x402 v2 PaymentPayload the buyer produced — includes accepted.network, accepted.scheme, and the signed authorization. Passed through as received; the facilitator does not re-derive it.",
+            "required": ["accepted"],
+            "properties": {
+              "accepted": {
+                "type": "object",
+                "properties": {
+                  "network": {
+                    "type": "string",
+                    "description": "CAIP-2 network id, e.g. eip155:10."
+                  },
+                  "scheme": { "type": "string", "description": "e.g. exact, batch-settlement." }
+                }
+              }
+            }
+          },
+          "paymentRequirements": {
+            "type": "object",
+            "description": "The x402 v2 PaymentRequirements the seller advertised in its 402 response.",
+            "properties": {
+              "amount": { "type": "string", "description": "Atomic units of the payment asset." }
+            }
+          }
+        }
+      },
+      "VerifyResponse": {
+        "type": "object",
+        "required": ["isValid"],
+        "properties": {
+          "isValid": { "type": "boolean" },
+          "payer": { "type": "string", "description": "The buyer's address, when known." },
+          "invalidReason": { "type": "string", "description": "Present when isValid is false." },
+          "remainingSettlements": {
+            "type": "integer",
+            "description": "How many more settlements the seller's current USDC approval for this facilitator still covers. Present only when a fee is configured and the allowance could be read — an early warning before it hits zero."
+          }
+        }
+      },
+      "SettleResponse": {
+        "type": "object",
+        "required": ["success"],
+        "properties": {
+          "success": { "type": "boolean" },
+          "payer": { "type": "string" },
+          "transaction": {
+            "type": "string",
+            "description": "On-chain settlement tx hash. Empty string on failure."
+          },
+          "network": {
+            "type": "string",
+            "description": "CAIP-2 network id the settlement ran on."
+          },
+          "errorReason": { "type": "string", "description": "Present when success is false." },
+          "fee": {
+            "type": "object",
+            "description": "Present only when a fee is configured for this network.",
+            "properties": {
+              "collected": {
+                "type": "boolean",
+                "description": "True only when status is \"collected\"."
+              },
+              "status": { "type": "string", "enum": ["collected", "pending", "failed"] },
+              "txHash": {
+                "type": "string",
+                "description": "Fee-collection tx hash, when one was sent."
+              },
+              "error": { "type": "string" }
+            }
+          },
+          "extensions": {
+            "type": "object",
+            "description": "x402 v2 extensions. facilitatorFees, when present, discloses the fee assessed for this payment per the #1016 disclosure proposal — see /supported for the full fee model."
+          },
+          "extra": {
+            "type": "object",
+            "description": "Scheme-specific extras passed through from the underlying scheme (e.g. batch-settlement channel state)."
+          }
+        }
+      },
+      "SupportedResponse": {
+        "type": "object",
+        "required": ["kinds", "extensions", "signers", "links"],
+        "properties": {
+          "kinds": {
+            "type": "array",
+            "description": "Every supported (network, scheme) pair.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "x402Version": { "type": "integer" },
+                "scheme": { "type": "string" },
+                "network": { "type": "string", "description": "CAIP-2 network id." }
+              }
+            }
+          },
+          "extensions": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Advertised extension keys, e.g. facilitatorFees when a fee is configured."
+          },
+          "signers": {
+            "type": "object",
+            "description": "Facilitator address(es) per network."
+          },
+          "facilitatorFees": {
+            "type": "object",
+            "description": "The full fee model disclosure (amount, recipient, recommended USDC approval) — present only when a fee is configured. This is the live source of truth for those numbers; this spec deliberately does not duplicate them."
+          },
+          "links": {
+            "type": "object",
+            "required": ["documentation", "source"],
+            "properties": {
+              "documentation": { "type": "string" },
+              "source": { "type": "string" },
+              "openapi": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

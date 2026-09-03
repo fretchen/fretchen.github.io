@@ -171,10 +171,10 @@ facilitator runs without a fee (no `FACILITATOR_WALLET_PRIVATE_KEY`, or fee amou
       "collection": "post_settlement_transferFrom"
     },
     "setup": {
-      "description": "One-time USDC approval required. Call approve() on the USDC contract for the facilitator's address.",
+      "description": "Recurring USDC approval. Call approve() on the USDC contract for the facilitator's address. The recommended amount is deliberately small: the spender is a hot wallet, so a large standing allowance is a standing risk. Re-approve when remainingSettlements (in the /verify response) runs low; revoke any time with approve(spender, 0).",
       "function": "approve(address spender, uint256 amount)",
       "spender": "0xFacilitatorAddress...",
-      "recommended_amount": "100000000"
+      "recommended_amount": "1000000"
     }
   }
 }
@@ -374,6 +374,17 @@ for (const network of getSupportedNetworks()) {
 
 This ensures that signatures for Mainnet (chainId 10) are validated with a Mainnet client, preventing accidental or malicious settlement on the wrong chain.
 
+## Fee model history
+
+Two fee models were implemented here. Neither is friction-free without protocol support; the choice is about _where_ the friction lands.
+
+- **Buyer-pays split** (`x402_splitter_*.js`, `EIP3009SplitterV1`) — retired, retained but not deployed or built. The buyer signs a single EIP-3009 authorization to a splitter contract, which atomically pays seller and facilitator. The seller needs no setup, but the buyer needs a non-stock client, and `payTo` shows the splitter rather than the actual recipient — so the buyer cannot see who they are paying from the payment requirements alone.
+- **Merchant-pays post-settlement** (`x402_fee.ts`) — current. The buyer is entirely untouched and stock `@x402/fetch` works. The seller must `approve()` the facilitator wallet for USDC and trust it not to over-pull.
+
+The current model matches the industry norm — Stripe and Coinbase CDP bill the merchant, not the payer. It does not eliminate onboarding friction; it moves it from the buyer to the seller.
+
+The splitter contract at `0x7e67bf96ADbf4a813DD7b0A3Ca3060a937018946` (Optimism Sepolia) stays deployed: it is referenced from [x402#937](https://github.com/x402-foundation/x402/issues/937).
+
 ## Deployment
 
 ### Deploy to Scaleway
@@ -474,21 +485,25 @@ The facilitator uses [viem](https://viem.sh/) for EIP-712 signature verification
 
 ```
 x402_facilitator/
-├── x402_facilitator.js          # Main handler (path-based routing)
-├── x402_verify.js                # Verification logic
-├── x402_settle.js                # Settlement logic
-├── x402_supported.js             # Supported networks/schemes
-├── x402_whitelist.js             # Multi-source whitelist
-├── chain_utils.js                # Centralized chain config
+├── x402_facilitator.ts           # Main handler (path-based routing)
+├── x402_verify.ts                # Verification logic
+├── x402_settle.ts                # Settlement logic
+├── x402_fee.ts                   # Fee collection (merchant-pays, current model)
+├── x402_supported.ts             # Supported networks/schemes + fee disclosure
+├── x402_whitelist.ts             # Multi-source whitelist (batch-settlement)
+├── facilitator_instance.ts       # Shared x402Facilitator + onAfterVerify fee hook
+├── chain_utils.ts                # Centralized chain config
+├── wallet_report_cron.ts         # Weekly wallet balance report
 ├── serverless.yml                # Scaleway deployment config
 ├── package.json
-└── test/
-    ├── x402_facilitator.test.js
-    ├── x402_verify.test.js
-    ├── x402_settle.test.js
-    ├── x402_supported.test.js
-    ├── x402_whitelist.test.js
-    └── eip712_reference.test.js
+│
+│   # Retired — buyer-pays splitter. Not deployed, not built; see "Fee model history".
+├── x402_splitter_facilitator.js
+├── x402_splitter_verify.js
+├── x402_splitter_settle.js
+├── x402_splitter_supported.js
+│
+└── test/                         # incl. retained x402_splitter_*.test.js
 ```
 
 ## Links

@@ -10,7 +10,10 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
-      exclude: ["node_modules/", "test/", "*.config.js"],
+      // The retired splitter still has tests (they run, so it cannot rot silently) but
+      // is excluded from the report: retired code should not misrepresent the coverage
+      // of the code that actually serves traffic.
+      exclude: ["node_modules/", "test/", "*.config.js", "x402_splitter_*.js"],
     },
   },
 });

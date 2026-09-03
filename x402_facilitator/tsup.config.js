@@ -2,7 +2,10 @@ import { defineConfig } from "tsup";
 import { builtinModules } from "module";
 
 export default defineConfig({
-  entry: ["x402_facilitator.ts", "wallet_report_cron.ts", "x402_splitter_facilitator.js"],
+  // x402_splitter_facilitator.js is deliberately absent: the buyer-pays splitter is
+  // retired (see README → Fee model history). No function in serverless.yml routes to it,
+  // but `package: dist/**` means anything built here still ships in the deploy archive.
+  entry: ["x402_facilitator.ts", "wallet_report_cron.ts"],
   format: ["esm"],
   platform: "node",
   target: "node22",

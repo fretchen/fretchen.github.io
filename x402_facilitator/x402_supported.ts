@@ -62,7 +62,22 @@ interface SupportedCapabilities {
   signers: Record<string, string[]>;
   /** Present only when a fee is configured (feeAmount > 0 and a facilitator key exists). */
   facilitatorFees?: FacilitatorFeesDisclosure;
+  /**
+   * Onward paths for a caller that has just discovered `/supported` and has nowhere else
+   * to go — an agent doing facilitator discovery, or a human who followed a link from a
+   * listing. Always present, unlike `facilitatorFees`: it doesn't depend on a fee being
+   * configured.
+   */
+  links: {
+    documentation: string;
+    source: string;
+    openapi: string;
+  };
 }
+
+const DOCUMENTATION_URL = "https://www.fretchen.eu/x402/";
+const SOURCE_URL = "https://github.com/fretchen/fretchen.github.io/tree/main/x402_facilitator";
+const OPENAPI_URL = "https://facilitator.fretchen.eu/openapi.json";
 
 /**
  * Get supported payment schemes and networks.
@@ -76,6 +91,7 @@ export function getSupportedCapabilities(): SupportedCapabilities {
   const supported: SupportedCapabilities = {
     ...base,
     extensions: [...(base.extensions ?? [])],
+    links: { documentation: DOCUMENTATION_URL, source: SOURCE_URL, openapi: OPENAPI_URL },
   };
 
   const feeAmount = getFeeAmount();
@@ -103,10 +119,17 @@ export function getSupportedCapabilities(): SupportedCapabilities {
       },
       setup: {
         description:
-          "One-time USDC approval required. Call approve() on the USDC contract for the facilitator's address.",
+          "Recurring USDC approval. Call approve() on the USDC contract for the facilitator's address. " +
+          "The recommended amount is deliberately small: the spender is a hot wallet, so a large standing " +
+          "allowance is a standing risk. Re-approve when remainingSettlements (in the /verify response) " +
+          "runs low; revoke any time with approve(spender, 0).",
         function: "approve(address spender, uint256 amount)",
         spender: facilitatorAddress,
-        recommended_amount: "100000000", // 100 USDC = 10,000 settlements
+        // Deliberately small. The spender is the same key that signs every settlement
+        // (FACILITATOR_WALLET_PRIVATE_KEY, a hot secret), so this figure is the per-merchant
+        // blast radius of a key compromise — not a convenience setting. Raise it only with
+        // that tradeoff in mind; the test in x402_supported.test.js bounds it.
+        recommended_amount: "1000000", // 1 USDC = 100 settlements
       },
     };
   }

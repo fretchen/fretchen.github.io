@@ -159,6 +159,19 @@ describe("x402 /supported endpoint", () => {
     expect(fees.networks).toContain("eip155:84532");
   });
 
+  test("keeps the recommended approval small relative to the fee", () => {
+    process.env.FACILITATOR_WALLET_PRIVATE_KEY =
+      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+
+    const fees = getSupportedCapabilities().facilitatorFees;
+    const settlementsCovered = BigInt(fees.setup.recommended_amount) / BigInt(fees.flatFee);
+
+    // The approval spender is the same hot key that signs every settlement, so this
+    // figure IS the per-merchant blast radius of a key compromise. Bounded rather than
+    // pinned to an exact value: the security property is "stays small", not "is 1 USDC".
+    expect(settlementsCovered).toBeLessThanOrEqual(100n);
+  });
+
   test("omits fee extension keys and disclosure when private key is missing", () => {
     delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
     const capabilities = getSupportedCapabilities();
@@ -166,5 +179,16 @@ describe("x402 /supported endpoint", () => {
     expect(capabilities.extensions).not.toContain("facilitator_fee");
     expect(capabilities.extensions).not.toContain("facilitatorFees");
     expect(capabilities.facilitatorFees).toBeUndefined();
+  });
+
+  test("always includes onward links, independent of fee configuration", () => {
+    // Unlike facilitatorFees, links must not depend on a configured key: an agent that
+    // discovers /supported in read-only mode still needs somewhere to go.
+    delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
+    const capabilities = getSupportedCapabilities();
+
+    expect(capabilities.links.documentation).toMatch(/^https:\/\//);
+    expect(capabilities.links.source).toMatch(/^https:\/\//);
+    expect(capabilities.links.openapi).toMatch(/^https:\/\//);
   });
 });

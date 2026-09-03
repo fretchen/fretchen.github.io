@@ -1,3 +1,3 @@
 export function title() {
-  return "Agent Onboarding | fretchen.eu";
+  return "Selling LLM Access with x402 Batch-Settlement | fretchen.eu";
 }

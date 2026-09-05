@@ -158,6 +158,12 @@ export function createFacilitator(requirePrivateKey = true): InstanceType<typeof
     // see getBatchSettlementNetworks(). No authorizerSigner → no receiverAuthorizer
     // advertised; servers self-manage it (self-managed receiver, per the
     // batch-settlement migration plan).
+    //
+    // Passing no authorizerSigner is also load-bearing for safety: the SDK's refund path
+    // omits the per-claim `receiverAuthorizer === authorizerSigner.address` check that its
+    // claim path performs, so it would sign a claim batch for channels naming any
+    // authorizer. That gap is unreachable here only because claimAuthorizerSignature must
+    // always come from the client. Adding an authorizerSigner would make it live.
     if (getBatchSettlementNetworks().includes(network)) {
       facilitator.register(network, new BatchSettlementEvmScheme(signer));
     }
@@ -169,12 +175,16 @@ export function createFacilitator(requirePrivateKey = true): InstanceType<typeof
       return;
     }
 
-    // Batch-settlement's deposit/voucher/refund payloads are not "usage" — they fund,
-    // sign, or unwind a channel rather than realize a payment — so they carry no fee
-    // and no gate at all (FEE_MODEL_PLAN.md Phase 3). Only claim/settle, which pay out
-    // to the receiver, are fee-gated — and those payload types skip verify() entirely
-    // (the SDK has no verify() branch for them), so they never reach this hook; their
-    // gate lives in x402_settle.ts instead.
+    // Batch-settlement carries NO fee decision in this hook — deliberately. Its
+    // fee-bearing event is a claimWithSignature, which is a property of the payload's
+    // SHAPE (a `claim`, a `settle`, or a `refund` enriched with a non-empty `claims[]`),
+    // not of `payload.type`, and it has to be gated against the receiver the SDK actually
+    // pays out to. That decision is made once, in x402_settle.ts's
+    // classifyBatchSettlement(). Forcing feeRequired=false here keeps this hook from
+    // becoming a second, label-based source of truth for the same question — which is the
+    // split-brain the enriched-refund bypass came out of. deposit/voucher/claim-less
+    // refunds are genuinely free: they fund, sign or unwind a channel rather than realize
+    // a payment (FEE_MODEL_PLAN.md Phase 3).
     if (paymentPayload.accepted?.scheme === "batch-settlement") {
       (result as Record<string, unknown>).feeRequired = false;
       return;

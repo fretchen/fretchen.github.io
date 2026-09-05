@@ -499,25 +499,16 @@ describe("x402_fee", () => {
 
       const gate = await evaluateFeeGate(merchant, "eip155:11155420");
 
-      expect(gate).toMatchObject({
-        kind: "reject",
-        reason: "facilitator_not_configured",
-        requiredAllowance: 10000n,
-      });
+      expect(gate).toEqual({ kind: "reject", reason: "facilitator_not_configured" });
     });
 
-    it("rejects with insufficient_fee_allowance, carrying the detail the caller reports", async () => {
+    it("rejects with insufficient_fee_allowance when the allowance is too low", async () => {
       await mockAllowance(5000n);
 
       const gate = await evaluateFeeGate(merchant, "eip155:11155420");
 
-      expect(gate).toMatchObject({
-        kind: "reject",
-        reason: "insufficient_fee_allowance",
-        allowance: 5000n,
-        requiredAllowance: 10000n,
-        facilitatorAddress: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-      });
+      // Only the reason travels — the allowance detail behind it is logged, not returned.
+      expect(gate).toEqual({ kind: "reject", reason: "insufficient_fee_allowance" });
     });
 
     it("charges, and reports remaining settlements, when the allowance covers the fee", async () => {

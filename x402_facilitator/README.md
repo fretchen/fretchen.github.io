@@ -17,7 +17,7 @@ The x402 Facilitator bridges the gap between Resource Servers and blockchain pay
 The facilitator supports two x402 schemes on the same `/verify` and `/settle` endpoints (it routes by the payload's `scheme` field):
 
 - **`exact`** — one EIP-3009 `transferWithAuthorization` per request, USDC moved wallet-to-wallet. Supported on all networks. A flat facilitator fee may be collected post-settlement.
-- **`batch-settlement`** — payment channels: the payer escrows USDC once, signs an off-chain cumulative voucher per request, and the receiver claims many requests in one on-chain transaction. Only advertised on networks where the canonical batch-settlement contract is deployed (see `getBatchSettlementNetworks()` — Optimism/Base mainnet + Base Sepolia). Optimism Sepolia is **not** on that list because the contract isn't deployed there — but `exact` still works on it; the restriction is specific to `batch-settlement`. See [`notebooks/x402_batch_settlement.ipynb`](./notebooks/x402_batch_settlement.ipynb) for an end-to-end walkthrough. `deposit`/`voucher`/`refund` payloads are open and fee-free — they fund, sign, or unwind a channel rather than realize a payment. `claim`/`settle` (the payload types that pay out) charge the same flat fee `exact` does, gated by the same USDC allowance check (see `x402_fee.ts`); an under-approved recipient gets `insufficient_fee_allowance` on `/settle`.
+- **`batch-settlement`** — payment channels: the payer escrows USDC once, signs an off-chain cumulative voucher per request, and the receiver claims many requests in one on-chain transaction. Only advertised on networks where the canonical batch-settlement contract is deployed (see `getBatchSettlementNetworks()` — Optimism/Base mainnet + Base Sepolia). Optimism Sepolia is **not** on that list because the contract isn't deployed there — but `exact` still works on it; the restriction is specific to `batch-settlement`. See [`notebooks/x402_batch_settlement.ipynb`](./notebooks/x402_batch_settlement.ipynb) for an end-to-end walkthrough. `deposit`/`voucher` payloads and claim-less `refund`s are open and fee-free — they fund, sign, or unwind a channel rather than realize a payment. Whatever pays out charges the same flat fee `exact` does, gated by the same USDC allowance check (see `x402_fee.ts`); an under-approved recipient gets `insufficient_fee_allowance` on `/settle`. That means `claim`, `settle`, **and** a `refund` carrying a non-empty `claims[]` — the SDK settles the latter as `multicall([claimWithSignature, refundWithSignature])`, so it performs the identical payout a `claim` does. The fee follows the claim, not the payload type: gating on `payload.type` alone let a relabelled claim skip the gate entirely.
 
 ### Key Features
 
@@ -74,10 +74,10 @@ SCW_SECRET_KEY=your_scaleway_secret_key
 SCW_DEFAULT_ORGANIZATION_ID=your_org_id
 SCW_DEFAULT_PROJECT_ID=your_project_id
 
-# batch-settlement claim/settle test-wallet bypass — lets a testnet dev key skip the
-# USDC allowance check (only honored on testnets: Optimism Sepolia, Base Sepolia, so
-# a testnet entry can never bypass real funds). deposit/voucher/refund need no env
-# var — they're always open and fee-free.
+# batch-settlement test-wallet bypass — lets a testnet dev key skip the USDC allowance
+# check on any paying payload (claim, settle, or a claim-carrying refund). Only honored
+# on testnets (Optimism Sepolia, Base Sepolia), so a testnet entry can never bypass real
+# funds. deposit/voucher/claim-less refunds need no env var — they're always fee-free.
 BATCH_SETTLEMENT_TEST_WALLETS=0x1234...,0x5678...
 
 # RPC endpoints (optional - have defaults)
@@ -271,8 +271,9 @@ Error-reason strings come from the `@x402/evm` SDK and are prefixed by scheme (`
 | `invalid_exact_evm_network_mismatch`                | Signed vs. settle network mismatch                                                                                |
 | `invalid_exact_evm_scheme`                          | Scheme not supported                                                                                              |
 | `invalid_batch_settlement_evm_insufficient_balance` | Channel balance too low for the voucher                                                                           |
-| `invalid_batch_settlement_evm_payload_type`         | Payload type not verifiable via `/verify`, or (on `/settle`) a `claim`/`settle` payload missing a usable receiver |
-| `insufficient_fee_allowance`                        | Recipient's USDC allowance for the facilitator is too low — `exact`, or `batch-settlement` `claim`/`settle`       |
+| `invalid_batch_settlement_evm_payload_type`         | Payload type not verifiable via `/verify`, or (on `/settle`) a paying payload missing a usable receiver, naming more than one, or carrying a non-array `claims` |
+| `invalid_batch_settlement_evm_receiver_mismatch`    | A `refund`'s `claims[]` pay out to a receiver other than its own verified channel                                |
+| `insufficient_fee_allowance`                        | Recipient's USDC allowance for the facilitator is too low — `exact`, or any `batch-settlement` payload that executes a claim |
 | `invalid_network`                                   | Network not supported                                                                                             |
 | `invalid_payload`                                   | Malformed payload                                                                                                 |
 | `unexpected_verify_error`                           | Unexpected error                                                                                                  |

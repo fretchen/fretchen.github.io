@@ -59,10 +59,11 @@ export function getSupportedCapabilities(): SupportedCapabilities {
       fee: {
         amount: feeAmount.toString(),
         description:
-          `${formatUnits(feeAmount, 6)} USDC per settlement (exact), or per claim/settle ` +
-          "transaction (batch-settlement) — same flat amount either way. batch-settlement's " +
-          "deposit/voucher/refund payloads are not charged; only claim/settle, which realize " +
-          "a payment, are.",
+          `${formatUnits(feeAmount, 6)} USDC per settlement (exact), or per on-chain claim ` +
+          "or settle transaction (batch-settlement) — same flat amount either way. " +
+          "batch-settlement charges whatever realizes a payment: claim, settle, and a refund " +
+          "that carries claims (which settles them in the same transaction). Deposits, " +
+          "vouchers, and claim-less refunds are not charged.",
         collection: "post_settlement_transferFrom",
       },
       setup: {

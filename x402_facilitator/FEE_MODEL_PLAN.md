@@ -252,13 +252,21 @@ two, and they don't all cost the facilitator gas the same way:
 | `voucher`    | no — signature only   | no                            |
 | `claim`      | yes                   | **yes**                       |
 | `settle`     | yes                   | **yes**                       |
-| `refund`     | yes                   | no — unwinds a channel        |
+| `refund` (claim-less) | yes          | no — unwinds a channel        |
+| `refund` (with `claims[]`) | yes     | **yes** — settles the claims¹ |
 
-**Scope decision:** fees apply only to `claim`/`settle` — the two payload types that
-actually pay out to the receiver. `deposit`, `voucher`, and `refund` are not usage and
-were made fully open and fee-free, same as `voucher` already was, even though
-`deposit`/`refund` still cost the facilitator gas. Accepted tradeoff at current
-volume — a gas-spam exposure on those two, not worth a gate for what they cost today.
+¹ An *enriched* refund — `type: "refund"` carrying a non-empty `claims[]` — is settled by
+`@x402/evm` as `multicall([claimWithSignature, refundWithSignature])`. It performs the
+identical on-chain payout a `claim` does, and it is the SDK client's ordinary close-out
+(`BatchSettlementServer.refundChannel()` emits exactly this shape).
+
+**Scope decision:** fees apply to any payload the SDK settles via `claimWithSignature` or
+`settle` — the operations that actually pay out to the receiver. `deposit`, `voucher`, and
+claim-less `refund`s are not usage and are fully open and fee-free, even though
+`deposit`/`refund` still cost the facilitator gas. Accepted tradeoff at current volume — a
+gas-spam exposure on those, not worth a gate for what they cost today.
+
+**This scope is keyed on the payload's SHAPE, never on `payload.type`.** See Phase 3.1.
 
 **No accrual ledger needed**, contrary to this section's earlier "Blocked" framing
 (that framing conflated this with the _Deferred from Phase 1_ sweep-batching idea,
@@ -276,13 +284,15 @@ vouchers for one merchant costs the same flat fee as one sweeping 5.
       `collectFee()` immediately after the transaction confirms, using a
       `collectAndReportFee()` helper shared with the `exact` branch (same
       `collected`/`pending`/`failed` receipt shape, same `#1016` extension).
-      A claim batching multiple receivers charges the fee once, against the batch's
-      first receiver — accepted simplification; real usage batches one merchant's own
-      channels, not several merchants in one claim.
+      A batch naming more than one receiver is rejected rather than charged once
+      against the first: real usage batches one merchant's own channels, and one flat
+      fee against one allowance would otherwise let one seller's approval pay for
+      another seller's payout.
 - [x] `facilitator_instance.ts`: the batch-settlement branch of `onAfterVerify`
       (reached by `deposit`/`voucher`/`refund` — `claim`/`settle` skip `verify()`
       entirely) simplified to an unconditional `feeRequired = false`. No lookup, no
-      per-payload-type branch.
+      per-payload-type branch. Phase 3.1 makes this deliberate rather than incidental:
+      it keeps the hook from becoming a second source of truth for the fee decision.
 - [x] `x402_whitelist.ts`: `BATCH_SETTLEMENT_MANUAL_WHITELIST` and
       `isRecipientWhitelisted` retired. `BATCH_SETTLEMENT_TEST_WALLETS` kept, renamed
       to `isTestWalletBypassed` — a test wallet on a testnet skips the allowance check
@@ -297,6 +307,63 @@ vouchers for one merchant costs the same flat fee as one sweeping 5.
       gate (insufficient allowance, gates on `payload.receiver` not
       `requirements.payTo`, single-fee-per-batch, test-wallet bypass keyed on
       `requirements.network` not `accepted.network`).
+
+---
+
+## Phase 3.1 — The fee follows the claim, not the label ✅ complete
+
+A security review of the Phase 3 gate found it dispatched on a **client-supplied label**:
+
+```ts
+if (isBatchSettlement && (payloadType === "claim" || payloadType === "settle")) {
+```
+
+The SDK dispatches on the payload's **shape**. Those two disagree for exactly one payload:
+an enriched refund (`type: "refund"` + `amount` + `refundNonce` + non-empty `claims[]`),
+which `@x402/evm` routes to `executeRefundWithSignature()` → `multicall([claimWithSignature,
+refundWithSignature])`. A seller could therefore take the claims it would have submitted as
+`type: "claim"`, relabel the payload `"refund"`, and have them relayed with **no allowance
+required and no fee charged** — on mainnet, with the manual whitelist already retired.
+
+Compounding it: `verify()` sends a refund to `verifyVoucher`, which validates only
+`payload.voucher` and `payload.channelConfig`. It never inspects `payload.claims`. So the
+claims could name receivers unrelated to the verified channel.
+
+**The principle, and the thing not to undo:** the fee-bearing event is a
+`claimWithSignature`, which is a property of what the SDK will *execute*, not of what the
+caller *calls* it. Classification must therefore key on shape — and on the SDK's own
+exported predicates (`isBatchSettlementClaimPayload`, `isBatchSettlementSettlePayload`,
+`isBatchSettlementEnrichedRefundPayload`), imported rather than reimplemented, so this
+file's notion of "what will this payload do" cannot drift from the SDK's across upgrades.
+Drift between the two *was* the vulnerability.
+
+- [x] `x402_settle.ts`: `classifyBatchSettlement()` replaces the label test, returning
+      `command` (claim/settle — skip verify, gate, settle, charge), `claiming-refund`
+      (verify first, then gate and charge like a claim), `free` (deposit, voucher,
+      claim-less refund), or `reject`. The SDK's guards are shape-only (`"claims" in
+      payload`), so a non-array `claims` is still validated here rather than trusted.
+- [x] `x402_settle.ts`: an enriched refund keeps going through `verifyPayment()` — that
+      is what pins `channelConfig.receiver` to `requirements.payTo`. Every claim is then
+      required to name that same receiver (`invalid_batch_settlement_evm_receiver_mismatch`),
+      which is what closes the unverified-`claims` hole. Rerouting it into the claim
+      branch would have traded one hole for a worse one.
+- [x] The allowance gate runs *before* `facilitator.settle()` on both paths: the allowance
+      is the merchant's authorization to be relayed at all, so it must hold before the hot
+      wallet spends gas.
+- [x] `facilitator_instance.ts`: `onAfterVerify` keeps its blanket `feeRequired = false`
+      for the whole scheme, deliberately. Letting it decide too would give one payload two
+      fee arms with two different recipient sources — the same split-brain this bug came
+      out of. One source of truth, in `x402_settle.ts`.
+- [x] Tests: seven cases in `x402_settle.test.js` covering a claim-carrying refund being
+      gated and charged, rejected on insufficient allowance without settling, the
+      claims-receiver mismatch, a non-array `claims`, a multi-seller enriched refund, the
+      testnet bypass, and a claim-less refund staying free. Five of the seven fail against
+      the pre-fix code — verified by reverting the source and re-running.
+
+**Residual, knowingly left open:** `deposit`, `voucher`, and claim-less `refund`s remain
+unauthenticated on mainnet since the whitelist was retired. They relay only the caller's own
+signed authorizations, so the exposure is facilitator gas rather than fund movement — the
+same accepted gas-spam tradeoff recorded in Phase 3, not a separate finding.
 
 ---
 

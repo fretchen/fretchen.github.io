@@ -955,9 +955,6 @@ describe("x402_settle with mocked facilitator", () => {
     vi.spyOn(feeModule, "evaluateFeeGate").mockResolvedValue({
       kind: "reject",
       reason: "insufficient_fee_allowance",
-      allowance: 0n,
-      requiredAllowance: 10000n,
-      facilitatorAddress: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     });
 
     const claimPayload = {
@@ -1247,9 +1244,6 @@ describe("x402_settle with mocked facilitator", () => {
     vi.spyOn(feeModule, "evaluateFeeGate").mockResolvedValue({
       kind: "reject",
       reason: "insufficient_fee_allowance",
-      allowance: 0n,
-      requiredAllowance: 10000n,
-      facilitatorAddress: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     });
 
     const claimPayload = {
@@ -1326,6 +1320,202 @@ describe("x402_settle with mocked facilitator", () => {
     vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
 
     const result = await settlePayment(claimPayload, requirements);
+
+    expect(result.success).toBe(true);
+    expect(feeModule.evaluateFeeGate).not.toHaveBeenCalled();
+    expect(feeModule.collectFee).not.toHaveBeenCalled();
+    expect(result.fee).toBeUndefined();
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // Enriched refunds: the fee follows the claim, not the label
+  //
+  // A `type: "refund"` carrying a non-empty `claims[]` is settled by @x402/evm as
+  // multicall([claimWithSignature, refundWithSignature]) — the identical on-chain payout
+  // a `type: "claim"` performs. Gating on `payload.type` let that shape skip the
+  // allowance check and the fee entirely, so a seller could have its claims relayed for
+  // free just by relabelling them. These tests pin the shape-based classification.
+  //
+  // Unlike claim/settle, an enriched refund IS verifiable, so it must keep going through
+  // verifyPayment() — that is what pins channelConfig.receiver to requirements.payTo,
+  // which the claims are then anchored to.
+  // ═══════════════════════════════════════════════════════════
+
+  const seller = "0x209693Bc6afc0C5328bA36FaF03C514EF312287C";
+  const payer = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+
+  /** An enriched refund for `seller`, with `claims` overridable per test. */
+  const enrichedRefundPayload = (claims) => ({
+    x402Version: 2,
+    accepted: { scheme: "batch-settlement", network: "eip155:84532" },
+    payload: {
+      type: "refund",
+      channelConfig: { payer, receiver: seller },
+      // isVoucherFields() requires all three of these to be present.
+      voucher: {
+        channelId: "0x" + "11".repeat(32),
+        maxClaimableAmount: "12000",
+        signature: "0x" + "ab".repeat(65),
+      },
+      amount: "5000",
+      refundNonce: "0",
+      claims,
+      refundAuthorizerSignature: "0x" + "ef".repeat(65),
+      claimAuthorizerSignature: "0x" + "cd".repeat(65),
+    },
+  });
+
+  const claimFor = (receiver) => ({
+    voucher: { channel: { payer, receiver }, maxClaimableAmount: "12000" },
+    signature: "0x" + "ab".repeat(65),
+    totalClaimed: "0",
+  });
+
+  const refundRequirements = {
+    scheme: "batch-settlement",
+    network: "eip155:84532",
+    payTo: seller,
+  };
+
+  it("gates and charges a refund that carries claims, like the claim it is", async () => {
+    // The core regression: this payload performs a claimWithSignature, so it owes the
+    // same flat fee and must clear the same allowance gate as `type: "claim"`.
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({ isValid: true, payer });
+    const mockFacilitator = {
+      settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xrefundtxhash" }),
+    };
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(
+      enrichedRefundPayload([claimFor(seller)]),
+      refundRequirements,
+    );
+
+    expect(result.success).toBe(true);
+    // Still verified — this path must NOT be rerouted into the claim branch, which skips
+    // verify and would discard the channelConfig.receiver === payTo check.
+    expect(verifyModule.verifyPayment).toHaveBeenCalled();
+    // Gated before settling, against the verified channel receiver.
+    expect(feeModule.evaluateFeeGate).toHaveBeenCalledTimes(1);
+    expect(feeModule.evaluateFeeGate).toHaveBeenCalledWith(seller, "eip155:84532");
+    // One claim, one flat fee.
+    expect(feeModule.collectFee).toHaveBeenCalledTimes(1);
+    expect(feeModule.collectFee).toHaveBeenCalledWith(seller, "eip155:84532");
+    expect(result.fee?.collected).toBe(true);
+    expect(result.extensions?.facilitatorFees?.info?.facilitatorFeePaid).toBe("10000");
+  });
+
+  it("refuses to relay a claim-carrying refund when the seller's allowance is insufficient", async () => {
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({ isValid: true, payer });
+    vi.spyOn(feeModule, "evaluateFeeGate").mockResolvedValue({
+      kind: "reject",
+      reason: "insufficient_fee_allowance",
+    });
+    const mockFacilitator = { settle: vi.fn() };
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(
+      enrichedRefundPayload([claimFor(seller)]),
+      refundRequirements,
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.errorReason).toBe("insufficient_fee_allowance");
+    // The gate is the seller's authorization to be relayed at all, so it has to hold
+    // before the facilitator's hot wallet spends any gas.
+    expect(mockFacilitator.settle).not.toHaveBeenCalled();
+  });
+
+  it("leaves a claim-less refund free", async () => {
+    // Returns the payer's own escrow and pays out to no receiver — no claim, no fee.
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({ isValid: true, payer });
+    const mockFacilitator = {
+      settle: vi.fn().mockResolvedValue({
+        success: true,
+        transaction: "0xrefundtxhash",
+        extra: { channelState: { channelId: "0xchannel" } },
+      }),
+    };
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(enrichedRefundPayload([]), refundRequirements);
+
+    expect(result.success).toBe(true);
+    expect(feeModule.evaluateFeeGate).not.toHaveBeenCalled();
+    expect(feeModule.collectFee).not.toHaveBeenCalled();
+    expect(result.fee).toBeUndefined();
+    // result.extra must survive the no-fee tail (channelState.channelId etc.).
+    expect(result.extra).toEqual({ channelState: { channelId: "0xchannel" } });
+  });
+
+  it("rejects a refund whose claims pay out to a receiver other than its own channel", async () => {
+    // verify() validates only payload.voucher and payload.channelConfig — it never
+    // inspects payload.claims. Without anchoring the claims to the verified channel, a
+    // valid refund for a channel the caller owns could smuggle payouts to anyone.
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({ isValid: true, payer });
+    const mockFacilitator = { settle: vi.fn() };
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(
+      enrichedRefundPayload([claimFor("0x3333333333333333333333333333333333333333")]),
+      refundRequirements,
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.errorReason).toBe("invalid_batch_settlement_evm_receiver_mismatch");
+    expect(mockFacilitator.settle).not.toHaveBeenCalled();
+    // Rejected structurally, before any allowance RPC.
+    expect(feeModule.evaluateFeeGate).not.toHaveBeenCalled();
+  });
+
+  it("rejects a refund whose claims are not an array", async () => {
+    // The SDK's guards are shape-only (`"claims" in payload`), so `claims: {}` arrives
+    // fully "narrowed". Malformed, not free.
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({ isValid: true, payer });
+    const mockFacilitator = { settle: vi.fn() };
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(enrichedRefundPayload({}), refundRequirements);
+
+    expect(result.success).toBe(false);
+    expect(result.errorReason).toBe("invalid_batch_settlement_evm_payload_type");
+    expect(mockFacilitator.settle).not.toHaveBeenCalled();
+  });
+
+  it("rejects a claim-carrying refund that spans more than one seller", async () => {
+    // Same one-seller-per-batch rule the claim path enforces: one flat fee is charged
+    // against one allowance, so a mixed batch would let one seller pay for another's
+    // payout.
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({ isValid: true, payer });
+    const mockFacilitator = { settle: vi.fn() };
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(
+      enrichedRefundPayload([
+        claimFor(seller),
+        claimFor("0x3333333333333333333333333333333333333333"),
+      ]),
+      refundRequirements,
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.errorReason).toBe("invalid_batch_settlement_evm_payload_type");
+    expect(mockFacilitator.settle).not.toHaveBeenCalled();
+  });
+
+  it("bypasses the fee for a claim-carrying refund from a testnet test wallet", async () => {
+    // Same CI/local-dev carve-out the claim path gets, keyed on requirements.network.
+    process.env.BATCH_SETTLEMENT_TEST_WALLETS = seller;
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({ isValid: true, payer });
+    const mockFacilitator = {
+      settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xrefundtxhash" }),
+    };
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(
+      enrichedRefundPayload([claimFor(seller)]),
+      refundRequirements,
+    );
 
     expect(result.success).toBe(true);
     expect(feeModule.evaluateFeeGate).not.toHaveBeenCalled();

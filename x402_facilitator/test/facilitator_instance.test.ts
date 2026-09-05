@@ -360,9 +360,6 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
     vi.mocked(evaluateFeeGate).mockResolvedValue({
       kind: "reject" as const,
       reason: "insufficient_fee_allowance" as const,
-      allowance: 5000n,
-      requiredAllowance: 10000n,
-      facilitatorAddress: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     });
 
     const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
@@ -370,9 +367,6 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
 
     expect(args.result.isValid).toBe(false);
     expect(args.result.invalidReason).toBe("insufficient_fee_allowance");
-    expect(args.result.requiredAllowance).toBe("10000");
-    expect(args.result.currentAllowance).toBe("5000");
-    expect(args.result.facilitatorAddress).toBe("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
   });
 
   it("proceeds when the allowance is unreadable, without capping collection", async () => {
@@ -401,35 +395,16 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
     expect(args.result.remainingSettlements).toBe(10);
   });
 
-  it("rejects recipient with zero allowance", async () => {
-    vi.mocked(evaluateFeeGate).mockResolvedValue({
-      kind: "reject" as const,
-      reason: "insufficient_fee_allowance" as const,
-      allowance: 0n,
-      requiredAllowance: 10000n,
-      facilitatorAddress: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-    });
-
-    const args = hookArgs("0x2222222222222222222222222222222222222222", "eip155:10");
-    await hookHolder.current!(args);
-
-    expect(args.result.isValid).toBe(false);
-    expect(args.result.invalidReason).toBe("insufficient_fee_allowance");
-    expect(args.result.currentAllowance).toBe("0");
-  });
-
   // ───────────────────────────────────────────────────────────
   // Edge cases
   // ───────────────────────────────────────────────────────────
 
   it("rejects when the gate reports the facilitator address is not configured", async () => {
     // The address check itself lives in evaluateFeeGate (see x402_fee.test.ts); this
-    // asserts the hook maps that rejection onto the verify result, and adds none of the
-    // allowance detail fields, which only apply to insufficient_fee_allowance.
+    // asserts the hook maps that rejection onto the verify result.
     vi.mocked(evaluateFeeGate).mockResolvedValue({
       kind: "reject" as const,
       reason: "facilitator_not_configured" as const,
-      requiredAllowance: 10000n,
     });
 
     const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
@@ -437,7 +412,6 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
 
     expect(args.result.isValid).toBe(false);
     expect(args.result.invalidReason).toBe("facilitator_not_configured");
-    expect(args.result.currentAllowance).toBeUndefined();
   });
 
   it("rejects when network is missing from requirements", async () => {

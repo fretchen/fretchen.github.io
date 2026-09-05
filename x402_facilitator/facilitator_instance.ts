@@ -224,14 +224,12 @@ export function createFacilitator(requirePrivateKey = true): InstanceType<typeof
     }
 
     if (gate.kind === "reject") {
+      // Only the reason travels. The allowance detail behind it (how much was approved,
+      // how much is needed, which address to approve) is already published by
+      // `/supported` → `facilitatorFees`, and is logged by evaluateFeeGate for operators
+      // — restating it here would widen the wire contract for no new information.
       result.isValid = false;
       result.invalidReason = gate.reason;
-      if (gate.reason === "insufficient_fee_allowance") {
-        (result as Record<string, unknown>).recipient = recipient;
-        (result as Record<string, unknown>).requiredAllowance = gate.requiredAllowance.toString();
-        (result as Record<string, unknown>).currentAllowance = (gate.allowance ?? 0n).toString();
-        (result as Record<string, unknown>).facilitatorAddress = gate.facilitatorAddress;
-      }
       return;
     }
 

@@ -71,12 +71,13 @@ export type FeeGateDecision =
   | { kind: "no_fee" }
   | { kind: "charge"; remainingSettlements?: number }
   | {
+      /**
+       * Only the reason travels. The allowance detail behind it is logged here for
+       * operators, and `/supported` → `facilitatorFees` already publishes the address to
+       * approve and the amount required — callers need nothing more from this type.
+       */
       kind: "reject";
       reason: "insufficient_fee_allowance" | "facilitator_not_configured";
-      /** Undefined when the allowance was never read (facilitator not configured). */
-      allowance?: bigint;
-      requiredAllowance: bigint;
-      facilitatorAddress?: Address;
     };
 
 // ═══════════════════════════════════════════════════════════════
@@ -261,11 +262,7 @@ export async function evaluateFeeGate(
       { recipient, network },
       "Cannot check fee allowance: facilitator address not configured",
     );
-    return {
-      kind: "reject",
-      reason: "facilitator_not_configured",
-      requiredAllowance: feeAmount,
-    };
+    return { kind: "reject", reason: "facilitator_not_configured" };
   }
 
   const allowanceInfo = await checkMerchantAllowance(recipient, network);
@@ -281,13 +278,7 @@ export async function evaluateFeeGate(
       },
       "Insufficient fee allowance — merchant must approve USDC for facilitator",
     );
-    return {
-      kind: "reject",
-      reason: "insufficient_fee_allowance",
-      allowance: allowanceInfo.allowance,
-      requiredAllowance: feeAmount,
-      facilitatorAddress,
-    };
+    return { kind: "reject", reason: "insufficient_fee_allowance" };
   }
 
   if (allowanceInfo.status === "unknown") {

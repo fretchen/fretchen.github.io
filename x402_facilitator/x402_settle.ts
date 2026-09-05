@@ -6,99 +6,92 @@
 
 import { getFacilitator } from "./facilitator_instance";
 import { verifyPayment } from "./x402_verify";
-import { checkMerchantAllowance, collectFee, getFeeAmount, type FeeResult } from "./x402_fee";
+import {
+  collectFee,
+  evaluateFeeGate,
+  getFeeAmount,
+  type FeeGateDecision,
+  type FeeResult,
+} from "./x402_fee";
 import type { Address } from "viem";
+import type { z } from "zod";
+import type {
+  FeeStatusSchema,
+  FacilitatorFeePaidSchema,
+  SettleResponseBody,
+} from "./x402_schemas";
 import { getChainConfig } from "./chain_utils";
 import { isTestWalletBypassed } from "./x402_whitelist";
 import pino from "pino";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
+/**
+ * The wire shapes below are derived from the Zod schemas in `x402_schemas.ts`, which are
+ * also what generate `openapi.json` — so the internal type, the published spec, and the
+ * response the handler builds cannot drift apart. Do not restate these fields by hand.
+ */
+
 /** How this payment's fee stands once the settlement returns. */
-export type FeeStatus = "collected" | "pending" | "failed";
+export type FeeStatus = z.infer<typeof FeeStatusSchema>;
 
 /** Facilitator fee receipt per x402 Fee Disclosure proposal (coinbase/x402#1016) */
-export interface FacilitatorFeePaid {
-  version: string;
-  /** Fee ASSESSED for this payment. Never varies with the collection outcome. */
-  facilitatorFeePaid: string;
-  asset: string;
-  model: string;
-  /**
-   * Whether that assessed fee has actually been transferred yet. Additive to the #1016
-   * shape — consumers reading the fields above are unaffected.
-   */
-  collection: {
-    status: FeeStatus;
-    txHash?: string;
-  };
-}
-
-export interface SettleResult {
-  success: boolean;
-  payer?: string;
-  transaction?: string;
-  network?: string;
-  errorReason?: string;
-  /**
-   * Underlying failure detail from the SDK (e.g. the decoded EVM revert reason behind a
-   * generic `errorReason` like `..._deposit_transaction_failed`). **Logged, never returned
-   * over HTTP** — it is SDK-generated text that can embed addresses and calldata, and
-   * callers get the stable `errorReason` code instead. Without this the real cause is
-   * silently discarded, which has previously turned a one-line revert into days of guessing.
-   */
-  errorMessage?: string;
-  /** Fee collection info (present when fee is configured) */
-  fee?: {
-    /** Derived from `status`; kept so existing consumers keep working. */
-    collected: boolean;
-    status: FeeStatus;
-    txHash?: string;
-    error?: string;
-  };
-  /** x402 v2 extensions (facilitatorFees receipt per #1016 proposal) */
-  extensions?: {
-    facilitatorFees?: {
-      info: FacilitatorFeePaid;
-    };
-  };
-  /** Scheme-specific extras passed through from the facilitator (e.g. batch-settlement's channelState) */
-  extra?: Record<string, unknown>;
-}
+export type FacilitatorFeePaid = z.infer<typeof FacilitatorFeePaidSchema>;
 
 /**
- * Derive the receiver(s) a batch-settlement claim/settle command would actually pay out to.
+ * The `/settle` response body, plus one field that never reaches the wire.
  *
- * These are read straight from the payload because that is what the SDK acts on:
+ * `errorMessage` is the underlying failure detail from the SDK (e.g. the decoded EVM
+ * revert reason behind a generic `errorReason` like `..._deposit_transaction_failed`).
+ * **Logged, never returned over HTTP** — it is SDK-generated text that can embed
+ * addresses and calldata, and callers get the stable `errorReason` code instead. Without
+ * it the real cause is silently discarded, which has previously turned a one-line revert
+ * into days of guessing. It is deliberately absent from `SettleResponseSchema`.
+ */
+export type SettleResult = SettleResponseBody & { errorMessage?: string };
+
+/**
+ * Derive the single receiver a batch-settlement claim/settle command pays out to.
+ *
+ * Read straight from the payload because that is what the SDK acts on:
  * `executeSettle()` takes its target from `payload.receiver`, and
  * `executeClaimWithSignature()` builds its claim args solely from `payload.claims` —
  * neither reads `paymentRequirements.payTo`.
  *
- * Returns null when the payload carries no usable receiver, so the caller rejects rather
- * than relaying an unauthorized command.
+ * A channel is a (payer, receiver, token, …) tuple, so a claim batch is one seller
+ * sweeping many of its own payer channels: many vouchers, **one** receiver. The contract
+ * would structurally accept a batch spanning channels with different receivers, but this
+ * facilitator charges one flat fee against one allowance, so such a batch would let one
+ * seller's allowance pay for another seller's payout. Reject it instead — returning null
+ * here makes the caller refuse the command.
+ *
+ * Returns null when the payload carries no usable receiver, or when a claim batch names
+ * more than one.
  */
-function getBatchSettlementReceivers(
-  payload: Record<string, unknown> | undefined,
-): string[] | null {
+function getBatchSettlementReceiver(payload: Record<string, unknown> | undefined): string | null {
   if (payload?.type === "settle") {
-    const receiver = payload?.receiver as string | undefined;
-    return receiver ? [receiver] : null;
+    return (payload?.receiver as string | undefined) ?? null;
   }
 
-  // "claim": one claimWithSignature() call settles the whole batch atomically. In
-  // practice a batch is one merchant sweeping many of its own payer channels (many
-  // vouchers, one receiver) — see the fee-recipient comment at the call site.
   const claims = payload?.claims as
     | Array<{ voucher?: { channel?: { receiver?: string } } }>
     | undefined;
   if (!Array.isArray(claims) || claims.length === 0) {
     return null;
   }
+
   const receivers = claims.map((claim) => claim?.voucher?.channel?.receiver);
   if (receivers.some((receiver) => !receiver)) {
     return null;
   }
-  return receivers as string[];
+
+  // Compare case-insensitively: addresses arrive in mixed EIP-55 checksum casing, so a
+  // raw string comparison would reject a legitimate single-seller batch.
+  const unique = new Set(receivers.map((receiver) => receiver!.toLowerCase()));
+  if (unique.size > 1) {
+    return null;
+  }
+  return receivers[0]!;
 }
 
 /**
@@ -224,16 +217,15 @@ export async function settlePayment(
       //    caller claim a testnet (admitting BATCH_SETTLEMENT_TEST_WALLETS) while the
       //    transaction executes on mainnet.
       const network = paymentRequirements.network as string | undefined;
-      const receivers = getBatchSettlementReceivers(payload);
-      // A claim/settle transaction pays out to one receiver in practice — a claim
-      // batches many *vouchers* (payer channels) for one merchant sweeping its own
-      // payments, not many different merchants in one transaction. The fee is charged
-      // once against that receiver's allowance, same as `exact`; `receivers[0]` is that
-      // receiver in the expected single-merchant case.
-      const feeRecipient = receivers?.[0];
+      // One seller per batch — see getBatchSettlementReceiver. The fee is charged once
+      // against that seller's allowance, same as `exact`.
+      const feeRecipient = getBatchSettlementReceiver(payload);
 
       if (!network || !feeRecipient) {
-        logger.warn({ receivers, network }, "Batch-settlement claim/settle missing receiver");
+        logger.warn(
+          { network },
+          "Batch-settlement claim/settle has no single usable receiver — missing, or a batch spanning several",
+        );
         return {
           success: false,
           errorReason: "invalid_batch_settlement_evm_payload_type",
@@ -242,21 +234,19 @@ export async function settlePayment(
         };
       }
 
-      const bypassed = isTestWalletBypassed(feeRecipient, network);
-      if (!bypassed) {
-        const allowanceInfo = await checkMerchantAllowance(feeRecipient as Address, network);
-        if (allowanceInfo.status === "insufficient") {
-          logger.warn(
-            { feeRecipient, network, allowance: allowanceInfo.allowance?.toString() },
-            "Insufficient fee allowance for batch-settlement claim/settle",
-          );
-          return {
-            success: false,
-            errorReason: "insufficient_fee_allowance",
-            transaction: "",
-            network,
-          };
-        }
+      // A testnet test wallet skips the gate entirely (CI/local dev convenience); it then
+      // takes the same no-receipt path fees-disabled does.
+      const gate: FeeGateDecision = isTestWalletBypassed(feeRecipient, network)
+        ? { kind: "no_fee" }
+        : await evaluateFeeGate(feeRecipient as Address, network);
+
+      if (gate.kind === "reject") {
+        return {
+          success: false,
+          errorReason: gate.reason,
+          transaction: "",
+          network,
+        };
       }
 
       const facilitator = getFacilitator();
@@ -287,9 +277,10 @@ export async function settlePayment(
         "Batch-settlement claim/settle transaction confirmed",
       );
 
-      if (bypassed) {
-        // Test wallet on a testnet — same convenience carve-out `exact` has none of,
-        // kept from the old whitelist so CI/local dev needs no funded USDC allowance.
+      if (gate.kind === "no_fee") {
+        // Fees disabled, or a testnet test wallet. Attach no fee receipt — `fee` and
+        // `extensions.facilitatorFees` are documented as present only when a fee is
+        // configured, and `exact` omits them under the same conditions.
         return {
           success: true,
           payer,

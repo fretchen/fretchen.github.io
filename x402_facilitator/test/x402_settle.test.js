@@ -1275,4 +1275,80 @@ describe("x402_settle with mocked facilitator", () => {
     expect(feeModule.collectFee).not.toHaveBeenCalled();
     expect(result.fee).toBeUndefined();
   });
+
+  // ═══════════════════════════════════════════════════════════
+  // Fees disabled (FACILITATOR_FEE_AMOUNT=0)
+  //
+  // Both schemes must behave identically: settle normally, attach NO fee receipt.
+  // x402_schemas.ts documents `fee`/`extensions.facilitatorFees` as "present only when
+  // a fee is configured" — emitting a facilitatorFeePaid:"0" receipt would contradict
+  // that and diverge from `exact`.
+  // ═══════════════════════════════════════════════════════════
+
+  it("attaches no fee receipt to a batch-settlement claim when fees are disabled", async () => {
+    vi.spyOn(feeModule, "getFeeAmount").mockReturnValue(0n);
+
+    const claimPayload = {
+      x402Version: 2,
+      accepted: { scheme: "batch-settlement", network: "eip155:84532" },
+      payload: {
+        type: "claim",
+        claims: [
+          {
+            voucher: {
+              channel: {
+                payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+                receiver: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+              },
+              maxClaimableAmount: "12000",
+            },
+            signature: "0x" + "ab".repeat(65),
+            totalClaimed: "0",
+          },
+        ],
+        claimAuthorizerSignature: "0x" + "cd".repeat(65),
+      },
+    };
+    const requirements = {
+      scheme: "batch-settlement",
+      network: "eip155:84532",
+      payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+    };
+
+    const mockFacilitator = {
+      settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xclaimtxhash" }),
+    };
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(claimPayload, requirements);
+
+    expect(result.success).toBe(true);
+    expect(result.transaction).toBe("0xclaimtxhash");
+    expect(result.fee).toBeUndefined();
+    expect(result.extensions).toBeUndefined();
+    expect(feeModule.collectFee).not.toHaveBeenCalled();
+  });
+
+  it("attaches no fee receipt to an exact settlement when fees are disabled", async () => {
+    // Parity guard for the test above — the two schemes must not diverge here.
+    vi.spyOn(feeModule, "getFeeAmount").mockReturnValue(0n);
+
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
+      isValid: true,
+      payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      feeRequired: false,
+      recipient: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+    });
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue({
+      settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xsettletxhash" }),
+    });
+
+    const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
+
+    expect(result.success).toBe(true);
+    expect(result.fee).toBeUndefined();
+    expect(result.extensions).toBeUndefined();
+    expect(feeModule.collectFee).not.toHaveBeenCalled();
+  });
+
 });

@@ -18,7 +18,7 @@ import { ExactEvmScheme } from "@x402/evm/exact/facilitator";
 import { BatchSettlementEvmScheme } from "@x402/evm/batch-settlement/facilitator";
 import pino from "pino";
 import { loadPrivateKey } from "@fretchen/chain-utils";
-import { checkMerchantAllowance, getFeeAmount, getFacilitatorAddress } from "./x402_fee";
+import { evaluateFeeGate, getFacilitatorAddress } from "./x402_fee";
 import {
   getChainConfig,
   getSupportedNetworks,
@@ -213,75 +213,34 @@ export function createFacilitator(requirePrivateKey = true): InstanceType<typeof
       return;
     }
 
-    // Check if fees are enabled
-    const feeAmount = getFeeAmount();
-    if (feeAmount === 0n) {
+    // The same gate batch-settlement's claim/settle path runs (x402_fee.ts) — shared so
+    // the two schemes cannot drift apart on when a fee is owed or when to fail closed.
+    const gate = await evaluateFeeGate(recipient as `0x${string}`, network);
+
+    if (gate.kind === "no_fee") {
       // Fees disabled — allow all recipients without fee
       (result as Record<string, unknown>).feeRequired = false;
       return;
     }
 
-    const facilitatorAddress = getFacilitatorAddress();
-    if (!facilitatorAddress) {
-      logger.warn(
-        { recipient, network },
-        "Cannot check fee allowance: facilitator address not configured",
-      );
+    if (gate.kind === "reject") {
       result.isValid = false;
-      result.invalidReason = "facilitator_not_configured";
+      result.invalidReason = gate.reason;
+      if (gate.reason === "insufficient_fee_allowance") {
+        (result as Record<string, unknown>).recipient = recipient;
+        (result as Record<string, unknown>).requiredAllowance = gate.requiredAllowance.toString();
+        (result as Record<string, unknown>).currentAllowance = (gate.allowance ?? 0n).toString();
+        (result as Record<string, unknown>).facilitatorAddress = gate.facilitatorAddress;
+      }
       return;
-    }
-
-    // Check merchant's USDC allowance for fee payment
-    const allowanceInfo = await checkMerchantAllowance(recipient as `0x${string}`, network);
-
-    // Fail closed only on a reading that genuinely came back too low. An unreadable
-    // allowance must not reject an otherwise-valid payment.
-    if (allowanceInfo.status === "insufficient") {
-      logger.warn(
-        {
-          recipient,
-          network,
-          allowance: allowanceInfo.allowance?.toString(),
-          feeAmount: feeAmount.toString(),
-          facilitatorAddress,
-        },
-        "Insufficient fee allowance — merchant must approve USDC for facilitator",
-      );
-      result.isValid = false;
-      result.invalidReason = "insufficient_fee_allowance";
-      (result as Record<string, unknown>).recipient = recipient;
-      (result as Record<string, unknown>).requiredAllowance = feeAmount.toString();
-      (result as Record<string, unknown>).currentAllowance = (
-        allowanceInfo.allowance ?? 0n
-      ).toString();
-      (result as Record<string, unknown>).facilitatorAddress = facilitatorAddress;
-      return;
-    }
-
-    if (allowanceInfo.status === "unknown") {
-      // Proceed by policy, not by accident: the payment is worth more than the fee.
-      logger.warn(
-        { recipient, network },
-        "Fee allowance unreadable — proceeding, fee collection attempted anyway",
-      );
-    } else {
-      logger.info(
-        {
-          recipient,
-          network,
-          remainingSettlements: allowanceInfo.remainingSettlements,
-        },
-        "Recipient approved via fee allowance",
-      );
     }
 
     (result as Record<string, unknown>).feeRequired = true;
     (result as Record<string, unknown>).recipient = recipient;
     // Surfaced in the verify response so sellers see their approval running down.
     // Left undefined when the allowance was unreadable — never reported as 0.
-    if (allowanceInfo.remainingSettlements !== undefined) {
-      (result as Record<string, unknown>).remainingSettlements = allowanceInfo.remainingSettlements;
+    if (gate.remainingSettlements !== undefined) {
+      (result as Record<string, unknown>).remainingSettlements = gate.remainingSettlements;
     }
   });
 

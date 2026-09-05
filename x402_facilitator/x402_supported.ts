@@ -6,74 +6,18 @@
 import { formatUnits } from "viem";
 import { createReadOnlyFacilitator } from "./facilitator_instance";
 import { getFeeAmount, getFacilitatorAddress } from "./x402_fee";
+import type { SupportedResponseBody } from "./x402_schemas";
 
 /**
- * Facilitator fee disclosure, per x402 Fee Disclosure proposal (coinbase/x402#1016).
- *
- * Wire-format note: the base x402 `SupportedResponse.extensions` is `string[]` (a list
- * of extension KEY names). We advertise the key `"facilitatorFees"` in that array and
- * carry the machine-readable detail in this top-level sibling object — mirroring the
- * `/settle` response, whose `extensions` map also nests a `facilitatorFees` receipt.
- * This keeps `/supported` conformant with the SDK type while still disclosing the fee
- * model for fee-aware multi-facilitator routing.
+ * Shape of the `/supported` response. Derived from `SupportedResponseSchema`
+ * (`x402_schemas.ts`) — that Zod schema is also what generates `openapi.json`'s
+ * `SupportedResponse`, so this type and the published spec can't drift apart.
  */
-interface FacilitatorFeesDisclosure {
-  version: string;
-  model: string;
-  asset: string;
-  flatFee: string;
-  decimals: number;
-  /** Facilitator address that collects the fee (fee recipient / approval spender). */
-  recipient: string;
-  /** CAIP-2 networks this fee model applies to. */
-  networks: string[];
-  fee: {
-    amount: string;
-    description: string;
-    collection: string;
-  };
-  setup: {
-    description: string;
-    function: string;
-    spender: string;
-    recommended_amount: string;
-  };
-}
+type SupportedCapabilities = SupportedResponseBody;
 
 /** Extension key advertised in `extensions` when a fee is configured. */
 const FACILITATOR_FEE_EXTENSION_KEY = "facilitator_fee";
 const FACILITATOR_FEES_EXTENSION_KEY = "facilitatorFees";
-
-/**
- * Shape of our `/supported` response. Matches `x402Facilitator.getSupported()` (whose
- * `extensions` is `string[]`) plus our optional top-level `facilitatorFees` disclosure.
- * `network` is `string` here to match the class's return type; the base SDK
- * `SupportedResponse` narrows it to `Network`, but that distinction is irrelevant to
- * this response and forcing it would require casting the base return.
- */
-interface SupportedCapabilities {
-  kinds: Array<{
-    x402Version: number;
-    scheme: string;
-    network: string;
-    extra?: Record<string, unknown>;
-  }>;
-  extensions: string[];
-  signers: Record<string, string[]>;
-  /** Present only when a fee is configured (feeAmount > 0 and a facilitator key exists). */
-  facilitatorFees?: FacilitatorFeesDisclosure;
-  /**
-   * Onward paths for a caller that has just discovered `/supported` and has nowhere else
-   * to go — an agent doing facilitator discovery, or a human who followed a link from a
-   * listing. Always present, unlike `facilitatorFees`: it doesn't depend on a fee being
-   * configured.
-   */
-  links: {
-    documentation: string;
-    source: string;
-    openapi: string;
-  };
-}
 
 const DOCUMENTATION_URL = "https://www.fretchen.eu/x402/";
 const SOURCE_URL = "https://github.com/fretchen/fretchen.github.io/tree/main/x402_facilitator";

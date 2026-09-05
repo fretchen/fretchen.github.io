@@ -1,17 +1,18 @@
 /**
- * x402 Batch-Settlement Recipient Whitelist
+ * x402 Batch-Settlement Test-Wallet Bypass
  *
- * Gates which merchants (the `payTo` / channel receiver address) may use the
- * fee-free `batch-settlement` scheme. `exact` gates recipients via a USDC
- * allowance fee (see `x402_fee.ts`); batch-settlement is fee-free by protocol
- * design so it has no fee to gate on, and needs its own check instead.
+ * `batch-settlement` gates its on-chain `claim`/`settle` transactions the same way
+ * `exact` gates recipients: a USDC allowance fee check (see `x402_fee.ts`). This module
+ * carries only the testnet convenience carve-out — a fixed list of test wallets that
+ * skip the allowance check on testnets, so CI/local dev doesn't need a funded USDC
+ * allowance to exercise the scheme.
  *
- * Plain explicit allowlist — no on-chain lookups. An earlier draft reused the
- * historical `exact`-scheme whitelist's on-chain `isAuthorizedAgent()` check
- * against GenImNFTv4/LLMv1, but that registry has no real relationship to
- * batch-settlement's receivers (it authorizes image-generation backend agents,
- * and LLMv1 is the contract batch-settlement replaces) — dropped in favor of
- * a scoped, explicit allowlist.
+ * `deposit`, `voucher`, and `refund` payloads are not gated here or anywhere else —
+ * they are not "usage" (payment realization), so they carry no fee and no check.
+ *
+ * History: this file used to also carry `BATCH_SETTLEMENT_MANUAL_WHITELIST`, an
+ * explicit allowlist gating every batch-settlement payload type. Retired once the
+ * claim/settle allowance check took over as the abuse gate (FEE_MODEL_PLAN.md Phase 3).
  */
 
 import { isTestnet } from "@fretchen/chain-utils";
@@ -23,27 +24,15 @@ function parseAddressList(envVar: string | undefined): string[] {
   return envVar.split(",").map((address) => address.trim().toLowerCase());
 }
 
-function getManualWhitelist(): string[] {
-  return parseAddressList(process.env.BATCH_SETTLEMENT_MANUAL_WHITELIST);
-}
-
 function getTestWallets(): string[] {
   return parseAddressList(process.env.BATCH_SETTLEMENT_TEST_WALLETS);
 }
 
 /**
- * Check whether a recipient (batch-settlement `payTo` / channel receiver) is
- * authorized to use batch-settlement.
- *
- * OR logic: whitelisted if the address is in `BATCH_SETTLEMENT_MANUAL_WHITELIST`
- * (any network) or in `BATCH_SETTLEMENT_TEST_WALLETS` (testnets only).
+ * Check whether a batch-settlement `claim`/`settle` receiver is a testnet test wallet
+ * that should skip the allowance/fee check.
  */
-export function isRecipientWhitelisted(address: string, network: string): boolean {
+export function isTestWalletBypassed(address: string, network: string): boolean {
   const normalizedAddress = address.toLowerCase();
-
-  if (getManualWhitelist().includes(normalizedAddress)) {
-    return true;
-  }
-
   return isTestnet(network) && getTestWallets().includes(normalizedAddress);
 }

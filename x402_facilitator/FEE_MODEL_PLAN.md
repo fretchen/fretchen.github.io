@@ -1,7 +1,8 @@
 # Fee Model: Implementation Plan
 
-Status: Phase 1 deployed. Phase 5 code complete; 5.3 (ask existing merchants to
-re-approve) is the only outstanding item that reduces live exposure — see _Sequencing_.
+Status: Phase 1 deployed. Phase 3 code complete. Phase 5 code complete; 5.3 (ask
+existing merchants to re-approve) is the only outstanding item that reduces live
+exposure — see _Sequencing_.
 Scope: `x402_facilitator/` (fee collection, splitter retirement, batch-settlement fees)
 
 ## Context
@@ -238,56 +239,131 @@ bullet was reaching for.
 
 ---
 
-## Phase 3 — Fees on batch-settlement
+## Phase 3 — Fees on batch-settlement ✅ complete
 
-**Blocked.** This depended on the Phase 1 accrual store, which was built and then removed
-(see 1.2/1.3/1.6 above). Charging fees on batch-settlement claims would first have to
-rebuild per-seller accrual — so the ledger's cost/benefit has to be settled before any of
-this is worth starting.
+Retired the manual recipient whitelist. Reading the actual `@x402/evm` batch-settlement
+SDK source (not just this plan's own earlier bullets, which only distinguished
+`voucher` vs `claim`) surfaced that batch-settlement has **five** payload types, not
+two, and they don't all cost the facilitator gas the same way:
 
-External review independently proposed both the accrual store and batched collection,
-arguing a 10-50× reduction in fee-collection gas. The ratio is probably right; the
-absolute figure is not the point. At current volume the swing is on the order of **a
-dollar a month**, against ~700 lines and a regression risk on the payment path. The
-blocker is volume, not the idea — revisit when lost fees are material enough to measure.
+| Payload type | Facilitator pays gas? | "Usage" (realizes a payment)? |
+| ------------ | --------------------- | ----------------------------- |
+| `deposit`    | yes                   | no — funds a channel          |
+| `voucher`    | no — signature only   | no                            |
+| `claim`      | yes                   | **yes**                       |
+| `settle`     | yes                   | **yes**                       |
+| `refund` (claim-less) | yes          | no — unwinds a channel        |
+| `refund` (with `claims[]`) | yes     | **yes** — settles the claims¹ |
 
-### 3.1 Charge per claim, not per voucher
+¹ An *enriched* refund — `type: "refund"` carrying a non-empty `claims[]` — is settled by
+`@x402/evm` as `multicall([claimWithSignature, refundWithSignature])`. It performs the
+identical on-chain payout a `claim` does, and it is the SDK client's ordinary close-out
+(`BatchSettlementServer.refundChannel()` emits exactly this shape).
 
-A voucher costs nothing on-chain — verification is off-chain signature checking. A
-claim is the only on-chain cost, and it is already amortised across N requests.
+**Scope decision:** fees apply to any payload the SDK settles via `claimWithSignature` or
+`settle` — the operations that actually pay out to the receiver. `deposit`, `voucher`, and
+claim-less `refund`s are not usage and are fully open and fee-free, even though
+`deposit`/`refund` still cost the facilitator gas. Accepted tradeoff at current volume — a
+gas-spam exposure on those, not worth a gate for what they cost today.
 
-Charging per voucher would reintroduce exactly the gas problem that makes `exact`
-marginal, on a scheme that does not have it.
+**This scope is keyed on the payload's SHAPE, never on `payload.type`.** See Phase 3.1.
 
-- [ ] In `x402_settle.ts`, replace the blanket `!isBatchSettlement` fee exclusion with
-      a branch: - voucher payloads → accrue nothing - `claim` / `settle` payloads → assess a fee
+**No accrual ledger needed**, contrary to this section's earlier "Blocked" framing
+(that framing conflated this with the _Deferred from Phase 1_ sweep-batching idea,
+which is a different feature and does need a ledger). A `claim`/`settle` transaction is
+already the on-chain, batched event — the fee is assessed and collected synchronously,
+right after it confirms, exactly like `exact` does after its own settlement.
 
-### 3.2 Scale the fee to the claim
+**Pricing: flat fee, same constant as `exact`** (`getFeeAmount()`), charged once per
+`claim`/`settle` transaction — never scaled by voucher count. A claim sweeping 500
+vouchers for one merchant costs the same flat fee as one sweeping 5.
 
-- [ ] Assess `n_vouchers × unit_rate` rather than a flat amount — a claim sweeping 500
-      vouchers is worth more to the seller than one sweeping 5.
-- [ ] Set `unit_rate` well below the `exact` fee: marginal cost per request here is
-      near zero. This is the best-margin product; price it to win volume.
+- [x] `x402_settle.ts`: the `claim`/`settle` branch now gates on the same allowance
+      check `exact` uses (`checkMerchantAllowance`), replacing
+      `isRecipientWhitelisted`. On success, collects the same flat fee via
+      `collectFee()` immediately after the transaction confirms, using a
+      `collectAndReportFee()` helper shared with the `exact` branch (same
+      `collected`/`pending`/`failed` receipt shape, same `#1016` extension).
+      A batch naming more than one receiver is rejected rather than charged once
+      against the first: real usage batches one merchant's own channels, and one flat
+      fee against one allowance would otherwise let one seller's approval pay for
+      another seller's payout.
+- [x] `facilitator_instance.ts`: the batch-settlement branch of `onAfterVerify`
+      (reached by `deposit`/`voucher`/`refund` — `claim`/`settle` skip `verify()`
+      entirely) simplified to an unconditional `feeRequired = false`. No lookup, no
+      per-payload-type branch. Phase 3.1 makes this deliberate rather than incidental:
+      it keeps the hook from becoming a second source of truth for the fee decision.
+- [x] `x402_whitelist.ts`: `BATCH_SETTLEMENT_MANUAL_WHITELIST` and
+      `isRecipientWhitelisted` retired. `BATCH_SETTLEMENT_TEST_WALLETS` kept, renamed
+      to `isTestWalletBypassed` — a test wallet on a testnet skips the allowance check
+      on `claim`/`settle`.
+- [x] `x402_supported.ts`: `FacilitatorFeesDisclosure` reworded to describe the flat
+      fee as applying to `exact` settlements and batch-settlement `claim`/`settle`
+      (not `deposit`/`voucher`/`refund`); `setup` block reworded to note both schemes
+      draw from the same allowance.
+- [x] Tests: `x402_whitelist.test.ts` rewritten for the reduced bypass;
+      `facilitator_instance.test.ts` batch-settlement cases collapsed to "always
+      fee-free"; `x402_settle.test.js` claim/settle cases rewritten for the allowance
+      gate (insufficient allowance, gates on `payload.receiver` not
+      `requirements.payTo`, single-fee-per-batch, test-wallet bypass keyed on
+      `requirements.network` not `accepted.network`).
 
-### 3.3 Drop the whitelist
+---
 
-`BATCH_SETTLEMENT_MANUAL_WHITELIST` exists only because the scheme was fee-free and had
-no abuse gate. A claim-time fee provides the same allowance-based gate that `exact`
-uses.
+## Phase 3.1 — The fee follows the claim, not the label ✅ complete
 
-- [ ] Retire `BATCH_SETTLEMENT_MANUAL_WHITELIST`; gate on allowance instead.
-- [ ] Keep `BATCH_SETTLEMENT_TEST_WALLETS` for testnet convenience.
-- [ ] Open the scheme to unlisted recipients.
+A security review of the Phase 3 gate found it dispatched on a **client-supplied label**:
 
-### 3.4 Update `/supported`
+```ts
+if (isBatchSettlement && (payloadType === "claim" || payloadType === "settle")) {
+```
 
-`FacilitatorFeesDisclosure` in `x402_supported.ts` currently describes a single flat
-model.
+The SDK dispatches on the payload's **shape**. Those two disagree for exactly one payload:
+an enriched refund (`type: "refund"` + `amount` + `refundNonce` + non-empty `claims[]`),
+which `@x402/evm` routes to `executeRefundWithSignature()` → `multicall([claimWithSignature,
+refundWithSignature])`. A seller could therefore take the claims it would have submitted as
+`type: "claim"`, relabel the payload `"refund"`, and have them relayed with **no allowance
+required and no fee charged** — on mainnet, with the manual whitelist already retired.
 
-- [ ] Express fees per scheme: flat-per-settlement for `exact`,
-      per-voucher-at-claim for `batch-settlement`.
-- [ ] Preserve the `#1016` shape for forward compatibility.
-- [ ] Update the `setup` block — it currently describes only the `exact` approval flow.
+Compounding it: `verify()` sends a refund to `verifyVoucher`, which validates only
+`payload.voucher` and `payload.channelConfig`. It never inspects `payload.claims`. So the
+claims could name receivers unrelated to the verified channel.
+
+**The principle, and the thing not to undo:** the fee-bearing event is a
+`claimWithSignature`, which is a property of what the SDK will *execute*, not of what the
+caller *calls* it. Classification must therefore key on shape — and on the SDK's own
+exported predicates (`isBatchSettlementClaimPayload`, `isBatchSettlementSettlePayload`,
+`isBatchSettlementEnrichedRefundPayload`), imported rather than reimplemented, so this
+file's notion of "what will this payload do" cannot drift from the SDK's across upgrades.
+Drift between the two *was* the vulnerability.
+
+- [x] `x402_settle.ts`: `classifyBatchSettlement()` replaces the label test, returning
+      `command` (claim/settle — skip verify, gate, settle, charge), `claiming-refund`
+      (verify first, then gate and charge like a claim), `free` (deposit, voucher,
+      claim-less refund), or `reject`. The SDK's guards are shape-only (`"claims" in
+      payload`), so a non-array `claims` is still validated here rather than trusted.
+- [x] `x402_settle.ts`: an enriched refund keeps going through `verifyPayment()` — that
+      is what pins `channelConfig.receiver` to `requirements.payTo`. Every claim is then
+      required to name that same receiver (`invalid_batch_settlement_evm_receiver_mismatch`),
+      which is what closes the unverified-`claims` hole. Rerouting it into the claim
+      branch would have traded one hole for a worse one.
+- [x] The allowance gate runs *before* `facilitator.settle()` on both paths: the allowance
+      is the merchant's authorization to be relayed at all, so it must hold before the hot
+      wallet spends gas.
+- [x] `facilitator_instance.ts`: `onAfterVerify` keeps its blanket `feeRequired = false`
+      for the whole scheme, deliberately. Letting it decide too would give one payload two
+      fee arms with two different recipient sources — the same split-brain this bug came
+      out of. One source of truth, in `x402_settle.ts`.
+- [x] Tests: seven cases in `x402_settle.test.js` covering a claim-carrying refund being
+      gated and charged, rejected on insufficient allowance without settling, the
+      claims-receiver mismatch, a non-array `claims`, a multi-seller enriched refund, the
+      testnet bypass, and a claim-less refund staying free. Five of the seven fail against
+      the pre-fix code — verified by reverting the source and re-running.
+
+**Residual, knowingly left open:** `deposit`, `voucher`, and claim-less `refund`s remain
+unauthenticated on mainnet since the whitelist was retired. They relay only the caller's own
+signed authorizations, so the exposure is facilitator gas rather than fund movement — the
+same accepted gas-spam tradeoff recorded in Phase 3, not a separate finding.
 
 ---
 
@@ -403,22 +479,19 @@ Phase 5  ✅ code done  (5.1 allowance 100→1 USDC · 5.2 honest disclosure)
    │
    ├─ 5.3  ⬅ NEXT      ask existing merchants to re-approve  (email, not code)
    │
-   └─ Phase 2          retire the splitter  (docs only, independent, any time)
+   ├─ Phase 2          retire the splitter  (docs only, independent, any time)
+   │
+   └─ Phase 3  ✅ code done  fees on batch-settlement claim/settle, whitelist retired
 
 Rejected:  1.2 / 1.3 / 1.6 — fee ledger (built, removed)
            5.4 FeeCollector contract  (disproportionate after 5.1)
            /quote endpoint · offer-receipt migration  (see Reviewed and declined)
 Deferred:  batching/sweeps · nonce serialization  (both presuppose the ledger)
-Blocked:   Phase 3, Phase 4 — need the ledger question settled first
 ```
 
 **5.3 is the only remaining item that reduces live exposure.** 5.1 changed what
 `/supported` advises; it cannot touch approvals already on-chain. Everything else
-outstanding is either documentation (Phase 2) or blocked on volume (Phases 3-4).
-
-**Phase 3 and Phase 4** are blocked on the same question, not on Phase 1: whether
-per-seller accrual can be made to pay for itself. Until then batch-settlement would
-inherit the same economics at greater volume, plus rebuild the ledger just removed.
+outstanding is documentation (Phase 2).
 
 ---
 

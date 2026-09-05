@@ -13,14 +13,11 @@ provider:
     LOG_LEVEL: info
     # Fee amount in USDC smallest unit (6 decimals): 10000 = 0.01 USDC
     FACILITATOR_FEE_AMOUNT: "10000"
-    # batch-settlement recipient whitelist (payTo, not the payer) — see x402_whitelist.ts.
-    # Without a match, every batch-settlement request is rejected with recipient_not_whitelisted.
-    #
-    # Two tiers, deliberately different trust levels:
-    #   MANUAL_WHITELIST — production allowlist, applies on ANY network incl. mainnet.
-    #   TEST_WALLETS     — convenience tier, fenced behind isTestnet() so a testnet entry
-    #                      can never authorize real funds. Keep testnet-only wallets here.
-    BATCH_SETTLEMENT_MANUAL_WHITELIST: ${env:BATCH_SETTLEMENT_MANUAL_WHITELIST, ''}
+    # batch-settlement claim/settle (the "usage" payload types — see x402_whitelist.ts)
+    # charge the same flat fee as exact, gated by the same USDC allowance check. This is
+    # a testnet-only convenience bypass: a listed address skips the allowance check on
+    # testnets, fenced behind isTestnet() so a testnet entry can never bypass real funds.
+    # deposit/voucher/refund are always open and fee-free; no env var gates them.
     BATCH_SETTLEMENT_TEST_WALLETS: ${env:BATCH_SETTLEMENT_TEST_WALLETS, ''}
     # Weekly wallet report (walletreportcron): warn when native gas balance drops below
     # this many ETH. Public value — the actual send is gated on the TEM secrets below.

@@ -6,6 +6,7 @@
 import { verifyPayment } from "./x402_verify";
 import { settlePayment } from "./x402_settle";
 import { getSupportedCapabilities } from "./x402_supported";
+import type { VerifyResponseBody, SettleResponseBody } from "./x402_schemas";
 import openapiSpec from "./openapi.json" with { type: "json" };
 import pino from "pino";
 
@@ -248,7 +249,7 @@ async function handlePaymentRequest(
           { payer: result.payer, transaction: result.transaction },
           "Settlement successful",
         );
-        const responseBody: Record<string, unknown> = {
+        const responseBody: SettleResponseBody = {
           success: true,
           payer: result.payer,
           transaction: result.transaction,
@@ -281,16 +282,17 @@ async function handlePaymentRequest(
           "Settlement failed",
         );
 
+        const failureBody: SettleResponseBody = {
+          success: false,
+          errorReason: result.errorReason,
+          payer: result.payer,
+          transaction: "",
+          network: result.network,
+        };
         return {
           statusCode: 200,
           headers: CORS_HEADERS,
-          body: JSON.stringify({
-            success: false,
-            errorReason: result.errorReason,
-            payer: result.payer,
-            transaction: "",
-            network: result.network,
-          }),
+          body: JSON.stringify(failureBody),
         };
       }
     }
@@ -300,18 +302,19 @@ async function handlePaymentRequest(
 
     if (result.isValid) {
       logger.info({ payer: result.payer }, "Payment verification successful");
+      const responseBody: VerifyResponseBody = {
+        isValid: true,
+        payer: result.payer,
+        // Early warning for the seller: how many more settlements their current USDC
+        // approval covers. Omitted when there is no fee or it could not be read.
+        ...(result.remainingSettlements !== undefined && {
+          remainingSettlements: result.remainingSettlements,
+        }),
+      };
       return {
         statusCode: 200,
         headers: CORS_HEADERS,
-        body: JSON.stringify({
-          isValid: true,
-          payer: result.payer,
-          // Early warning for the seller: how many more settlements their current USDC
-          // approval covers. Omitted when there is no fee or it could not be read.
-          ...(result.remainingSettlements !== undefined && {
-            remainingSettlements: result.remainingSettlements,
-          }),
-        }),
+        body: JSON.stringify(responseBody),
       };
     } else {
       logger.warn(
@@ -322,14 +325,15 @@ async function handlePaymentRequest(
         "Payment verification failed",
       );
 
+      const responseBody: VerifyResponseBody = {
+        isValid: false,
+        invalidReason: result.invalidReason,
+        payer: result.payer,
+      };
       return {
         statusCode: 200, // Still return 200, but with isValid: false
         headers: CORS_HEADERS,
-        body: JSON.stringify({
-          isValid: false,
-          invalidReason: result.invalidReason,
-          payer: result.payer,
-        }),
+        body: JSON.stringify(responseBody),
       };
     }
   } catch (error) {

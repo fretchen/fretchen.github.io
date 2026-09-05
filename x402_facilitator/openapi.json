@@ -11,8 +11,17 @@
       "email": "fretchen.dev@proton.me"
     }
   },
-  "servers": [{ "url": "https://facilitator.fretchen.eu" }],
-  "tags": [{ "name": "x402", "description": "x402 v2 payment verification and settlement" }],
+  "servers": [
+    {
+      "url": "https://facilitator.fretchen.eu"
+    }
+  ],
+  "tags": [
+    {
+      "name": "x402",
+      "description": "x402 v2 payment verification and settlement"
+    }
+  ],
   "paths": {
     "/verify": {
       "post": {
@@ -24,7 +33,9 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/PaymentRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/PaymentRequest"
+              }
             }
           }
         },
@@ -33,14 +44,18 @@
             "description": "Verification result. A 200 status does not imply the payment was valid — check isValid.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/VerifyResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyResponse"
+                }
               }
             }
           },
           "400": {
             "description": "Request body was not valid JSON, or was missing paymentPayload/paymentRequirements."
           },
-          "405": { "description": "Method not allowed — use POST." }
+          "405": {
+            "description": "Method not allowed — use POST."
+          }
         }
       }
     },
@@ -54,7 +69,9 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/PaymentRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/PaymentRequest"
+              }
             }
           }
         },
@@ -63,14 +80,18 @@
             "description": "Settlement result. A 200 status does not imply the settlement succeeded — check success.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/SettleResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/SettleResponse"
+                }
               }
             }
           },
           "400": {
             "description": "Request body was not valid JSON, or was missing paymentPayload/paymentRequirements."
           },
-          "405": { "description": "Method not allowed — use POST." }
+          "405": {
+            "description": "Method not allowed — use POST."
+          }
         }
       }
     },
@@ -85,11 +106,15 @@
             "description": "Supported capabilities.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/SupportedResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/SupportedResponse"
+                }
               }
             }
           },
-          "405": { "description": "Method not allowed — use GET." }
+          "405": {
+            "description": "Method not allowed — use GET."
+          }
         }
       }
     },
@@ -101,7 +126,13 @@
         "responses": {
           "200": {
             "description": "This OpenAPI document.",
-            "content": { "application/json": { "schema": { "type": "object" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           }
         }
       }
@@ -111,128 +142,326 @@
     "schemas": {
       "PaymentRequest": {
         "type": "object",
-        "required": ["paymentPayload", "paymentRequirements"],
-        "description": "Identical shape for /verify and /settle.",
         "properties": {
           "paymentPayload": {
             "type": "object",
-            "description": "The x402 v2 PaymentPayload the buyer produced — includes accepted.network, accepted.scheme, and the signed authorization. Passed through as received; the facilitator does not re-derive it.",
-            "required": ["accepted"],
             "properties": {
               "accepted": {
                 "type": "object",
                 "properties": {
                   "network": {
-                    "type": "string",
-                    "description": "CAIP-2 network id, e.g. eip155:10."
+                    "description": "CAIP-2 network id, e.g. eip155:10.",
+                    "type": "string"
                   },
-                  "scheme": { "type": "string", "description": "e.g. exact, batch-settlement." }
-                }
+                  "scheme": {
+                    "description": "e.g. exact, batch-settlement.",
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
               }
-            }
+            },
+            "required": ["accepted"],
+            "additionalProperties": false,
+            "description": "The x402 v2 PaymentPayload the buyer produced — includes accepted.network, accepted.scheme, and the signed authorization. Passed through as received; the facilitator does not re-derive it."
           },
           "paymentRequirements": {
             "type": "object",
-            "description": "The x402 v2 PaymentRequirements the seller advertised in its 402 response.",
             "properties": {
-              "amount": { "type": "string", "description": "Atomic units of the payment asset." }
-            }
+              "amount": {
+                "description": "Atomic units of the payment asset.",
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "description": "The x402 v2 PaymentRequirements the seller advertised in its 402 response."
           }
-        }
+        },
+        "required": ["paymentPayload", "paymentRequirements"],
+        "additionalProperties": false,
+        "description": "Identical shape for /verify and /settle."
       },
       "VerifyResponse": {
         "type": "object",
-        "required": ["isValid"],
         "properties": {
-          "isValid": { "type": "boolean" },
-          "payer": { "type": "string", "description": "The buyer's address, when known." },
-          "invalidReason": { "type": "string", "description": "Present when isValid is false." },
+          "isValid": {
+            "type": "boolean"
+          },
+          "payer": {
+            "description": "The buyer's address, when known.",
+            "type": "string"
+          },
+          "invalidReason": {
+            "description": "Present when isValid is false.",
+            "type": "string"
+          },
           "remainingSettlements": {
+            "description": "How many more settlements the seller's current USDC approval for this facilitator still covers. Present only when a fee is configured and the allowance could be read — an early warning before it hits zero.",
             "type": "integer",
-            "description": "How many more settlements the seller's current USDC approval for this facilitator still covers. Present only when a fee is configured and the allowance could be read — an early warning before it hits zero."
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
           }
-        }
+        },
+        "required": ["isValid"],
+        "additionalProperties": false
       },
       "SettleResponse": {
         "type": "object",
-        "required": ["success"],
         "properties": {
-          "success": { "type": "boolean" },
-          "payer": { "type": "string" },
+          "success": {
+            "type": "boolean"
+          },
+          "payer": {
+            "type": "string"
+          },
           "transaction": {
-            "type": "string",
-            "description": "On-chain settlement tx hash. Empty string on failure."
+            "description": "On-chain settlement tx hash. Empty string on failure.",
+            "type": "string"
           },
           "network": {
-            "type": "string",
-            "description": "CAIP-2 network id the settlement ran on."
+            "description": "CAIP-2 network id the settlement ran on.",
+            "type": "string"
           },
-          "errorReason": { "type": "string", "description": "Present when success is false." },
+          "errorReason": {
+            "description": "Present when success is false.",
+            "type": "string"
+          },
           "fee": {
-            "type": "object",
             "description": "Present only when a fee is configured for this network.",
+            "type": "object",
             "properties": {
               "collected": {
                 "type": "boolean",
                 "description": "True only when status is \"collected\"."
               },
-              "status": { "type": "string", "enum": ["collected", "pending", "failed"] },
-              "txHash": {
+              "status": {
                 "type": "string",
-                "description": "Fee-collection tx hash, when one was sent."
+                "enum": ["collected", "pending", "failed"]
               },
-              "error": { "type": "string" }
-            }
+              "txHash": {
+                "description": "Fee-collection tx hash, when one was sent.",
+                "type": "string"
+              },
+              "error": {
+                "type": "string"
+              }
+            },
+            "required": ["collected", "status"],
+            "additionalProperties": false
           },
           "extensions": {
+            "description": "x402 v2 extensions. facilitatorFees, when present, discloses the fee assessed for this payment per the #1016 disclosure proposal — see /supported for the full fee model.",
             "type": "object",
-            "description": "x402 v2 extensions. facilitatorFees, when present, discloses the fee assessed for this payment per the #1016 disclosure proposal — see /supported for the full fee model."
+            "properties": {
+              "facilitatorFees": {
+                "type": "object",
+                "properties": {
+                  "info": {
+                    "type": "object",
+                    "properties": {
+                      "version": {
+                        "type": "string"
+                      },
+                      "facilitatorFeePaid": {
+                        "type": "string",
+                        "description": "Fee ASSESSED for this payment. Never varies with the collection outcome."
+                      },
+                      "asset": {
+                        "type": "string"
+                      },
+                      "model": {
+                        "type": "string"
+                      },
+                      "collection": {
+                        "type": "object",
+                        "properties": {
+                          "status": {
+                            "type": "string",
+                            "enum": ["collected", "pending", "failed"]
+                          },
+                          "txHash": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["status"],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": ["version", "facilitatorFeePaid", "asset", "model", "collection"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["info"],
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
           },
           "extra": {
+            "description": "Scheme-specific extras passed through from the underlying scheme (e.g. batch-settlement channel state).",
             "type": "object",
-            "description": "Scheme-specific extras passed through from the underlying scheme (e.g. batch-settlement channel state)."
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
           }
-        }
+        },
+        "required": ["success"],
+        "additionalProperties": false
       },
       "SupportedResponse": {
         "type": "object",
-        "required": ["kinds", "extensions", "signers", "links"],
         "properties": {
           "kinds": {
             "type": "array",
-            "description": "Every supported (network, scheme) pair.",
             "items": {
               "type": "object",
               "properties": {
-                "x402Version": { "type": "integer" },
-                "scheme": { "type": "string" },
-                "network": { "type": "string", "description": "CAIP-2 network id." }
-              }
-            }
+                "x402Version": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "scheme": {
+                  "type": "string"
+                },
+                "network": {
+                  "type": "string",
+                  "description": "CAIP-2 network id."
+                },
+                "extra": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                }
+              },
+              "required": ["x402Version", "scheme", "network"],
+              "additionalProperties": false
+            },
+            "description": "Every supported (network, scheme) pair."
           },
           "extensions": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "Advertised extension keys, e.g. facilitatorFees when a fee is configured."
           },
           "signers": {
             "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
             "description": "Facilitator address(es) per network."
           },
           "facilitatorFees": {
+            "description": "The full fee model disclosure (amount, recipient, recommended USDC approval) — present only when a fee is configured.",
             "type": "object",
-            "description": "The full fee model disclosure (amount, recipient, recommended USDC approval) — present only when a fee is configured. This is the live source of truth for those numbers; this spec deliberately does not duplicate them."
+            "properties": {
+              "version": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              },
+              "asset": {
+                "type": "string"
+              },
+              "flatFee": {
+                "type": "string"
+              },
+              "decimals": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "recipient": {
+                "type": "string",
+                "description": "Facilitator address that collects the fee (fee recipient / approval spender)."
+              },
+              "networks": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "CAIP-2 networks this fee model applies to."
+              },
+              "fee": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "collection": {
+                    "type": "string"
+                  }
+                },
+                "required": ["amount", "description", "collection"],
+                "additionalProperties": false
+              },
+              "setup": {
+                "type": "object",
+                "properties": {
+                  "description": {
+                    "type": "string"
+                  },
+                  "function": {
+                    "type": "string"
+                  },
+                  "spender": {
+                    "type": "string"
+                  },
+                  "recommended_amount": {
+                    "type": "string"
+                  }
+                },
+                "required": ["description", "function", "spender", "recommended_amount"],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "version",
+              "model",
+              "asset",
+              "flatFee",
+              "decimals",
+              "recipient",
+              "networks",
+              "fee",
+              "setup"
+            ],
+            "additionalProperties": false
           },
           "links": {
             "type": "object",
-            "required": ["documentation", "source"],
             "properties": {
-              "documentation": { "type": "string" },
-              "source": { "type": "string" },
-              "openapi": { "type": "string" }
-            }
+              "documentation": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "openapi": {
+                "type": "string"
+              }
+            },
+            "required": ["documentation", "source", "openapi"],
+            "additionalProperties": false
           }
-        }
+        },
+        "required": ["kinds", "extensions", "signers", "links"],
+        "additionalProperties": false
       }
     }
   }

@@ -5,7 +5,8 @@
   "type": "module",
   "main": "dist/x402_facilitator.js",
   "scripts": {
-    "build": "tsup",
+    "generate:openapi": "tsx scripts/generate-openapi.ts && prettier --write --log-level warn openapi.json",
+    "build": "npm run generate:openapi && tsup",
     "dev": "NODE_ENV=test node dist/x402_facilitator.js",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -39,7 +40,8 @@
     "@x402/evm": "^2.17.0",
     "dotenv": "^16.0.0",
     "pino": "^9.0.0",
-    "viem": "^2.54.2"
+    "viem": "^2.54.2",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",
@@ -50,6 +52,7 @@
     "prettier": "^3.0.0",
     "serverless-scaleway-functions": ">=0.4.16",
     "tsup": "^8.3.5",
+    "tsx": "^4.23.13",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.60.0",
     "vitest": "^4.0.16"

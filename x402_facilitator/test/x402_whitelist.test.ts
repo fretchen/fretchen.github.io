@@ -57,9 +57,7 @@ describe("isTestWalletBypassed", () => {
   });
 
   it("rejects everything when unset", () => {
-    expect(isTestWalletBypassed("0x1111111111111111111111111111111111111111", MAINNET)).toBe(
-      false,
-    );
+    expect(isTestWalletBypassed("0x1111111111111111111111111111111111111111", MAINNET)).toBe(false);
     expect(isTestWalletBypassed("0x1111111111111111111111111111111111111111", BASE_SEPOLIA)).toBe(
       false,
     );

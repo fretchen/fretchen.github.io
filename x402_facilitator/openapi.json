@@ -28,9 +28,7 @@
         "operationId": "verify",
         "summary": "Verify a signed payment off-chain, before delivering the resource",
         "description": "Called by a seller after receiving a payment header from a buyer. Checks signature validity, sufficient balance, correct recipient, and expiration. Does not move funds. Call this before delivering the resource; call /settle after.",
-        "tags": [
-          "x402"
-        ],
+        "tags": ["x402"],
         "requestBody": {
           "required": true,
           "content": {
@@ -66,9 +64,7 @@
         "operationId": "settle",
         "summary": "Settle a verified payment on-chain",
         "description": "Called by a seller after delivering the resource. Executes the payment on-chain (EIP-3009 transferWithAuthorization for the exact scheme). Same request shape as /verify.",
-        "tags": [
-          "x402"
-        ],
+        "tags": ["x402"],
         "requestBody": {
           "required": true,
           "content": {
@@ -104,9 +100,7 @@
         "operationId": "supported",
         "summary": "Discover the networks, schemes, and fee model this facilitator advertises",
         "description": "Called once by a seller (or a buyer's client) to learn what this facilitator supports, before ever calling /verify or /settle. No request body.",
-        "tags": [
-          "x402"
-        ],
+        "tags": ["x402"],
         "responses": {
           "200": {
             "description": "Supported capabilities.",
@@ -128,9 +122,7 @@
       "get": {
         "operationId": "openapiSpec",
         "summary": "This document",
-        "tags": [
-          "x402"
-        ],
+        "tags": ["x402"],
         "responses": {
           "200": {
             "description": "This OpenAPI document.",
@@ -169,9 +161,7 @@
                 "additionalProperties": false
               }
             },
-            "required": [
-              "accepted"
-            ],
+            "required": ["accepted"],
             "additionalProperties": false,
             "description": "The x402 v2 PaymentPayload the buyer produced — includes accepted.network, accepted.scheme, and the signed authorization. Passed through as received; the facilitator does not re-derive it."
           },
@@ -187,10 +177,7 @@
             "description": "The x402 v2 PaymentRequirements the seller advertised in its 402 response."
           }
         },
-        "required": [
-          "paymentPayload",
-          "paymentRequirements"
-        ],
+        "required": ["paymentPayload", "paymentRequirements"],
         "additionalProperties": false,
         "description": "Identical shape for /verify and /settle."
       },
@@ -215,9 +202,7 @@
             "maximum": 9007199254740991
           }
         },
-        "required": [
-          "isValid"
-        ],
+        "required": ["isValid"],
         "additionalProperties": false
       },
       "SettleResponse": {
@@ -251,11 +236,7 @@
               },
               "status": {
                 "type": "string",
-                "enum": [
-                  "collected",
-                  "pending",
-                  "failed"
-                ]
+                "enum": ["collected", "pending", "failed"]
               },
               "txHash": {
                 "description": "Fee-collection tx hash, when one was sent.",
@@ -265,10 +246,7 @@
                 "type": "string"
               }
             },
-            "required": [
-              "collected",
-              "status"
-            ],
+            "required": ["collected", "status"],
             "additionalProperties": false
           },
           "extensions": {
@@ -299,35 +277,21 @@
                         "properties": {
                           "status": {
                             "type": "string",
-                            "enum": [
-                              "collected",
-                              "pending",
-                              "failed"
-                            ]
+                            "enum": ["collected", "pending", "failed"]
                           },
                           "txHash": {
                             "type": "string"
                           }
                         },
-                        "required": [
-                          "status"
-                        ],
+                        "required": ["status"],
                         "additionalProperties": false
                       }
                     },
-                    "required": [
-                      "version",
-                      "facilitatorFeePaid",
-                      "asset",
-                      "model",
-                      "collection"
-                    ],
+                    "required": ["version", "facilitatorFeePaid", "asset", "model", "collection"],
                     "additionalProperties": false
                   }
                 },
-                "required": [
-                  "info"
-                ],
+                "required": ["info"],
                 "additionalProperties": false
               }
             },
@@ -342,9 +306,7 @@
             "additionalProperties": {}
           }
         },
-        "required": [
-          "success"
-        ],
+        "required": ["success"],
         "additionalProperties": false
       },
       "SupportedResponse": {
@@ -375,11 +337,7 @@
                   "additionalProperties": {}
                 }
               },
-              "required": [
-                "x402Version",
-                "scheme",
-                "network"
-              ],
+              "required": ["x402Version", "scheme", "network"],
               "additionalProperties": false
             },
             "description": "Every supported (network, scheme) pair."
@@ -449,11 +407,7 @@
                     "type": "string"
                   }
                 },
-                "required": [
-                  "amount",
-                  "description",
-                  "collection"
-                ],
+                "required": ["amount", "description", "collection"],
                 "additionalProperties": false
               },
               "setup": {
@@ -472,12 +426,7 @@
                     "type": "string"
                   }
                 },
-                "required": [
-                  "description",
-                  "function",
-                  "spender",
-                  "recommended_amount"
-                ],
+                "required": ["description", "function", "spender", "recommended_amount"],
                 "additionalProperties": false
               }
             },
@@ -507,20 +456,11 @@
                 "type": "string"
               }
             },
-            "required": [
-              "documentation",
-              "source",
-              "openapi"
-            ],
+            "required": ["documentation", "source", "openapi"],
             "additionalProperties": false
           }
         },
-        "required": [
-          "kinds",
-          "extensions",
-          "signers",
-          "links"
-        ],
+        "required": ["kinds", "extensions", "signers", "links"],
         "additionalProperties": false
       }
     }

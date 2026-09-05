@@ -247,12 +247,12 @@ SDK source (not just this plan's own earlier bullets, which only distinguished
 two, and they don't all cost the facilitator gas the same way:
 
 | Payload type | Facilitator pays gas? | "Usage" (realizes a payment)? |
-|---|---|---|
-| `deposit` | yes | no — funds a channel |
-| `voucher` | no — signature only | no |
-| `claim` | yes | **yes** |
-| `settle` | yes | **yes** |
-| `refund` | yes | no — unwinds a channel |
+| ------------ | --------------------- | ----------------------------- |
+| `deposit`    | yes                   | no — funds a channel          |
+| `voucher`    | no — signature only   | no                            |
+| `claim`      | yes                   | **yes**                       |
+| `settle`     | yes                   | **yes**                       |
+| `refund`     | yes                   | no — unwinds a channel        |
 
 **Scope decision:** fees apply only to `claim`/`settle` — the two payload types that
 actually pay out to the receiver. `deposit`, `voucher`, and `refund` are not usage and
@@ -261,7 +261,7 @@ were made fully open and fee-free, same as `voucher` already was, even though
 volume — a gas-spam exposure on those two, not worth a gate for what they cost today.
 
 **No accrual ledger needed**, contrary to this section's earlier "Blocked" framing
-(that framing conflated this with the *Deferred from Phase 1* sweep-batching idea,
+(that framing conflated this with the _Deferred from Phase 1_ sweep-batching idea,
 which is a different feature and does need a ledger). A `claim`/`settle` transaction is
 already the on-chain, batched event — the fee is assessed and collected synchronously,
 right after it confirms, exactly like `exact` does after its own settlement.

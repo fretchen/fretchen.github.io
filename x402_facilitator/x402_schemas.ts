@@ -93,7 +93,10 @@ export const FacilitatorFeePaidSchema = z.object({
 export const SettleResponseSchema = z.object({
   success: z.boolean(),
   payer: z.string().optional(),
-  transaction: z.string().optional().describe("On-chain settlement tx hash. Empty string on failure."),
+  transaction: z
+    .string()
+    .optional()
+    .describe("On-chain settlement tx hash. Empty string on failure."),
   network: z.string().optional().describe("CAIP-2 network id the settlement ran on."),
   errorReason: z.string().optional().describe("Present when success is false."),
   fee: z
@@ -186,7 +189,9 @@ export const SupportedResponseSchema = z.object({
   extensions: z
     .array(z.string())
     .describe("Advertised extension keys, e.g. facilitatorFees when a fee is configured."),
-  signers: z.record(z.string(), z.array(z.string())).describe("Facilitator address(es) per network."),
+  signers: z
+    .record(z.string(), z.array(z.string()))
+    .describe("Facilitator address(es) per network."),
   facilitatorFees: FacilitatorFeesDisclosureSchema.optional().describe(
     "The full fee model disclosure (amount, recipient, recommended USDC approval) — " +
       "present only when a fee is configured.",

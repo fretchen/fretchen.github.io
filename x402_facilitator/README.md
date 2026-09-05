@@ -50,7 +50,7 @@ There is no whitelist. Both schemes gate recipients the same way: a flat USDC
 allowance the recipient has `approve()`d for the facilitator's wallet.
 `checkMerchantAllowance()` (`x402_fee.ts`) reads that allowance; an under-approved
 recipient is rejected with `insufficient_fee_allowance` rather than settled for free.
-See *Fee model history* below for how batch-settlement got here — it started
+See _Fee model history_ below for how batch-settlement got here — it started
 whitelist-gated and fee-free, before Phase 3 moved `claim`/`settle` onto this same
 allowance check. `BATCH_SETTLEMENT_TEST_WALLETS` (`x402_whitelist.ts`) is the one
 remaining carve-out: a listed address skips the allowance check, but only on testnets.
@@ -258,24 +258,24 @@ The `/verify` endpoint validates:
 9. ✅ **Balance Check** - Payer has sufficient USDC balance
 10. ✅ **Fee Allowance** (`exact` only, checked here) - recipient's USDC allowance for the facilitator must cover the flat fee, or verification fails with `insufficient_fee_allowance`
 
-> Note: `/verify` applies to `exact` payments and to `batch-settlement` deposit/voucher payloads. `batch-settlement` **claim** and **settle** payloads are settlement _commands_ (not future payments) and are handled directly by `/settle` without a verify step — the scheme validates them internally, including the equivalent fee-allowance check (see *Recipient gating* above).
+> Note: `/verify` applies to `exact` payments and to `batch-settlement` deposit/voucher payloads. `batch-settlement` **claim** and **settle** payloads are settlement _commands_ (not future payments) and are handled directly by `/settle` without a verify step — the scheme validates them internally, including the equivalent fee-allowance check (see _Recipient gating_ above).
 
 ## Error Codes
 
 Error-reason strings come from the `@x402/evm` SDK and are prefixed by scheme (`invalid_exact_evm_*` / `invalid_batch_settlement_evm_*`). Common ones:
 
-| Error Code                                          | Description                                                 |
-| --------------------------------------------------- | ----------------------------------------------------------- |
-| `invalid_exact_evm_insufficient_balance`            | Payer doesn't have enough USDC (`exact`)                    |
-| `invalid_exact_evm_signature`                       | Invalid EIP-712 signature                                   |
-| `invalid_exact_evm_network_mismatch`                | Signed vs. settle network mismatch                          |
-| `invalid_exact_evm_scheme`                          | Scheme not supported                                        |
-| `invalid_batch_settlement_evm_insufficient_balance` | Channel balance too low for the voucher                     |
+| Error Code                                          | Description                                                                                                       |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `invalid_exact_evm_insufficient_balance`            | Payer doesn't have enough USDC (`exact`)                                                                          |
+| `invalid_exact_evm_signature`                       | Invalid EIP-712 signature                                                                                         |
+| `invalid_exact_evm_network_mismatch`                | Signed vs. settle network mismatch                                                                                |
+| `invalid_exact_evm_scheme`                          | Scheme not supported                                                                                              |
+| `invalid_batch_settlement_evm_insufficient_balance` | Channel balance too low for the voucher                                                                           |
 | `invalid_batch_settlement_evm_payload_type`         | Payload type not verifiable via `/verify`, or (on `/settle`) a `claim`/`settle` payload missing a usable receiver |
-| `insufficient_fee_allowance`                        | Recipient's USDC allowance for the facilitator is too low — `exact`, or `batch-settlement` `claim`/`settle` |
-| `invalid_network`                                   | Network not supported                                       |
-| `invalid_payload`                                   | Malformed payload                                           |
-| `unexpected_verify_error`                           | Unexpected error                                            |
+| `insufficient_fee_allowance`                        | Recipient's USDC allowance for the facilitator is too low — `exact`, or `batch-settlement` `claim`/`settle`       |
+| `invalid_network`                                   | Network not supported                                                                                             |
+| `invalid_payload`                                   | Malformed payload                                                                                                 |
+| `unexpected_verify_error`                           | Unexpected error                                                                                                  |
 
 > These strings were renamed by `@x402/evm` in the 2.x line; the tests in `test/` are the source of truth for the current values.
 

@@ -940,7 +940,6 @@ describe("x402_settle with mocked facilitator", () => {
     expect(result.payer).toBe("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
   });
 
-
   // ═══════════════════════════════════════════════════════════
   // Batch-settlement claim/settle: allowance-based fee gate
   //

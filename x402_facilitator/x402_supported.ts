@@ -114,15 +114,20 @@ export function getSupportedCapabilities(): SupportedCapabilities {
       networks: [...new Set(supported.kinds.map((k) => k.network))],
       fee: {
         amount: feeAmount.toString(),
-        description: `${formatUnits(feeAmount, 6)} USDC per settlement`,
+        description:
+          `${formatUnits(feeAmount, 6)} USDC per settlement (exact), or per claim/settle ` +
+          "transaction (batch-settlement) — same flat amount either way. batch-settlement's " +
+          "deposit/voucher/refund payloads are not charged; only claim/settle, which realize " +
+          "a payment, are.",
         collection: "post_settlement_transferFrom",
       },
       setup: {
         description:
           "Recurring USDC approval. Call approve() on the USDC contract for the facilitator's address. " +
-          "The recommended amount is deliberately small: the spender is a hot wallet, so a large standing " +
-          "allowance is a standing risk. Re-approve when remainingSettlements (in the /verify response) " +
-          "runs low; revoke any time with approve(spender, 0).",
+          "Applies to both schemes: exact recipients and batch-settlement claim/settle recipients draw " +
+          "from the same allowance. The recommended amount is deliberately small: the spender is a hot " +
+          "wallet, so a large standing allowance is a standing risk. Re-approve when remainingSettlements " +
+          "(in the /verify response) runs low; revoke any time with approve(spender, 0).",
         function: "approve(address spender, uint256 amount)",
         spender: facilitatorAddress,
         // Deliberately small. The spender is the same key that signs every settlement

@@ -6,10 +6,10 @@
 
 import { getFacilitator } from "./facilitator_instance";
 import { verifyPayment } from "./x402_verify";
-import { collectFee, getFeeAmount, type FeeResult } from "./x402_fee";
+import { checkMerchantAllowance, collectFee, getFeeAmount, type FeeResult } from "./x402_fee";
 import type { Address } from "viem";
 import { getChainConfig } from "./chain_utils";
-import { isRecipientWhitelisted } from "./x402_whitelist";
+import { isTestWalletBypassed } from "./x402_whitelist";
 import pino from "pino";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
@@ -85,9 +85,9 @@ function getBatchSettlementReceivers(
     return receiver ? [receiver] : null;
   }
 
-  // "claim": one claimWithSignature() call settles the whole batch atomically, so EVERY
-  // claim's receiver must be whitelisted — checking only the first would let a single
-  // non-whitelisted entry ride along inside an otherwise-legitimate batch.
+  // "claim": one claimWithSignature() call settles the whole batch atomically. In
+  // practice a batch is one merchant sweeping many of its own payer channels (many
+  // vouchers, one receiver) — see the fee-recipient comment at the call site.
   const claims = payload?.claims as
     | Array<{ voucher?: { channel?: { receiver?: string } } }>
     | undefined;
@@ -119,6 +119,74 @@ function feeStatusOf(result: FeeResult): FeeStatus {
   return result.error === "fee_collection_pending" ? "pending" : "failed";
 }
 
+/**
+ * Collect the flat fee after a successful settlement and build the #1016 receipt.
+ * Shared by the `exact` branch and the batch-settlement `claim`/`settle` branch — both
+ * charge the identical flat fee, on-chain, immediately after their settlement lands.
+ */
+async function collectAndReportFee(
+  recipient: Address,
+  network: string,
+): Promise<{
+  fee: NonNullable<SettleResult["fee"]>;
+  extensions: SettleResult["extensions"];
+}> {
+  const feeAmount = getFeeAmount();
+  const feeResult = await collectFee(recipient, network);
+  const feeStatus = feeStatusOf(feeResult);
+
+  if (feeStatus === "collected") {
+    logger.info(
+      { recipient, network, feeTxHash: feeResult.txHash },
+      "Fee collected successfully after settlement",
+    );
+  } else if (feeStatus === "pending") {
+    // Fee tx was sent but not confirmed within its bounded wait. It may still land,
+    // so this is not a failure — it is an unknown outcome carrying a tx hash, which
+    // is returned in the receipt so the seller can resolve it themselves.
+    logger.warn(
+      { recipient, network, feeTxHash: feeResult.txHash },
+      "Fee tx pending at response time — outcome unknown",
+    );
+  } else {
+    // Fee collection failed — settlement still succeeded. The fee is not retried:
+    // at 0.01 USDC the bookkeeping to recover it costs far more than the fee.
+    logger.warn(
+      { recipient, network, feeError: feeResult.error },
+      "Fee collection failed after successful settlement",
+    );
+  }
+
+  // `facilitatorFeePaid` always reports the fee ASSESSED for this payment, never a
+  // collection outcome. Zeroing it because collection failed would understate what
+  // the payment actually cost and make the facilitator look cheaper than it is — the
+  // worse distortion for a transparency extension. The outcome lives in
+  // `collection.status` instead.
+  const chainConfig = getChainConfig(network);
+  return {
+    fee: {
+      collected: feeStatus === "collected",
+      status: feeStatus,
+      txHash: feeResult.txHash,
+      error: feeResult.error,
+    },
+    extensions: {
+      facilitatorFees: {
+        info: {
+          version: "1",
+          facilitatorFeePaid: feeAmount.toString(),
+          asset: `${network}/erc20:${chainConfig.USDC_ADDRESS}`,
+          model: "flat",
+          collection: {
+            status: feeStatus,
+            ...(feeResult.txHash && { txHash: feeResult.txHash }),
+          },
+        },
+      },
+    },
+  };
+}
+
 export async function settlePayment(
   paymentPayload: Record<string, unknown>,
   paymentRequirements: Record<string, unknown>,
@@ -139,14 +207,15 @@ export async function settlePayment(
     const isBatchSettlement = accepted?.scheme === "batch-settlement";
     if (isBatchSettlement && (payloadType === "claim" || payloadType === "settle")) {
       // Claim/settle payloads never reach verifyPayment()/onAfterVerify() (see the
-      // comment above), so this is the only gate they ever pass through. Without it,
-      // anyone with a valid (self-managed) channel could get the facilitator to relay
-      // claim/settle transactions at its own gas expense, for free — batch-settlement
-      // has no fee to fall back on the way the exact scheme does.
+      // comment above), so this is the only gate they ever pass through. These are the
+      // two payload types that actually realize a payment ("usage"), so — unlike
+      // deposit/voucher/refund, which are open and fee-free — they carry the same flat
+      // fee `exact` charges, gated by the same USDC allowance check
+      // (FEE_MODEL_PLAN.md Phase 3).
       //
-      // BOTH gate inputs must come from what the SDK actually executes on, never from
+      // The gate input must come from what the SDK actually executes on, never from
       // the client's `accepted` envelope or `paymentRequirements.payTo`:
-      //  - receivers: `requirements.payTo` is bound to the channel's receiver only by
+      //  - `requirements.payTo` is bound to the channel's receiver only by
       //    validateChannelConfig(), which runs inside verify() — the very path this
       //    branch skips. On the settle path it is an unchecked, caller-supplied string.
       //  - network: verify() enforces `accepted.network === requirements.network`, but
@@ -156,18 +225,38 @@ export async function settlePayment(
       //    transaction executes on mainnet.
       const network = paymentRequirements.network as string | undefined;
       const receivers = getBatchSettlementReceivers(payload);
-      if (
-        !network ||
-        !receivers ||
-        !receivers.every((receiver) => isRecipientWhitelisted(receiver, network))
-      ) {
-        logger.warn({ receivers, network }, "Batch-settlement recipient not whitelisted");
+      // A claim/settle transaction pays out to one receiver in practice — a claim
+      // batches many *vouchers* (payer channels) for one merchant sweeping its own
+      // payments, not many different merchants in one transaction. The fee is charged
+      // once against that receiver's allowance, same as `exact`; `receivers[0]` is that
+      // receiver in the expected single-merchant case.
+      const feeRecipient = receivers?.[0];
+
+      if (!network || !feeRecipient) {
+        logger.warn({ receivers, network }, "Batch-settlement claim/settle missing receiver");
         return {
           success: false,
-          errorReason: "recipient_not_whitelisted",
+          errorReason: "invalid_batch_settlement_evm_payload_type",
           transaction: "",
           network,
         };
+      }
+
+      const bypassed = isTestWalletBypassed(feeRecipient, network);
+      if (!bypassed) {
+        const allowanceInfo = await checkMerchantAllowance(feeRecipient as Address, network);
+        if (allowanceInfo.status === "insufficient") {
+          logger.warn(
+            { feeRecipient, network, allowance: allowanceInfo.allowance?.toString() },
+            "Insufficient fee allowance for batch-settlement claim/settle",
+          );
+          return {
+            success: false,
+            errorReason: "insufficient_fee_allowance",
+            transaction: "",
+            network,
+          };
+        }
       }
 
       const facilitator = getFacilitator();
@@ -197,12 +286,29 @@ export async function settlePayment(
         { hash: result.transaction, network },
         "Batch-settlement claim/settle transaction confirmed",
       );
-      // Fee-free — no fee collection for batch-settlement (see the fee guard below).
+
+      if (bypassed) {
+        // Test wallet on a testnet — same convenience carve-out `exact` has none of,
+        // kept from the old whitelist so CI/local dev needs no funded USDC allowance.
+        return {
+          success: true,
+          payer,
+          transaction: result.transaction,
+          network,
+          extra: result.extra,
+        };
+      }
+
+      logger.info({ feeRecipient, network }, "Settlement succeeded, collecting fee");
+      const { fee, extensions } = await collectAndReportFee(feeRecipient as Address, network);
+
       return {
         success: true,
         payer,
         transaction: result.transaction,
         network,
+        fee,
+        extensions,
         extra: result.extra,
       };
     }
@@ -254,70 +360,16 @@ export async function settlePayment(
     const network = accepted?.network as string | undefined;
 
     if (feeRequired && recipient && network) {
-      // Post-settlement fee collection
       logger.info({ recipient, network }, "Settlement succeeded, collecting fee");
-
-      const feeAmount = getFeeAmount();
-      const feeResult = await collectFee(recipient as Address, network);
-      const feeStatus = feeStatusOf(feeResult);
-
-      if (feeStatus === "collected") {
-        logger.info(
-          { recipient, network, feeTxHash: feeResult.txHash },
-          "Fee collected successfully after settlement",
-        );
-      } else if (feeStatus === "pending") {
-        // Fee tx was sent but not confirmed within its bounded wait. It may still land,
-        // so this is not a failure — it is an unknown outcome carrying a tx hash, which
-        // is returned in the receipt so the seller can resolve it themselves.
-        logger.warn(
-          { recipient, network, feeTxHash: feeResult.txHash },
-          "Fee tx pending at response time — outcome unknown",
-        );
-      } else {
-        // Fee collection failed — settlement still succeeded. The fee is not retried:
-        // at 0.01 USDC the bookkeeping to recover it costs far more than the fee.
-        logger.warn(
-          { recipient, network, feeError: feeResult.error },
-          "Fee collection failed after successful settlement",
-        );
-      }
-
-      // Build facilitatorFees receipt (per x402 Fee Disclosure proposal #1016)
-      //
-      // `facilitatorFeePaid` always reports the fee ASSESSED for this payment, never a
-      // collection outcome. Zeroing it because collection failed would understate what
-      // the payment actually cost and make the facilitator look cheaper than it is —
-      // the worse distortion for a transparency extension. The outcome lives in
-      // `collection.status` instead.
-      const chainConfig = getChainConfig(network);
-      const facilitatorFeesExtension: SettleResult["extensions"] = {
-        facilitatorFees: {
-          info: {
-            version: "1",
-            facilitatorFeePaid: feeAmount.toString(),
-            asset: `${network}/erc20:${chainConfig.USDC_ADDRESS}`,
-            model: "flat",
-            collection: {
-              status: feeStatus,
-              ...(feeResult.txHash && { txHash: feeResult.txHash }),
-            },
-          },
-        },
-      };
+      const { fee, extensions } = await collectAndReportFee(recipient as Address, network);
 
       return {
         success: true,
         payer: verifyResult.payer,
         transaction: result.transaction,
         network: accepted?.network as string,
-        fee: {
-          collected: feeStatus === "collected",
-          status: feeStatus,
-          txHash: feeResult.txHash,
-          error: feeResult.error,
-        },
-        extensions: facilitatorFeesExtension,
+        fee,
+        extensions,
         extra: result.extra,
       };
     }

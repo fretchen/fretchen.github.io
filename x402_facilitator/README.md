@@ -17,14 +17,14 @@ The x402 Facilitator bridges the gap between Resource Servers and blockchain pay
 The facilitator supports two x402 schemes on the same `/verify` and `/settle` endpoints (it routes by the payload's `scheme` field):
 
 - **`exact`** — one EIP-3009 `transferWithAuthorization` per request, USDC moved wallet-to-wallet. Supported on all networks. A flat facilitator fee may be collected post-settlement.
-- **`batch-settlement`** — payment channels: the payer escrows USDC once, signs an off-chain cumulative voucher per request, and the receiver claims many requests in one on-chain transaction. **Fee-free.** Only advertised on networks where the canonical batch-settlement contract is deployed (see `getBatchSettlementNetworks()` — Optimism/Base mainnet + Base Sepolia). Optimism Sepolia is **not** on that list because the contract isn't deployed there — but `exact` still works on it; the restriction is specific to `batch-settlement`. See [`notebooks/x402_batch_settlement_buyer.ipynb`](./notebooks/x402_batch_settlement_buyer.ipynb) for an end-to-end walkthrough. Since it's fee-free, the facilitator can't gate abuse via an allowance check the way it does for `exact` — instead, the recipient (`payTo`) must be in the `BATCH_SETTLEMENT_MANUAL_WHITELIST` / `BATCH_SETTLEMENT_TEST_WALLETS` allowlist (see `x402_whitelist.ts`), or every `/verify` and `/settle` call for that scheme is rejected with `recipient_not_whitelisted`.
+- **`batch-settlement`** — payment channels: the payer escrows USDC once, signs an off-chain cumulative voucher per request, and the receiver claims many requests in one on-chain transaction. Only advertised on networks where the canonical batch-settlement contract is deployed (see `getBatchSettlementNetworks()` — Optimism/Base mainnet + Base Sepolia). Optimism Sepolia is **not** on that list because the contract isn't deployed there — but `exact` still works on it; the restriction is specific to `batch-settlement`. See [`notebooks/x402_batch_settlement_buyer.ipynb`](./notebooks/x402_batch_settlement_buyer.ipynb) for an end-to-end walkthrough. `deposit`/`voucher`/`refund` payloads are open and fee-free — they fund, sign, or unwind a channel rather than realize a payment. `claim`/`settle` (the payload types that pay out) charge the same flat fee `exact` does, gated by the same USDC allowance check (see `x402_fee.ts`); an under-approved recipient gets `insufficient_fee_allowance` on `/settle`.
 
 ### Key Features
 
 - ✅ EIP-3009 `transferWithAuthorization` for USDC payments (`exact` scheme)
-- ✅ `batch-settlement` payment channels (fee-free, deploy-gated per network)
+- ✅ `batch-settlement` payment channels (`claim`/`settle` fee-gated like `exact`; `deposit`/`voucher`/`refund` free; deploy-gated per network)
 - ✅ Optimism + Base, Mainnet and testnet support
-- ✅ Multi-source recipient whitelist (GenImNFTv4 + LLMv1 NFT holders)
+- ✅ Flat facilitator fee, gated by a USDC allowance check on the recipient (`exact`, and `batch-settlement` `claim`/`settle`)
 - ✅ Single Scaleway Function with path-based routing
 - ✅ Custom domain with TLS termination
 - ✅ CORS-enabled for browser-based applications
@@ -44,40 +44,16 @@ The facilitator supports two x402 schemes on the same `/verify` and `/settle` en
                                                           └─────────────────┘
 ```
 
-### Whitelist Architecture
+### Recipient gating
 
-The facilitator validates payment recipients using multi-source OR logic:
-
-```
-┌────────────────────────────────────────┐
-│     isAgentWhitelisted(address)        │
-│                                        │
-│  ┌──────────────────────────────────┐ │
-│  │  1. MANUAL_WHITELIST (env var)   │ │───┐
-│  └──────────────────────────────────┘ │   │
-│                                        │   │
-│  ┌──────────────────────────────────┐ │   │
-│  │  2. Test Wallets (sepolia only)  │ │───┤ OR logic
-│  └──────────────────────────────────┘ │   │
-│                                        │   │
-│  ┌──────────────────────────────────┐ │   │
-│  │  3. GenImNFTv4 (balanceOf > 0)   │ │───┤
-│  └──────────────────────────────────┘ │   │
-│                                        │   │
-│  ┌──────────────────────────────────┐ │   │
-│  │  4. LLMv1 (balanceOf > 0)        │ │───┘
-│  └──────────────────────────────────┘ │
-└────────────────────────────────────────┘
-```
-
-**Whitelist Sources:**
-
-- **Manual Whitelist**: Addresses in `MANUAL_WHITELIST` env variable (comma-separated)
-- **Test Wallets**: Hardcoded addresses for Sepolia testing only
-- **GenImNFTv4**: NFT holders on Optimism Mainnet (0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb)
-- **LLMv1**: NFT holders on Optimism Mainnet (0x833F39D6e67390324796f861990ce9B7cf9F5dE1)
-
-All sources are checked automatically. Results are cached for 1 minute.
+There is no whitelist. Both schemes gate recipients the same way: a flat USDC
+allowance the recipient has `approve()`d for the facilitator's wallet.
+`checkMerchantAllowance()` (`x402_fee.ts`) reads that allowance; an under-approved
+recipient is rejected with `insufficient_fee_allowance` rather than settled for free.
+See *Fee model history* below for how batch-settlement got here — it started
+whitelist-gated and fee-free, before Phase 3 moved `claim`/`settle` onto this same
+allowance check. `BATCH_SETTLEMENT_TEST_WALLETS` (`x402_whitelist.ts`) is the one
+remaining carve-out: a listed address skips the allowance check, but only on testnets.
 
 ## Quick Start
 
@@ -98,15 +74,10 @@ SCW_SECRET_KEY=your_scaleway_secret_key
 SCW_DEFAULT_ORGANIZATION_ID=your_org_id
 SCW_DEFAULT_PROJECT_ID=your_project_id
 
-# Manual whitelist (optional, comma-separated addresses)
-MANUAL_WHITELIST=0x1234...,0x5678...
-
-# batch-settlement recipient (payTo) whitelist — required for batch-settlement to
-# accept anyone, since that scheme is fee-free and has no allowance-based gate to
-# fall back on the way `exact` does. Comma-separated addresses.
-BATCH_SETTLEMENT_MANUAL_WHITELIST=0x1234...,0x5678...
-# Same, but only honored on testnets (Optimism Sepolia, Base Sepolia) — lets a
-# testnet dev key in here without it also being valid on mainnet.
+# batch-settlement claim/settle test-wallet bypass — lets a testnet dev key skip the
+# USDC allowance check (only honored on testnets: Optimism Sepolia, Base Sepolia, so
+# a testnet entry can never bypass real funds). deposit/voucher/refund need no env
+# var — they're always open and fee-free.
 BATCH_SETTLEMENT_TEST_WALLETS=0x1234...,0x5678...
 
 # RPC endpoints (optional - have defaults)
@@ -279,8 +250,15 @@ The `/verify` endpoint validates:
 1. ✅ **Protocol Version** - Must be x402 v2
 2. ✅ **Scheme Support** - Must be `exact` or `batch-settlement`
 3. ✅ **Network Support** - Must be a supported Optimism/Base network
+4. ✅ **EIP-712 Signature** - Valid signature from payer
+5. ✅ **Time Window** - validAfter ≤ now < validBefore
+6. ✅ **Amount Match** - Authorization value ≥ required amount
+7. ✅ **Recipient Match** - Authorization.to === paymentRequirements.payTo
+8. ✅ **Nonce Check** - Nonce not already used on-chain
+9. ✅ **Balance Check** - Payer has sufficient USDC balance
+10. ✅ **Fee Allowance** (`exact` only, checked here) - recipient's USDC allowance for the facilitator must cover the flat fee, or verification fails with `insufficient_fee_allowance`
 
-> Note: `/verify` applies to `exact` payments and to `batch-settlement` deposit/voucher payloads. `batch-settlement` **claim** and **settle** payloads are settlement _commands_ (not future payments) and are handled directly by `/settle` without a verify step — the scheme validates them internally. 4. ✅ **Recipient Whitelist** - Authorization.to must be whitelisted 5. ✅ **EIP-712 Signature** - Valid signature from payer 6. ✅ **Time Window** - validAfter ≤ now < validBefore 7. ✅ **Amount Match** - Authorization value ≥ required amount 8. ✅ **Recipient Match** - Authorization.to === paymentRequirements.payTo 9. ✅ **Nonce Check** - Nonce not already used on-chain 10. ✅ **Balance Check** - Payer has sufficient USDC balance
+> Note: `/verify` applies to `exact` payments and to `batch-settlement` deposit/voucher payloads. `batch-settlement` **claim** and **settle** payloads are settlement _commands_ (not future payments) and are handled directly by `/settle` without a verify step — the scheme validates them internally, including the equivalent fee-allowance check (see *Recipient gating* above).
 
 ## Error Codes
 
@@ -293,8 +271,8 @@ Error-reason strings come from the `@x402/evm` SDK and are prefixed by scheme (`
 | `invalid_exact_evm_network_mismatch`                | Signed vs. settle network mismatch                          |
 | `invalid_exact_evm_scheme`                          | Scheme not supported                                        |
 | `invalid_batch_settlement_evm_insufficient_balance` | Channel balance too low for the voucher                     |
-| `invalid_batch_settlement_evm_payload_type`         | Payload type not verifiable via `/verify`                   |
-| `recipient_not_whitelisted`                         | `batch-settlement` `payTo` isn't in the recipient whitelist |
+| `invalid_batch_settlement_evm_payload_type`         | Payload type not verifiable via `/verify`, or (on `/settle`) a `claim`/`settle` payload missing a usable receiver |
+| `insufficient_fee_allowance`                        | Recipient's USDC allowance for the facilitator is too low — `exact`, or `batch-settlement` `claim`/`settle` |
 | `invalid_network`                                   | Network not supported                                       |
 | `invalid_payload`                                   | Malformed payload                                           |
 | `unexpected_verify_error`                           | Unexpected error                                            |
@@ -432,7 +410,7 @@ TLS termination is handled automatically by Scaleway.
 
 - [ ] Set `FACILITATOR_WALLET_PRIVATE_KEY` in Scaleway Secrets
 - [ ] Fund facilitator wallet with ETH for gas (~0.01 ETH minimum)
-- [ ] Configure `MANUAL_WHITELIST` if needed
+- [ ] Configure `BATCH_SETTLEMENT_TEST_WALLETS` if testnet dev convenience is needed
 - [ ] Test all endpoints after deployment
 - [ ] Set up monitoring and alerts in Scaleway Console
 - [ ] Document endpoint URLs for client applications
@@ -490,7 +468,7 @@ x402_facilitator/
 ├── x402_settle.ts                # Settlement logic
 ├── x402_fee.ts                   # Fee collection (merchant-pays, current model)
 ├── x402_supported.ts             # Supported networks/schemes + fee disclosure
-├── x402_whitelist.ts             # Multi-source whitelist (batch-settlement)
+├── x402_whitelist.ts             # batch-settlement claim/settle test-wallet bypass
 ├── facilitator_instance.ts       # Shared x402Facilitator + onAfterVerify fee hook
 ├── chain_utils.ts                # Centralized chain config
 ├── wallet_report_cron.ts         # Weekly wallet balance report

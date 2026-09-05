@@ -25,7 +25,6 @@ import {
   getBatchSettlementNetworks,
   getRpcUrl,
 } from "./chain_utils";
-import { isRecipientWhitelisted } from "./x402_whitelist";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
@@ -170,31 +169,13 @@ export function createFacilitator(requirePrivateKey = true): InstanceType<typeof
       return;
     }
 
-    // Batch-settlement channels are fee-free. The facilitator fee model
-    // (post-settlement USDC transferFrom) is specific to the exact scheme, and
-    // batch-settlement payloads have no `authorization.to`, so run no fee gating
-    // for them — otherwise the recipient check below would reject every request.
-    // It's not fee-gated, but it IS whitelist-gated: batch-settlement has no fee
-    // to fall back on, so an explicit recipient allowlist is the only thing
-    // standing between this facilitator and relaying transactions for free on
-    // anyone's self-managed channel (see x402_whitelist.ts).
+    // Batch-settlement's deposit/voucher/refund payloads are not "usage" — they fund,
+    // sign, or unwind a channel rather than realize a payment — so they carry no fee
+    // and no gate at all (FEE_MODEL_PLAN.md Phase 3). Only claim/settle, which pay out
+    // to the receiver, are fee-gated — and those payload types skip verify() entirely
+    // (the SDK has no verify() branch for them), so they never reach this hook; their
+    // gate lives in x402_settle.ts instead.
     if (paymentPayload.accepted?.scheme === "batch-settlement") {
-      // Gate on `requirements`, NOT on the client's `accepted` envelope. This hook only
-      // runs for deposit/voucher/refund payloads, and for those the SDK has already tied
-      // requirements to the transaction before we get here: validateChannelConfig()
-      // enforces `channelConfig.receiver === requirements.payTo`, and verify() rejects
-      // `accepted.network !== requirements.network`. Nothing binds `accepted.payTo` to
-      // anything at all — the SDK never reads it — so whitelisting it would check a field
-      // the caller can set freely while the channel pays out somewhere else entirely.
-      const network = requirements?.network;
-      const payTo = requirements?.payTo as string | undefined;
-
-      if (!network || !payTo || !isRecipientWhitelisted(payTo, network)) {
-        result.isValid = false;
-        result.invalidReason = "recipient_not_whitelisted";
-        return;
-      }
-
       (result as Record<string, unknown>).feeRequired = false;
       return;
     }

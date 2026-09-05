@@ -355,8 +355,17 @@ describe("x402_settle with mocked facilitator", () => {
       "0x1234567890123456789012345678901234567890123456789012345678901234";
     // Pin fee amount for deterministic assertions on facilitatorFeePaid
     vi.spyOn(feeModule, "getFeeAmount").mockReturnValue(10000n);
-    // Whitelist the fixture payTo address for batch-settlement claim/settle tests
-    process.env.BATCH_SETTLEMENT_MANUAL_WHITELIST = "0x209693Bc6afc0C5328bA36FaF03C514EF312287C";
+    // Default: sufficient allowance and successful collection for batch-settlement
+    // claim/settle tests — individual tests override these to exercise rejection paths.
+    vi.spyOn(feeModule, "checkMerchantAllowance").mockResolvedValue({
+      allowance: 1000000n,
+      remainingSettlements: 100,
+      status: "ok",
+    });
+    vi.spyOn(feeModule, "collectFee").mockResolvedValue({
+      success: true,
+      txHash: "0xfeetxhash",
+    });
   });
 
   afterEach(() => {
@@ -834,18 +843,23 @@ describe("x402_settle with mocked facilitator", () => {
 
     expect(verifyPaymentSpy).not.toHaveBeenCalled();
     expect(mockFacilitator.settle).toHaveBeenCalledWith(claimPayload, claimRequirements);
-    expect(result).toEqual({
-      success: true,
-      payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-      transaction: "0xclaimtxhash",
-      network: "eip155:84532",
-      extra: {
-        channelState: {
-          channelId: "0xchannelid00000000000000000000000000000000000000000000000000000",
-          balance: "88000",
-        },
+    expect(result.success).toBe(true);
+    expect(result.payer).toBe("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+    expect(result.transaction).toBe("0xclaimtxhash");
+    expect(result.network).toBe("eip155:84532");
+    expect(result.extra).toEqual({
+      channelState: {
+        channelId: "0xchannelid00000000000000000000000000000000000000000000000000000",
+        balance: "88000",
       },
     });
+    // claim is "usage" — it's fee-gated and charged the same flat fee as exact.
+    expect(feeModule.checkMerchantAllowance).toHaveBeenCalledWith(
+      "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+      "eip155:84532",
+    );
+    expect(result.fee.collected).toBe(true);
+    expect(result.extensions.facilitatorFees.info.facilitatorFeePaid).toBe("10000");
   });
 
   it("skips verifyPayment for a batch-settlement 'settle' payload too", async () => {
@@ -875,6 +889,12 @@ describe("x402_settle with mocked facilitator", () => {
     expect(verifyPaymentSpy).not.toHaveBeenCalled();
     expect(result.success).toBe(true);
     expect(result.transaction).toBe("0xsweeptxhash");
+    // settle, like claim, is "usage" — same flat fee, gated the same way.
+    expect(feeModule.checkMerchantAllowance).toHaveBeenCalledWith(
+      "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+      "eip155:84532",
+    );
+    expect(result.fee.collected).toBe(true);
   });
 
   it("surfaces the facilitator's error reason when a batch-settlement claim fails", async () => {
@@ -920,12 +940,22 @@ describe("x402_settle with mocked facilitator", () => {
     expect(result.payer).toBe("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
   });
 
+
   // ═══════════════════════════════════════════════════════════
-  // Batch-settlement recipient whitelist gate
+  // Batch-settlement claim/settle: allowance-based fee gate
+  //
+  // Replaces the old manual whitelist (FEE_MODEL_PLAN.md Phase 3). claim/settle are
+  // the only batch-settlement payload types that are "usage" — deposit/voucher/refund
+  // are open and fee-free (see facilitator_instance.test.ts). The gate here mirrors
+  // exact's checkMerchantAllowance flow exactly.
   // ═══════════════════════════════════════════════════════════
 
-  it("rejects a batch-settlement claim when the claim's receiver is not whitelisted", async () => {
-    delete process.env.BATCH_SETTLEMENT_MANUAL_WHITELIST;
+  it("rejects a batch-settlement claim when the receiver's fee allowance is insufficient", async () => {
+    vi.spyOn(feeModule, "checkMerchantAllowance").mockResolvedValue({
+      allowance: 0n,
+      remainingSettlements: 0,
+      status: "insufficient",
+    });
 
     const claimPayload = {
       x402Version: 2,
@@ -958,13 +988,11 @@ describe("x402_settle with mocked facilitator", () => {
     const result = await settlePayment(claimPayload, claimRequirements);
 
     expect(result.success).toBe(false);
-    expect(result.errorReason).toBe("recipient_not_whitelisted");
+    expect(result.errorReason).toBe("insufficient_fee_allowance");
     expect(mockFacilitator.settle).not.toHaveBeenCalled();
   });
 
   it("rejects a batch-settlement settle command when receiver is missing from the payload", async () => {
-    // requirements.payTo is deliberately whitelisted here — the payload carries no
-    // receiver, and that alone must be fatal. The gate reads the payload, not payTo.
     const settlePayload = {
       x402Version: 2,
       accepted: { scheme: "batch-settlement", network: "eip155:84532" },
@@ -985,8 +1013,9 @@ describe("x402_settle with mocked facilitator", () => {
     const result = await settlePayment(settlePayload, requirements);
 
     expect(result.success).toBe(false);
-    expect(result.errorReason).toBe("recipient_not_whitelisted");
+    expect(result.errorReason).toBe("invalid_batch_settlement_evm_payload_type");
     expect(mockFacilitator.settle).not.toHaveBeenCalled();
+    expect(feeModule.checkMerchantAllowance).not.toHaveBeenCalled();
   });
 
   it("rejects a batch-settlement claim with an empty claims array", async () => {
@@ -1007,50 +1036,53 @@ describe("x402_settle with mocked facilitator", () => {
     const result = await settlePayment(claimPayload, requirements);
 
     expect(result.success).toBe(false);
-    expect(result.errorReason).toBe("recipient_not_whitelisted");
+    expect(result.errorReason).toBe("invalid_batch_settlement_evm_payload_type");
     expect(mockFacilitator.settle).not.toHaveBeenCalled();
   });
 
   // ═══════════════════════════════════════════════════════════
-  // REGRESSION: the whitelist must gate on what the SDK executes on
+  // REGRESSION: the fee gate must key off what the SDK executes on
   //
-  // The SDK's settle() path acts only on the payload —
-  // executeSettle() uses payload.receiver, executeClaimWithSignature() uses
-  // payload.claims — and dispatches the chain on paymentRequirements.network.
-  // Neither reads paymentRequirements.payTo, and settle() (unlike verify()) does
-  // no accepted-vs-requirements cross-check. Gating on either of those fields let
-  // a caller spoof one string and relay claims on their own channel for free.
+  // The SDK's settle() path acts only on the payload — executeSettle() uses
+  // payload.receiver, executeClaimWithSignature() uses payload.claims — and
+  // dispatches the chain on paymentRequirements.network. Neither reads
+  // paymentRequirements.payTo, and settle() (unlike verify()) does no
+  // accepted-vs-requirements cross-check. Checking allowance against either of those
+  // fields would let a caller spoof one string while a different address's allowance
+  // (or none) actually pays.
   // ═══════════════════════════════════════════════════════════
 
-  it("rejects a settle command whose payload.receiver differs from a whitelisted payTo", async () => {
+  it("checks allowance against payload.receiver, not requirements.payTo", async () => {
+    const payloadReceiver = "0x3333333333333333333333333333333333333333";
     const settlePayload = {
       x402Version: 2,
       accepted: { scheme: "batch-settlement", network: "eip155:84532" },
       payload: {
         type: "settle",
-        // The address the on-chain settle() would actually pay out to — NOT whitelisted.
-        receiver: "0x3333333333333333333333333333333333333333",
+        receiver: payloadReceiver,
         token: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
       },
     };
     const requirements = {
       scheme: "batch-settlement",
       network: "eip155:84532",
-      // Whitelisted, but never read by the SDK on this path — must not authorize.
+      // Different address, never read by settle() — must not be what's checked.
       payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
     };
 
-    const mockFacilitator = { settle: vi.fn() };
+    const mockFacilitator = {
+      settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xsweeptxhash" }),
+    };
     vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
 
     const result = await settlePayment(settlePayload, requirements);
 
-    expect(result.success).toBe(false);
-    expect(result.errorReason).toBe("recipient_not_whitelisted");
-    expect(mockFacilitator.settle).not.toHaveBeenCalled();
+    expect(feeModule.checkMerchantAllowance).toHaveBeenCalledWith(payloadReceiver, "eip155:84532");
+    expect(result.success).toBe(true);
   });
 
-  it("rejects a claim whose channel receiver differs from a whitelisted payTo", async () => {
+  it("checks allowance against the claim's channel receiver, not requirements.payTo", async () => {
+    const payloadReceiver = "0x3333333333333333333333333333333333333333";
     const claimPayload = {
       x402Version: 2,
       accepted: { scheme: "batch-settlement", network: "eip155:84532" },
@@ -1061,7 +1093,7 @@ describe("x402_settle with mocked facilitator", () => {
             voucher: {
               channel: {
                 payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-                receiver: "0x3333333333333333333333333333333333333333",
+                receiver: payloadReceiver,
               },
               maxClaimableAmount: "12000",
             },
@@ -1078,19 +1110,23 @@ describe("x402_settle with mocked facilitator", () => {
       payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
     };
 
-    const mockFacilitator = { settle: vi.fn() };
+    const mockFacilitator = {
+      settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xclaimtxhash" }),
+    };
     vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
 
     const result = await settlePayment(claimPayload, requirements);
 
-    expect(result.success).toBe(false);
-    expect(result.errorReason).toBe("recipient_not_whitelisted");
-    expect(mockFacilitator.settle).not.toHaveBeenCalled();
+    expect(feeModule.checkMerchantAllowance).toHaveBeenCalledWith(payloadReceiver, "eip155:84532");
+    expect(result.success).toBe(true);
   });
 
-  it("rejects a claim batch mixing a whitelisted receiver with a non-whitelisted one", async () => {
-    // claimWithSignature() settles the batch atomically — checking only claims[0] would
-    // let the second claim ride along for free.
+  it("charges the fee once per claim, against the batch's first receiver — a known simplification", async () => {
+    // A claim batches many vouchers (payer channels) for one merchant sweeping its own
+    // payments — this is the expected shape, not an edge case. A batch spanning
+    // multiple distinct receivers is possible on-chain but atypical; this facilitator
+    // charges the flat fee once, against receivers[0], and does not gate the other
+    // entries individually (accepted simplification — FEE_MODEL_PLAN.md Phase 3).
     const claimPayload = {
       x402Version: 2,
       accepted: { scheme: "batch-settlement", network: "eip155:84532" },
@@ -1112,6 +1148,7 @@ describe("x402_settle with mocked facilitator", () => {
             voucher: {
               channel: {
                 payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+                // A second, distinct receiver riding along in the same batch.
                 receiver: "0x3333333333333333333333333333333333333333",
               },
               maxClaimableAmount: "12000",
@@ -1129,22 +1166,35 @@ describe("x402_settle with mocked facilitator", () => {
       payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
     };
 
-    const mockFacilitator = { settle: vi.fn() };
+    const mockFacilitator = {
+      settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xclaimtxhash" }),
+    };
     vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
 
     const result = await settlePayment(claimPayload, requirements);
 
-    expect(result.success).toBe(false);
-    expect(result.errorReason).toBe("recipient_not_whitelisted");
-    expect(mockFacilitator.settle).not.toHaveBeenCalled();
+    expect(result.success).toBe(true);
+    expect(feeModule.checkMerchantAllowance).toHaveBeenCalledTimes(1);
+    expect(feeModule.checkMerchantAllowance).toHaveBeenCalledWith(
+      "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+      "eip155:84532",
+    );
+    expect(feeModule.collectFee).toHaveBeenCalledTimes(1);
   });
 
-  it("rejects a claim gating on accepted.network when the tx executes on another network", async () => {
+  it("gates the test-wallet bypass on requirements.network, not accepted.network", async () => {
     // Test wallets are testnet-only. accepted.network claims Base Sepolia, but
     // executeClaimWithSignature() dispatches on requirements.network — Optimism
-    // mainnet. Gating on accepted.network would admit a test wallet on mainnet.
-    delete process.env.BATCH_SETTLEMENT_MANUAL_WHITELIST;
+    // mainnet. Bypassing on accepted.network would admit a test wallet on mainnet.
     process.env.BATCH_SETTLEMENT_TEST_WALLETS = "0x209693Bc6afc0C5328bA36FaF03C514EF312287C";
+    // If the bypass is (incorrectly) skipped due to using the wrong network, this
+    // insufficient allowance is what surfaces the bug as a test failure instead of a
+    // silent pass.
+    vi.spyOn(feeModule, "checkMerchantAllowance").mockResolvedValue({
+      allowance: 0n,
+      remainingSettlements: 0,
+      status: "insufficient",
+    });
 
     const claimPayload = {
       x402Version: 2,
@@ -1179,8 +1229,51 @@ describe("x402_settle with mocked facilitator", () => {
     const result = await settlePayment(claimPayload, requirements);
 
     expect(result.success).toBe(false);
-    expect(result.errorReason).toBe("recipient_not_whitelisted");
+    expect(result.errorReason).toBe("insufficient_fee_allowance");
     expect(result.network).toBe("eip155:10");
     expect(mockFacilitator.settle).not.toHaveBeenCalled();
+  });
+
+  it("bypasses the fee gate for a test wallet on the actual settlement network", async () => {
+    process.env.BATCH_SETTLEMENT_TEST_WALLETS = "0x209693Bc6afc0C5328bA36FaF03C514EF312287C";
+
+    const claimPayload = {
+      x402Version: 2,
+      accepted: { scheme: "batch-settlement", network: "eip155:84532" },
+      payload: {
+        type: "claim",
+        claims: [
+          {
+            voucher: {
+              channel: {
+                payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+                receiver: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+              },
+              maxClaimableAmount: "12000",
+            },
+            signature: "0x" + "ab".repeat(65),
+            totalClaimed: "0",
+          },
+        ],
+        claimAuthorizerSignature: "0x" + "cd".repeat(65),
+      },
+    };
+    const requirements = {
+      scheme: "batch-settlement",
+      network: "eip155:84532",
+      payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+    };
+
+    const mockFacilitator = {
+      settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xclaimtxhash" }),
+    };
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(claimPayload, requirements);
+
+    expect(result.success).toBe(true);
+    expect(feeModule.checkMerchantAllowance).not.toHaveBeenCalled();
+    expect(feeModule.collectFee).not.toHaveBeenCalled();
+    expect(result.fee).toBeUndefined();
   });
 });

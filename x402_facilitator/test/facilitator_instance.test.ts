@@ -91,11 +91,6 @@ vi.mock("../x402_fee.js", () => ({
   getFacilitatorAddress: vi.fn(),
 }));
 
-// Mock the whitelist module — the hook's batch-settlement gating dependency
-vi.mock("../x402_whitelist.js", () => ({
-  isRecipientWhitelisted: vi.fn(),
-}));
-
 import {
   createFacilitator,
   createReadOnlyFacilitator,
@@ -103,7 +98,6 @@ import {
   getFacilitator,
 } from "../facilitator_instance.js";
 import { checkMerchantAllowance, getFeeAmount, getFacilitatorAddress } from "../x402_fee.js";
-import { isRecipientWhitelisted } from "../x402_whitelist.js";
 
 // ═══════════════════════════════════════════════════════════════
 // Tests
@@ -124,8 +118,6 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
     // Default fee configuration
     vi.mocked(getFeeAmount).mockReturnValue(10000n);
     vi.mocked(getFacilitatorAddress).mockReturnValue("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
-    // Default: recipient is whitelisted for batch-settlement tests
-    vi.mocked(isRecipientWhitelisted).mockReturnValue(true);
 
     // Create facilitator — this registers the schemes + the onAfterVerify hook
     createFacilitator();
@@ -246,12 +238,33 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
   });
 
   // ───────────────────────────────────────────────────────────
-  // Batch-settlement recipient whitelist gate
+  // Batch-settlement deposit/voucher/refund: always open, always fee-free
   // ───────────────────────────────────────────────────────────
+  //
+  // These payload types reach this hook (claim/settle skip verify() entirely — see
+  // x402_settle.ts). They are not "usage" — deposit funds a channel, refund unwinds
+  // it, voucher is an off-chain signature check — so FEE_MODEL_PLAN.md Phase 3 leaves
+  // them completely ungated: no whitelist, no allowance check, no fee. The old
+  // whitelist gate is retired (x402_whitelist.ts) with nothing replacing it here;
+  // claim/settle's allowance gate lives in x402_settle.ts instead.
 
-  it("rejects a non-whitelisted recipient for batch-settlement", async () => {
-    vi.mocked(isRecipientWhitelisted).mockReturnValue(false);
+  it("is fee-free and gate-free for batch-settlement even with no payTo at all", async () => {
+    const args: HookArgs = {
+      paymentPayload: {
+        accepted: { network: "eip155:84532", scheme: "batch-settlement" },
+      },
+      requirements: { network: "eip155:84532", scheme: "batch-settlement" },
+      result: { isValid: true },
+    };
 
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(true);
+    expect(args.result.feeRequired).toBe(false);
+    expect(checkMerchantAllowance).not.toHaveBeenCalled();
+  });
+
+  it("is fee-free and gate-free for batch-settlement regardless of recipient", async () => {
     const args: HookArgs = {
       paymentPayload: {
         accepted: {
@@ -270,70 +283,13 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
 
     await hookHolder.current!(args);
 
-    expect(args.result.isValid).toBe(false);
-    expect(args.result.invalidReason).toBe("recipient_not_whitelisted");
-    expect(isRecipientWhitelisted).toHaveBeenCalledWith(
-      "0x2222222222222222222222222222222222222222",
-      "eip155:84532",
-    );
+    expect(args.result.isValid).toBe(true);
+    expect(args.result.feeRequired).toBe(false);
+    expect(checkMerchantAllowance).not.toHaveBeenCalled();
   });
 
-  it("rejects batch-settlement when payTo is missing from the requirements", async () => {
-    const args: HookArgs = {
-      paymentPayload: {
-        accepted: { network: "eip155:84532", scheme: "batch-settlement" },
-      },
-      requirements: { network: "eip155:84532", scheme: "batch-settlement" },
-      result: { isValid: true },
-    };
-
-    await hookHolder.current!(args);
-
-    expect(args.result.isValid).toBe(false);
-    expect(args.result.invalidReason).toBe("recipient_not_whitelisted");
-    expect(isRecipientWhitelisted).not.toHaveBeenCalled();
-  });
-
-  // REGRESSION: the SDK never reads accepted.payTo and never binds it to anything —
-  // only requirements.payTo is tied to the channel's receiver (by validateChannelConfig,
-  // inside verify(), before this hook runs). Gating on accepted.payTo would let a caller
-  // pass a whitelisted address while the channel pays out to an address they control.
-  it("ignores accepted.payTo and gates on requirements.payTo", async () => {
-    vi.mocked(isRecipientWhitelisted).mockImplementation(
-      (address: string) => address === "0x1111111111111111111111111111111111111111",
-    );
-
-    const args: HookArgs = {
-      paymentPayload: {
-        accepted: {
-          network: "eip155:84532",
-          scheme: "batch-settlement",
-          // Whitelisted, caller-supplied, and bound to nothing.
-          payTo: "0x1111111111111111111111111111111111111111",
-        },
-      },
-      requirements: {
-        network: "eip155:84532",
-        scheme: "batch-settlement",
-        // The address validateChannelConfig ties the channel receiver to — not whitelisted.
-        payTo: "0x3333333333333333333333333333333333333333",
-      },
-      result: { isValid: true },
-    };
-
-    await hookHolder.current!(args);
-
-    expect(args.result.isValid).toBe(false);
-    expect(args.result.invalidReason).toBe("recipient_not_whitelisted");
-    expect(isRecipientWhitelisted).toHaveBeenCalledWith(
-      "0x3333333333333333333333333333333333333333",
-      "eip155:84532",
-    );
-  });
-
-  it("does not apply the batch-settlement whitelist gate to the exact scheme", async () => {
-    // exact-scheme recipients are gated by the fee-allowance model only.
-    vi.mocked(isRecipientWhitelisted).mockReturnValue(false);
+  it("does not apply batch-settlement's free pass to the exact scheme", async () => {
+    // exact-scheme recipients are still gated by the fee-allowance model.
     vi.mocked(checkMerchantAllowance).mockResolvedValue({
       allowance: 100000n,
       remainingSettlements: 10,
@@ -344,7 +300,10 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
     await hookHolder.current!(args);
 
     expect(args.result.isValid).toBe(true);
-    expect(isRecipientWhitelisted).not.toHaveBeenCalled();
+    expect(checkMerchantAllowance).toHaveBeenCalledWith(
+      "0x1111111111111111111111111111111111111111",
+      "eip155:11155420",
+    );
   });
 
   it("skips processing when verification already failed", async () => {

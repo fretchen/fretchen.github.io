@@ -341,7 +341,7 @@ Drift between the two _was_ the vulnerability.
       `command` (claim/settle — skip verify, gate, settle, charge), `claiming-refund`
       (verify first, then gate and charge like a claim), `free` (deposit, voucher,
       claim-less refund), or `reject`. The SDK's guards are shape-only (`"claims" in
-  payload`), so a non-array `claims` is still validated here rather than trusted.
+payload`), so a non-array `claims` is still validated here rather than trusted.
 - [x] `x402_settle.ts`: an enriched refund keeps going through `verifyPayment()` — that
       is what pins `channelConfig.receiver` to `requirements.payTo`. Every claim is then
       required to name that same receiver (`invalid_batch_settlement_evm_receiver_mismatch`),

@@ -339,10 +339,7 @@ export async function settlePayment(
       const feeRecipient = route.feeRecipient;
 
       if (!network) {
-        logger.warn(
-          { network },
-          "Batch-settlement claim/settle has no network to dispatch on",
-        );
+        logger.warn({ network }, "Batch-settlement claim/settle has no network to dispatch on");
         return {
           success: false,
           errorReason: "invalid_batch_settlement_evm_payload_type",
@@ -507,10 +504,7 @@ export async function settlePayment(
     const chargeable: { recipient: Address; network: string } | undefined =
       route.kind === "claiming-refund" && refundGate?.kind === "charge" && settleNetwork
         ? { recipient: route.feeRecipient as Address, network: settleNetwork }
-        : verifyResult.feeRequired &&
-            !isBatchSettlement &&
-            verifyResult.recipient &&
-            network
+        : verifyResult.feeRequired && !isBatchSettlement && verifyResult.recipient && network
           ? { recipient: verifyResult.recipient as Address, network }
           : undefined;
 

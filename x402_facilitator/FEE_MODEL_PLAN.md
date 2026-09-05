@@ -246,16 +246,16 @@ SDK source (not just this plan's own earlier bullets, which only distinguished
 `voucher` vs `claim`) surfaced that batch-settlement has **five** payload types, not
 two, and they don't all cost the facilitator gas the same way:
 
-| Payload type | Facilitator pays gas? | "Usage" (realizes a payment)? |
-| ------------ | --------------------- | ----------------------------- |
-| `deposit`    | yes                   | no — funds a channel          |
-| `voucher`    | no — signature only   | no                            |
-| `claim`      | yes                   | **yes**                       |
-| `settle`     | yes                   | **yes**                       |
-| `refund` (claim-less) | yes          | no — unwinds a channel        |
-| `refund` (with `claims[]`) | yes     | **yes** — settles the claims¹ |
+| Payload type               | Facilitator pays gas? | "Usage" (realizes a payment)? |
+| -------------------------- | --------------------- | ----------------------------- |
+| `deposit`                  | yes                   | no — funds a channel          |
+| `voucher`                  | no — signature only   | no                            |
+| `claim`                    | yes                   | **yes**                       |
+| `settle`                   | yes                   | **yes**                       |
+| `refund` (claim-less)      | yes                   | no — unwinds a channel        |
+| `refund` (with `claims[]`) | yes                   | **yes** — settles the claims¹ |
 
-¹ An *enriched* refund — `type: "refund"` carrying a non-empty `claims[]` — is settled by
+¹ An _enriched_ refund — `type: "refund"` carrying a non-empty `claims[]` — is settled by
 `@x402/evm` as `multicall([claimWithSignature, refundWithSignature])`. It performs the
 identical on-chain payout a `claim` does, and it is the SDK client's ordinary close-out
 (`BatchSettlementServer.refundChannel()` emits exactly this shape).
@@ -330,24 +330,24 @@ Compounding it: `verify()` sends a refund to `verifyVoucher`, which validates on
 claims could name receivers unrelated to the verified channel.
 
 **The principle, and the thing not to undo:** the fee-bearing event is a
-`claimWithSignature`, which is a property of what the SDK will *execute*, not of what the
-caller *calls* it. Classification must therefore key on shape — and on the SDK's own
+`claimWithSignature`, which is a property of what the SDK will _execute_, not of what the
+caller _calls_ it. Classification must therefore key on shape — and on the SDK's own
 exported predicates (`isBatchSettlementClaimPayload`, `isBatchSettlementSettlePayload`,
 `isBatchSettlementEnrichedRefundPayload`), imported rather than reimplemented, so this
 file's notion of "what will this payload do" cannot drift from the SDK's across upgrades.
-Drift between the two *was* the vulnerability.
+Drift between the two _was_ the vulnerability.
 
 - [x] `x402_settle.ts`: `classifyBatchSettlement()` replaces the label test, returning
       `command` (claim/settle — skip verify, gate, settle, charge), `claiming-refund`
       (verify first, then gate and charge like a claim), `free` (deposit, voucher,
       claim-less refund), or `reject`. The SDK's guards are shape-only (`"claims" in
-      payload`), so a non-array `claims` is still validated here rather than trusted.
+    payload`), so a non-array `claims` is still validated here rather than trusted.
 - [x] `x402_settle.ts`: an enriched refund keeps going through `verifyPayment()` — that
       is what pins `channelConfig.receiver` to `requirements.payTo`. Every claim is then
       required to name that same receiver (`invalid_batch_settlement_evm_receiver_mismatch`),
       which is what closes the unverified-`claims` hole. Rerouting it into the claim
       branch would have traded one hole for a worse one.
-- [x] The allowance gate runs *before* `facilitator.settle()` on both paths: the allowance
+- [x] The allowance gate runs _before_ `facilitator.settle()` on both paths: the allowance
       is the merchant's authorization to be relayed at all, so it must hold before the hot
       wallet spends gas.
 - [x] `facilitator_instance.ts`: `onAfterVerify` keeps its blanket `feeRequired = false`

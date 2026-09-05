@@ -169,6 +169,10 @@ export function generateOpenApiSpec(): object {
 
 function main() {
   const spec = generateOpenApiSpec();
+  // Written unformatted, then Prettier'd by the npm script — the repo's `format:check`
+  // covers openapi.json, so a raw JSON.stringify here would make every regeneration
+  // fail `npm run check`. The golden-file test compares parsed JSON, so formatting
+  // never affects it either way.
   writeFileSync(OUTPUT_PATH, JSON.stringify(spec, null, 2) + "\n");
   console.log(`Generated ${OUTPUT_PATH}`);
 }

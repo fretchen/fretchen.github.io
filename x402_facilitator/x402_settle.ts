@@ -15,11 +15,7 @@ import {
 } from "./x402_fee";
 import type { Address } from "viem";
 import type { z } from "zod";
-import type {
-  FeeStatusSchema,
-  FacilitatorFeePaidSchema,
-  SettleResponseBody,
-} from "./x402_schemas";
+import type { FeeStatusSchema, FacilitatorFeePaidSchema, SettleResponseBody } from "./x402_schemas";
 import { getChainConfig } from "./chain_utils";
 import { isTestWalletBypassed } from "./x402_whitelist";
 import pino from "pino";

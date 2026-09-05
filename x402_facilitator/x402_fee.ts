@@ -257,7 +257,10 @@ export async function evaluateFeeGate(
 
   const facilitatorAddress = getFacilitatorAddress();
   if (!facilitatorAddress) {
-    logger.warn({ recipient, network }, "Cannot check fee allowance: facilitator address not configured");
+    logger.warn(
+      { recipient, network },
+      "Cannot check fee allowance: facilitator address not configured",
+    );
     return {
       kind: "reject",
       reason: "facilitator_not_configured",

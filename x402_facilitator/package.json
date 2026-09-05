@@ -5,7 +5,7 @@
   "type": "module",
   "main": "dist/x402_facilitator.js",
   "scripts": {
-    "generate:openapi": "tsx scripts/generate-openapi.ts",
+    "generate:openapi": "tsx scripts/generate-openapi.ts && prettier --write --log-level warn openapi.json",
     "build": "npm run generate:openapi && tsup",
     "dev": "NODE_ENV=test node dist/x402_facilitator.js",
     "test": "vitest run",

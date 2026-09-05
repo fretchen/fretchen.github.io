@@ -86,8 +86,7 @@ vi.mock("viem/accounts", () => ({
 
 // Mock fee module — the hook's dependency
 vi.mock("../x402_fee.js", () => ({
-  checkMerchantAllowance: vi.fn(),
-  getFeeAmount: vi.fn(),
+  evaluateFeeGate: vi.fn(),
   getFacilitatorAddress: vi.fn(),
 }));
 
@@ -97,7 +96,7 @@ import {
   resetFacilitator,
   getFacilitator,
 } from "../facilitator_instance.js";
-import { checkMerchantAllowance, getFeeAmount, getFacilitatorAddress } from "../x402_fee.js";
+import { evaluateFeeGate, getFacilitatorAddress } from "../x402_fee.js";
 
 // ═══════════════════════════════════════════════════════════════
 // Tests
@@ -115,8 +114,8 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
     registerCalls.length = 0;
     resetFacilitator();
 
-    // Default fee configuration
-    vi.mocked(getFeeAmount).mockReturnValue(10000n);
+    // Default: a fee is owed and the recipient's allowance covers it.
+    vi.mocked(evaluateFeeGate).mockResolvedValue({ kind: "charge" as const });
     vi.mocked(getFacilitatorAddress).mockReturnValue("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
 
     // Create facilitator — this registers the schemes + the onAfterVerify hook
@@ -211,7 +210,7 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
   });
 
   it("skips fee gating for batch-settlement payments (fee-free channels)", async () => {
-    // Fees are enabled (getFeeAmount=10000n), but batch-settlement must bypass the
+    // A fee is owed for `exact`, but batch-settlement must bypass the
     // exact-scheme fee model entirely — and must NOT be rejected for lacking an
     // exact-style authorization.to recipient.
     const args: HookArgs = {
@@ -234,7 +233,7 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
 
     expect(args.result.isValid).toBe(true);
     expect(args.result.feeRequired).toBe(false);
-    expect(checkMerchantAllowance).not.toHaveBeenCalled();
+    expect(evaluateFeeGate).not.toHaveBeenCalled();
   });
 
   // ───────────────────────────────────────────────────────────
@@ -261,7 +260,7 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
 
     expect(args.result.isValid).toBe(true);
     expect(args.result.feeRequired).toBe(false);
-    expect(checkMerchantAllowance).not.toHaveBeenCalled();
+    expect(evaluateFeeGate).not.toHaveBeenCalled();
   });
 
   it("is fee-free and gate-free for batch-settlement regardless of recipient", async () => {
@@ -285,22 +284,21 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
 
     expect(args.result.isValid).toBe(true);
     expect(args.result.feeRequired).toBe(false);
-    expect(checkMerchantAllowance).not.toHaveBeenCalled();
+    expect(evaluateFeeGate).not.toHaveBeenCalled();
   });
 
   it("does not apply batch-settlement's free pass to the exact scheme", async () => {
     // exact-scheme recipients are still gated by the fee-allowance model.
-    vi.mocked(checkMerchantAllowance).mockResolvedValue({
-      allowance: 100000n,
+    vi.mocked(evaluateFeeGate).mockResolvedValue({
+      kind: "charge" as const,
       remainingSettlements: 10,
-      status: "ok" as const,
     });
 
     const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
     await hookHolder.current!(args);
 
     expect(args.result.isValid).toBe(true);
-    expect(checkMerchantAllowance).toHaveBeenCalledWith(
+    expect(evaluateFeeGate).toHaveBeenCalledWith(
       "0x1111111111111111111111111111111111111111",
       "eip155:11155420",
     );
@@ -315,22 +313,21 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
 
     expect(args.result.isValid).toBe(false);
     expect(args.result.invalidReason).toBe("invalid_signature");
-    expect(checkMerchantAllowance).not.toHaveBeenCalled();
+    expect(evaluateFeeGate).not.toHaveBeenCalled();
   });
 
   // ───────────────────────────────────────────────────────────
   // Path 1: Fees disabled
   // ───────────────────────────────────────────────────────────
 
-  it("allows all recipients when fee is 0 (fees disabled)", async () => {
-    vi.mocked(getFeeAmount).mockReturnValue(0n);
+  it("allows all recipients when fees are disabled", async () => {
+    vi.mocked(evaluateFeeGate).mockResolvedValue({ kind: "no_fee" as const });
 
     const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
     await hookHolder.current!(args);
 
     expect(args.result.isValid).toBe(true);
     expect(args.result.feeRequired).toBe(false);
-    expect(checkMerchantAllowance).not.toHaveBeenCalled();
   });
 
   // ───────────────────────────────────────────────────────────
@@ -338,10 +335,9 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
   // ───────────────────────────────────────────────────────────
 
   it("allows recipient with sufficient fee allowance", async () => {
-    vi.mocked(checkMerchantAllowance).mockResolvedValue({
-      allowance: 100000n,
+    vi.mocked(evaluateFeeGate).mockResolvedValue({
+      kind: "charge" as const,
       remainingSettlements: 10,
-      status: "ok" as const,
     });
 
     const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
@@ -350,7 +346,7 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
     expect(args.result.isValid).toBe(true);
     expect(args.result.feeRequired).toBe(true);
     expect(args.result.recipient).toBe("0x1111111111111111111111111111111111111111");
-    expect(checkMerchantAllowance).toHaveBeenCalledWith(
+    expect(evaluateFeeGate).toHaveBeenCalledWith(
       "0x1111111111111111111111111111111111111111",
       "eip155:11155420",
     );
@@ -361,10 +357,12 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
   // ───────────────────────────────────────────────────────────
 
   it("rejects recipient without sufficient fee allowance", async () => {
-    vi.mocked(checkMerchantAllowance).mockResolvedValue({
+    vi.mocked(evaluateFeeGate).mockResolvedValue({
+      kind: "reject" as const,
+      reason: "insufficient_fee_allowance" as const,
       allowance: 5000n,
-      remainingSettlements: 0,
-      status: "insufficient" as const,
+      requiredAllowance: 10000n,
+      facilitatorAddress: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     });
 
     const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
@@ -378,9 +376,8 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
   });
 
   it("proceeds when the allowance is unreadable, without capping collection", async () => {
-    vi.mocked(checkMerchantAllowance).mockResolvedValue({
-      status: "unknown" as const,
-    });
+    // Unreadable allowance still charges — evaluateFeeGate reports no settlement count.
+    vi.mocked(evaluateFeeGate).mockResolvedValue({ kind: "charge" as const });
 
     const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
     await hookHolder.current!(args);
@@ -393,10 +390,9 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
   });
 
   it("surfaces remaining settlements so sellers see their approval running down", async () => {
-    vi.mocked(checkMerchantAllowance).mockResolvedValue({
-      allowance: 100000n,
+    vi.mocked(evaluateFeeGate).mockResolvedValue({
+      kind: "charge" as const,
       remainingSettlements: 10,
-      status: "ok" as const,
     });
 
     const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
@@ -406,10 +402,12 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
   });
 
   it("rejects recipient with zero allowance", async () => {
-    vi.mocked(checkMerchantAllowance).mockResolvedValue({
+    vi.mocked(evaluateFeeGate).mockResolvedValue({
+      kind: "reject" as const,
+      reason: "insufficient_fee_allowance" as const,
       allowance: 0n,
-      remainingSettlements: 0,
-      status: "insufficient" as const,
+      requiredAllowance: 10000n,
+      facilitatorAddress: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     });
 
     const args = hookArgs("0x2222222222222222222222222222222222222222", "eip155:10");
@@ -424,14 +422,22 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
   // Edge cases
   // ───────────────────────────────────────────────────────────
 
-  it("rejects when facilitator address is not configured", async () => {
-    vi.mocked(getFacilitatorAddress).mockReturnValue(null);
+  it("rejects when the gate reports the facilitator address is not configured", async () => {
+    // The address check itself lives in evaluateFeeGate (see x402_fee.test.ts); this
+    // asserts the hook maps that rejection onto the verify result, and adds none of the
+    // allowance detail fields, which only apply to insufficient_fee_allowance.
+    vi.mocked(evaluateFeeGate).mockResolvedValue({
+      kind: "reject" as const,
+      reason: "facilitator_not_configured" as const,
+      requiredAllowance: 10000n,
+    });
 
     const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
     await hookHolder.current!(args);
 
     expect(args.result.isValid).toBe(false);
     expect(args.result.invalidReason).toBe("facilitator_not_configured");
+    expect(args.result.currentAllowance).toBeUndefined();
   });
 
   it("rejects when network is missing from requirements", async () => {
@@ -475,10 +481,9 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
   it("rejects Permit2 exact payloads with permit2_not_supported", async () => {
     // Even a valid, well-formed Permit2 payment must be rejected: the fee model, the
     // proxy deployment registry, and end-to-end coverage all assume EIP-3009.
-    vi.mocked(checkMerchantAllowance).mockResolvedValue({
-      allowance: 100000n,
+    vi.mocked(evaluateFeeGate).mockResolvedValue({
+      kind: "charge" as const,
       remainingSettlements: 10,
-      status: "ok" as const,
     });
 
     const args = permit2HookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
@@ -487,7 +492,7 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
     expect(args.result.isValid).toBe(false);
     expect(args.result.invalidReason).toBe("permit2_not_supported");
     // Must reject before touching the fee-allowance path.
-    expect(checkMerchantAllowance).not.toHaveBeenCalled();
+    expect(evaluateFeeGate).not.toHaveBeenCalled();
   });
 });
 

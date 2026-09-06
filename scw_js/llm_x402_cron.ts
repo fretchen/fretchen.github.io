@@ -60,6 +60,7 @@ interface NetworkResult {
 async function readFeeAllowanceClaimsLeft(
   receiver: `0x${string}`,
   network: string,
+  usdcAddress: `0x${string}`,
   fee: FacilitatorFeeConfig,
 ): Promise<number | null> {
   try {
@@ -68,7 +69,7 @@ async function readFeeAllowanceClaimsLeft(
       transport: http(getRpcUrl(network)),
     });
     const allowance = await publicClient.readContract({
-      address: getUSDCConfig(network).address as `0x${string}`,
+      address: usdcAddress,
       abi: ERC20_ALLOWANCE_ABI,
       functionName: "allowance",
       args: [receiver, fee.recipient],
@@ -125,11 +126,19 @@ export async function handle(
   const feeConfig = await getFacilitatorFeeConfig();
 
   for (const network of getBatchSettlementNetworks()) {
+    // Pass the token explicitly on EVERY network, not just Optimism. Omitting it makes
+    // the SDK fall back to its `DEFAULT_STABLECOINS` registry, which still has no
+    // "eip155:10" entry (see BATCH_SETTLEMENT_NETWORKS in x402_server.ts) and throws
+    // "No default asset configured for network eip155:10". On Base the explicit value is
+    // identical to the registry's, so a uniform call site costs nothing and can't
+    // silently regress the way a network-conditional one could.
+    const usdcAddress = getUSDCConfig(network).address as `0x${string}`;
+
     // Checked BEFORE the claim, deliberately: if the claim is about to fail for lack of
     // allowance, this is the run where the warning is most needed.
     let claimsLeft: number | null = null;
     if (feeConfig) {
-      claimsLeft = await readFeeAllowanceClaimsLeft(receiverAddress, network, feeConfig);
+      claimsLeft = await readFeeAllowanceClaimsLeft(receiverAddress, network, usdcAddress, feeConfig);
       if (claimsLeft !== null && BigInt(claimsLeft) < LOW_ALLOWANCE_CLAIMS) {
         logger.warn(
           {
@@ -137,7 +146,7 @@ export async function handle(
             claimsLeft,
             receiver: receiverAddress,
             spender: feeConfig.recipient,
-            asset: getUSDCConfig(network).address,
+            asset: usdcAddress,
           },
           "Fee allowance nearly exhausted — approve more USDC for the facilitator, or claims " +
             "will start failing with insufficient_fee_allowance",
@@ -146,16 +155,10 @@ export async function handle(
     }
 
     try {
-      // Pass the token explicitly on EVERY network, not just Optimism. Omitting it makes
-      // the SDK fall back to its `DEFAULT_STABLECOINS` registry, which still has no
-      // "eip155:10" entry (see BATCH_SETTLEMENT_NETWORKS in x402_server.ts) and throws
-      // "No default asset configured for network eip155:10". On Base the explicit value is
-      // identical to the registry's, so a uniform call site costs nothing and can't
-      // silently regress the way a network-conditional one could.
       const manager = scheme.createChannelManager(
         facilitatorClient,
         network as `${string}:${string}`,
-        getUSDCConfig(network).address,
+        usdcAddress,
       );
       const { claims, settle } = await manager.claimAndSettle();
       logger.info({ network, claims, settle }, "claimAndSettle completed");

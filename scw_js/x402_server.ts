@@ -88,10 +88,18 @@ export interface FacilitatorFeeConfig {
  * Returns null — never throws — when the facilitator is unreachable, advertises no fee, or
  * returns something unparseable. Callers use this for advisory checks only, so a failure
  * here must degrade to "no warning", never to a blocked payment.
+ *
+ * Bounded to FEE_CONFIG_FETCH_TIMEOUT_MS: this is awaited once, before the per-network
+ * claim loop even starts, so an unbounded fetch would stall every network's claim behind
+ * it — the opposite of "advisory only" if the facilitator is merely slow, not down.
  */
+const FEE_CONFIG_FETCH_TIMEOUT_MS = 5_000;
+
 export async function getFacilitatorFeeConfig(): Promise<FacilitatorFeeConfig | null> {
   try {
-    const res = await fetch(`${FACILITATOR_URL}/supported`);
+    const res = await fetch(`${FACILITATOR_URL}/supported`, {
+      signal: AbortSignal.timeout(FEE_CONFIG_FETCH_TIMEOUT_MS),
+    });
     if (!res.ok) {
       return null;
     }

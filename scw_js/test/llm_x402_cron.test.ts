@@ -227,5 +227,4 @@ describe("llm_x402_cron", () => {
     expect(res.statusCode).toBe(200);
     expect(mockClaimAndSettle).toHaveBeenCalledTimes(3);
   });
-
 });

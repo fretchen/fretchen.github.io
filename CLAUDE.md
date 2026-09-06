@@ -6,17 +6,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Monorepo for a blockchain-based AI service platform. Each subdirectory is an independent npm package — there is no root `package.json` or workspace manager.
 
-| Directory | Purpose | Further reading |
-|---|---|---|
-| `website/` | Frontend (Vike SSR + React 19 + Panda CSS) | [`README`](website/README.md) · [`CLAUDE.md`](website/CLAUDE.md) |
-| `eth/` | Solidity smart contracts (Hardhat, Optimism L2) | [`README`](eth/README.md) · [`CLAUDE.md`](eth/CLAUDE.md) |
-| `scw_js/` | Serverless backend (Scaleway Functions, AI image gen + LLM) | [`README`](scw_js/README.md) |
-| `x402_facilitator/` | EIP-3009 USDC payment facilitator (Scaleway Functions) | [`README`](x402_facilitator/README.md) |
-| `comment_service/` | Blog comment backend (Scaleway Functions) | [`README`](comment_service/README.md) |
-| `analytics/` | Serverless pageview counter (Scaleway Functions, S3-backed) | [`README`](analytics/README.md) |
-| `growth-agent/` | AI growth agent cron container (Python, LangGraph) | [`README`](growth-agent/README.md) |
-| `shared/chain-utils/` | Shared blockchain utility library (Viem peer dep) | — |
-| `notebooks/` | Python Jupyter notebooks for analysis | [`README`](notebooks/README.md) |
+| Directory             | Purpose                                                     | Further reading                                                  |
+| --------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------- |
+| `website/`            | Frontend (Vike SSR + React 19 + Panda CSS)                  | [`README`](website/README.md) · [`CLAUDE.md`](website/CLAUDE.md) |
+| `eth/`                | Solidity smart contracts (Hardhat, Optimism L2)             | [`README`](eth/README.md) · [`CLAUDE.md`](eth/CLAUDE.md)         |
+| `scw_js/`             | Serverless backend (Scaleway Functions, AI image gen + LLM) | [`README`](scw_js/README.md)                                     |
+| `x402_facilitator/`   | EIP-3009 USDC payment facilitator (Scaleway Functions)      | [`README`](x402_facilitator/README.md)                           |
+| `comment_service/`    | Blog comment backend (Scaleway Functions)                   | [`README`](comment_service/README.md)                            |
+| `analytics/`          | Serverless pageview counter (Scaleway Functions, S3-backed) | [`README`](analytics/README.md)                                  |
+| `growth-agent/`       | AI growth agent cron container (Python, LangGraph)          | [`README`](growth-agent/README.md)                               |
+| `shared/chain-utils/` | Shared blockchain utility library (Viem peer dep)           | —                                                                |
+| `notebooks/`          | Python Jupyter notebooks for analysis                       | [`README`](notebooks/README.md)                                  |
 
 ## Commands
 
@@ -47,14 +47,14 @@ counterintuitive and has been published wrong: `/imagegen` and `/assistent` are 
 
 Two things that silently break payments if you get them wrong, both documented in detail where they belong:
 
-- **EIP-712 domain names differ by network** (mainnet USDC is `"USD Coin"`, testnet is `"USDC"`). Follow the checklist in [`scw_js/README.md`](scw_js/README.md) → *Adding New Networks*, which carries the verified per-network table.
-- **The x402 recipient whitelist uses OR logic** across a manual list, testnet-only test wallets, and NFT-holder status. See [`x402_facilitator/README.md`](x402_facilitator/README.md) → *Whitelist Architecture*.
+- **EIP-712 domain names differ by network** (mainnet USDC is `"USD Coin"`, testnet is `"USDC"`). Follow the checklist in [`scw_js/README.md`](scw_js/README.md) → _Adding New Networks_, which carries the verified per-network table.
+- **The x402 recipient whitelist uses OR logic** across a manual list, testnet-only test wallets, and NFT-holder status. See [`x402_facilitator/README.md`](x402_facilitator/README.md) → _Whitelist Architecture_.
 
 ### Frontend (`website/`)
 
 **Vike SSR** with file-based routing: pages in `pages/`, renderer in `renderer/`. Client-only components need `{ ssr: false }` in imports.
 
-**Panda CSS** compiles `css({})` at build time, so several ways of writing a style fail *silently* — the component renders, the tests pass, only the CSS is missing. The rules are in [`website/CLAUDE.md`](website/CLAUDE.md), enforced by `website/test/styleConventions.test.ts`. The design system itself — colours and their jobs, the button recipe, the scales — is in [`website/README.md`](website/README.md); read it before adding any style.
+**Panda CSS** compiles `css({})` at build time, so several ways of writing a style fail _silently_ — the component renders, the tests pass, only the CSS is missing. The rules are in [`website/CLAUDE.md`](website/CLAUDE.md), enforced by `website/test/styleConventions.test.ts`. The design system itself — colours and their jobs, the button recipe, the scales — is in [`website/README.md`](website/README.md); read it before adding any style.
 
 **Wagmi v2 + TanStack Query** for blockchain state; hooks are auto-generated from `wagmi.config.ts`, not hand-written.
 
@@ -80,3 +80,22 @@ Rules that apply everywhere:
 Posts are `.md`/`.mdx` in `website/blog/`, with frontmatter: `title`, `publishing_date`, `category`, `description`, `tokenID`. Interactive posts import their widgets as regular React components from `website/components/blog/` — there is no `.tsx` post format.
 
 Use the **`blog-planner`** skill to plan or write one — it enforces the plan-first rule (no MDX before an approved `website/blog/<slug>.plan.md`) and carries the audience and style conventions. Use **`blog-critic`** to review a draft; it is read-only and outputs a `.todos.md`.
+
+### Prose: no manufactured suspense
+
+State a claim where it arises. Never order sentences so they build to a reveal — the suspense is
+fake, because the sentence already knows what it is withholding. Four constructions are banned:
+
+- **Concede-then-swing** — "X is the benchmark, and it works. But…", "So a good outcome exists.
+  But…". Put the limitation in the same sentence as the claim: "The planner reaches the right
+  fleet, but has to know how fast the fish breed."
+- **Forward promise** — "the two ends of that bracket everything below", "this point is worth
+  detailing further", "more on that later". Say it here or cut it.
+- **Meta-announcement** — "That is enough to state the tragedy", "Now for the interesting part".
+  Delete the sentence; the next one is the content.
+- **Withheld reveal** — "a third possibility, from an odd direction", "That is the point", or a
+  heading with an appended promise ("The circuit, and what it implements"). Name the thing in the
+  sentence that raises it; a heading names its subject and stops.
+
+Test: read each paragraph's first sentence on its own. If it announces that something is coming
+rather than saying something, rewrite it. This applies to figure captions too.

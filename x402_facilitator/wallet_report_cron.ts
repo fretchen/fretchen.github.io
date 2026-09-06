@@ -8,14 +8,22 @@
  *   - native (ETH) balance  -> the real "will settlements keep working?" signal
  *   - USDC balance          -> accumulated fee revenue
  *
- * (A 7-day transfer-history summary was considered but dropped: it needs wide
+ * It also reports week-over-week ACTIVITY (transactions sent, fees earned, gas spent)
+ * by reading the same balances/nonce as of a block ~7 days ago and diffing against now.
+ * An event-log transfer history was considered for this and dropped: it needs wide
  * eth_getLogs ranges, and the configured Alchemy key is on the free tier which caps
- * eth_getLogs at a 10-block range. Balances alone cover the real need — knowing when
- * to top up gas before settlements stall.)
+ * eth_getLogs at a 10-block range. Historical account-state reads (balance/nonce AT a
+ * past block) have no such range limit and work on the plain public RPCs already used
+ * here — no new secret, no new dependency. The tradeoff: no exact/batch-settlement
+ * scheme split, since that needs each transaction's destination contract, i.e. real
+ * transaction history. Not worth an explorer-API dependency while volume is near zero;
+ * revisit if traffic ever makes the split interesting.
  *
  * Results are emailed weekly via Scaleway Transactional Email (same mechanism as
  * comment_service). One network failing (e.g. an RPC hiccup) degrades that network's
- * row to an error but never kills the whole report.
+ * row to an error but never kills the whole report. The activity numbers degrade
+ * independently of balances: an RPC without archive state still reports gas/fee
+ * balances normally and just marks activity "unavailable" for that network.
  */
 
 import {
@@ -28,7 +36,7 @@ import {
   type Abi,
 } from "viem";
 import pino from "pino";
-import { getFacilitatorAddress } from "./x402_fee";
+import { getFacilitatorAddress, getFeeAmount } from "./x402_fee";
 import { getChainConfig, getRpcUrl } from "./chain_utils";
 import type { ScalewayEvent, ScalewayResponse } from "./x402_facilitator";
 
@@ -42,6 +50,10 @@ const DEFAULT_LOW_GAS_THRESHOLD_ETH = "0.005";
 
 const USDC_DECIMALS = 6;
 
+// Both report networks are OP-stack chains at a ~2s block time, so this is ~7 days.
+// Revisit if REPORT_NETWORKS ever gains a network with a different block time.
+const LOOKBACK_BLOCKS = 302_400n;
+
 // Minimal ERC-20 read ABI (balanceOf) — mirrors the shape used in x402_fee.ts.
 const ERC20_BALANCE_ABI = [
   {
@@ -53,6 +65,23 @@ const ERC20_BALANCE_ABI = [
   },
 ] as const satisfies Abi;
 
+interface ActivityReport {
+  /** Transactions the facilitator sent — the nonce delta over the lookback window. */
+  txCount: number;
+  /**
+   * Net USDC balance change over the window. Negative when more was withdrawn than
+   * earned — never render this as "earned" without checking the sign.
+   */
+  usdcDelta: string;
+  /** Positive = topped up over the window, negative = spent on gas. */
+  ethDelta: string;
+  /**
+   * Settlements implied by `usdcDelta / flatFee` — an ESTIMATE, not a count of actual
+   * settlements. Present only when a fee is configured and `usdcDelta > 0`.
+   */
+  estimatedSettlements?: number;
+}
+
 interface NetworkReport {
   network: string;
   chainName: string;
@@ -60,6 +89,9 @@ interface NetworkReport {
   usdc?: string;
   lowGas?: boolean;
   error?: string;
+  /** Absent when the historical reads failed (e.g. no archive state) — balances above are
+   *  unaffected either way. */
+  activity?: ActivityReport;
 }
 
 async function buildNetworkReport(network: string, facilitator: Address): Promise<NetworkReport> {
@@ -86,12 +118,45 @@ async function buildNetworkReport(network: string, facilitator: Address): Promis
     const eth = formatEther(ethBalance);
     const threshold = Number(process.env.LOW_GAS_THRESHOLD_ETH ?? DEFAULT_LOW_GAS_THRESHOLD_ETH);
 
+    // Independent try/catch: an RPC without archive state (or any other failure here)
+    // must not affect the balances/lowGas result above, which is the more important half
+    // of this report.
+    let activity: ActivityReport | undefined;
+    try {
+      const currentBlock = await publicClient.getBlockNumber();
+      if (currentBlock > LOOKBACK_BLOCKS) {
+        const lookbackBlock = currentBlock - LOOKBACK_BLOCKS;
+
+        const [pastNonce, currentNonce, pastEth, pastUsdc] = await Promise.all([
+          publicClient.getTransactionCount({ address: facilitator, blockNumber: lookbackBlock }),
+          publicClient.getTransactionCount({ address: facilitator }),
+          publicClient.getBalance({ address: facilitator, blockNumber: lookbackBlock }),
+          usdc.read.balanceOf([facilitator], { blockNumber: lookbackBlock }),
+        ]);
+
+        const usdcDelta = usdcBalance - pastUsdc;
+        const ethDelta = ethBalance - pastEth;
+        const feeAmount = getFeeAmount();
+
+        activity = {
+          txCount: currentNonce - pastNonce,
+          usdcDelta: formatUnits(usdcDelta, USDC_DECIMALS),
+          ethDelta: formatEther(ethDelta),
+          ...(feeAmount > 0n &&
+            usdcDelta > 0n && { estimatedSettlements: Number(usdcDelta / feeAmount) }),
+        };
+      }
+    } catch (err) {
+      logger.warn({ err, network }, "Could not read historical wallet state — omitting activity");
+    }
+
     return {
       network,
       chainName,
       eth,
       usdc: formatUnits(usdcBalance, USDC_DECIMALS),
       lowGas: Number(eth) < threshold,
+      ...(activity && { activity }),
     };
   } catch (err) {
     logger.error({ err, network }, "Failed to build wallet report for network");
@@ -115,6 +180,22 @@ function renderEmailText(facilitator: Address, reports: NetworkReport[]): string
       `  Gas (ETH):    ${r.eth}${r.lowGas ? "   ⚠️ LOW — top up to avoid stalled settlements" : ""}`,
     );
     lines.push(`  USDC balance: ${r.usdc}`);
+    lines.push("");
+    lines.push(`  Last ~7 days:`);
+    if (!r.activity) {
+      lines.push(`    unavailable (RPC returned no historical state)`);
+    } else {
+      const { txCount, usdcDelta, ethDelta, estimatedSettlements } = r.activity;
+      lines.push(`    Transactions:  ${txCount}`);
+      // Sign carries the meaning here — a negative delta is a withdrawal, not "earned".
+      const usdcSign = Number(usdcDelta) >= 0 ? "+" : "";
+      const settlementsNote =
+        estimatedSettlements !== undefined ? `  (≈ ${estimatedSettlements} settlements)` : "";
+      lines.push(`    USDC change:   ${usdcSign}${usdcDelta} USDC${settlementsNote}`);
+      const ethSign = Number(ethDelta) >= 0 ? "+" : "";
+      const ethNote = Number(ethDelta) >= 0 ? "  (topped up)" : "  (gas spent)";
+      lines.push(`    ETH change:    ${ethSign}${ethDelta} ETH${ethNote}`);
+    }
     lines.push("");
   }
 

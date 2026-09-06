@@ -3,14 +3,41 @@
  *
  * Tests for the x402 payment-based image generation hook.
  * Verifies hook state management, error handling, and wallet integration.
+ *
+ * Most tests below route around the dynamic `@x402/*` imports entirely (no wallet, or
+ * asserting synchronously without awaiting generateImage()). The "Spend controls" describe
+ * block is the exception: it mocks `@x402/fetch` and `@x402/evm/exact/client` (mirroring
+ * `useX402Chat.test.ts`'s pattern) so generateImage()'s real client-setup code runs.
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useX402ImageGeneration } from "../hooks/useX402ImageGeneration";
+import { buildUsdcAllowedAssets } from "../hooks/x402SpendControls";
 import { useWalletClient, useAccount } from "wagmi";
 import type { X402GenImgRequest } from "../types/x402";
 import { buildAccountData, buildWalletClientData } from "./setup";
+
+const mockSetSpendControls = vi.fn();
+const mockRegisterExactEvmScheme = vi.fn();
+const mockGetPaymentSettleResponse = vi.fn();
+
+vi.mock("@x402/fetch", () => ({
+  // vi.fn() needs a real `function`, not an arrow, to remain usable via `new`.
+  x402Client: vi.fn().mockImplementation(function MockX402Client() {
+    return { setSpendControls: mockSetSpendControls };
+  }),
+  // Pass the caller's fetch straight through — drives the real validatingFetch → global
+  // fetch path from the hook without a real SDK.
+  wrapFetchWithPayment: vi.fn((fetchFn: typeof fetch) => fetchFn),
+  x402HTTPClient: vi.fn().mockImplementation(function MockX402HTTPClient() {
+    return { getPaymentSettleResponse: mockGetPaymentSettleResponse };
+  }),
+}));
+
+vi.mock("@x402/evm/exact/client", () => ({
+  registerExactEvmScheme: (...args: unknown[]) => mockRegisterExactEvmScheme(...args),
+}));
 
 describe("useX402ImageGeneration", () => {
   beforeEach(() => {
@@ -184,6 +211,39 @@ describe("useX402ImageGeneration", () => {
 
       expect(requestBody.network).toBe("eip155:10");
       expect(JSON.stringify(requestBody)).toContain("eip155:10");
+    });
+  });
+
+  // Regression guard for the production incident where an unconfigured x402Client's
+  // default spend controls rejected Optimism USDC (see x402SpendControls.ts).
+  describe("Spend controls", () => {
+    it("allowlists USDC on every site network via setSpendControls before registering the scheme", async () => {
+      const mockWalletClient = {
+        account: { address: "0x1234567890123456789012345678901234567890" as `0x${string}` },
+        signTypedData: vi.fn(),
+      };
+      vi.mocked(useWalletClient).mockReturnValue(buildWalletClientData({ data: mockWalletClient }));
+      vi.mocked(useAccount).mockReturnValue(
+        buildAccountData({ isConnected: true, address: mockWalletClient.account.address }),
+      );
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(
+          new Response(JSON.stringify({ imageUrl: "https://example.com/img.png" }), {
+            status: 200,
+          }),
+        ),
+      );
+
+      const { result } = renderHook(() => useX402ImageGeneration());
+      await act(async () => {
+        await result.current.generateImage({ prompt: "A dog on Optimism", network: "eip155:10" });
+      });
+
+      expect(mockSetSpendControls).toHaveBeenCalledWith({ allowedAssets: buildUsdcAllowedAssets() });
+      expect(mockSetSpendControls.mock.invocationCallOrder[0]).toBeLessThan(
+        mockRegisterExactEvmScheme.mock.invocationCallOrder[0],
+      );
     });
   });
 });

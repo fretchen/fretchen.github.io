@@ -58,6 +58,28 @@ export interface AllowanceInfo {
   status: "ok" | "insufficient" | "unknown";
 }
 
+/**
+ * Whether this settlement owes a fee, and whether the recipient can pay it.
+ *
+ * - `no_fee`  — fees are disabled. Settle normally and attach NO fee receipt: the
+ *               `fee` / `extensions.facilitatorFees` fields are documented (see
+ *               `x402_schemas.ts`) as present only when a fee is configured.
+ * - `charge`  — a fee is owed; settle, then collect it.
+ * - `reject`  — do not settle at all.
+ */
+export type FeeGateDecision =
+  | { kind: "no_fee" }
+  | { kind: "charge"; remainingSettlements?: number }
+  | {
+      /**
+       * Only the reason travels. The allowance detail behind it is logged here for
+       * operators, and `/supported` → `facilitatorFees` already publishes the address to
+       * approve and the amount required — callers need nothing more from this type.
+       */
+      kind: "reject";
+      reason: "insufficient_fee_allowance" | "facilitator_not_configured";
+    };
+
 // ═══════════════════════════════════════════════════════════════
 // ERC-20 ABI (minimal subset for fee operations)
 // ═══════════════════════════════════════════════════════════════
@@ -211,6 +233,68 @@ export async function checkMerchantAllowance(
     );
     return { status: "unknown" };
   }
+}
+
+/**
+ * The single fee gate both schemes run before settling.
+ *
+ * `exact` calls this from the `onAfterVerify` hook (`facilitator_instance.ts`);
+ * `batch-settlement` calls it for `claim`/`settle` payloads (`x402_settle.ts`), which
+ * skip verify() entirely and so never reach that hook. Sharing it is the point: these
+ * were previously two hand-written implementations, and the batch-settlement copy had
+ * silently omitted the fee-disabled and facilitator-not-configured checks.
+ *
+ * Fails closed only on an allowance that genuinely read too low. An *unreadable*
+ * allowance proceeds — the payment is worth more than the fee.
+ */
+export async function evaluateFeeGate(
+  recipient: Address,
+  network: string,
+): Promise<FeeGateDecision> {
+  const feeAmount = getFeeAmount();
+  if (feeAmount === 0n) {
+    return { kind: "no_fee" };
+  }
+
+  const facilitatorAddress = getFacilitatorAddress();
+  if (!facilitatorAddress) {
+    logger.warn(
+      { recipient, network },
+      "Cannot check fee allowance: facilitator address not configured",
+    );
+    return { kind: "reject", reason: "facilitator_not_configured" };
+  }
+
+  const allowanceInfo = await checkMerchantAllowance(recipient, network);
+
+  if (allowanceInfo.status === "insufficient") {
+    logger.warn(
+      {
+        recipient,
+        network,
+        allowance: allowanceInfo.allowance?.toString(),
+        feeAmount: feeAmount.toString(),
+        facilitatorAddress,
+      },
+      "Insufficient fee allowance — merchant must approve USDC for facilitator",
+    );
+    return { kind: "reject", reason: "insufficient_fee_allowance" };
+  }
+
+  if (allowanceInfo.status === "unknown") {
+    // Proceed by policy, not by accident: the payment is worth more than the fee.
+    logger.warn(
+      { recipient, network },
+      "Fee allowance unreadable — proceeding, fee collection attempted anyway",
+    );
+  } else {
+    logger.info(
+      { recipient, network, remainingSettlements: allowanceInfo.remainingSettlements },
+      "Recipient approved via fee allowance",
+    );
+  }
+
+  return { kind: "charge", remainingSettlements: allowanceInfo.remainingSettlements };
 }
 
 // ═══════════════════════════════════════════════════════════════

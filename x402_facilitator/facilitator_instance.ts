@@ -18,14 +18,13 @@ import { ExactEvmScheme } from "@x402/evm/exact/facilitator";
 import { BatchSettlementEvmScheme } from "@x402/evm/batch-settlement/facilitator";
 import pino from "pino";
 import { loadPrivateKey } from "@fretchen/chain-utils";
-import { checkMerchantAllowance, getFeeAmount, getFacilitatorAddress } from "./x402_fee";
+import { evaluateFeeGate, getFacilitatorAddress } from "./x402_fee";
 import {
   getChainConfig,
   getSupportedNetworks,
   getBatchSettlementNetworks,
   getRpcUrl,
 } from "./chain_utils";
-import { isRecipientWhitelisted } from "./x402_whitelist";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
@@ -159,6 +158,12 @@ export function createFacilitator(requirePrivateKey = true): InstanceType<typeof
     // see getBatchSettlementNetworks(). No authorizerSigner → no receiverAuthorizer
     // advertised; servers self-manage it (self-managed receiver, per the
     // batch-settlement migration plan).
+    //
+    // Passing no authorizerSigner is also load-bearing for safety: the SDK's refund path
+    // omits the per-claim `receiverAuthorizer === authorizerSigner.address` check that its
+    // claim path performs, so it would sign a claim batch for channels naming any
+    // authorizer. That gap is unreachable here only because claimAuthorizerSignature must
+    // always come from the client. Adding an authorizerSigner would make it live.
     if (getBatchSettlementNetworks().includes(network)) {
       facilitator.register(network, new BatchSettlementEvmScheme(signer));
     }
@@ -170,31 +175,17 @@ export function createFacilitator(requirePrivateKey = true): InstanceType<typeof
       return;
     }
 
-    // Batch-settlement channels are fee-free. The facilitator fee model
-    // (post-settlement USDC transferFrom) is specific to the exact scheme, and
-    // batch-settlement payloads have no `authorization.to`, so run no fee gating
-    // for them — otherwise the recipient check below would reject every request.
-    // It's not fee-gated, but it IS whitelist-gated: batch-settlement has no fee
-    // to fall back on, so an explicit recipient allowlist is the only thing
-    // standing between this facilitator and relaying transactions for free on
-    // anyone's self-managed channel (see x402_whitelist.ts).
+    // Batch-settlement carries NO fee decision in this hook — deliberately. Its
+    // fee-bearing event is a claimWithSignature, which is a property of the payload's
+    // SHAPE (a `claim`, a `settle`, or a `refund` enriched with a non-empty `claims[]`),
+    // not of `payload.type`, and it has to be gated against the receiver the SDK actually
+    // pays out to. That decision is made once, in x402_settle.ts's
+    // classifyBatchSettlement(). Forcing feeRequired=false here keeps this hook from
+    // becoming a second, label-based source of truth for the same question — which is the
+    // split-brain the enriched-refund bypass came out of. deposit/voucher/claim-less
+    // refunds are genuinely free: they fund, sign or unwind a channel rather than realize
+    // a payment (FEE_MODEL_PLAN.md Phase 3).
     if (paymentPayload.accepted?.scheme === "batch-settlement") {
-      // Gate on `requirements`, NOT on the client's `accepted` envelope. This hook only
-      // runs for deposit/voucher/refund payloads, and for those the SDK has already tied
-      // requirements to the transaction before we get here: validateChannelConfig()
-      // enforces `channelConfig.receiver === requirements.payTo`, and verify() rejects
-      // `accepted.network !== requirements.network`. Nothing binds `accepted.payTo` to
-      // anything at all — the SDK never reads it — so whitelisting it would check a field
-      // the caller can set freely while the channel pays out somewhere else entirely.
-      const network = requirements?.network;
-      const payTo = requirements?.payTo as string | undefined;
-
-      if (!network || !payTo || !isRecipientWhitelisted(payTo, network)) {
-        result.isValid = false;
-        result.invalidReason = "recipient_not_whitelisted";
-        return;
-      }
-
       (result as Record<string, unknown>).feeRequired = false;
       return;
     }
@@ -232,75 +223,32 @@ export function createFacilitator(requirePrivateKey = true): InstanceType<typeof
       return;
     }
 
-    // Check if fees are enabled
-    const feeAmount = getFeeAmount();
-    if (feeAmount === 0n) {
+    // The same gate batch-settlement's claim/settle path runs (x402_fee.ts) — shared so
+    // the two schemes cannot drift apart on when a fee is owed or when to fail closed.
+    const gate = await evaluateFeeGate(recipient as `0x${string}`, network);
+
+    if (gate.kind === "no_fee") {
       // Fees disabled — allow all recipients without fee
       (result as Record<string, unknown>).feeRequired = false;
       return;
     }
 
-    const facilitatorAddress = getFacilitatorAddress();
-    if (!facilitatorAddress) {
-      logger.warn(
-        { recipient, network },
-        "Cannot check fee allowance: facilitator address not configured",
-      );
+    if (gate.kind === "reject") {
+      // Only the reason travels. The allowance detail behind it (how much was approved,
+      // how much is needed, which address to approve) is already published by
+      // `/supported` → `facilitatorFees`, and is logged by evaluateFeeGate for operators
+      // — restating it here would widen the wire contract for no new information.
       result.isValid = false;
-      result.invalidReason = "facilitator_not_configured";
+      result.invalidReason = gate.reason;
       return;
-    }
-
-    // Check merchant's USDC allowance for fee payment
-    const allowanceInfo = await checkMerchantAllowance(recipient as `0x${string}`, network);
-
-    // Fail closed only on a reading that genuinely came back too low. An unreadable
-    // allowance must not reject an otherwise-valid payment.
-    if (allowanceInfo.status === "insufficient") {
-      logger.warn(
-        {
-          recipient,
-          network,
-          allowance: allowanceInfo.allowance?.toString(),
-          feeAmount: feeAmount.toString(),
-          facilitatorAddress,
-        },
-        "Insufficient fee allowance — merchant must approve USDC for facilitator",
-      );
-      result.isValid = false;
-      result.invalidReason = "insufficient_fee_allowance";
-      (result as Record<string, unknown>).recipient = recipient;
-      (result as Record<string, unknown>).requiredAllowance = feeAmount.toString();
-      (result as Record<string, unknown>).currentAllowance = (
-        allowanceInfo.allowance ?? 0n
-      ).toString();
-      (result as Record<string, unknown>).facilitatorAddress = facilitatorAddress;
-      return;
-    }
-
-    if (allowanceInfo.status === "unknown") {
-      // Proceed by policy, not by accident: the payment is worth more than the fee.
-      logger.warn(
-        { recipient, network },
-        "Fee allowance unreadable — proceeding, fee collection attempted anyway",
-      );
-    } else {
-      logger.info(
-        {
-          recipient,
-          network,
-          remainingSettlements: allowanceInfo.remainingSettlements,
-        },
-        "Recipient approved via fee allowance",
-      );
     }
 
     (result as Record<string, unknown>).feeRequired = true;
     (result as Record<string, unknown>).recipient = recipient;
     // Surfaced in the verify response so sellers see their approval running down.
     // Left undefined when the allowance was unreadable — never reported as 0.
-    if (allowanceInfo.remainingSettlements !== undefined) {
-      (result as Record<string, unknown>).remainingSettlements = allowanceInfo.remainingSettlements;
+    if (gate.remainingSettlements !== undefined) {
+      (result as Record<string, unknown>).remainingSettlements = gate.remainingSettlements;
     }
   });
 

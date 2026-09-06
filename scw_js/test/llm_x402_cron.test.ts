@@ -2,18 +2,46 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ===== Mocks (vi.hoisted ensures these are available when vi.mock factories run) =====
 
-const { mockCreateLLMResourceServer, mockCreateFacilitatorClient, mockGetBatchSettlementNetworks } =
-  vi.hoisted(() => ({
-    mockCreateLLMResourceServer: vi.fn(),
-    mockCreateFacilitatorClient: vi.fn(),
-    mockGetBatchSettlementNetworks: vi.fn(),
-  }));
+const {
+  mockCreateLLMResourceServer,
+  mockCreateFacilitatorClient,
+  mockGetBatchSettlementNetworks,
+  mockGetFacilitatorFeeConfig,
+  mockReadContract,
+  mockLoggerWarn,
+} = vi.hoisted(() => ({
+  mockCreateLLMResourceServer: vi.fn(),
+  mockCreateFacilitatorClient: vi.fn(),
+  mockGetBatchSettlementNetworks: vi.fn(),
+  mockGetFacilitatorFeeConfig: vi.fn(),
+  mockReadContract: vi.fn(),
+  mockLoggerWarn: vi.fn(),
+}));
 
 vi.mock("../x402_server.js", () => ({
   createLLMResourceServer: mockCreateLLMResourceServer,
   createFacilitatorClient: mockCreateFacilitatorClient,
   getBatchSettlementNetworks: mockGetBatchSettlementNetworks,
+  getFacilitatorFeeConfig: mockGetFacilitatorFeeConfig,
 }));
+
+// The cron's logger is module-private; mock pino so its warnings are observable.
+vi.mock("pino", () => ({
+  default: vi.fn(() => ({
+    info: vi.fn(),
+    warn: mockLoggerWarn,
+    error: vi.fn(),
+    debug: vi.fn(),
+  })),
+}));
+
+vi.mock("viem", async () => {
+  const actual = await vi.importActual("viem");
+  return {
+    ...actual,
+    createPublicClient: vi.fn(() => ({ readContract: mockReadContract })),
+  };
+});
 
 // ===== Import after mocks =====
 
@@ -49,6 +77,12 @@ describe("llm_x402_cron", () => {
     });
     mockCreateFacilitatorClient.mockReturnValue({});
     mockGetBatchSettlementNetworks.mockReturnValue(["eip155:10", "eip155:8453", "eip155:84532"]);
+    // Default: the facilitator charges 0.01 USDC and the approval is healthy (100 claims).
+    mockGetFacilitatorFeeConfig.mockResolvedValue({
+      recipient: "0x3F8d2Fb6fEA24E70155bC61471936F3c9C30c206",
+      flatFee: 10000n,
+    });
+    mockReadContract.mockResolvedValue(1_000_000n);
   });
 
   it("returns 500 when NFT_WALLET_PUBLIC_KEY is missing", async () => {
@@ -80,7 +114,12 @@ describe("llm_x402_cron", () => {
 
     const body = JSON.parse(res.body) as { results: Array<{ network: string; claims: number }> };
     expect(body.results).toHaveLength(3);
-    expect(body.results[0]).toEqual({ network: "eip155:10", claims: 1, settled: true });
+    expect(body.results[0]).toEqual({
+      network: "eip155:10",
+      claims: 1,
+      settled: true,
+      feeAllowanceClaimsLeft: 100,
+    });
   });
 
   /**
@@ -114,7 +153,12 @@ describe("llm_x402_cron", () => {
     mockClaimAndSettle.mockResolvedValue({ claims: [], settle: undefined });
     const res = await handle(makeEvent() as never, {});
     const body = JSON.parse(res.body) as { results: Array<{ claims: number; settled: boolean }> };
-    expect(body.results[0]).toEqual({ network: "eip155:10", claims: 0, settled: false });
+    expect(body.results[0]).toEqual({
+      network: "eip155:10",
+      claims: 0,
+      settled: false,
+      feeAllowanceClaimsLeft: 100,
+    });
   });
 
   it("continues to other networks and returns 500 when one network's claimAndSettle throws", async () => {
@@ -130,5 +174,57 @@ describe("llm_x402_cron", () => {
     const body = JSON.parse(res.body) as { results: Array<{ network: string; error?: string }> };
     expect(body.results[0].error).toBe("facilitator unreachable");
     expect(body.results[1].error).toBeUndefined();
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // Fee-allowance early warning
+  //
+  // claim/settle skip /verify, so this path never receives `remainingSettlements` the way
+  // the exact scheme does. Without this check the approval runs out silently and claims
+  // begin failing with insufficient_fee_allowance. The check is advisory: it must surface
+  // the problem early and must never itself cost us a claim.
+  // ═══════════════════════════════════════════════════════════
+
+  it("warns when the fee allowance is nearly exhausted, and still claims", async () => {
+    // 5 claims left, below the 10-claim threshold.
+    mockReadContract.mockResolvedValue(50_000n);
+
+    const res = await handle(makeEvent() as never, {});
+
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      expect.objectContaining({ network: "eip155:10", claimsLeft: 5 }),
+      expect.stringContaining("insufficient_fee_allowance"),
+    );
+    // The warning is advisory — collection must still happen.
+    expect(mockClaimAndSettle).toHaveBeenCalledTimes(3);
+    expect(res.statusCode).toBe(200);
+  });
+
+  it("does not warn when the allowance is healthy", async () => {
+    await handle(makeEvent() as never, {});
+
+    expect(mockLoggerWarn).not.toHaveBeenCalled();
+  });
+
+  it("still claims when the allowance read fails — the check must never cost a claim", async () => {
+    mockReadContract.mockRejectedValue(new Error("RPC down"));
+
+    const res = await handle(makeEvent() as never, {});
+
+    expect(res.statusCode).toBe(200);
+    expect(mockClaimAndSettle).toHaveBeenCalledTimes(3);
+    // Unreadable is not "low": no warning, and no runway reported rather than a made-up 0.
+    const body = JSON.parse(res.body) as { results: Array<Record<string, unknown>> };
+    expect(body.results[0].feeAllowanceClaimsLeft).toBeUndefined();
+  });
+
+  it("skips the allowance read entirely when the facilitator charges no fee", async () => {
+    mockGetFacilitatorFeeConfig.mockResolvedValue(null);
+
+    const res = await handle(makeEvent() as never, {});
+
+    expect(mockReadContract).not.toHaveBeenCalled();
+    expect(res.statusCode).toBe(200);
+    expect(mockClaimAndSettle).toHaveBeenCalledTimes(3);
   });
 });

@@ -4,6 +4,7 @@ import {
   getFacilitatorAddress,
   checkMerchantAllowance,
   collectFee,
+  evaluateFeeGate,
 } from "../x402_fee.js";
 import type { createPublicClient, getContract } from "viem";
 
@@ -459,6 +460,78 @@ describe("x402_fee", () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBe("fee_collection_failed");
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // evaluateFeeGate — the single gate both schemes run before settling
+  //
+  // `exact` reaches it via facilitator_instance.ts's onAfterVerify hook;
+  // `batch-settlement` claim/settle reaches it directly from x402_settle.ts. These
+  // were two hand-written implementations until the batch-settlement copy was found
+  // to be missing the fee-disabled and facilitator-not-configured checks below.
+  // ═══════════════════════════════════════════════════════════
+
+  describe("evaluateFeeGate", () => {
+    const merchant = "0x209693Bc6afc0C5328bA36FaF03C514EF312287C";
+
+    function mockAllowance(value: bigint) {
+      return import("viem").then(({ getContract }) => {
+        vi.mocked(getContract).mockReturnValue(
+          mockContract({ read: { allowance: vi.fn().mockResolvedValue(value) } }),
+        );
+      });
+    }
+
+    it("returns no_fee when fees are disabled, without reading any allowance", async () => {
+      process.env.FACILITATOR_FEE_AMOUNT = "0";
+      const { getContract } = await import("viem");
+
+      const gate = await evaluateFeeGate(merchant, "eip155:11155420");
+
+      expect(gate.kind).toBe("no_fee");
+      // Nothing to collect means nothing to check — no RPC round-trip.
+      expect(getContract).not.toHaveBeenCalled();
+    });
+
+    it("rejects with facilitator_not_configured when no facilitator key is set", async () => {
+      delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
+
+      const gate = await evaluateFeeGate(merchant, "eip155:11155420");
+
+      expect(gate).toEqual({ kind: "reject", reason: "facilitator_not_configured" });
+    });
+
+    it("rejects with insufficient_fee_allowance when the allowance is too low", async () => {
+      await mockAllowance(5000n);
+
+      const gate = await evaluateFeeGate(merchant, "eip155:11155420");
+
+      // Only the reason travels — the allowance detail behind it is logged, not returned.
+      expect(gate).toEqual({ kind: "reject", reason: "insufficient_fee_allowance" });
+    });
+
+    it("charges, and reports remaining settlements, when the allowance covers the fee", async () => {
+      await mockAllowance(100000n);
+
+      const gate = await evaluateFeeGate(merchant, "eip155:11155420");
+
+      expect(gate).toEqual({ kind: "charge", remainingSettlements: 10 });
+    });
+
+    it("charges without a settlement count when the allowance is unreadable", async () => {
+      const { getContract } = await import("viem");
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          read: { allowance: vi.fn().mockRejectedValue(new Error("RPC down")) },
+        }),
+      );
+
+      const gate = await evaluateFeeGate(merchant, "eip155:11155420");
+
+      // Fails OPEN: a reading we could not take must not block a valid payment, and
+      // remainingSettlements stays undefined rather than being reported as 0.
+      expect(gate).toEqual({ kind: "charge", remainingSettlements: undefined });
     });
   });
 });

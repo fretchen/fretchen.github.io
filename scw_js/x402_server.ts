@@ -70,6 +70,56 @@ export function createFacilitatorClient(): HTTPFacilitatorClient {
   return new HTTPFacilitatorClient({ url: FACILITATOR_URL });
 }
 
+/** What the facilitator charges, and the address that collects it. */
+export interface FacilitatorFeeConfig {
+  /** Spender to approve — the facilitator wallet that runs `transferFrom`. */
+  recipient: `0x${string}`;
+  /** Flat fee per settlement, in USDC atomic units. */
+  flatFee: bigint;
+}
+
+/**
+ * Read the fee model the facilitator currently advertises, or null when it charges none.
+ *
+ * `/supported` is the documented source of truth for both the amount and the collecting
+ * address, so reading it here means no extra env var to keep in sync and no breakage if
+ * the facilitator rotates its key.
+ *
+ * Returns null — never throws — when the facilitator is unreachable, advertises no fee, or
+ * returns something unparseable. Callers use this for advisory checks only, so a failure
+ * here must degrade to "no warning", never to a blocked payment.
+ *
+ * Bounded to FEE_CONFIG_FETCH_TIMEOUT_MS: this is awaited once, before the per-network
+ * claim loop even starts, so an unbounded fetch would stall every network's claim behind
+ * it — the opposite of "advisory only" if the facilitator is merely slow, not down.
+ */
+const FEE_CONFIG_FETCH_TIMEOUT_MS = 5_000;
+
+export async function getFacilitatorFeeConfig(): Promise<FacilitatorFeeConfig | null> {
+  try {
+    const res = await fetch(`${FACILITATOR_URL}/supported`, {
+      signal: AbortSignal.timeout(FEE_CONFIG_FETCH_TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      return null;
+    }
+    const body: unknown = await res.json();
+    const fees = (body as { facilitatorFees?: { recipient?: unknown; flatFee?: unknown } })
+      ?.facilitatorFees;
+    if (typeof fees?.recipient !== "string" || typeof fees?.flatFee !== "string") {
+      // No fee configured on this facilitator — nothing to check an allowance against.
+      return null;
+    }
+    const flatFee = BigInt(fees.flatFee);
+    if (flatFee <= 0n) {
+      return null;
+    }
+    return { recipient: fees.recipient as `0x${string}`, flatFee };
+  } catch {
+    return null;
+  }
+}
+
 export function createResourceServer(): x402ResourceServer {
   const server = new x402ResourceServer(createFacilitatorClient());
   for (const network of getSupportedNetworks()) {

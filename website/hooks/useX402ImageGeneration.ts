@@ -8,6 +8,7 @@
 import { useState, useCallback } from "react";
 import { useWalletClient } from "wagmi";
 import { useIsWalletConnected } from "./useIsWalletConnected";
+import { buildUsdcAllowedAssets } from "./x402SpendControls";
 import type { X402GenImgRequest, X402GenImgResponse, X402PaymentReceipt, X402GenerationStatus } from "../types/x402";
 
 // API URL from environment (fallback to env var if not set)
@@ -61,6 +62,9 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
 
         // === Setup x402 client (exactly like Quickstart) ===
         const client = new x402Client();
+        // Explicitly allowlist USDC on every network this site pays on — the SDK's
+        // default spend controls reject Optimism USDC otherwise. See x402SpendControls.ts.
+        client.setSpendControls({ allowedAssets: buildUsdcAllowedAssets() });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment -- x402 SDK expects specific signer interface
         registerExactEvmScheme(client, { signer: signer as any });
 

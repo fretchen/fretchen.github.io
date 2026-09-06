@@ -77,7 +77,10 @@ interface ActivityReport {
   ethDelta: string;
   /**
    * Settlements implied by `usdcDelta / flatFee` — an ESTIMATE, not a count of actual
-   * settlements. Present only when a fee is configured and `usdcDelta > 0`.
+   * settlements. Uses the CURRENT fee rate (`getFeeAmount()` at report time), not
+   * whatever rate was actually in effect during the window, and treats any non-fee USDC
+   * movement (a manual top-up, a refund, a withdrawal) as if it were settlement revenue.
+   * Present only when a fee is configured and `usdcDelta > 0`.
    */
   estimatedSettlements?: number;
 }
@@ -110,10 +113,18 @@ async function buildNetworkReport(network: string, facilitator: Address): Promis
       client: publicClient,
     });
 
-    const [ethBalance, usdcBalance] = await Promise.all([
-      publicClient.getBalance({ address: facilitator }),
-      usdc.read.balanceOf([facilitator]),
-    ]);
+    // All four "current state" reads are fired here, before anything is awaited, so their
+    // network round-trips overlap rather than serialize. They're still awaited in two
+    // separate groups below: the balances are the critical pair (their failure fails the
+    // whole network report, via the outer try/catch), while the block number and nonce are
+    // only ever used for the optional activity block and must not be able to take the
+    // balances down with them if they fail — see the inner try/catch below.
+    const ethBalancePromise = publicClient.getBalance({ address: facilitator });
+    const usdcBalancePromise = usdc.read.balanceOf([facilitator]);
+    const currentBlockPromise = publicClient.getBlockNumber();
+    const currentNoncePromise = publicClient.getTransactionCount({ address: facilitator });
+
+    const [ethBalance, usdcBalance] = await Promise.all([ethBalancePromise, usdcBalancePromise]);
 
     const eth = formatEther(ethBalance);
     const threshold = Number(process.env.LOW_GAS_THRESHOLD_ETH ?? DEFAULT_LOW_GAS_THRESHOLD_ETH);
@@ -123,13 +134,13 @@ async function buildNetworkReport(network: string, facilitator: Address): Promis
     // of this report.
     let activity: ActivityReport | undefined;
     try {
-      const currentBlock = await publicClient.getBlockNumber();
+      const currentBlock = await currentBlockPromise;
       if (currentBlock > LOOKBACK_BLOCKS) {
         const lookbackBlock = currentBlock - LOOKBACK_BLOCKS;
 
         const [pastNonce, currentNonce, pastEth, pastUsdc] = await Promise.all([
           publicClient.getTransactionCount({ address: facilitator, blockNumber: lookbackBlock }),
-          publicClient.getTransactionCount({ address: facilitator }),
+          currentNoncePromise,
           publicClient.getBalance({ address: facilitator, blockNumber: lookbackBlock }),
           usdc.read.balanceOf([facilitator], { blockNumber: lookbackBlock }),
         ]);

@@ -138,7 +138,12 @@ export async function handle(
     // allowance, this is the run where the warning is most needed.
     let claimsLeft: number | null = null;
     if (feeConfig) {
-      claimsLeft = await readFeeAllowanceClaimsLeft(receiverAddress, network, usdcAddress, feeConfig);
+      claimsLeft = await readFeeAllowanceClaimsLeft(
+        receiverAddress,
+        network,
+        usdcAddress,
+        feeConfig,
+      );
       if (claimsLeft !== null && BigInt(claimsLeft) < LOW_ALLOWANCE_CLAIMS) {
         logger.warn(
           {

@@ -50,20 +50,22 @@ The interactive game above reveals something unsettling: there&rsquo;s a strong 
 
 **The Team Perspective:** If Walter and Jesse could step back and ask &quot;What&rsquo;s best for us together?&quot;, the answer is clear. Both cooperating (3 years each) beats both betraying (5 years each). Total time served: 6 years versus 10 years. They&rsquo;re partners against the DEA, not enemies.
 
-**The Individual Perspective:** But here&rsquo;s where Walter&rsquo;s mind would really go: &quot;What&rsquo;s best for *me*?&quot; And that&rsquo;s where the mathematics becomes crucial—and troubling.
+**The Individual Perspective:** But here&rsquo;s where Walter&rsquo;s mind would really go: &quot;What&rsquo;s best for _me_?&quot; And that&rsquo;s where the mathematics becomes crucial—and troubling.
 
 ### Walter&rsquo;s Cold Calculation
 
 Walter is, at heart, a high school chemistry teacher who thinks systematically. He&rsquo;d probably work through the logic like this: &quot;Let me figure out what Jesse might do, then decide accordingly.&quot;
 
-Suppose Walter estimates there's a probability *p* that Jesse will betray him. That means there's a probability *(1-p)* that Jesse cooperates.
+Suppose Walter estimates there's a probability _p_ that Jesse will betray him. That means there's a probability _(1-p)_ that Jesse cooperates.
 
 **Walter's expected sentence if he cooperates:**
+
 - If Jesse cooperates (probability 1-p): 3 years
 - If Jesse betrays (probability p): 15 years
 - Expected sentence: 3(1-p) + 15p = 3 + 12p years
 
 **Walter's expected sentence if he betrays Jesse:**
+
 - If Jesse cooperates (probability 1-p): 0 years (Walter goes free)
 - If Jesse betrays (probability p): 5 years
 - Expected sentence: 0(1-p) + 5p = 5p years
@@ -81,7 +83,7 @@ betray is what game theorists call a ["Nash equilibrium"](https://en.wikipedia.o
 
 ### When Cooperation Becomes Rational
 
-Walter's calculation revealed a stark conclusion: betrayal dominates in his specific situation. But this raises a deeper question: are there *any* circumstances where cooperation becomes the rational choice in a prisoner's dilemma?
+Walter's calculation revealed a stark conclusion: betrayal dominates in his specific situation. But this raises a deeper question: are there _any_ circumstances where cooperation becomes the rational choice in a prisoner's dilemma?
 
 Let's step back from Walter's specific numbers and examine how this logic applies to any prisoner's dilemma. Game theorists use a standard notation to describe these situations:
 
@@ -162,24 +164,28 @@ The mathematical foundation is surprisingly simple: if both players value future
 In repeated prisoner's dilemmas, players typically adopt consistent behavioral rules rather than making isolated decisions. Let's examine four fundamental strategies that capture different approaches to the cooperation-defection dilemma:
 
 **1. Always Cooperate** (Season 1 Jesse approach)
-- *Rule*: Stay loyal to your partner regardless of their past behavior
-- *Logic*: Trust and loyalty should be unconditional
-- *Risk*: Vulnerable to exploitation by defectors
+
+- _Rule_: Stay loyal to your partner regardless of their past behavior
+- _Logic_: Trust and loyalty should be unconditional
+- _Risk_: Vulnerable to exploitation by defectors
 
 **2. Always Defect** (Season 5 Walter approach)
-- *Rule*: Always prioritize self-interest, minimize your own sentence
-- *Logic*: Others can't be trusted, so protect yourself first
-- *Advantage*: Cannot be exploited, guarantees reasonable outcomes
+
+- _Rule_: Always prioritize self-interest, minimize your own sentence
+- _Logic_: Others can't be trusted, so protect yourself first
+- _Advantage_: Cannot be exploited, guarantees reasonable outcomes
 
 **3. Tit-for-Tat** (Reciprocal relationship)
-- *Rule*: Start by cooperating, then match whatever your partner did in the previous interaction
-- *Logic*: Reward cooperation with cooperation, punish defection with defection
-- *Balance*: Enables mutual benefit while deterring exploitation
+
+- _Rule_: Start by cooperating, then match whatever your partner did in the previous interaction
+- _Logic_: Reward cooperation with cooperation, punish defection with defection
+- _Balance_: Enables mutual benefit while deterring exploitation
 
 **4. Random** (Unpredictable behavior)
-- *Rule*: Make decisions based on emotions, circumstances, or chance
-- *Logic*: Unpredictability might confuse opponents
-- *Problem*: Cannot build trust or sustain beneficial patterns
+
+- _Rule_: Make decisions based on emotions, circumstances, or chance
+- _Logic_: Unpredictability might confuse opponents
+- _Problem_: Cannot build trust or sustain beneficial patterns
 
 ### Interactive Strategy Exploration
 
@@ -211,12 +217,14 @@ Let's run our own tournament to see how the Breaking Bad strategies fare against
 The tournament results reveal a crucial insight about repeated interactions: **the dominance of defection in single games doesn't necessarily carry over to repeated games**. Here's what the data typically shows:
 
 **When Strategies Face Each Other:**
+
 - **Tit-for-Tat vs. Always Cooperate**: Mutual cooperation emerges, both players benefit
 - **Always Defect vs. Always Cooperate**: Defection exploits cooperation, creating large payoff differences
 - **Tit-for-Tat vs. Always Defect**: Initial cooperation is punished, leading to mutual defection
 - **Random vs. Any Strategy**: Unpredictability prevents stable cooperation patterns
 
 **Key Findings from Game Theory Research:**
+
 1. **Nice strategies** (never defect first) can outperform nasty ones when there are enough cooperative players
 2. **Retaliatory strategies** (punish defection) prevent exploitation better than unconditional cooperation
 3. **Forgiving strategies** (return to cooperation after punishment) enable recovery from conflicts

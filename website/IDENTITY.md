@@ -15,12 +15,12 @@ itself, not decoration around it.
 
 ## Character
 
-| Is | Is not |
-|---|---|
-| deep | dense |
-| clean | decorated |
-| unhurried | polemical |
-| honest | pretentious |
+| Is        | Is not      |
+| --------- | ----------- |
+| deep      | dense       |
+| clean     | decorated   |
+| unhurried | polemical   |
+| honest    | pretentious |
 
 The right column does the work — any one word can kill a decision on its own.
 `deep` and `clean` pull against each other on purpose. That tension is the design problem.
@@ -29,7 +29,7 @@ The right column does the work — any one word can kill a decision on its own.
 
 > **Everything on a page is useful to the person on that page. Everything else goes.**
 
-The scope is the point: useful *here*, now — not "useful to someone eventually", which
+The scope is the point: useful _here_, now — not "useful to someone eventually", which
 justifies everything. "Person", not "reader": someone operating a tool in `/lab` isn't reading.
 
 ## Typography
@@ -60,7 +60,7 @@ requests, consistent with how the rest of the site is run.
 **Article headings stay in the body family.** Hierarchy comes from weight and whitespace,
 not from size. A small scale keeps the page from announcing its own importance — that is
 the `pretentious` failure, and a large `h1` is its most common form. Note this is scoped to
-the *article*: a `/lab` page title is a label on a tool, not something you read, so it stays
+the _article_: a `/lab` page title is a label on a tool, not something you read, so it stays
 sans. That boundary is drawn in exactly one component.
 
 **Type is sized for reading, not for interface.** Framework defaults are set for pages of
@@ -77,7 +77,7 @@ Reasons only — the contract lives in `README.md`.
 **Figures sit on the page ground.** No box, no tint, no framing rule. A container carries
 no information about what it contains; it is the `decorated` failure, and the Principle
 deletes it. Separation is whitespace, which costs nothing and says the same thing. This
-follows from the Claim more than from taste: if the built thing *is* the content, boxing it
+follows from the Claim more than from taste: if the built thing _is_ the content, boxing it
 says the opposite — that it is an exhibit set apart from the writing.
 
 The failure mode is specific and worth naming, because it has shipped here. A tint too faint
@@ -92,7 +92,7 @@ of object rather than as whatever each component invented.
 **A caption earns its place or it goes** — the Principle applied to the figure's own label.
 A caption that renames what the paragraph above just said is not a caption, it is an echo,
 and it makes the figure feel bolted on rather than belonging. So the caption is where you
-say the thing the surrounding prose *cannot*: what to notice, what the shape means, why the
+say the thing the surrounding prose _cannot_: what to notice, what the shape means, why the
 order matters. When the prose has already done that work, the figure needs no caption at
 all. This is why captions here are sentences rather than titles — and why they read in the
 serif with the rest of the writing, not least because several of them carry equations.
@@ -109,7 +109,7 @@ Ciechanowski: the article is visible immediately.
 
 **Avoiding** — gwern.net: far too much information, too heavy. Tufte CSS: too heavy, too
 simple. vitalik.eth: deep and simple and the original inspiration, but no figures, so
-nothing for the design to be *for*.
+nothing for the design to be _for_.
 
 All five sit on one axis: how much does the page do? vitalik does nothing, gwern does
 everything. Aim between Ciechanowski and distill.
@@ -123,5 +123,5 @@ Everything below is expression, not identity — it gets decided against the sec
   are fixed.
 - Layout: how much the page does around the content. distill.pub is admired visually, but
   it publishes only finished, authorless papers — the fit here is unproven. **Figures came
-  off this list** (see above); how much chrome the *page* carries is still open.
+  off this list** (see above); how much chrome the _page_ carries is still open.
 - Whether the colour system as it stands still follows from any of the above.

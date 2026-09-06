@@ -281,6 +281,13 @@ export default function Page() {
               <li>
                 <strong>A scheduled job</strong> (cron) — this is how you actually collect the money.
               </li>
+              <li>
+                <strong>A small USDC balance in your receiving wallet.</strong> Most facilitators charge a flat
+                per-settlement fee and collect it via an ERC-20 <code className={inlineCode}>approve()</code> you grant
+                them, rather than deducting from the payment itself — check your facilitator&apos;s{" "}
+                <code className={inlineCode}>/supported</code> for its fee model and the address to approve. This is
+                separate from the channel escrow your payers lock up in step 2.
+              </li>
             </ul>
           </section>
 
@@ -753,6 +760,19 @@ export default function Page() {
               <p>
                 Per-message settlements are <strong>bookkeeping only</strong> — no funds move. A scheduled job redeems
                 the accumulated vouchers on-chain. Skip this and you never get paid. It&apos;s genuinely this short:
+              </p>
+              <p>
+                If your facilitator charges a fee (see &quot;What you&apos;ll need&quot; above),{" "}
+                <strong>this claim is where it&apos;s charged</strong> — the approval has to exist before the first one.
+                Because
+                <code className={inlineCode}> claim</code>/<code className={inlineCode}>settle</code> are settlement
+                commands, not payments to verify, most facilitators settle them directly without the earlier
+                verification step — so a missing approval doesn&apos;t surface until this cron job runs, as a rejected
+                claim rather than an earlier request failing. There is usually no built-in warning before you hit it,
+                unlike ordinary payments, which often report how much approval headroom is left — worth checking for and
+                logging yourself, and re-checking the approval before it runs low. For the concrete fee amount and
+                approval snippet against the facilitator this site runs, see{" "}
+                <Link href="/x402/sellers">the seller guide</Link>.
               </p>
               <Foldable label="Show the claim job (cron.ts — a separate entry point)">
                 <CodeBlock>{`// Same setupX402() as step 2 — this runs in its own process, on a schedule

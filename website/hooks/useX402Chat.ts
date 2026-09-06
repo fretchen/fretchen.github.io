@@ -18,6 +18,7 @@ import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
 import { getConfiguredPublicClient } from "./useConfiguredPublicClient";
 import { useIsWalletConnected } from "./useIsWalletConnected";
 import { probeAccepts, negotiateNetwork, LLM_V1_FLOOR } from "./x402Discovery";
+import { buildUsdcAllowedAssets } from "./x402SpendControls";
 import type { X402ChatMessage, X402ChatResponse, X402PaymentReceipt, X402GenerationStatus } from "../types/x402";
 // Type-only import — erased at compile time, so no @x402 runtime is pulled into SSR.
 import type {
@@ -255,6 +256,9 @@ export function useX402Chat(network: string, agentUrl: string = DEFAULT_LLM_AGEN
         const scheme = new BatchSettlementEvmScheme(signer, { storage, voucherSigner, depositStrategy });
 
         const client = new x402Client();
+        // Explicitly allowlist USDC on every network this site pays on — the SDK's
+        // default spend controls reject Optimism USDC otherwise. See x402SpendControls.ts.
+        client.setSpendControls({ allowedAssets: buildUsdcAllowedAssets() });
         // `payNetwork` is a CAIP-2 id (e.g. "eip155:10"); register's type wants the literal
         // `${string}:${string}` shape, which every CAIP-2 value satisfies.
         client.register(payNetwork as `${string}:${string}`, scheme);

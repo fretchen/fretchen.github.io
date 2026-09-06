@@ -12,10 +12,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useWalletClient, useAccount } from "wagmi";
 import { useX402Chat, WebStorageClientChannelStorage } from "../hooks/useX402Chat";
+import { buildUsdcAllowedAssets } from "../hooks/x402SpendControls";
 import type { X402ChatMessage } from "../types/x402";
 import { buildAccountData, buildWalletClientData } from "./setup";
 
 const mockRegister = vi.fn();
+const mockSetSpendControls = vi.fn();
 const mockGetPaymentSettleResponse = vi.fn();
 const mockBatchSettlementEvmScheme = vi.fn();
 const mockToClientEvmSigner = vi.fn((...args: unknown[]) => args[0]);
@@ -29,7 +31,7 @@ vi.mock("../hooks/useConfiguredPublicClient", () => ({
 vi.mock("@x402/fetch", () => ({
   // vi.fn() needs a real `function`, not an arrow, to remain usable via `new`.
   x402Client: vi.fn().mockImplementation(function MockX402Client() {
-    return { register: mockRegister };
+    return { register: mockRegister, setSpendControls: mockSetSpendControls };
   }),
   // Pass the caller's fetch straight through — lets us drive the real
   // validatingFetch → global fetch path from the hook without a real SDK.
@@ -124,6 +126,23 @@ describe("useX402Chat", () => {
         }),
       );
       expect(mockRegister).toHaveBeenCalledWith(NETWORK, expect.anything());
+    });
+
+    // Regression guard for the production incident where an unconfigured x402Client's
+    // default spend controls rejected Optimism USDC (see x402SpendControls.ts).
+    it("allowlists USDC on every site network via setSpendControls before registering the scheme", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(new Response(JSON.stringify({ content: "hi" }), { status: 200 })),
+      );
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+      });
+
+      expect(mockSetSpendControls).toHaveBeenCalledWith({ allowedAssets: buildUsdcAllowedAssets() });
+      expect(mockSetSpendControls.mock.invocationCallOrder[0]).toBeLessThan(mockRegister.mock.invocationCallOrder[0]);
     });
 
     it("deposit strategy floors deposits/top-ups at $0.50, ignoring the SDK's smaller default", async () => {

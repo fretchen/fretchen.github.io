@@ -17,11 +17,13 @@ Kept for the derivations only. Do not act on the conclusions.
 -->
 
 ---
+
 publishing_date: 2026-08-06
 title: The quantum commons is a co-liability rule
 category: "quantum"
 secondaryCategory: "others"
 description: The Li–Du–Massar entangler, applied to a fishery, is exactly a harbourmaster's clearing rule — and if the islands are patient, it reaches the sustainable optimum.
+
 ---
 
 import LDMCircuit from "../components/blog/LDMCircuit";
@@ -224,10 +226,10 @@ entangled fishery is the co-liability fishery, and we can just ask what happens 
 after year, each season picking the fleet that is best for them at that season's stock, and let the stock rise or fall
 by the difference between regrowth and catch. Where does it settle?
 
-|                            | stock | income per year |
-| -------------------------- | ----- | --------------- |
-| no rule, myopic islands    | 48    | 0.34            |
-| entangled, myopic islands  | 70    | 0.97            |
+|                           | stock | income per year |
+| ------------------------- | ----- | --------------- |
+| no rule, myopic islands   | 48    | 0.34            |
+| entangled, myopic islands | 70    | 0.97            |
 
 The rule helps, and the help is real: nearly three times the income, with no regulator, no quota and no negotiation.
 But the fishery is still a wreck. The stock settles at a small fraction of what the ground could carry, and the islands

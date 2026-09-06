@@ -1,13 +1,37 @@
 import pino from "pino";
-import { getUSDCConfig } from "@fretchen/chain-utils";
+import { createPublicClient, http } from "viem";
+import { getUSDCConfig, getViemChain, getRpcUrl } from "@fretchen/chain-utils";
 import {
   createLLMResourceServer,
   createFacilitatorClient,
   getBatchSettlementNetworks,
+  getFacilitatorFeeConfig,
+  type FacilitatorFeeConfig,
 } from "./x402_server.js";
 import type { ScwEvent } from "./types.js";
 
 const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
+
+const ERC20_ALLOWANCE_ABI = [
+  {
+    name: "allowance",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "spender", type: "address" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+] as const;
+
+/**
+ * Warn once the approval covers fewer than this many claims.
+ *
+ * This cron runs twice a day, so ten claims is roughly five days of notice — enough to
+ * re-approve before collection actually stalls.
+ */
+const LOW_ALLOWANCE_CLAIMS = 10n;
 
 function isHexAddress(addr: unknown): addr is `0x${string}` {
   return typeof addr === "string" && /^0x[a-fA-F0-9]{40}$/.test(addr);
@@ -17,7 +41,43 @@ interface NetworkResult {
   network: string;
   claims?: number;
   settled?: boolean;
+  /** How many more claims the current fee approval covers, when it could be read. */
+  feeAllowanceClaimsLeft?: number;
   error?: string;
+}
+
+/**
+ * How many more claims this receiver's USDC approval for the facilitator covers.
+ *
+ * Why this exists: `claim`/`settle` skip `/verify` entirely, so — unlike the `exact`
+ * scheme, which gets `remainingSettlements` back from every verify — this path has no
+ * built-in early warning. Without this check the approval simply runs out one day and
+ * claims start failing with `insufficient_fee_allowance`, with nothing said beforehand.
+ *
+ * Advisory only: returns null rather than throwing on any RPC or decoding failure, so a
+ * bad reading can never cost us a claim.
+ */
+async function readFeeAllowanceClaimsLeft(
+  receiver: `0x${string}`,
+  network: string,
+  fee: FacilitatorFeeConfig,
+): Promise<number | null> {
+  try {
+    const publicClient = createPublicClient({
+      chain: getViemChain(network),
+      transport: http(getRpcUrl(network)),
+    });
+    const allowance = await publicClient.readContract({
+      address: getUSDCConfig(network).address as `0x${string}`,
+      abi: ERC20_ALLOWANCE_ABI,
+      functionName: "allowance",
+      args: [receiver, fee.recipient],
+    });
+    return Number(allowance / fee.flatFee);
+  } catch (err) {
+    logger.debug({ err, network }, "Could not read fee allowance — skipping the low-balance check");
+    return null;
+  }
 }
 
 /**
@@ -60,7 +120,31 @@ export async function handle(
   const facilitatorClient = createFacilitatorClient();
   const results: NetworkResult[] = [];
 
+  // Null when the facilitator charges no fee (or could not be reached) — then there is no
+  // allowance to run out and the check below is skipped entirely.
+  const feeConfig = await getFacilitatorFeeConfig();
+
   for (const network of getBatchSettlementNetworks()) {
+    // Checked BEFORE the claim, deliberately: if the claim is about to fail for lack of
+    // allowance, this is the run where the warning is most needed.
+    let claimsLeft: number | null = null;
+    if (feeConfig) {
+      claimsLeft = await readFeeAllowanceClaimsLeft(receiverAddress, network, feeConfig);
+      if (claimsLeft !== null && BigInt(claimsLeft) < LOW_ALLOWANCE_CLAIMS) {
+        logger.warn(
+          {
+            network,
+            claimsLeft,
+            receiver: receiverAddress,
+            spender: feeConfig.recipient,
+            asset: getUSDCConfig(network).address,
+          },
+          "Fee allowance nearly exhausted — approve more USDC for the facilitator, or claims " +
+            "will start failing with insufficient_fee_allowance",
+        );
+      }
+    }
+
     try {
       // Pass the token explicitly on EVERY network, not just Optimism. Omitting it makes
       // the SDK fall back to its `DEFAULT_STABLECOINS` registry, which still has no
@@ -75,10 +159,19 @@ export async function handle(
       );
       const { claims, settle } = await manager.claimAndSettle();
       logger.info({ network, claims, settle }, "claimAndSettle completed");
-      results.push({ network, claims: claims.length, settled: settle !== undefined });
+      results.push({
+        network,
+        claims: claims.length,
+        settled: settle !== undefined,
+        ...(claimsLeft !== null && { feeAllowanceClaimsLeft: claimsLeft }),
+      });
     } catch (err) {
       logger.error({ err, network }, "claimAndSettle failed");
-      results.push({ network, error: (err as Error).message });
+      results.push({
+        network,
+        error: (err as Error).message,
+        ...(claimsLeft !== null && { feeAllowanceClaimsLeft: claimsLeft }),
+      });
     }
   }
 

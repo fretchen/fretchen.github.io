@@ -762,14 +762,15 @@ export default function Page() {
                 the accumulated vouchers on-chain. Skip this and you never get paid. It&apos;s genuinely this short:
               </p>
               <p>
-                If your facilitator charges a fee (see &quot;What you&apos;ll need&quot; above), <strong>this claim is
-                where it&apos;s charged</strong> — the approval has to exist before the first one. Because
+                If your facilitator charges a fee (see &quot;What you&apos;ll need&quot; above),{" "}
+                <strong>this claim is where it&apos;s charged</strong> — the approval has to exist before the first one.
+                Because
                 <code className={inlineCode}> claim</code>/<code className={inlineCode}>settle</code> are settlement
                 commands, not payments to verify, most facilitators settle them directly without the earlier
                 verification step — so a missing approval doesn&apos;t surface until this cron job runs, as a rejected
                 claim rather than an earlier request failing. There is usually no built-in warning before you hit it,
-                unlike ordinary payments, which often report how much approval headroom is left — worth checking for
-                and logging yourself, and re-checking the approval before it runs low. For the concrete fee amount and
+                unlike ordinary payments, which often report how much approval headroom is left — worth checking for and
+                logging yourself, and re-checking the approval before it runs low. For the concrete fee amount and
                 approval snippet against the facilitator this site runs, see{" "}
                 <Link href="/x402/sellers">the seller guide</Link>.
               </p>

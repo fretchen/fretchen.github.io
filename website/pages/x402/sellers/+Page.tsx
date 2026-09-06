@@ -214,9 +214,9 @@ return new Response(JSON.stringify(result), { status: 200 });`}</CodeBlock>
 
           <p>
             The <code>exact</code> scheme documented here works on all four networks. Batch-settlement, if you go beyond{" "}
-            <code>exact</code> later, is not deployed on OP Sepolia — use Base Sepolia to rehearse that one. It draws
-            on the same fee allowance described below, so nothing extra needs approving to use it, and there is no
-            separate recipient whitelist to get onto.
+            <code>exact</code> later, is not deployed on OP Sepolia — use Base Sepolia to rehearse that one. It draws on
+            the same fee allowance described below, so nothing extra needs approving to use it, and there is no separate
+            recipient whitelist to get onto.
           </p>
 
           <h2>Fee model</h2>
@@ -230,8 +230,8 @@ return new Response(JSON.stringify(result), { status: 200 });`}</CodeBlock>
           <p>
             &quot;Per settlement&quot; means per on-chain settlement, not per request. For <code>exact</code> those are
             the same thing — one payment, one fee. For batch-settlement they aren&apos;t: many per-message vouchers are
-            free, off-chain signatures, and the fee is charged once when you claim the accumulated batch — which is
-            what makes the channel scheme cheap per request in the first place.
+            free, off-chain signatures, and the fee is charged once when you claim the accumulated batch — which is what
+            makes the channel scheme cheap per request in the first place.
           </p>
 
           <p>

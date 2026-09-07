@@ -10,8 +10,14 @@ exists.
 **Non-goal:** changing the payment flow. x402 `exact` / EIP-3009 / $0.07 stays exactly as is.
 
 **Status:** PR 1 (request side — steps 1–4) shipped. PR 2's `scw_js` half (steps 5, 6, 7, 9)
-shipped. **Remaining: step 8 — the `website` half**, which is knowingly red (`npm run typecheck`)
-until it lands. See §7 for the step-by-step state.
+shipped. **Remaining: step 8 — the `website` half.** See §7 for the step-by-step state.
+
+⚠️ **The website does NOT fail to compile against the new shape, and that is the hazard.** This
+doc previously predicted a red `npm run typecheck` window; there is none.
+`website/types/x402.ts` hand-duplicates `X402GenImgResponse` rather than deriving it from
+`scw_js`, so there is no compile-time link between the two at all. The frontend will build clean
+and read `result.image_url` as `undefined` **at runtime**, after deploy. Nothing catches this —
+which makes step 8 and the deploy order below load-bearing rather than tidy-up.
 
 ---
 
@@ -395,13 +401,17 @@ website. Steps 5–9 change the wire shape and must move the frontend with them.
 Breaking changes between commits are fine on this branch, so the commits follow the natural data
 flow rather than contorting to keep each one green:
 
-| #   | Commit                                                                                        | `scw_js` | `website`    |
-| --- | --------------------------------------------------------------------------------------------- | -------- | ------------ |
-| 1   | Backend: response envelope — response schema, `buildSuccessBody()`, spec regen, 14 assertions | ✅       | 🔴 typecheck |
-| 2   | Backend: mint-failure branch — split generate/mint, 200 + no settle, tests                    | ✅       | 🔴           |
-| 3   | Spec: `images/v1` keys — `x-service-type`, `x-interop-floor`, `x-capabilities`                | ✅       | 🔴           |
-| 4   | Frontend: switch to the envelope — `types/x402.ts`, `ImageGenerator.tsx`                      | ✅       | ✅           |
-| 5   | Docs — buyers page sample, blog sample, `README.md`, this file's status                       | ✅       | ✅           |
+| #   | Commit                                                                                        | `scw_js` | `website` |
+| --- | --------------------------------------------------------------------------------------------- | -------- | --------- |
+| 1   | Backend: response envelope — response schema, `buildSuccessBody()`, spec regen, 14 assertions | ✅       | ⚠️ stale  |
+| 2   | Backend: mint-failure branch — split generate/mint, 200 + no settle, tests                    | ✅       | ⚠️ stale  |
+| 3   | Spec: `images/v1` keys — `x-service-type`, `x-interop-floor`, `x-capabilities`                | ✅       | ⚠️ stale  |
+| 4   | Frontend: switch to the envelope — `types/x402.ts`, `ImageGenerator.tsx`                      | ✅       | ✅        |
+| 5   | Docs — buyers page sample, blog sample, `README.md`, this file's status                       | ✅       | ✅        |
+
+"⚠️ stale" and not "🔴": as the warning at the top of this file explains, `website` keeps
+compiling and testing green through commits 1–3 because its `X402GenImgResponse` is a hand-written
+duplicate, not a derived type. The breakage is real but invisible until runtime.
 
 **The one known-red window is `website` typecheck, commits 1–3**, because `X402GenImgResponse`
 stops matching what `ImageGenerator.tsx:294-336` reads. `scw_js` is green at every commit, and

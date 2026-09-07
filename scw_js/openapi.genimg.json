@@ -4,7 +4,7 @@
     "title": "Fretchen AI Image Generation Service",
     "description": "AI-powered image generation with NFT minting on Optimism/Base, paid via x402 USDC.",
     "version": "1.0.0",
-    "x-guidance": "POST / with { prompt, tokenId, mode, size } and no payment header to receive a 402 with x402 v2 payment requirements (accepts[]). Pay in USDC on one of the offered networks, retry with the payment header, and the service mints/updates the NFT and returns its metadata and image URLs.",
+    "x-guidance": "POST / with { prompt, size } and no payment header to receive a 402 with x402 v2 payment requirements (accepts[]). Pay in USDC on one of the offered networks, retry with the payment header, and the service generates the image, mints it as an NFT, and transfers it to the payer. The mint recipient is derived from the payment payload, so there is no recipient field. Unknown request fields are rejected, not ignored. Note: payment uses x402, so a stock OpenAI SDK cannot pay this endpoint — the OpenAI body shape is for legibility, not drop-in SDK use. Testnet networks return a placeholder image rather than a generated one.",
     "contact": {
       "name": "fretchen",
       "url": "https://www.fretchen.eu",
@@ -16,43 +16,86 @@
       "0x8af9242b0056decb756ccd803fa791f7bd022f3f4973e9f84fec58ab3ab9160305a35b947c9a817146b91e7b61b49a1eea8eaa5832bc80682fb7b6fbba737e4f1b"
     ]
   },
-  "servers": [{ "url": "https://imagegen-agent.fretchen.eu" }],
+  "servers": [
+    {
+      "url": "https://imagegen-agent.fretchen.eu"
+    }
+  ],
   "tags": [
-    { "name": "Image Generation", "description": "AI text-to-image and image editing" },
-    { "name": "NFT", "description": "Mints the result as an NFT on Optimism/Base" },
-    { "name": "x402", "description": "Paid via x402 USDC payments" }
+    {
+      "name": "Image Generation",
+      "description": "AI text-to-image and image editing"
+    },
+    {
+      "name": "NFT",
+      "description": "Mints the result as an NFT on Optimism/Base"
+    },
+    {
+      "name": "x402",
+      "description": "Paid via x402 USDC payments"
+    }
   ],
   "paths": {
     "/": {
       "post": {
         "operationId": "genimgX402Token",
         "summary": "Generate AI Image and Mint NFT (x402 USDC payment)",
-        "description": "Generates an AI image using Black Forest Labs (BFL) API, uploads to S3, mints an NFT on Optimism/Base, and transfers it to the payer. Requires x402 USDC payment.",
+        "description": "Generates an AI image using Black Forest Labs (BFL), uploads it to S3, mints an NFT on Optimism/Base, and transfers it to the payer. Requires x402 USDC payment. An unpaid request is answered with the 402 challenge whatever its body says, so a client can always discover the payment terms; a paid request is validated before anything is verified or settled.",
         "tags": ["Image Generation", "NFT", "x402"],
         "security": [],
         "x-payment-info": {
           "protocols": ["x402"],
-          "price": { "mode": "fixed", "currency": "USD", "amount": "0.07" }
+          "price": {
+            "mode": "fixed",
+            "currency": "USD",
+            "amount": "0.07"
+          }
         },
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/ImageGenerationRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/ImageGenerationRequest"
+              }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Image generated and NFT minted/updated successfully",
+            "description": "Image generated and NFT minted successfully",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ImageGenerationResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ImageGenerationResponse"
+                }
               }
             }
           },
+          "400": {
+            "description": "Request validation failed — missing prompt, an unsupported value, or an unrecognized field. Body is { error: { message, type, code } }."
+          },
           "402": {
             "description": "Payment required. Body/headers (Payment-Required, X-Payment) carry the x402 v2 payment requirements to satisfy and retry with."
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "operationId": "openapiSpec",
+        "summary": "This document",
+        "tags": ["x402"],
+        "responses": {
+          "200": {
+            "description": "This OpenAPI document.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           }
         }
       }
@@ -62,52 +105,138 @@
     "schemas": {
       "ImageGenerationRequest": {
         "type": "object",
-        "required": ["prompt", "tokenId"],
         "properties": {
           "prompt": {
             "type": "string",
-            "description": "The text prompt for AI image generation"
+            "minLength": 1,
+            "description": "The text prompt to generate from."
           },
-          "tokenId": {
-            "type": "integer",
-            "description": "The NFT token ID to update"
-          },
-          "mode": {
+          "model": {
+            "description": "Model to generate with. Only the advertised id(s) are served: flux-kontext-pro. Defaults to flux-kontext-pro.",
             "type": "string",
-            "enum": ["generate", "edit"],
-            "default": "generate",
-            "description": "generate: create new image, edit: modify existing image"
+            "enum": ["flux-kontext-pro"]
           },
           "size": {
+            "description": "Output image dimensions. Defaults to 1024x1024.",
             "type": "string",
-            "enum": ["1024x1024", "1792x1024"],
-            "description": "Output image dimensions"
+            "enum": ["1024x1024", "1792x1024"]
+          },
+          "n": {
+            "description": "Number of images. Only 1 is supported — pricing and the NFT mint are per-image.",
+            "type": "number",
+            "const": 1
+          },
+          "response_format": {
+            "description": "Only 'url' is supported. Images are served from stable URLs; b64_json would push large bodies through a paid function for no benefit.",
+            "type": "string",
+            "const": "url"
+          },
+          "mode": {
+            "description": "Vendor extension: 'edit' transforms `referenceImage` instead of generating fresh.",
+            "type": "string",
+            "enum": ["generate", "edit"]
           },
           "referenceImage": {
-            "type": "string",
-            "format": "byte",
-            "description": "Base64-encoded reference image (required for edit mode)"
+            "description": "Vendor extension: base64-encoded source image. Required when mode is 'edit'.",
+            "type": "string"
+          },
+          "network": {
+            "description": "Vendor extension: CAIP-2 network id (e.g. eip155:10) to restrict the 402 payment offer to. Drives payment negotiation, not generation.",
+            "type": "string"
+          },
+          "isListed": {
+            "description": "Vendor extension: list the minted NFT in the public gallery. Alias of x_nft.listed.",
+            "type": "boolean"
+          },
+          "x_nft": {
+            "description": "Vendor extension: NFT-specific options. Not part of the images/v1 floor.",
+            "type": "object",
+            "properties": {
+              "listed": {
+                "description": "List the minted NFT in the public gallery.",
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          },
+          "payment": {
+            "description": "Vendor extension: x402 payment payload, as a body fallback for clients that cannot set the PAYMENT-SIGNATURE / X-PAYMENT header. Passed through as received; validated by @x402/evm, not here."
           }
-        }
+        },
+        "required": ["prompt"],
+        "additionalProperties": false,
+        "description": "OpenAI images-generation body plus this agent's vendor extensions. Unknown fields are rejected rather than ignored — see additionalProperties."
       },
       "ImageGenerationResponse": {
         "type": "object",
         "properties": {
-          "metadata_url": {
-            "type": "string",
-            "format": "uri",
-            "description": "URL to the NFT metadata JSON"
-          },
           "image_url": {
             "type": "string",
-            "format": "uri",
-            "description": "URL to the generated image"
+            "description": "URL of the generated image."
           },
-          "transaction_hash": {
+          "metadata_url": {
             "type": "string",
-            "description": "Mint transaction hash on-chain"
+            "description": "URL of the NFT metadata JSON."
+          },
+          "tokenId": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Token id of the minted NFT."
+          },
+          "mintTxHash": {
+            "type": "string",
+            "description": "Hash of the mint transaction."
+          },
+          "transferTxHash": {
+            "type": "string",
+            "description": "Hash of the transfer to the payer."
+          },
+          "payer": {
+            "type": "string",
+            "description": "Address the NFT was minted to, derived from the x402 payment."
+          },
+          "network": {
+            "type": "string",
+            "description": "CAIP-2 network the mint settled on."
+          },
+          "size": {
+            "type": "string",
+            "description": "Dimensions the image was generated at."
+          },
+          "mode": {
+            "type": "string",
+            "description": "Whether the image was generated or edited."
+          },
+          "isListed": {
+            "type": "boolean",
+            "description": "Whether the NFT was listed in the public gallery."
+          },
+          "mintPrice": {
+            "type": "string",
+            "description": "Mint price paid on-chain, in wei."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable summary."
           }
-        }
+        },
+        "required": [
+          "image_url",
+          "metadata_url",
+          "tokenId",
+          "mintTxHash",
+          "transferTxHash",
+          "payer",
+          "network",
+          "size",
+          "mode",
+          "isListed",
+          "mintPrice",
+          "message"
+        ],
+        "additionalProperties": false,
+        "description": "Successful generation and mint."
       }
     }
   }

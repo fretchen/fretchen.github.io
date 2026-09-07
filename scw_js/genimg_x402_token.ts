@@ -9,6 +9,12 @@ import {
 } from "@fretchen/chain-utils";
 import { parseJsonBody, CORS_HEADERS, errorResponse, openAiError } from "./utils.js";
 import {
+  ImageGenerationRequestSchema,
+  ADVERTISED_MODELS,
+  MODEL_TO_PROVIDER,
+} from "./genimg_schemas.js";
+import type { z } from "zod";
+import {
   getContract,
   createWalletClient,
   createPublicClient,
@@ -17,7 +23,7 @@ import {
   type PublicClient,
   type Chain,
 } from "viem";
-import { generateAndUploadImage, JSON_BASE_PATH } from "./image_service.js";
+import { generateAndUploadImage, JSON_BASE_PATH, type Provider } from "./image_service.js";
 import { privateKeyToAccount } from "viem/accounts";
 import {
   createResourceServer,
@@ -47,6 +53,29 @@ const TRANSFER_EVENT_HASH = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a1162
  * shape stays as-is rather than folding into the OpenAI error contract. See utils.ts's
  * errorResponse/openAiError for the two shapes this endpoint otherwise uses.
  */
+/**
+ * Turns the first Zod issue into an OpenAI-shaped 400.
+ *
+ * `param` has to come from two different places: a rejected unknown field surfaces as
+ * `{ code: "unrecognized_keys", keys: ["quality"], path: [] }` — note the EMPTY path, so the
+ * field name is only in `keys` — while an ordinary field issue carries it in `path`.
+ */
+function zodErrorToResponse(error: z.ZodError) {
+  const issue = error.issues[0]!;
+  if (issue.code === "unrecognized_keys") {
+    const key = issue.keys[0];
+    return openAiError(
+      400,
+      `Unrecognized request argument supplied: ${issue.keys.join(", ")}`,
+      "invalid_request_error",
+      "unknown_parameter",
+      key,
+    );
+  }
+  const param = issue.path.length > 0 ? issue.path.join(".") : undefined;
+  return openAiError(400, issue.message, "invalid_request_error", "invalid_value", param);
+}
+
 function paymentError(reason: string | undefined, extra: Record<string, unknown> = {}) {
   return {
     statusCode: 402,
@@ -225,6 +254,7 @@ async function generateImageAndMintNFT(
   useMockImage = false,
   mintPrice = BigInt(0),
   isListed = false,
+  provider: Provider = "bfl",
 ): Promise<GenerateResult> {
   console.log(`🎨 Generating image: mode=${mode}, size=${size}, prompt="${prompt}"`);
 
@@ -240,7 +270,7 @@ async function generateImageAndMintNFT(
     metadataUrl = await generateAndUploadImage(
       prompt,
       tempTokenId,
-      "bfl",
+      provider,
       size,
       mode,
       referenceImageBase64,
@@ -356,13 +386,9 @@ async function handle(
   }
   const serverWallet = account.address;
 
-  // Reads only — not validation. Needed here because the 402 challenge below negotiates
-  // the network from `requestedNetwork`; the rest are read now for that same reason but
-  // validated only after the 402 branch, see below.
-  const mode = (body["mode"] as string | undefined) ?? "generate";
-  const size = (body["size"] as string | undefined) ?? "1024x1024";
+  // Read, not validated — the 402 challenge below negotiates which networks to offer from it,
+  // and that has to happen before any request validation runs (see the comment on the branch).
   const requestedNetwork = (body["network"] as string | undefined) ?? null;
-  const isListed = body["isListed"] === true;
 
   if (requestedNetwork) {
     const isTestnetMode = isTestnet(requestedNetwork);
@@ -403,41 +429,31 @@ async function handle(
     return create402Response(paymentRequirements);
   }
 
-  const prompt = body["prompt"] as string | undefined;
-  if (!prompt) {
-    return openAiError(400, "No prompt provided", "invalid_request_error", "prompt");
+  const parsed = ImageGenerationRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return zodErrorToResponse(parsed.error);
   }
+
+  const { prompt, mode = "generate", size = "1024x1024" } = parsed.data;
+  const model = parsed.data.model ?? ADVERTISED_MODELS[0];
+  const provider = MODEL_TO_PROVIDER[model];
+  // `isListed` and its `x_nft.listed` alias mean the same thing; either being true is enough.
+  const isListed = parsed.data.isListed === true || parsed.data.x_nft?.listed === true;
 
   console.log(`📝 Prompt: "${prompt}"`);
 
-  const validModes = ["generate", "edit"];
-  if (!validModes.includes(mode)) {
-    return openAiError(
-      400,
-      `Invalid mode parameter. Must be one of: ${validModes.join(", ")}`,
-      "invalid_request_error",
-      "mode",
-    );
-  }
-
-  const validSizes = ["1024x1024", "1792x1024"];
-  if (!validSizes.includes(size)) {
-    return openAiError(
-      400,
-      `Invalid size parameter. Must be one of: ${validSizes.join(", ")}`,
-      "invalid_request_error",
-      "size",
-    );
-  }
-
+  // Cross-field rule, deliberately outside the schema: JSON Schema cannot express
+  // "required when another field has this value" without if/then, and `.refine()` is not
+  // representable by z.toJSONSchema at all — it would silently vanish from the generated spec.
   let referenceImageBase64: string | null = null;
   if (mode === "edit") {
-    referenceImageBase64 = (body["referenceImage"] as string | undefined) ?? null;
+    referenceImageBase64 = parsed.data.referenceImage ?? null;
     if (!referenceImageBase64) {
       return openAiError(
         400,
         "Edit mode requires referenceImage parameter",
         "invalid_request_error",
+        "missing_required_parameter",
         "referenceImage",
       );
     }
@@ -552,6 +568,7 @@ async function handle(
       isTestnet(clientNetwork!),
       mintPrice,
       isListed,
+      provider,
     );
 
     resourceServer

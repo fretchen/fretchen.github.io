@@ -5,7 +5,7 @@
  * - Server offers multiple networks in 402 response (accepts array)
  * - Client selects locally from offered networks (default: accepts[0])
  * - Server can restrict offered networks via `networks` parameter
- * - New: `sepoliaTest` body flag controls server-side network offering
+ * - Test mode follows from the payment payload's network (isTestnet), not a body flag
  *
  * Tests the complete x402 token payment flow:
  * 1. Client requests without payment → 402 with x402 v2 payment header
@@ -859,6 +859,105 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
     });
   });
 
+  describe("handle() - OpenAI request fields (strict schema)", () => {
+    test("should accept an OpenAI-shaped request", async () => {
+      setupSuccessfulMintingFlow(90);
+
+      const event = {
+        httpMethod: "POST",
+        headers: { "x-payment": JSON.stringify(paidRequestPaymentHeader) },
+        body: JSON.stringify({
+          model: "flux-kontext-pro",
+          prompt: "A beautiful sunset",
+          size: "1024x1024",
+          n: 1,
+          response_format: "url",
+        }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
+      expect(response.statusCode).toBe(200);
+      expect(JSON.parse(response.body).image_url).toBeDefined();
+    });
+
+    test("should reject n other than 1", async () => {
+      const event = {
+        httpMethod: "POST",
+        headers: { "x-payment": JSON.stringify(paidRequestPaymentHeader) },
+        body: JSON.stringify({ prompt: "Test", n: 2 }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
+      expect(response.statusCode).toBe(400);
+
+      const body = JSON.parse(response.body);
+      expect(body.error.param).toBe("n");
+      expect(body.error.type).toBe("invalid_request_error");
+    });
+
+    test("should reject response_format b64_json", async () => {
+      const event = {
+        httpMethod: "POST",
+        headers: { "x-payment": JSON.stringify(paidRequestPaymentHeader) },
+        body: JSON.stringify({ prompt: "Test", response_format: "b64_json" }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.body).error.param).toBe("response_format");
+    });
+
+    test("should reject an unadvertised model", async () => {
+      const event = {
+        httpMethod: "POST",
+        headers: { "x-payment": JSON.stringify(paidRequestPaymentHeader) },
+        body: JSON.stringify({ prompt: "Test", model: "dall-e-3" }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
+      expect(response.statusCode).toBe(400);
+      expect(JSON.parse(response.body).error.param).toBe("model");
+    });
+
+    test("should reject an unknown field on a paid request, naming it", async () => {
+      const event = {
+        httpMethod: "POST",
+        headers: { "x-payment": JSON.stringify(paidRequestPaymentHeader) },
+        body: JSON.stringify({ prompt: "Test", quality: "hd" }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
+      expect(response.statusCode).toBe(400);
+
+      const body = JSON.parse(response.body);
+      expect(body.error.param).toBe("quality");
+      expect(body.error.code).toBe("unknown_parameter");
+      expect(body.error.message).toContain("quality");
+      // Rejected before the facilitator is ever contacted — nothing is charged.
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    test("should still return the 402 challenge for an UNPAID request with an unknown field", async () => {
+      // Strictness must not regress the ordering rule: the payment challenge comes first,
+      // so a discovery probe always gets terms rather than a validation error.
+      const event = {
+        httpMethod: "POST",
+        headers: {},
+        body: JSON.stringify({ prompt: "Test", quality: "hd" }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
+      expect(response.statusCode).toBe(402);
+      expect(response.headers["X-Payment"]).toBeDefined();
+    });
+  });
+
   describe("handle() - Multi-Network Support (x402 v2 Pull Model)", () => {
     // x402 v2: Server offers networks, client selects locally
     // These tests verify that server correctly processes payments from different networks
@@ -939,10 +1038,9 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         headers: {
           "x-payment": JSON.stringify(sepoliaPayment),
         },
-        body: JSON.stringify({
-          prompt: "Test Sepolia",
-          sepoliaTest: true, // REQUIRED: Enable test mode for Sepolia
-        }),
+        // Test mode follows from the payment payload's network (isTestnet(clientNetwork)),
+        // not from any body flag.
+        body: JSON.stringify({ prompt: "Test Sepolia" }),
         path: "/genimg",
       };
 
@@ -1333,7 +1431,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
             payload: { authorization: { from: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb" } },
           }),
         },
-        body: JSON.stringify({ prompt: "Test image", sepoliaTest: true }),
+        body: JSON.stringify({ prompt: "Test image" }),
       };
 
       const response = await handle(event, {});
@@ -1371,7 +1469,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
             payload: { authorization: { from: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb" } },
           }),
         },
-        body: JSON.stringify({ prompt: "Test", sepoliaTest: true }),
+        body: JSON.stringify({ prompt: "Test" }),
       };
 
       const response = await handle(event, {});
@@ -1599,26 +1697,14 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(body.isListed).toBe(false);
     });
 
-    test("should treat non-boolean isListed values as false", async () => {
-      const mockTokenId = 57;
-      setupSuccessfulMintingFlow(mockTokenId);
-
+    test("should reject non-boolean isListed values", async () => {
+      // BEHAVIOUR CHANGE: this used to be silently coerced to false (`body.isListed === true`),
+      // i.e. a caller who asked for a listed NFT got an unlisted one and was still charged.
+      // Rejecting is the same principle the rest of the strict schema applies — never
+      // silently mishandle a field the caller clearly meant.
       const event = {
         httpMethod: "POST",
-        headers: {
-          "x-payment": JSON.stringify({
-            accepted: {
-              network: "eip155:10",
-              asset: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-              payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
-            },
-            payload: {
-              authorization: {
-                from: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
-              },
-            },
-          }),
-        },
+        headers: { "x-payment": JSON.stringify(paidRequestPaymentHeader) },
         body: JSON.stringify({
           prompt: "Test with string isListed",
           isListed: "true", // String instead of boolean
@@ -1627,11 +1713,31 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       };
 
       const response = await handle(event, {});
+      expect(response.statusCode).toBe(400);
+
+      const body = JSON.parse(response.body);
+      expect(body.error.param).toBe("isListed");
+    });
+
+    test("should accept x_nft.listed as an alias for isListed", async () => {
+      const mockTokenId = 57;
+      setupSuccessfulMintingFlow(mockTokenId);
+
+      const event = {
+        httpMethod: "POST",
+        headers: { "x-payment": JSON.stringify(paidRequestPaymentHeader) },
+        body: JSON.stringify({
+          prompt: "Test with x_nft.listed",
+          x_nft: { listed: true },
+        }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
       expect(response.statusCode).toBe(200);
 
       const body = JSON.parse(response.body);
-      // Should be false because "true" !== true (strict comparison)
-      expect(body.isListed).toBe(false);
+      expect(body.isListed).toBe(true);
     });
   });
 

@@ -46,15 +46,20 @@ export function errorResponse(statusCode: number, error: string): ScwResponse {
  * failures, so callers reusing OpenAI response types parse our errors too. Payment (402) and
  * internal (500) errors keep the plain x402-style `errorResponse` above — those are not part
  * of the OpenAI request contract.
+ *
+ * `param` names the offending request field, as OpenAI's own errors do. It is omitted from the
+ * body entirely when not supplied, so callers that never pass it (sc_llm_x402) keep their exact
+ * previous shape.
  */
 export function openAiError(
   statusCode: number,
   message: string,
   type: string,
   code: string | null = null,
+  param?: string,
 ): ScwResponse {
   return {
-    body: JSON.stringify({ error: { message, type, code } }),
+    body: JSON.stringify({ error: { message, type, code, ...(param && { param }) } }),
     headers: CORS_HEADERS,
     statusCode,
   };

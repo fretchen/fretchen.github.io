@@ -12,7 +12,7 @@ if (process.env.NODE_ENV === "test" && !process.env.CI) {
 import { putS3Object, getS3BaseUrl } from "@fretchen/s3-utils";
 import { randomBytes } from "crypto";
 
-type Provider = "ionos" | "bfl";
+export type Provider = "ionos" | "bfl";
 
 interface ProviderConfig {
   endpoint: string;

@@ -9,8 +9,9 @@ exists.
 
 **Non-goal:** changing the payment flow. x402 `exact` / EIP-3009 / $0.07 stays exactly as is.
 
-**Status:** PR 1 (request side — steps 1–4) is shipped; 241 tests green. PR 2 (response side —
-steps 5–9) is outstanding. See §7 for the step-by-step state.
+**Status:** PR 1 (request side — steps 1–4) shipped. PR 2's `scw_js` half (steps 5, 6, 7, 9)
+shipped. **Remaining: step 8 — the `website` half**, which is knowingly red (`npm run typecheck`)
+until it lands. See §7 for the step-by-step state.
 
 ---
 
@@ -374,20 +375,20 @@ website. Steps 5–9 change the wire shape and must move the frontend with them.
 4. ✅ Request-side: strict allowlist, `model` map, `n`, `response_format`, `x_nft.listed` alias —
    one `safeParse`
 
-**PR 2 — response side. Remaining.**
+**PR 2 — response side. `scw_js` shipped; `website` remaining.**
 
-5. ⬜ `buildSuccessBody()` emitting the new envelope — including echoing `model`, which PR 1
-   resolves and uses but does not yet return
-6. ⬜ The mint-failure branch, split out of the catch-all, with no settlement
-7. 🟨 `openapi.genimg.json` is generated (PR 1) but does **not** yet carry the `images/v1`
-   contract keys — `x-service-type`, `x-interop-floor`, `x-capabilities`. They are deliberately
-   held back: the floor requires `data[0].url`, which does not exist until step 5. Adding them is
-   what remains here.
+5. ✅ `buildSuccessBody()` emitting the new envelope, `model` echoed
+6. ✅ The mint-failure branch, split out of the catch-all, with no settlement
+7. ✅ `openapi.genimg.json` carries `x-service-type: "images/v1"`, `x-interop-floor` and
+   `x-capabilities: ["nft-mint"]`, asserted by `test/openapi_genimg_generation.test.ts` — the
+   protection `llm/v1` gets from `precheckLlmV1Agent`, which `images/v1` will not have
 8. ⬜ `website/types/x402.ts` (response envelope, plus `model?` on the request type),
    `website/components/ImageGenerator.tsx:294-336`, **and the two public code samples in §8**
-9. ⬜ `scw_js/README.md`: an `images/v1` section mirroring the `llm/v1` one at `README.md:73`,
-   plus the `x_nft` extension, the `mode`/`referenceImage` vendor extensions, and the
-   testnet-placeholder caveat
+9. ✅ `scw_js/README.md`: `images/v1` section, the `x_nft` extension, the `mode`/`referenceImage`
+   vendor extensions, the strict-request rule, and the testnet-placeholder caveat. Its parameter
+   table and response example had both drifted (the example showed `mint_tx_hash`/`token_id`,
+   never the real shape; `network` and `payment` were marked required and are not) — corrected
+   and pointed at the generated spec as authoritative.
 
 ### PR 2 as five commits
 

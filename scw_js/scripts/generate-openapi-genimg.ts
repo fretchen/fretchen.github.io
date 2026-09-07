@@ -45,7 +45,7 @@ export function generateOpenApiSpec(): object {
         "AI-powered image generation with NFT minting on Optimism/Base, paid via x402 USDC.",
       version: "1.0.0",
       "x-guidance":
-        "POST / with { prompt, size } and no payment header to receive a 402 with x402 v2 payment requirements (accepts[]). Pay in USDC on one of the offered networks, retry with the payment header, and the service generates the image, mints it as an NFT, and transfers it to the payer. The mint recipient is derived from the payment payload, so there is no recipient field. Unknown request fields are rejected, not ignored. Note: payment uses x402, so a stock OpenAI SDK cannot pay this endpoint — the OpenAI body shape is for legibility, not drop-in SDK use. Testnet networks return a placeholder image rather than a generated one.",
+        "OpenAI images-generation body. POST / with { prompt, size } and no payment header to receive a 402 with x402 v2 payment requirements (accepts[]). Pay in USDC on one of the offered networks, retry with the payment header, and the service returns { created, data: [{ url }], model } — data[0].url is the image. The mint recipient is derived from the payment payload, so there is no recipient field. Unknown request fields are rejected, not ignored. This agent also mints the image as an NFT and reports it under the x_nft response extension; that is a declared capability, not part of the images/v1 contract, and a client that only wants an image can ignore it. A 200 does not by itself mean the NFT was minted — check x_nft.status. Note: payment uses x402, so a stock OpenAI SDK cannot pay this endpoint — the OpenAI shape is for body legibility, not drop-in SDK use. Testnet networks return a placeholder image rather than a generated one.",
       contact: {
         name: "fretchen",
         url: "https://www.fretchen.eu",
@@ -57,6 +57,13 @@ export function generateOpenApiSpec(): object {
         "0x8af9242b0056decb756ccd803fa791f7bd022f3f4973e9f84fec58ab3ab9160305a35b947c9a817146b91e7b61b49a1eea8eaa5832bc80682fb7b6fbba737e4f1b",
       ],
     },
+    "x-service-type": "images/v1",
+    "x-interop-floor":
+      "A compatible images/v1 agent MUST accept an OpenAI images-generation body ({ prompt, model?, size?, n?, response_format? }), MUST support size 1024x1024 (other sizes are per-agent and advertised in its own schema), MUST return { created, data: [{ url }] } with a fetchable URL rather than base64, and MUST advertise at least one accepts[] entry with asset USDC on network Optimism (eip155:10) or Base (eip155:8453), scheme exact. Request/response schema is defined by this document's ImageGenerationRequest/ImageGenerationResponse. Minting an NFT is NOT part of the floor — see x-capabilities. See README.md.",
+    // The NFT sits deliberately outside the interop floor: requiring it would mean a second
+    // implementer needed an NFT contract, a funded agent wallet and a transfer flow, which is
+    // the opposite of interchangeable. Declared here so a client can detect it instead.
+    "x-capabilities": ["nft-mint"],
     servers: [{ url: "https://imagegen-agent.fretchen.eu" }],
     tags: [
       { name: "Image Generation", description: "AI text-to-image and image editing" },

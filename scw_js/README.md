@@ -24,16 +24,30 @@ Generates AI images using Black Forest Labs API with USDC payment via x402 proto
 
 **Endpoint:** POST to `imagegen-agent.fretchen.eu`
 
-**Parameters:**
+**Parameters:** the authoritative list is [`openapi.genimg.json`](./openapi.genimg.json), generated
+from [`genimg_schemas.ts`](./genimg_schemas.ts) — the table below is a summary and the spec wins.
 
-| Field            | Type   | Required | Description                           |
-| ---------------- | ------ | -------- | ------------------------------------- |
-| `prompt`         | string | ✅       | Text prompt for AI image generation   |
-| `network`        | string | ✅       | CAIP-2 network ID (e.g., `eip155:10`) |
-| `mode`           | string | ❌       | `generate` (default) or `edit`        |
-| `size`           | string | ❌       | `1024x1024` (default) or `1792x1024`  |
-| `referenceImage` | base64 | ❌       | Required for `edit` mode              |
-| `payment`        | object | ✅       | x402 USDC payment authorization       |
+| Field             | Type    | Required | Description                                                   |
+| ----------------- | ------- | -------- | ------------------------------------------------------------- |
+| `prompt`          | string  | ✅       | Text prompt for AI image generation                           |
+| `model`           | string  | ❌       | Only `flux-kontext-pro` is advertised; defaults to it         |
+| `size`            | string  | ❌       | `1024x1024` (default) or `1792x1024`                          |
+| `n`               | number  | ❌       | Only `1` — pricing and the mint are per-image                 |
+| `response_format` | string  | ❌       | Only `url`                                                    |
+| `network`         | string  | ❌       | CAIP-2 network ID (e.g. `eip155:10`) to narrow the 402 offer  |
+| `mode`            | string  | ❌       | Vendor extension: `generate` (default) or `edit`              |
+| `referenceImage`  | base64  | ❌       | Vendor extension: required for `edit` mode                    |
+| `isListed`        | boolean | ❌       | Vendor extension: list the NFT publicly. Alias `x_nft.listed` |
+| `payment`         | object  | ❌       | x402 payment payload, if not sent as a header                 |
+
+**Unknown fields are rejected, not ignored** (400 `invalid_request_error`, `param` naming the
+field). This endpoint charges per call, so silently dropping a `quality: "hd"` the caller believed
+in would mean taking money for a request we did not fulfil as asked. It is also what the real
+OpenAI API does. Any new field a client wants to send has to be added to `genimg_schemas.ts` first.
+
+**An unpaid POST is always answered with the 402 challenge**, whatever its body says, so a client
+can discover the payment terms it is supposed to satisfy. Validation runs only on the paid path,
+before verify or settle — a malformed paid request is rejected without being charged.
 
 **Payment Authorization (EIP-3009):**
 
@@ -55,14 +69,50 @@ Generates AI images using Black Forest Labs API with USDC payment via x402 proto
 
 ```json
 {
-  "metadata_url": "https://...",
-  "image_url": "https://...",
-  "mint_tx_hash": "0x...",
-  "transfer_tx_hash": "0x...",
-  "token_id": "42",
-  "network": "eip155:10"
+  "created": 1757260000,
+  "data": [{ "url": "https://...", "revised_prompt": null }],
+  "model": "flux-kontext-pro",
+  "x_nft": {
+    "status": "minted",
+    "token_id": 42,
+    "contract": "0x...",
+    "network": "eip155:10",
+    "metadata_url": "https://...",
+    "mint_tx": "0x...",
+    "transfer_tx": "0x...",
+    "listed": false,
+    "mint_price": "10000000000000000",
+    "owner": "0x..."
+  }
 }
 ```
+
+**A 200 does not mean the NFT was minted — check `x_nft.status`.** If generation succeeds but the
+mint fails, the response is still 200 with a usable `data[0].url` and
+`x_nft: { status: "mint_failed", reason }`: the caller is holding the image, so a 5xx would be a
+lie. **Nothing is settled in that case** — no `Payment-Response` header, no charge. This is the one
+place the endpoint answers 200 with no payment settled, and it preserves the behaviour the service
+has always had, since settlement only ever ran after a successful mint.
+
+**`images/v1` contract.** [`openapi.genimg.json`](./openapi.genimg.json) declares
+`x-service-type: "images/v1"` — the interchangeable-agent contract, defined entirely by that
+document: the request/response body is the **OpenAI images-generation shape** (`{ prompt, model?, size?, n?, response_format? }`
+in → `{ created, data: [{ url }], model }` out — `ImageGenerationRequest`/`ImageGenerationResponse`),
+plus the `x-interop-floor` (≥1 `accepts[]` entry with USDC on Optimism `eip155:10` or Base
+`eip155:8453`, scheme `exact`; `size: "1024x1024"` supported at minimum). Payment stays x402, so
+the OpenAI shape is for **body legibility, not drop-in OpenAI-SDK use** — a stock SDK sends
+`Authorization: Bearer` and can't satisfy the 402.
+
+**The NFT is deliberately outside the floor**, declared as `x-capabilities: ["nft-mint"]` and
+reported under the `x_nft` response extension. Putting the mint inside would mean any second
+implementer needed an NFT contract, a funded agent wallet and a transfer flow — the opposite of
+interchangeable. A response with no `x_nft` is still valid `images/v1`, and a client that only
+wants an image reads `data[0].url` and never learns an NFT exists.
+
+`mode` and `referenceImage` (image editing) are likewise vendor extensions, not part of the floor.
+
+**Testnet networks return a placeholder image**, not a generated one — real inference budget is
+never spent on a valueless testnet payment. The x402 verify/settle flow still runs for real.
 
 ### `sc_llm_x402.js` / `llm_x402_cron.js` - x402 Batch-Settlement LLM Chat
 

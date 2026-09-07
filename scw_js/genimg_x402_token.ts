@@ -12,6 +12,7 @@ import {
   ImageGenerationRequestSchema,
   ADVERTISED_MODELS,
   MODEL_TO_PROVIDER,
+  type ImageGenerationResponse,
 } from "./genimg_schemas.js";
 import type { z } from "zod";
 import {
@@ -74,6 +75,24 @@ function zodErrorToResponse(error: z.ZodError) {
   }
   const param = issue.path.length > 0 ? issue.path.join(".") : undefined;
   return openAiError(400, issue.message, "invalid_request_error", "invalid_value", param);
+}
+
+/**
+ * The OpenAI-style success envelope. Everything chain-related lives under `x_nft`, so a caller
+ * that only wants an image reads `data[0].url` and never learns an NFT exists — that separation
+ * is what makes the published `images/v1` contract implementable by someone with no chain at all.
+ */
+function buildSuccessBody(args: {
+  imageUrl: string;
+  model: string;
+  nft: ImageGenerationResponse["x_nft"];
+}): ImageGenerationResponse {
+  return {
+    created: Math.floor(Date.now() / 1000),
+    data: [{ url: args.imageUrl, revised_prompt: null }],
+    model: args.model,
+    x_nft: args.nft,
+  };
 }
 
 function paymentError(reason: string | undefined, extra: Record<string, unknown> = {}) {
@@ -588,16 +607,24 @@ async function handle(
     });
 
     return {
-      body: JSON.stringify({
-        ...result,
-        payer: clientAddress,
-        network: clientNetwork,
-        size,
-        mode,
-        isListed,
-        mintPrice: mintPrice.toString(),
-        message: `Image successfully ${mode === "edit" ? "edited" : "generated"} and NFT minted`,
-      }),
+      body: JSON.stringify(
+        buildSuccessBody({
+          imageUrl: result.image_url,
+          model,
+          nft: {
+            status: "minted",
+            token_id: result.tokenId,
+            contract: contractAddress,
+            network: clientNetwork,
+            metadata_url: result.metadata_url,
+            mint_tx: result.mintTxHash,
+            transfer_tx: result.transferTxHash,
+            listed: isListed,
+            mint_price: mintPrice.toString(),
+            owner: clientAddress,
+          },
+        }),
+      ),
       headers: { ...CORS_HEADERS, ...settlementHeaders },
       statusCode: 200,
     };

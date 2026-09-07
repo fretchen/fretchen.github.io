@@ -26,6 +26,7 @@ import {
   makeMockResponse,
   mockMetadataResponse,
   mockViemFunctions,
+  mockGenerateAndUploadImage,
 } from "./setup.js";
 
 // Setup global mocks
@@ -629,11 +630,12 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       );
 
       const body = JSON.parse(response.body);
-      expect(body.payer).toBe("0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb");
-      expect(body.image_url).toBeDefined();
-      expect(body.tokenId).toBeDefined();
-      expect(body.mintTxHash).toBeDefined();
-      expect(body.transferTxHash).toBeDefined();
+      expect(body.x_nft.owner).toBe("0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb");
+      expect(body.data[0].url).toBeDefined();
+      expect(body.x_nft.status).toBe("minted");
+      expect(body.x_nft.token_id).toBeDefined();
+      expect(body.x_nft.mint_tx).toBeDefined();
+      expect(body.x_nft.transfer_tx).toBeDefined();
     });
 
     test("should reject invalid payment", async () => {
@@ -764,8 +766,8 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
-      expect(body.payer).toBe("0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb");
-      expect(body.tokenId).toBe(mockTokenId);
+      expect(body.x_nft.owner).toBe("0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb");
+      expect(body.x_nft.token_id).toBe(mockTokenId);
     });
   });
 
@@ -801,8 +803,16 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       const response = await handle(event, {});
       expect(response.statusCode).toBe(200);
 
-      const body = JSON.parse(response.body);
-      expect(body.size).toBe("1792x1024");
+      // The envelope no longer echoes `size`, so assert it reached the generator instead —
+      // which is what the caller actually pays for.
+      expect(mockGenerateAndUploadImage).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        "bfl",
+        "1792x1024",
+        "generate",
+        null,
+      );
     });
 
     test("should reject invalid size parameter", async () => {
@@ -878,7 +888,14 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
       const response = await handle(event, {});
       expect(response.statusCode).toBe(200);
-      expect(JSON.parse(response.body).image_url).toBeDefined();
+
+      const body = JSON.parse(response.body);
+      expect(body.created).toEqual(expect.any(Number));
+      expect(body.data).toHaveLength(1);
+      expect(body.data[0].url).toBeDefined();
+      expect(body.data[0].revised_prompt).toBeNull();
+      expect(body.model).toBe("flux-kontext-pro");
+      expect(body.x_nft.status).toBe("minted");
     });
 
     test("should reject n other than 1", async () => {
@@ -1393,7 +1410,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(response.statusCode).toBe(200);
 
       const body = JSON.parse(response.body);
-      expect(body.tokenId).toBe(mockTokenId); // Should pick the mint, not the regular transfer
+      expect(body.x_nft.token_id).toBe(mockTokenId); // Should pick the mint, not the regular transfer
     });
   });
 
@@ -1659,8 +1676,8 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(response.statusCode).toBe(200);
 
       const body = JSON.parse(response.body);
-      expect(body.isListed).toBe(true);
-      expect(body.tokenId).toBe(mockTokenId);
+      expect(body.x_nft.listed).toBe(true);
+      expect(body.x_nft.token_id).toBe(mockTokenId);
     });
 
     test("should default isListed to false when not specified", async () => {
@@ -1694,7 +1711,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(response.statusCode).toBe(200);
 
       const body = JSON.parse(response.body);
-      expect(body.isListed).toBe(false);
+      expect(body.x_nft.listed).toBe(false);
     });
 
     test("should reject non-boolean isListed values", async () => {
@@ -1737,7 +1754,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(response.statusCode).toBe(200);
 
       const body = JSON.parse(response.body);
-      expect(body.isListed).toBe(true);
+      expect(body.x_nft.listed).toBe(true);
     });
   });
 

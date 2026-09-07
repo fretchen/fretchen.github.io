@@ -86,7 +86,8 @@ export function generateOpenApiSpec(): object {
           },
           responses: {
             "200": {
-              description: "Image generated and NFT minted successfully",
+              description:
+                "The image was generated. A 200 does not by itself mean the NFT was minted — check x_nft.status.",
               content: {
                 "application/json": {
                   schema: { $ref: "#/components/schemas/ImageGenerationResponse" },

@@ -26,11 +26,10 @@
  * 3. The x402 payment payload stays **out** of the schema, for the facilitator's original
  *    reason — `@x402/evm` validates it, and `payment` is passed through as received.
  *
- * NOTE ON SCOPE: `ImageGenerationResponseSchema` deliberately describes the endpoint's response
- * as it is **today** — a flat object. The migration replaces it with an OpenAI-style
- * `{ created, data: [{ url }], x_nft }` envelope in a later step; documenting the envelope here
- * before the handler emits it would advertise a contract we do not serve. See
- * `genimg-openai-compat-migration.md` §4.
+ * These schemas are PUBLISHED UI, not just validation. `website/pages/x402/buyers` renders
+ * `components.schemas.ImageGenerationResponse` from the live deployed spec via `SpecParamTable`,
+ * so every `.describe()` below is user-facing copy, and the exported schema *names* are
+ * load-bearing — renaming `ImageGenerationResponse` breaks that page.
  */
 
 import { z } from "zod";
@@ -137,21 +136,55 @@ export type ImageGenerationRequest = z.infer<typeof ImageGenerationRequestSchema
 
 // ── Response ──
 
+/**
+ * The NFT receipt. One object with a `status` enum rather than a discriminated union: a union
+ * renders as `anyOf` through `z.toJSONSchema`, which reads badly in the published parameter
+ * table. Everything below `status` is therefore optional — on `mint_failed` only `reason` is set.
+ */
+export const NftReceiptSchema = z
+  .object({
+    status: z
+      .enum(["minted", "mint_failed"])
+      .describe(
+        "'minted': the NFT exists and belongs to the payer. 'mint_failed': the image was generated and is yours, but the on-chain mint did not complete — no payment was settled in that case.",
+      ),
+    token_id: z.number().int().optional().describe("Token id of the minted NFT."),
+    contract: z.string().optional().describe("Address of the NFT contract holding the token."),
+    network: z.string().optional().describe("CAIP-2 id of the chain the NFT was minted on."),
+    metadata_url: z.string().optional().describe("URL of the NFT metadata JSON."),
+    mint_tx: z.string().optional().describe("Hash of the mint transaction."),
+    transfer_tx: z.string().optional().describe("Hash of the transfer to the payer."),
+    listed: z.boolean().optional().describe("Whether the NFT was listed in the public gallery."),
+    mint_price: z.string().optional().describe("Mint price paid on-chain, in wei."),
+    owner: z
+      .string()
+      .optional()
+      .describe("Address the NFT was transferred to, derived from the x402 payment."),
+    reason: z.string().optional().describe("Why the mint failed. Only set on 'mint_failed'."),
+  })
+  .describe(
+    "Vendor extension carrying the NFT receipt. Not part of the images/v1 contract — a client that only wants an image can ignore it entirely.",
+  );
+
 export const ImageGenerationResponseSchema = z
   .object({
-    image_url: z.string().describe("URL of the generated image."),
-    metadata_url: z.string().describe("URL of the NFT metadata JSON."),
-    tokenId: z.number().int().describe("Token id of the minted NFT."),
-    mintTxHash: z.string().describe("Hash of the mint transaction."),
-    transferTxHash: z.string().describe("Hash of the transfer to the payer."),
-    payer: z.string().describe("Address the NFT was minted to, derived from the x402 payment."),
-    network: z.string().describe("CAIP-2 network the mint settled on."),
-    size: z.string().describe("Dimensions the image was generated at."),
-    mode: z.string().describe("Whether the image was generated or edited."),
-    isListed: z.boolean().describe("Whether the NFT was listed in the public gallery."),
-    mintPrice: z.string().describe("Mint price paid on-chain, in wei."),
-    message: z.string().describe("Human-readable summary."),
+    created: z.number().int().describe("Unix timestamp (seconds) when the image was produced."),
+    data: z
+      .array(
+        z.object({
+          url: z.string().describe("URL of the generated image."),
+          revised_prompt: z
+            .string()
+            .nullable()
+            .describe("Always null — this endpoint does not rewrite prompts."),
+        }),
+      )
+      .describe("The generated images. Always exactly one entry, since only n=1 is supported."),
+    model: z.string().describe("The model that served the request."),
+    x_nft: NftReceiptSchema,
   })
-  .describe("Successful generation and mint.");
+  .describe(
+    "OpenAI images-generation response envelope, plus the x_nft vendor extension. A 200 does not by itself mean the NFT was minted — check x_nft.status.",
+  );
 
 export type ImageGenerationResponse = z.infer<typeof ImageGenerationResponseSchema>;

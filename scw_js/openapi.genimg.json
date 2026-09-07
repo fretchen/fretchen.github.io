@@ -63,7 +63,7 @@
         },
         "responses": {
           "200": {
-            "description": "Image generated and NFT minted successfully",
+            "description": "The image was generated. A 200 does not by itself mean the NFT was minted — check x_nft.status.",
             "content": {
               "application/json": {
                 "schema": {
@@ -170,73 +170,94 @@
       "ImageGenerationResponse": {
         "type": "object",
         "properties": {
-          "image_url": {
-            "type": "string",
-            "description": "URL of the generated image."
-          },
-          "metadata_url": {
-            "type": "string",
-            "description": "URL of the NFT metadata JSON."
-          },
-          "tokenId": {
+          "created": {
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991,
-            "description": "Token id of the minted NFT."
+            "description": "Unix timestamp (seconds) when the image was produced."
           },
-          "mintTxHash": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "description": "URL of the generated image."
+                },
+                "revised_prompt": {
+                  "description": "Always null — this endpoint does not rewrite prompts.",
+                  "type": ["string", "null"]
+                }
+              },
+              "required": ["url", "revised_prompt"],
+              "additionalProperties": false
+            },
+            "description": "The generated images. Always exactly one entry, since only n=1 is supported."
+          },
+          "model": {
             "type": "string",
-            "description": "Hash of the mint transaction."
+            "description": "The model that served the request."
           },
-          "transferTxHash": {
-            "type": "string",
-            "description": "Hash of the transfer to the payer."
-          },
-          "payer": {
-            "type": "string",
-            "description": "Address the NFT was minted to, derived from the x402 payment."
-          },
-          "network": {
-            "type": "string",
-            "description": "CAIP-2 network the mint settled on."
-          },
-          "size": {
-            "type": "string",
-            "description": "Dimensions the image was generated at."
-          },
-          "mode": {
-            "type": "string",
-            "description": "Whether the image was generated or edited."
-          },
-          "isListed": {
-            "type": "boolean",
-            "description": "Whether the NFT was listed in the public gallery."
-          },
-          "mintPrice": {
-            "type": "string",
-            "description": "Mint price paid on-chain, in wei."
-          },
-          "message": {
-            "type": "string",
-            "description": "Human-readable summary."
+          "x_nft": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": ["minted", "mint_failed"],
+                "description": "'minted': the NFT exists and belongs to the payer. 'mint_failed': the image was generated and is yours, but the on-chain mint did not complete — no payment was settled in that case."
+              },
+              "token_id": {
+                "description": "Token id of the minted NFT.",
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "contract": {
+                "description": "Address of the NFT contract holding the token.",
+                "type": "string"
+              },
+              "network": {
+                "description": "CAIP-2 id of the chain the NFT was minted on.",
+                "type": "string"
+              },
+              "metadata_url": {
+                "description": "URL of the NFT metadata JSON.",
+                "type": "string"
+              },
+              "mint_tx": {
+                "description": "Hash of the mint transaction.",
+                "type": "string"
+              },
+              "transfer_tx": {
+                "description": "Hash of the transfer to the payer.",
+                "type": "string"
+              },
+              "listed": {
+                "description": "Whether the NFT was listed in the public gallery.",
+                "type": "boolean"
+              },
+              "mint_price": {
+                "description": "Mint price paid on-chain, in wei.",
+                "type": "string"
+              },
+              "owner": {
+                "description": "Address the NFT was transferred to, derived from the x402 payment.",
+                "type": "string"
+              },
+              "reason": {
+                "description": "Why the mint failed. Only set on 'mint_failed'.",
+                "type": "string"
+              }
+            },
+            "required": ["status"],
+            "additionalProperties": false,
+            "description": "Vendor extension carrying the NFT receipt. Not part of the images/v1 contract — a client that only wants an image can ignore it entirely."
           }
         },
-        "required": [
-          "image_url",
-          "metadata_url",
-          "tokenId",
-          "mintTxHash",
-          "transferTxHash",
-          "payer",
-          "network",
-          "size",
-          "mode",
-          "isListed",
-          "mintPrice",
-          "message"
-        ],
+        "required": ["created", "data", "model", "x_nft"],
         "additionalProperties": false,
-        "description": "Successful generation and mint."
+        "description": "OpenAI images-generation response envelope, plus the x_nft vendor extension. A 200 does not by itself mean the NFT was minted — check x_nft.status."
       }
     }
   }

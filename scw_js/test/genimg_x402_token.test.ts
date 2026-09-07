@@ -31,6 +31,23 @@ import {
 // Setup global mocks
 setupGlobalMocks();
 
+// A minimal valid x-payment header — enough to clear the 402 challenge and reach
+// request validation, without a facilitator mock. Used by tests that assert on
+// paid-path validation errors (which must fail before verifyPayment is ever called).
+const paidRequestPaymentHeader = {
+  accepted: {
+    network: "eip155:10",
+    asset: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+    payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+  },
+  payload: {
+    authorization: {
+      from: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+      to: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+    },
+  },
+};
+
 describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
   let handle;
   let create402Response;
@@ -514,13 +531,13 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
       expect(response.statusCode).toBe(400);
       const body = JSON.parse(response.body);
-      expect(body.error).toContain("Invalid JSON");
+      expect(body.error.message).toContain("Invalid JSON");
     });
 
-    test("should reject missing prompt", async () => {
+    test("should reject missing prompt on a paid request", async () => {
       const event = {
         httpMethod: "POST",
-        headers: {},
+        headers: { "x-payment": JSON.stringify(paidRequestPaymentHeader) },
         body: JSON.stringify({}),
         path: "/genimg",
       };
@@ -529,7 +546,23 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
       expect(response.statusCode).toBe(400);
       const body = JSON.parse(response.body);
-      expect(body.error).toContain("No prompt");
+      expect(body.error.message).toContain("No prompt");
+    });
+
+    test("should return the 402 challenge for an unpaid request whatever its body says", async () => {
+      // A discovery probe (or any unpaid request) must be answered with the payment terms,
+      // not a validation error — even when the body is missing required fields entirely.
+      const event = {
+        httpMethod: "POST",
+        headers: {},
+        body: JSON.stringify({ size: "not-a-real-size" }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
+
+      expect(response.statusCode).toBe(402);
+      expect(response.headers["X-Payment"]).toBeDefined();
     });
   });
 
@@ -775,7 +808,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
     test("should reject invalid size parameter", async () => {
       const event = {
         httpMethod: "POST",
-        headers: {},
+        headers: { "x-payment": JSON.stringify(paidRequestPaymentHeader) },
         body: JSON.stringify({
           prompt: "Test",
           size: "invalid",
@@ -787,13 +820,13 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(response.statusCode).toBe(400);
 
       const body = JSON.parse(response.body);
-      expect(body.error).toContain("Invalid size");
+      expect(body.error.message).toContain("Invalid size");
     });
 
     test("should require referenceImage for edit mode", async () => {
       const event = {
         httpMethod: "POST",
-        headers: {},
+        headers: { "x-payment": JSON.stringify(paidRequestPaymentHeader) },
         body: JSON.stringify({
           prompt: "Test",
           mode: "edit",
@@ -806,7 +839,23 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(response.statusCode).toBe(400);
 
       const body = JSON.parse(response.body);
-      expect(body.error).toContain("referenceImage");
+      expect(body.error.message).toContain("referenceImage");
+    });
+
+    test("should reject a paid request that fails validation before calling the facilitator", async () => {
+      const event = {
+        httpMethod: "POST",
+        headers: { "x-payment": JSON.stringify(paidRequestPaymentHeader) },
+        body: JSON.stringify({ prompt: "Test", size: "invalid" }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
+
+      expect(response.statusCode).toBe(400);
+      // A malformed paid request must be rejected before verify/settle — the payer is
+      // not charged for a request we're about to reject anyway.
+      expect(global.fetch).not.toHaveBeenCalled();
     });
   });
 
@@ -1161,9 +1210,9 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
       const response = await handle(event, {});
       expect(response.statusCode).toBe(500);
-      // Error is wrapped as "Operation failed" in handle()
+      // Error is wrapped as "Operation failed: ..." in handle()
       const body = JSON.parse(response.body);
-      expect(body.error).toBe("Operation failed");
+      expect(body.error).toContain("Operation failed");
     });
 
     test("should correctly identify mint event by zero address in topics[1]", async () => {

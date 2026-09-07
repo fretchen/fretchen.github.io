@@ -7,7 +7,7 @@ import {
   loadPrivateKey,
   getRpcUrl,
 } from "@fretchen/chain-utils";
-import { parseJsonBody } from "./utils.js";
+import { parseJsonBody, CORS_HEADERS, errorResponse, openAiError } from "./utils.js";
 import {
   getContract,
   createWalletClient,
@@ -40,6 +40,20 @@ const GAS_BUFFER = parseEther("0.00001");
 
 // keccak256("Transfer(address,address,uint256)") — used to extract tokenId from mint tx logs
 const TRANSFER_EVENT_HASH = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+
+/**
+ * 402 bodies carry x402-specific diagnostic fields (reason, expected/received, payer) that
+ * `errorResponse` (plain `{error: string}`) can't express — x402 clients read them, so the
+ * shape stays as-is rather than folding into the OpenAI error contract. See utils.ts's
+ * errorResponse/openAiError for the two shapes this endpoint otherwise uses.
+ */
+function paymentError(reason: string | undefined, extra: Record<string, unknown> = {}) {
+  return {
+    statusCode: 402,
+    headers: CORS_HEADERS,
+    body: JSON.stringify({ error: "Payment verification failed", reason, ...extra }),
+  };
+}
 
 interface PreFlightSuccess {
   success: true;
@@ -280,29 +294,13 @@ async function handle(
   isBase64Encoded?: boolean;
 }> {
   if (event.httpMethod === "OPTIONS") {
-    return {
-      statusCode: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        // Must cover every header @x402/fetch sets on the paid retry request, or the
-        // browser preflight fails with "... is not allowed by Access-Control-Allow-Headers".
-        // - PAYMENT-SIGNATURE: x402 v2 payment header (we negotiate x402Version: 2)
-        // - X-PAYMENT: x402 v1 payment header (fallback)
-        // - Access-Control-Expose-Headers: set on the request by @x402/fetch (spec-odd but real)
-        // Keep this in sync with @x402/fetch; the OPTIONS test enforces it.
-        "Access-Control-Allow-Headers":
-          "Content-Type, PAYMENT-SIGNATURE, X-PAYMENT, Access-Control-Expose-Headers",
-        "Access-Control-Allow-Methods": "GET, HEAD, POST, OPTIONS",
-        "Content-Type": "application/json",
-      },
-      body: "",
-    };
+    return { statusCode: 200, headers: CORS_HEADERS, body: "" };
   }
 
   if (event.httpMethod === "GET" && (event.path ?? "").replace(/^\/+/, "") === "openapi.json") {
     return {
       statusCode: 200,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      headers: CORS_HEADERS,
       body: JSON.stringify(openapiSpec),
     };
   }
@@ -324,7 +322,7 @@ async function handle(
     const isHead = event.httpMethod === "HEAD";
     return {
       statusCode: 200,
-      headers: { "Content-Type": faviconContentType, "Access-Control-Allow-Origin": "*" },
+      headers: { ...CORS_HEADERS, "Content-Type": faviconContentType },
       body: isHead ? "" : faviconBase64,
       isBase64Encoded: !isHead,
     };
@@ -334,101 +332,50 @@ async function handle(
     const isHead = event.httpMethod === "HEAD";
     return {
       statusCode: 200,
-      headers: { "Content-Type": "text/html; charset=utf-8", "Access-Control-Allow-Origin": "*" },
+      headers: { ...CORS_HEADERS, "Content-Type": "text/html; charset=utf-8" },
       body: isHead ? "" : FAVICON_DISCOVERY_HTML,
     };
   }
 
   if (event.httpMethod !== "POST") {
-    return {
-      body: JSON.stringify({ error: "Only POST requests are supported" }),
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      statusCode: 400,
-    };
+    return errorResponse(400, "Only POST requests are supported");
   }
 
   const body = parseJsonBody(event.body);
   if (!body) {
-    return {
-      body: JSON.stringify({ error: "Invalid JSON body" }),
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      statusCode: 400,
-    };
+    return openAiError(400, "Invalid JSON body", "invalid_request_error");
   }
 
   const paymentPayload = extractPaymentPayload(event.headers) ?? body["payment"];
-  const prompt = body["prompt"] as string | undefined;
-
-  if (!prompt) {
-    return {
-      body: JSON.stringify({ error: "No prompt provided" }),
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      statusCode: 400,
-    };
-  }
-
-  console.log(`📝 Prompt: "${prompt}"`);
 
   let account: ReturnType<typeof privateKeyToAccount>;
   try {
     account = privateKeyToAccount(loadPrivateKey("NFT_WALLET_PRIVATE_KEY"));
   } catch (err) {
-    return {
-      statusCode: 500,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify({
-        error: "Server configuration error",
-        message: (err as Error).message,
-      }),
-    };
+    return errorResponse(500, `Server configuration error: ${(err as Error).message}`);
   }
   const serverWallet = account.address;
 
+  // Reads only — not validation. Needed here because the 402 challenge below negotiates
+  // the network from `requestedNetwork`; the rest are read now for that same reason but
+  // validated only after the 402 branch, see below.
   const mode = (body["mode"] as string | undefined) ?? "generate";
   const size = (body["size"] as string | undefined) ?? "1024x1024";
   const requestedNetwork = (body["network"] as string | undefined) ?? null;
   const isListed = body["isListed"] === true;
-
-  const validModes = ["generate", "edit"];
-  if (!validModes.includes(mode)) {
-    return {
-      body: JSON.stringify({
-        error: `Invalid mode parameter. Must be one of: ${validModes.join(", ")}`,
-      }),
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      statusCode: 400,
-    };
-  }
-
-  const validSizes = ["1024x1024", "1792x1024"];
-  if (!validSizes.includes(size)) {
-    return {
-      body: JSON.stringify({
-        error: `Invalid size parameter. Must be one of: ${validSizes.join(", ")}`,
-      }),
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      statusCode: 400,
-    };
-  }
-
-  let referenceImageBase64: string | null = null;
-  if (mode === "edit") {
-    referenceImageBase64 = (body["referenceImage"] as string | undefined) ?? null;
-    if (!referenceImageBase64) {
-      return {
-        body: JSON.stringify({ error: "Edit mode requires referenceImage parameter" }),
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-        statusCode: 400,
-      };
-    }
-    console.log("🖼️  Reference image provided for editing");
-  }
 
   if (requestedNetwork) {
     const isTestnetMode = isTestnet(requestedNetwork);
     console.log(`🌐 Network: ${requestedNetwork} (${isTestnetMode ? "testnet" : "mainnet"})`);
   }
 
+  // ─── Payment challenge comes BEFORE request validation ───
+  // An unpaid request is answered with the 402 whatever its body says — mirrors
+  // sc_llm_x402.ts's identical rule. Validating first means a client probing for the
+  // payment terms it is supposed to discover gets a 400 with no Payment-Required header
+  // instead. Nothing is charged here: this branch only advertises terms. A *paid* request
+  // still runs the full validation below before any voucher is verified or settled, so a
+  // malformed paid request is rejected without being charged.
   if (!paymentPayload) {
     console.log("❌ No payment provided → Returning 402");
 
@@ -456,6 +403,47 @@ async function handle(
     return create402Response(paymentRequirements);
   }
 
+  const prompt = body["prompt"] as string | undefined;
+  if (!prompt) {
+    return openAiError(400, "No prompt provided", "invalid_request_error", "prompt");
+  }
+
+  console.log(`📝 Prompt: "${prompt}"`);
+
+  const validModes = ["generate", "edit"];
+  if (!validModes.includes(mode)) {
+    return openAiError(
+      400,
+      `Invalid mode parameter. Must be one of: ${validModes.join(", ")}`,
+      "invalid_request_error",
+      "mode",
+    );
+  }
+
+  const validSizes = ["1024x1024", "1792x1024"];
+  if (!validSizes.includes(size)) {
+    return openAiError(
+      400,
+      `Invalid size parameter. Must be one of: ${validSizes.join(", ")}`,
+      "invalid_request_error",
+      "size",
+    );
+  }
+
+  let referenceImageBase64: string | null = null;
+  if (mode === "edit") {
+    referenceImageBase64 = (body["referenceImage"] as string | undefined) ?? null;
+    if (!referenceImageBase64) {
+      return openAiError(
+        400,
+        "Edit mode requires referenceImage parameter",
+        "invalid_request_error",
+        "referenceImage",
+      );
+    }
+    console.log("🖼️  Reference image provided for editing");
+  }
+
   console.log("🔍 Payment received, verifying...");
 
   const clientNetwork =
@@ -471,16 +459,10 @@ async function handle(
   const networkValidation = validatePaymentNetwork(clientNetwork, clientIsTestnet);
   if (!networkValidation.valid) {
     console.error(`❌ Network validation failed: ${networkValidation.reason}`);
-    return {
-      statusCode: 402,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify({
-        error: "Payment verification failed",
-        reason: networkValidation.reason,
-        expected: networkValidation.expected,
-        received: networkValidation.received,
-      }),
-    };
+    return paymentError(networkValidation.reason, {
+      expected: networkValidation.expected,
+      received: networkValidation.received,
+    });
   }
 
   const usdcConfig = getUSDCConfig(clientNetwork!);
@@ -505,28 +487,12 @@ async function handle(
     verification = await resourceServer.verifyPayment(paymentPayload as any, paymentRequirements);
   } catch (error) {
     console.error(`❌ Payment verification error:`, error);
-    return {
-      statusCode: 402,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify({
-        error: "Payment verification failed",
-        reason: "facilitator_error",
-        details: (error as Error).message,
-      }),
-    };
+    return paymentError("facilitator_error", { details: (error as Error).message });
   }
 
   if (!verification.isValid) {
     console.log(`❌ Payment verification failed: ${verification.invalidReason}`);
-    return {
-      statusCode: 402,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify({
-        error: "Payment verification failed",
-        reason: verification.invalidReason,
-        payer: verification.payer,
-      }),
-    };
+    return paymentError(verification.invalidReason, { payer: verification.payer });
   }
 
   const clientAddress = verification.payer!;
@@ -564,7 +530,7 @@ async function handle(
       console.error(`❌ Pre-flight check failed: ${preFlightResult.error}`);
       return {
         statusCode: 500,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+        headers: CORS_HEADERS,
         body: JSON.stringify({
           error: "Service configuration error",
           reason: preFlightResult.error,
@@ -615,20 +581,12 @@ async function handle(
         mintPrice: mintPrice.toString(),
         message: `Image successfully ${mode === "edit" ? "edited" : "generated"} and NFT minted`,
       }),
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-        ...settlementHeaders,
-      },
+      headers: { ...CORS_HEADERS, ...settlementHeaders },
       statusCode: 200,
     };
   } catch (error) {
     console.error(`❌ Error during operation: ${error}`);
-    return {
-      body: JSON.stringify({ error: "Operation failed", message: (error as Error).message }),
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      statusCode: 500,
-    };
+    return errorResponse(500, `Operation failed: ${(error as Error).message}`);
   }
 }
 

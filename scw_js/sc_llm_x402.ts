@@ -5,7 +5,7 @@ import {
   advertisedModelIds,
   type LLMMessage,
 } from "./llm_service.js";
-import { parseJsonBody } from "./utils.js";
+import { parseJsonBody, CORS_HEADERS, errorResponse, openAiError } from "./utils.js";
 import { getUSDCConfig, isTestnet } from "@fretchen/chain-utils";
 import pino from "pino";
 import {
@@ -75,41 +75,8 @@ function getSettleAmount(usage: { prompt_tokens: number; completion_tokens: numb
   return (actualCost > maxCost ? maxCost : actualCost).toString();
 }
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  // Must cover every header @x402/fetch sets on the paid retry request — see
-  // genimg_x402_token.ts's identical OPTIONS block for the same reasoning.
-  "Access-Control-Allow-Headers":
-    "Content-Type, PAYMENT-SIGNATURE, X-PAYMENT, Access-Control-Expose-Headers",
-  "Access-Control-Allow-Methods": "GET, HEAD, POST, OPTIONS",
-  "Content-Type": "application/json",
-};
-
 function isHexAddress(addr: unknown): addr is `0x${string}` {
   return typeof addr === "string" && /^0x[a-fA-F0-9]{40}$/.test(addr);
-}
-
-function errorResponse(statusCode: number, error: string): ScwResponse {
-  return { body: JSON.stringify({ error }), headers: CORS_HEADERS, statusCode };
-}
-
-/**
- * OpenAI-shaped error body ({ error: { message, type, code } }) for request/model validation
- * failures, so callers reusing OpenAI response types parse our errors too. Payment (402) and
- * internal (500) errors keep the plain x402-style `errorResponse` above — those are not part
- * of the OpenAI request contract.
- */
-function openAiError(
-  statusCode: number,
-  message: string,
-  type: string,
-  code: string | null = null,
-): ScwResponse {
-  return {
-    body: JSON.stringify({ error: { message, type, code } }),
-    headers: CORS_HEADERS,
-    statusCode,
-  };
 }
 
 export async function handle(event: ScwEvent, _context: unknown): Promise<ScwResponse> {

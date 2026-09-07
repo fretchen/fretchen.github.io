@@ -1282,7 +1282,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       });
     });
 
-    test("should fail gracefully when mint event is not found", async () => {
+    test("should return 200 with x_nft.mint_failed when the mint event is not found", async () => {
       // Setup mock that returns logs without Transfer event from zero address
       mockContract.write.safeMint.mockResolvedValue("0xmintTx");
       mockContract.read.mintPrice.mockResolvedValue(BigInt("10000000000000000"));
@@ -1324,10 +1324,40 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       };
 
       const response = await handle(event, {});
-      expect(response.statusCode).toBe(500);
-      // Error is wrapped as "Operation failed: ..." in handle()
+
+      // The image was generated and is usable, so a 5xx would be a lie — the chain-side
+      // failure is reported in the extension instead.
+      expect(response.statusCode).toBe(200);
+
       const body = JSON.parse(response.body);
-      expect(body.error).toContain("Operation failed");
+      expect(body.data[0].url).toBeDefined();
+      expect(body.x_nft.status).toBe("mint_failed");
+      expect(body.x_nft.reason).toContain("mint event");
+      expect(body.x_nft.token_id).toBeUndefined();
+
+      // Nothing settled: no Payment-Response header, and the facilitator's /settle was never
+      // called (only /verify and the metadata fetch — the settlement-flow test sees 3).
+      expect(response.headers["Payment-Response"]).toBeUndefined();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+    });
+
+    test("should still return 500 when generation itself fails", async () => {
+      // The complement of the case above: nothing was produced, so nothing is owed and the
+      // caller should be told the request failed.
+      setupSuccessfulMintingFlow(11);
+      mockGenerateAndUploadImage.mockRejectedValueOnce(new Error("BFL unreachable"));
+
+      const event = {
+        httpMethod: "POST",
+        headers: { "x-payment": JSON.stringify(paidRequestPaymentHeader) },
+        body: JSON.stringify({ prompt: "Test" }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
+      expect(response.statusCode).toBe(500);
+      expect(JSON.parse(response.body).error).toContain("Operation failed");
     });
 
     test("should correctly identify mint event by zero address in topics[1]", async () => {

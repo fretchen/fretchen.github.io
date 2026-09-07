@@ -251,85 +251,60 @@ async function mintNFTToClient(
   return { tokenId, mintTxHash, transferTxHash };
 }
 
-interface GenerateResult {
-  metadata_url: string;
-  image_url: string;
-  tokenId: number;
-  mintTxHash: `0x${string}`;
-  transferTxHash: `0x${string}`;
+interface GeneratedImage {
+  metadataUrl: string;
+  imageUrl: string;
 }
 
-async function generateImageAndMintNFT(
+/**
+ * Generation only — deliberately separate from `mintNFTToClient` so the handler owns the
+ * boundary between them. That boundary is the whole point: a failure here means the caller got
+ * nothing and must not be charged (500), while a failure in the mint means they hold a usable
+ * image and get a 200 with `x_nft.status: "mint_failed"`.
+ */
+async function generateImage(
   prompt: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  contract: any,
-  publicClient: PublicClient,
-  clientAddress: string,
-  contractAddress: string,
-  serverWallet: string,
   size = "1024x1024",
   mode = "generate",
   referenceImageBase64: string | null = null,
   useMockImage = false,
-  mintPrice = BigInt(0),
-  isListed = false,
   provider: Provider = "bfl",
-): Promise<GenerateResult> {
+): Promise<GeneratedImage> {
   console.log(`🎨 Generating image: mode=${mode}, size=${size}, prompt="${prompt}"`);
 
   const tempTokenId = Date.now();
-  let metadataUrl: string;
-  let imageUrl: string;
 
   if (useMockImage) {
     console.log("🎭 Using mock image (test mode)");
-    imageUrl = "https://via.placeholder.com/1024x1024.png?text=Test+Image";
-    metadataUrl = `https://example.com/metadata/test_${tempTokenId}.json`;
-  } else {
-    metadataUrl = await generateAndUploadImage(
-      prompt,
-      tempTokenId,
-      provider,
-      size,
-      mode,
-      referenceImageBase64,
-    );
-
-    const baseDomain = new URL(JSON_BASE_PATH);
-    const url = new URL(metadataUrl);
-    if (url.hostname !== baseDomain.hostname) {
-      throw new Error(`Untrusted metadata URL: ${metadataUrl}`);
-    }
-
-    const metadataResponse = await fetch(metadataUrl);
-    if (!metadataResponse.ok) {
-      throw new Error(`Failed to load metadata: ${metadataResponse.status}`);
-    }
-
-    const metadata = (await metadataResponse.json()) as { image: string };
-    imageUrl = metadata.image;
+    const imageUrl = "https://via.placeholder.com/1024x1024.png?text=Test+Image";
+    const metadataUrl = `https://example.com/metadata/test_${tempTokenId}.json`;
+    console.log(`✅ Image mocked: ${imageUrl}`);
+    return { metadataUrl, imageUrl };
   }
 
-  console.log(`✅ Image ${useMockImage ? "mocked" : "generated"}: ${imageUrl}`);
-
-  const mintResult = await mintNFTToClient(
-    contract,
-    publicClient,
-    clientAddress,
-    metadataUrl,
-    contractAddress,
-    serverWallet,
-    mintPrice,
-    isListed,
+  const metadataUrl = await generateAndUploadImage(
+    prompt,
+    tempTokenId,
+    provider,
+    size,
+    mode,
+    referenceImageBase64,
   );
 
-  return {
-    metadata_url: metadataUrl,
-    image_url: imageUrl,
-    tokenId: mintResult.tokenId,
-    mintTxHash: mintResult.mintTxHash,
-    transferTxHash: mintResult.transferTxHash,
-  };
+  const baseDomain = new URL(JSON_BASE_PATH);
+  const url = new URL(metadataUrl);
+  if (url.hostname !== baseDomain.hostname) {
+    throw new Error(`Untrusted metadata URL: ${metadataUrl}`);
+  }
+
+  const metadataResponse = await fetch(metadataUrl);
+  if (!metadataResponse.ok) {
+    throw new Error(`Failed to load metadata: ${metadataResponse.status}`);
+  }
+
+  const metadata = (await metadataResponse.json()) as { image: string };
+  console.log(`✅ Image generated: ${metadata.image}`);
+  return { metadataUrl, imageUrl: metadata.image };
 }
 
 async function handle(
@@ -574,21 +549,56 @@ async function handle(
       };
     }
 
-    const result = await generateImageAndMintNFT(
+    // Generation failure means the caller got nothing — the outer catch turns it into a 500
+    // and no payment is settled.
+    const { metadataUrl, imageUrl } = await generateImage(
       prompt,
-      contract,
-      publicClient,
-      clientAddress,
-      contractAddress,
-      serverWallet,
       size,
       mode,
       referenceImageBase64,
       isTestnet(clientNetwork!),
-      mintPrice,
-      isListed,
       provider,
     );
+
+    let mintResult: MintResult;
+    try {
+      mintResult = await mintNFTToClient(
+        contract,
+        publicClient,
+        clientAddress,
+        metadataUrl,
+        contractAddress,
+        serverWallet,
+        mintPrice,
+        isListed,
+      );
+    } catch (mintError) {
+      // The image exists and the caller can use it, so a 5xx would be a lie. Return 200 with
+      // the URL and report the chain-side failure in the extension.
+      //
+      // Nothing is settled here, and no settlement headers are attached — a Payment-Response
+      // would assert a settlement that never happened. This preserves the money behaviour
+      // exactly as it has always been: settlePayment only ever ran after a successful mint, so
+      // a failed mint was never charged. It is the one place this endpoint answers 200 while
+      // no payment settled.
+      console.error(`❌ Mint failed after successful generation:`, mintError);
+      return {
+        body: JSON.stringify(
+          buildSuccessBody({
+            imageUrl,
+            model,
+            nft: {
+              status: "mint_failed",
+              reason: (mintError as Error).message,
+              network: clientNetwork,
+              metadata_url: metadataUrl,
+            },
+          }),
+        ),
+        headers: CORS_HEADERS,
+        statusCode: 200,
+      };
+    }
 
     resourceServer
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -609,16 +619,16 @@ async function handle(
     return {
       body: JSON.stringify(
         buildSuccessBody({
-          imageUrl: result.image_url,
+          imageUrl,
           model,
           nft: {
             status: "minted",
-            token_id: result.tokenId,
+            token_id: mintResult.tokenId,
             contract: contractAddress,
             network: clientNetwork,
-            metadata_url: result.metadata_url,
-            mint_tx: result.mintTxHash,
-            transfer_tx: result.transferTxHash,
+            metadata_url: metadataUrl,
+            mint_tx: mintResult.mintTxHash,
+            transfer_tx: mintResult.transferTxHash,
             listed: isListed,
             mint_price: mintPrice.toString(),
             owner: clientAddress,

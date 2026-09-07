@@ -9,6 +9,9 @@ exists.
 
 **Non-goal:** changing the payment flow. x402 `exact` / EIP-3009 / $0.07 stays exactly as is.
 
+**Status:** PR 1 (request side — steps 1–4) is shipped; 241 tests green. PR 2 (response side —
+steps 5–9) is outstanding. See §7 for the step-by-step state.
+
 ---
 
 ## 0. Scope
@@ -188,7 +191,16 @@ disclosure grew a dozen fields across two fee-model phases.
 
 genimg is the **second** adopter of that generator pattern and the first in `scw_js/`.
 `openapi.llm.json` is still hand-written; converting it the same way is a natural follow-up, out
-of scope here (§9).
+of scope here (§10).
+
+**Shipped in PR 1** as `genimg_schemas.ts`, `scripts/generate-openapi-genimg.ts`,
+`test/openapi_genimg_generation.test.ts`, and a `generate:openapi:genimg` script chained into
+`build`. Named for genimg because `scw_js` has two spec files. When the llm spec is converted,
+extract the ~17 genuinely common lines (`toComponentSchema`, the write-and-log `main`, the
+`contact` block, the `/openapi.json` path stanza) into a local `scripts/openapi-codegen.ts` —
+not a `shared/` package. A shared package is right only once a _third package_ needs it (the
+facilitator, or the first spec for `comment_service`/`analytics`); until then it would add a
+`file:` build-ordering dependency to `scw_js`'s deploy path for very little code.
 
 Name the generated schemas `ImageGenerationRequest` / `ImageGenerationResponse` and treat their
 `.describe()` text as contract prose, not internal comments — under §1 that text is what a third
@@ -344,20 +356,52 @@ The only consumer we control reads exactly three fields — `image_url`, `metada
 `mintTxHash`/`transferTxHash`, which nothing reads). That surface does not justify a dual-emit
 shim or a timed deprecation window.
 
-**One PR:**
+It ended up as two, split on **request-side vs response-side**. Steps 1–4 change nothing a caller
+can observe except error bodies and the 402/validation order, so they shipped without touching the
+website. Steps 5–9 change the wire shape and must move the frontend with them.
 
-1. `CORS_HEADERS` + the two error helpers; convert all error returns
-2. Zod schemas, `scripts/generate-openapi.ts`, the golden test, `zod` dependency, `build` wiring
-3. Reorder: 402 challenge before validation (§5)
-4. Request-side: strict allowlist, `model` map, `n`, `response_format`, `x_nft.listed` alias —
+**PR 1 — request side. Shipped.**
+
+1. ✅ `CORS_HEADERS` + the two error helpers; convert all error returns
+2. ✅ Zod schemas, `scripts/generate-openapi-genimg.ts`, the golden test, `zod` dependency,
+   `build` wiring
+3. ✅ Reorder: 402 challenge before validation (§5)
+4. ✅ Request-side: strict allowlist, `model` map, `n`, `response_format`, `x_nft.listed` alias —
    one `safeParse`
-5. `buildSuccessBody()` emitting the new envelope
-6. The mint-failure branch, split out of the catch-all, with no settlement
-7. Regenerated `openapi.genimg.json`, carrying the `images/v1` contract keys
-8. `website/types/x402.ts` and `website/components/ImageGenerator.tsx:294-336`
-9. `scw_js/README.md`: an `images/v1` section mirroring the `llm/v1` one at `README.md:73`, plus
-   the `x_nft` extension, the `mode`/`referenceImage` vendor extensions, and the
+
+**PR 2 — response side. Remaining.**
+
+5. ⬜ `buildSuccessBody()` emitting the new envelope — including echoing `model`, which PR 1
+   resolves and uses but does not yet return
+6. ⬜ The mint-failure branch, split out of the catch-all, with no settlement
+7. 🟨 `openapi.genimg.json` is generated (PR 1) but does **not** yet carry the `images/v1`
+   contract keys — `x-service-type`, `x-interop-floor`, `x-capabilities`. They are deliberately
+   held back: the floor requires `data[0].url`, which does not exist until step 5. Adding them is
+   what remains here.
+8. ⬜ `website/types/x402.ts` (response envelope, plus `model?` on the request type) and
+   `website/components/ImageGenerator.tsx:294-336`
+9. ⬜ `scw_js/README.md`: an `images/v1` section mirroring the `llm/v1` one at `README.md:73`,
+   plus the `x_nft` extension, the `mode`/`referenceImage` vendor extensions, and the
    testnet-placeholder caveat
+
+### What PR 1 changed that this doc did not predict
+
+- **`openAiError` gained a `param` argument** (`utils.ts`), so errors name the offending field as
+  OpenAI's do. Omitted from the body when absent, so `sc_llm_x402`'s error bodies are unchanged.
+- **A dead field was found and removed.** `sepoliaTest` appeared in three tests and in the test
+  file's header comment as though it were a feature; `genimg_x402_token.ts` has never read it.
+  Test mode comes from `isTestnet(clientNetwork)` off the payment payload. Strict validation is
+  what surfaced it.
+- **`isListed: "true"` (string) is now rejected rather than silently coerced to `false`.** The old
+  behaviour gave a caller who asked for a listed NFT an unlisted one and charged them anyway.
+  Same principle as the rest of the strictness. The website only ever sends a real boolean.
+- **New standing constraint:** the request schema is an allowlist, so **any new request field the
+  website starts sending must be added to `genimg_schemas.ts` first**, or it will 400. Worth
+  remembering when `/imagegen` next grows an option.
+- **The lockfile moved `@x402/core` and `@x402/evm` 2.20.0 → 2.24.0.** Not caused by zod:
+  `package.json` already declared `^2.23.0` while the lockfile pinned 2.20.0, below its own floor,
+  so any `npm install` resolves it. The full suite passes, but the tests mock the facilitator, so
+  on-chain verify semantics are unexercised — worth isolating in its own commit.
 
 **Deploy the function before the website.** They deploy separately and this is a hard cut, so
 the frontend reads `result.data?.[0]?.url ?? result.image_url` (and the same for
@@ -385,19 +429,28 @@ beyond that, the old shape is gone, which is what the regenerated spec will say.
 
 ## 9. Test additions
 
-- OpenAI-shaped request (`{ model, prompt, size, n: 1 }`) → valid envelope, `data[0].url` present
-- `n: 2` → 400 with `param: "n"`
-- `response_format: "b64_json"` → 400
-- Unknown field (`quality: "hd"`) on a **paid** request → 400 naming the field, and no settlement
-- Unpaid POST with a junk body → **402** with `Payment-Required`, not 400 (§5)
-- Mint failure → **200** with `x_nft.status: "mint_failed"`, a usable `data[0].url`, **and
+Already in place from PR 1 (241 tests green):
+
+- ✅ OpenAI-shaped request (`{ model, prompt, size, n: 1, response_format: "url" }`) → 200
+- ✅ `n: 2` → 400 with `param: "n"`
+- ✅ `response_format: "b64_json"` → 400
+- ✅ Unadvertised `model` → 400 with `param: "model"`
+- ✅ Unknown field (`quality: "hd"`) on a **paid** request → 400 naming the field, and the
+  facilitator never contacted (`fetch` spy)
+- ✅ Unknown field on an **unpaid** request → **402** with `X-Payment`, not 400 (§5)
+- ✅ Non-boolean `isListed` → 400; `x_nft.listed` honoured as an alias
+- ✅ Generated OpenAPI deep-equals the committed `openapi.genimg.json` (drift-checked by
+  tampering with the committed file and confirming the test fails)
+- ✅ Existing OPTIONS/CORS test unchanged — the preflight header list survived the move of
+  `CORS_HEADERS` into `utils.ts`
+- ✅ Error bodies parse as `{ error: { message, type, code, param? } }`
+
+Still to add in PR 2:
+
+- ⬜ Success response is a valid envelope with `data[0].url` present, and echoes `model`
+- ⬜ Mint failure → **200** with `x_nft.status: "mint_failed"`, a usable `data[0].url`, **and
   `settlePayment` not called** (spy assertion)
-- `isListed` and `x_nft.listed` both honoured
-- Generated OpenAPI deep-equals the committed `openapi.genimg.json`
-- Spec declares `x-service-type: "images/v1"` and an `x-interop-floor`
-- Existing OPTIONS/CORS test unchanged — the preflight header list (`Content-Type`,
-  `PAYMENT-SIGNATURE`, `X-PAYMENT`, `Access-Control-Expose-Headers`) must not regress
-- Error bodies parse as `{ error: { message, type, code } }`
+- ⬜ Spec declares `x-service-type: "images/v1"` and an `x-interop-floor`
 
 Unchanged and expected to stay green: the multi-network 402 tests, token-ID extraction,
 pre-flight checks, and the settlement-flow test.
@@ -431,17 +484,26 @@ sit at stable URLs. Reject explicitly rather than silently ignoring.
 
 ## 11. Effort
 
-| Item                                                              |                                         |
-| ----------------------------------------------------------------- | --------------------------------------- |
-| Error helper, minus deleted ad-hoc bodies                         | **net −60 lines**                       |
-| Zod schemas, replacing hand-written request validation            | roughly a wash                          |
-| `scripts/generate-openapi.ts` + golden test                       | new plumbing, ~150 lines, mostly copied |
-| Envelope + `x_nft` restructure                                    | ~40 lines, mechanical                   |
-| 402/validation reorder                                            | ~20 lines moved, no new logic           |
-| Regenerated spec, README `images/v1` section, frontend read sites | small, spread thin                      |
+PR 1, as actually shipped:
 
-Handler line count comes out flat or slightly smaller. The generator and its test are net new, and
-the earlier "half a day" estimate did not cost them — plan on one to two days.
+| Item                                                       |                                         |
+| ---------------------------------------------------------- | --------------------------------------- |
+| Error helpers + shared `CORS_HEADERS`, minus ad-hoc bodies | `genimg` −42, `sc_llm_x402` −33         |
+| 402/validation reorder                                     | folded in, no new logic                 |
+| Zod schemas, replacing hand-written request validation     | `genimg_x402_token.ts` +49/−32          |
+| Generator + golden test + regenerated spec                 | new plumbing, ~150 lines, mostly copied |
+| Tests                                                      | +132/−26, 233 → 241                     |
+
+PR 2, still to come:
+
+| Item                                                          |                                     |
+| ------------------------------------------------------------- | ----------------------------------- |
+| Envelope + `x_nft` restructure, incl. response schema rewrite | ~40 lines, mechanical               |
+| Mint-failure branch                                           | small, but the one behaviour change |
+| `images/v1` keys, README section, frontend read sites         | small, spread thin                  |
+
+Handler line count came out smaller, as predicted. PR 1 took about a day including the two
+detours over the zod dependency; PR 2 should be less, since the shape is already written down.
 
 The gain isn't size. It's that "standard response" and "our chain extension" stop being
 interleaved in one flat object, that request validation stops being nine `if` blocks and starts

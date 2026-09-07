@@ -285,6 +285,11 @@ comment saying so.
 
 Status values: `minted` | `mint_failed`.
 
+**How to structure it:** split `generateImageAndMintNFT` into a generation half and a minting half
+so the _handler_ owns the branch. That is what makes "settle only on a complete success" explicit
+rather than incidental — today it is merely a consequence of `settlePayment` sitting after a call
+that throws. Generation failure keeps the existing 500 path unchanged.
+
 (An earlier draft justified this by saying a 5xx retry would resend the payment header and hit a
 rejected nonce. Since settlement never fired, the nonce is untouched and a retry would in fact
 succeed. The 200 is still right, for the plainer reason above.)
@@ -378,11 +383,39 @@ website. Steps 5–9 change the wire shape and must move the frontend with them.
    contract keys — `x-service-type`, `x-interop-floor`, `x-capabilities`. They are deliberately
    held back: the floor requires `data[0].url`, which does not exist until step 5. Adding them is
    what remains here.
-8. ⬜ `website/types/x402.ts` (response envelope, plus `model?` on the request type) and
-   `website/components/ImageGenerator.tsx:294-336`
+8. ⬜ `website/types/x402.ts` (response envelope, plus `model?` on the request type),
+   `website/components/ImageGenerator.tsx:294-336`, **and the two public code samples in §8**
 9. ⬜ `scw_js/README.md`: an `images/v1` section mirroring the `llm/v1` one at `README.md:73`,
    plus the `x_nft` extension, the `mode`/`referenceImage` vendor extensions, and the
    testnet-placeholder caveat
+
+### PR 2 as five commits
+
+Breaking changes between commits are fine on this branch, so the commits follow the natural data
+flow rather than contorting to keep each one green:
+
+| #   | Commit                                                                                        | `scw_js` | `website`    |
+| --- | --------------------------------------------------------------------------------------------- | -------- | ------------ |
+| 1   | Backend: response envelope — response schema, `buildSuccessBody()`, spec regen, 14 assertions | ✅       | 🔴 typecheck |
+| 2   | Backend: mint-failure branch — split generate/mint, 200 + no settle, tests                    | ✅       | 🔴           |
+| 3   | Spec: `images/v1` keys — `x-service-type`, `x-interop-floor`, `x-capabilities`                | ✅       | 🔴           |
+| 4   | Frontend: switch to the envelope — `types/x402.ts`, `ImageGenerator.tsx`                      | ✅       | ✅           |
+| 5   | Docs — buyers page sample, blog sample, `README.md`, this file's status                       | ✅       | ✅           |
+
+**The one known-red window is `website` typecheck, commits 1–3**, because `X402GenImgResponse`
+stops matching what `ImageGenerator.tsx:294-336` reads. `scw_js` is green at every commit, and
+nothing else breaks: the website's test surface for the response shape is effectively zero
+(`useX402ImageGeneration.test.ts` and `ImageGenerator.test.tsx` mock wagmi hooks, not the
+response; `ImageGenerator.integration.test.tsx` asserts against its own `fetch` fixture — a GET
+with `tokenId` query params the endpoint never supported, inert here). If branch CI runs
+per-commit rather than per-PR-head, commits 1–3 will report red. Expected.
+
+Two ordering constraints are real rather than stylistic:
+
+- Commit 3 must follow commit 1 — the `images/v1` floor requires `data[0].url`, so declaring the
+  contract earlier would advertise a shape not yet served.
+- Commit 1's schema declares `status: "minted" | "mint_failed"` while only `minted` is reachable
+  until commit 2. The enum is the contract; it lands whole rather than being widened later.
 
 ### What PR 1 changed that this doc did not predict
 
@@ -403,10 +436,22 @@ website. Steps 5–9 change the wire shape and must move the frontend with them.
   so any `npm install` resolves it. The full suite passes, but the tests mock the facilitator, so
   on-chain verify semantics are unexercised — worth isolating in its own commit.
 
-**Deploy the function before the website.** They deploy separately and this is a hard cut, so
-the frontend reads `result.data?.[0]?.url ?? result.image_url` (and the same for
-`x_nft.token_id` / `metadata_url`) — about three lines that make a skew window harmless instead
-of breaking `/imagegen`.
+### Deploy the website before the function
+
+The frontend reads `result.data?.[0]?.url ?? result.image_url` (and the same for
+`x_nft.token_id` / `metadata_url`) — about three lines. Those fallbacks are **about deployment,
+not commits**: the PR merges atomically, but the website and the function deploy separately, and
+`/imagegen` is a paid user-facing path.
+
+|             | old frontend | new frontend, no fallback | new frontend, with fallback |
+| ----------- | ------------ | ------------------------- | --------------------------- |
+| old backend | ✅           | ❌                        | ✅                          |
+| new backend | ❌           | ✅                        | ✅                          |
+
+Only the fallback column is safe in both directions, and it is safe only if the **website goes
+first** — deploying the function first leaves the old, non-tolerant frontend against the new
+shape. (An earlier draft of this section said function-first, which contradicted the fallbacks
+it was justifying.)
 
 **Optional follow-up:** delete those fallbacks once the function deploy is confirmed live.
 
@@ -414,13 +459,57 @@ of breaking `/imagegen`.
 
 ## 8. Client migration
 
-Only consumer we control:
+### The app
 
 - `website/hooks/useX402ImageGeneration.ts` — types the response as `X402GenImgResponse`
 - `website/components/ImageGenerator.tsx:294-336` — reads `result.tokenId`, `result.image_url`,
   `result.metadata_url`, and `result.tokenId` again in the analytics call
 
-`npm run typecheck` in `website/` finds every call site once the type changes.
+`npm run typecheck` in `website/` finds every call site once the type changes. It must also handle
+`x_nft.status === "mint_failed"`, where there is an image but **no token id** — today's code would
+call `BigInt(undefined)`.
+
+### Two public code samples, both already wrong today
+
+These teach third parties how to call the endpoint, and neither was in the original plan:
+
+- **`website/pages/x402/buyers/+Page.tsx:116-117`** prints `result.image_url` and
+  `result.transaction_hash`. **`transaction_hash` has never existed** — it is the phantom field
+  from the old hand-written spec, which propagated from the spec into the public guide. PR 1
+  removed it from the spec; PR 2 removes it here.
+- **`website/blog/x402_facilitator_imagegen.mdx:207`** prints `result.imageUrl` — camelCase,
+  where the endpoint returns `image_url`. Wrong independently, and today.
+
+Both are factual corrections to existing published samples, not new content, so they do not need
+the `blog-planner` flow.
+
+### The buyers page renders the live spec
+
+Directly beneath that code sample sits:
+
+```tsx
+<SpecParamTable
+  specUrl={IMAGEGEN_SPEC_URL}
+  schemaName="ImageGenerationResponse"
+  caption="Response body"
+/>
+```
+
+`SpecParamTable` fetches the **deployed** `openapi.json` at runtime and renders
+`components.schemas.ImageGenerationResponse`. Three consequences:
+
+- The table updates on **function deploy, with no website deploy at all** — so between deploys the
+  page would show the `data[]`/`x_nft` table above a sample still saying `result.image_url`. The
+  sample fix belongs in this PR, not a later one.
+- **The schema name `ImageGenerationResponse` is load-bearing** and must not be renamed. PR 1
+  already matches it.
+- **The `.describe()` text in `genimg_schemas.ts` is user-facing website copy**, not internal
+  comment. Write the envelope's descriptions accordingly.
+
+No component change is needed: `ParamTable`'s `nestedProperties()` unwraps `schema.items` and
+nested objects, and `typeLabel()` renders `object[]`, so `data: [{…}]` and `x_nft: {…}` render
+correctly. `pages/agent-onboarding` also uses `SpecParamTable`, but only against the LLM spec —
+unaffected.
 
 External consumers may exist via x402scan discovery. The `??` fallbacks cover the deploy window;
 beyond that, the old shape is gone, which is what the regenerated spec will say.

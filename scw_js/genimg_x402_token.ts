@@ -399,17 +399,35 @@ async function handle(
   if (!paymentPayload) {
     console.log("❌ No payment provided → Returning 402");
 
+    // The one field validated before the challenge, because it is the one that *determines the
+    // terms*: `network` decides what the 402 offers, and the exact scheme signs for whatever it
+    // is offered. Everything else (prompt, size, model) stays after the challenge, so a client
+    // probing for the payment terms still gets them — a probe sends no network at all.
+    //
+    // This used to fall back to the mainnet list, so a caller naming a chain we do not serve was
+    // silently offered — and could pay on — a different, real-money chain. `eip155:84532` is the
+    // trap: Base Sepolia is sc_llm_x402's testnet but has no GenImNFT, so "our testnet" was a
+    // mainnet bill here.
     let networks: readonly string[];
     if (requestedNetwork) {
       const allNetworks = [...getExpectedNetworks(false), ...getExpectedNetworks(true)];
-      if (allNetworks.includes(requestedNetwork)) {
-        networks = [requestedNetwork];
-      } else {
-        networks = getExpectedNetworks(false);
+      if (!allNetworks.includes(requestedNetwork)) {
+        return openAiError(
+          400,
+          `Unsupported network '${requestedNetwork}'. This endpoint can only be paid on: ${allNetworks.join(", ")}`,
+          "invalid_request_error",
+          "unsupported_network",
+          "network",
+        );
       }
+      networks = [requestedNetwork];
     } else {
+      // No network named: offer every mainnet we accept. Deliberate — a third-party agent that
+      // pays should pay on mainnet, and this is the path an images/v1 client takes, since
+      // `network` is a vendor extension outside the interop floor.
       networks = getExpectedNetworks(false);
     }
+    console.log(`🌐 402 offering: ${networks.join(", ")}`);
 
     const paymentRequirements = createPaymentRequirements({
       resourceUrl: event.path ?? process.env.GENIMG_SERVICE_URL ?? "https://api.example.com/genimg",

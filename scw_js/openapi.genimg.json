@@ -144,8 +144,9 @@
             "type": "string"
           },
           "network": {
-            "description": "Vendor extension: CAIP-2 network id (e.g. eip155:10) to restrict the 402 payment offer to. Drives payment negotiation, not generation.",
-            "type": "string"
+            "description": "Vendor extension: CAIP-2 network to restrict the 402 payment offer to. One of eip155:10, eip155:8453, eip155:11155420 — the chains where this agent's NFT contract is deployed. Omit it and the 402 offers every mainnet the agent accepts. Drives payment negotiation, not generation.",
+            "type": "string",
+            "enum": ["eip155:10", "eip155:8453", "eip155:11155420"]
           },
           "isListed": {
             "description": "Vendor extension: list the minted NFT in the public gallery. Alias of x_nft.listed.",

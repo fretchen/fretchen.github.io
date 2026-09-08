@@ -33,8 +33,25 @@
  */
 
 import { z } from "zod";
+import { getExpectedNetworks } from "./getChain.js";
 
 // ── Request ──
+
+/**
+ * The CAIP-2 networks this agent can actually be paid on — every chain where GenImNFT is
+ * deployed. Derived from the same source the 402 challenge offers from, so the enum cannot drift
+ * from what the server will accept.
+ *
+ * Enumerated rather than left as a free string for two reasons: the paid path gets the check for
+ * free, and the generated OpenAPI lists them, so an images/v1 implementer can read the supported
+ * chains instead of guessing. Note these are genimg's own — `sc_llm_x402` serves a *different*
+ * set (its testnet is Base Sepolia, which has no GenImNFT), and confusing the two is exactly the
+ * mistake this enum makes loud.
+ */
+export const SUPPORTED_NETWORKS = [...getExpectedNetworks(false), ...getExpectedNetworks(true)] as [
+  string,
+  ...string[],
+];
 
 /** Sizes this agent serves. Not a fixed set across `images/v1` implementers — see §1 of the migration doc. */
 export const IMAGE_SIZES = ["1024x1024", "1792x1024"] as const;
@@ -104,10 +121,12 @@ export const ImageGenerationRequestSchema = z
       .optional()
       .describe("Vendor extension: base64-encoded source image. Required when mode is 'edit'."),
     network: z
-      .string()
+      .enum(SUPPORTED_NETWORKS, {
+        error: `Unsupported network. This endpoint can only be paid on: ${SUPPORTED_NETWORKS.join(", ")}`,
+      })
       .optional()
       .describe(
-        "Vendor extension: CAIP-2 network id (e.g. eip155:10) to restrict the 402 payment offer to. Drives payment negotiation, not generation.",
+        `Vendor extension: CAIP-2 network to restrict the 402 payment offer to. One of ${SUPPORTED_NETWORKS.join(", ")} — the chains where this agent's NFT contract is deployed. Omit it and the 402 offers every mainnet the agent accepts. Drives payment negotiation, not generation.`,
       ),
     isListed: z
       .boolean()

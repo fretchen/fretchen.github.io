@@ -363,6 +363,47 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(body.accepts[1].network).toBe("eip155:8453"); // Base Mainnet
     });
 
+    test("should reject an unsupported network instead of offering mainnet", async () => {
+      // REGRESSION: this used to fall through to getExpectedNetworks(false) and offer BOTH
+      // MAINNETS. eip155:84532 is Base Sepolia — sc_llm_x402's testnet, but no GenImNFT is
+      // deployed there — so a caller who thought they were on testnet was handed a real-money
+      // offer, and the exact scheme signs for whatever it is offered. This cost real USDC once.
+      const event = {
+        httpMethod: "POST",
+        headers: {},
+        body: JSON.stringify({ prompt: "Test", network: "eip155:84532" }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
+
+      expect(response.statusCode).toBe(400);
+
+      const body = JSON.parse(response.body);
+      expect(body.error.param).toBe("network");
+      expect(body.error.code).toBe("unsupported_network");
+      expect(body.error.message).toContain("eip155:84532");
+      // The point of the test: no mainnet was offered.
+      expect(response.body).not.toContain("accepts");
+      expect(response.headers["X-Payment"]).toBeUndefined();
+    });
+
+    test("should still answer the 402 challenge for a body it cannot otherwise satisfy", async () => {
+      // The network check is the ONE thing validated before the challenge, because it decides
+      // the terms. A missing prompt must NOT gate discovery — the ordering rule still holds.
+      const event = {
+        httpMethod: "POST",
+        headers: {},
+        body: JSON.stringify({ quality: "hd" }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
+
+      expect(response.statusCode).toBe(402);
+      expect(response.headers["X-Payment"]).toBeDefined();
+    });
+
     test("should handle OPTIONS request (CORS preflight)", async () => {
       const event = {
         httpMethod: "OPTIONS",

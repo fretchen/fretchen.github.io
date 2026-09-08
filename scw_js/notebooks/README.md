@@ -1,22 +1,21 @@
 # scw_js Notebooks
 
-Notebooks for exploring and spiking scw_js's own behavior — both the **x402
-resource-server** side (Deno/TS) and scw_js's backend API integrations (Python), kept
-together here rather than in the repo's general-purpose root `notebooks/` package,
-per the per-package notebook convention (`growth-agent/notebooks/`,
-`x402_facilitator/notebooks/`).
+Notebooks for exercising scw_js's own behavior — the **x402 buyer** side (Deno/TS) and
+the third-party APIs scw_js integrates with (Python), kept together here rather than in
+the repo's general-purpose root `notebooks/` package, per the per-package notebook
+convention (`growth-agent/notebooks/`, `x402_facilitator/notebooks/`).
 
-| Notebook                                   | Kernel  | What it does                                                                                                                                                                                                                                                                              |
-| ------------------------------------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `x402_batch_settlement_server_spike.ipynb` | Deno/TS | Phase B0 spike: registers a server-side `BatchSettlementEvmScheme` + `InMemoryChannelStorage`, drives it with a real buyer-side deposit/voucher flow, and inspects exactly what `verifyPayment()` does to channel storage — before writing the real S3-backed handler (`sc_llm_x402.ts`). |
-| `sc_llm_x402_buyer.ipynb`                  | Deno/TS | Real end-to-end buyer flow against the **locally-running** `sc_llm_x402.ts` server via `wrapFetchWithPayment` (no raw facilitator calls) — the missing real-server verification for Phase B, and a literal blueprint for `website/hooks/useX402Chat.ts` (Phase C).                        |
-| `ionos_llm.ipynb`                          | Python  | Exploration of the IONOS AI Model Hub API — the same API `llm_service.ts::callLLMAPI` calls.                                                                                                                                                                                              |
-| `merkle_tree.ipynb`                        | Python  | How merkle trees work and how they're used for LLM API usage batching — the mechanism behind `llm_service.ts`'s `saveLeafToTree`/`processMerkleTree`.                                                                                                                                     |
-| `bfl_ai.ipynb`                             | Python  | Exploration of the Black Forest Labs image-generation API — the same API `image_service.ts` (`genimg_bfl.js`) wraps.                                                                                                                                                                      |
-| `scw_llm.ipynb`                            | Python  | Client testing against `sc_llm.ts`'s local dev server (`localhost:8080`): builds and signs the wallet-based bearer-auth payload `auth_utils.ts` expects.                                                                                                                                  |
-| `requests.ipynb`                           | Python  | Client testing against the image-generation/NFT endpoint (`genimg_x402_token.ts`'s local dev server).                                                                                                                                                                                     |
+Names follow `<subject>_<role>`, with two roles: **`_buyer`** drives one of our own paid
+endpoints end to end as a real client would, and **`_explore`** pokes at a third-party
+API we depend on.
 
-## Setup — Deno (x402 spike)
+| Notebook                  | Kernel  | What it does                                                                                                                                                                                                                                                             |
+| ------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `genimg_x402_buyer.ipynb` | Deno/TS | Real end-to-end buyer flow against the **locally-running** `genimg_x402_token.ts` server via `wrapFetchWithPayment` — verifies the `images/v1` response envelope over a real payment, and is the blueprint for `website/components/ImageGenerator.tsx`. Scheme: `exact`. |
+| `sc_llm_x402_buyer.ipynb` | Deno/TS | The same, for `sc_llm_x402.ts` — and the blueprint `website/hooks/useX402Chat.ts` was built from. Scheme: `batch-settlement`, so it also covers channel storage and deposit strategy. Linked from the public `/agent-onboarding` page: **do not rename.**                |
+| `bfl_api_explore.ipynb`   | Python  | Exploration of the Black Forest Labs image-generation API — the same API `image_service.ts` wraps.                                                                                                                                                                       |
+
+## Setup — Deno (buyer notebooks)
 
 All env lives in the package's single **`scw_js/.env`** (one level up — there is no
 per-notebook `.env`), same pattern as `x402_facilitator/notebooks/`. Deno's `load()`
@@ -37,7 +36,7 @@ deno jupyter --install
 
 Then open a notebook and select the **Deno** kernel.
 
-## Setup — Python (API-exploration notebooks)
+## Setup — Python (API-exploration notebook)
 
 This directory also has its own scoped `pyproject.toml`/`uv.lock`, separate from the
 root `notebooks/` package's Python env — scw_js has no other Python tooling, so this
@@ -52,11 +51,12 @@ uv run jupyter notebook
 Then open a notebook and select the **scw-js-notebooks** kernel. Formatting/linting via
 `uv run ruff format .` / `uv run ruff check .`, same as the root package.
 
-## Running a local facilitator
+## Facilitator
 
-Some spikes need a facilitator to talk to (e.g. to call `verifyPayment()`, which
-delegates the actual payment validation to the facilitator over HTTP). From
-`x402_facilitator/`:
+The buyer notebooks do **not** need a local facilitator: `FACILITATOR_URL` defaults to
+the deployed `https://facilitator.fretchen.eu`, so a locally-run handler verifies and
+settles against production. To point at a local one instead, set `FACILITATOR_URL` in
+`scw_js/.env` and run it from `x402_facilitator/`:
 
 ```bash
 cd ../../x402_facilitator

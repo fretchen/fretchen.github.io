@@ -1,15 +1,12 @@
 [project]
 name = "scw-js-notebooks"
 version = "0.1.0"
-description = "Python Jupyter notebooks for exploring scw_js's own backend APIs (IONOS LLM, Black Forest Labs image gen, merkle-tree batching, sc_llm/genimg client auth)"
+description = "Python Jupyter notebooks for exploring the third-party APIs scw_js integrates with"
 requires-python = ">=3.10"
 dependencies = [
     "jupyter>=1.0.0",
     "ipykernel>=6.25.0",
-    "pydantic>=2.11.7",
     "python-dotenv>=1.0",
-    "web3>=7.12.1",
-    "eth-account>=0.13.7",
     "requests>=2.33.0",
 ]
 

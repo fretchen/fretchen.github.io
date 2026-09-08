@@ -146,16 +146,17 @@ cannot honour, and each one ignored is a caller charged for the wrong image. `n`
 `.strict()` produces all of it for free, which makes strictness an argument _for_ the schema work
 in §3 rather than a cost of it.
 
-### `model` maps to a real provider choice — carefully
+### `model` maps to a real provider choice
 
-`image_service.ts` has two providers: `bfl` (`flux-kontext-pro`) and `ionos`
-(`black-forest-labs/FLUX.1-schnell`). A naive allowlist would ship a silent bug:
-`generateImageIONOS()` ignores both `mode` and `referenceImageBase64`, so an edit request routed
-to ionos returns a fresh image instead of an edit, with no error anywhere.
+A **single-entry map** `{ "flux-kontext-pro": "bfl" }`, defaulting to `bfl`, replacing the
+hardcoded `"bfl"` in the `generateAndUploadImage` call.
 
-So: a **single-entry map** `{ "flux-kontext-pro": "bfl" }`, defaulting to `bfl`, replacing the
-currently hardcoded `"bfl"` in the `generateAndUploadImage` call. ionos becomes selectable only
-once `generateImageIONOS` either supports edit mode or the handler rejects `mode: "edit"` for it.
+`image_service.ts` had a second provider, `ionos`, when this was written, and the constraint it
+imposed is worth keeping even though the provider is gone: `generateImageIONOS()` ignored both
+`mode` and `referenceImageBase64`, so routing an edit request there would have returned a freshly
+generated image instead of an edit, with no error anywhere — and charged for it. Any provider
+added in future must honour edit mode, or the handler must reject `mode: "edit"` for it. IONOS
+itself was removed from `scw_js` once it was unreachable from either handler.
 
 ### Divergences worth documenting
 
@@ -575,8 +576,6 @@ requests it.
 sit at stable URLs. Reject explicitly rather than silently ignoring.
 
 **`n > 1`.** Would need N mints, N metadata uploads, and per-image pricing. Reject cleanly.
-
-**ionos as a selectable `model`.** Blocked on edit-mode support or an explicit rejection (§2).
 
 **Changing the payment amount, scheme, or network negotiation.** Out of scope entirely.
 

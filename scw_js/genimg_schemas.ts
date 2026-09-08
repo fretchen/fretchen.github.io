@@ -40,12 +40,12 @@ import { z } from "zod";
 export const IMAGE_SIZES = ["1024x1024", "1792x1024"] as const;
 
 /**
- * Model ids this endpoint advertises, mapped to the provider that serves them.
+ * Model ids this endpoint advertises, mapped to the provider in `image_service.ts` that serves
+ * them. One entry today; adding a model means adding it here and to PROVIDER_CONFIGS there.
  *
- * Deliberately one entry. `image_service.ts` also has an `ionos` provider, but
- * `generateImageIONOS()` ignores `mode` and `referenceImageBase64` entirely — routing an edit
- * request there would silently return a fresh image instead of an edit. ionos becomes
- * selectable only once it supports edit mode or the handler rejects `mode: "edit"` for it.
+ * Any provider added must honour `mode: "edit"` and `referenceImage`, or the handler has to
+ * reject edit requests for it — silently returning a freshly generated image to someone who
+ * asked for an edit, and charging them, is the failure mode to avoid.
  */
 export const MODEL_TO_PROVIDER = { "flux-kontext-pro": "bfl" } as const;
 

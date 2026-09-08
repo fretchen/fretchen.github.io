@@ -47,8 +47,7 @@ const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 // with the ceiling amount, then pass a smaller usage-derived amount to settlePayment().
 // (The installed @x402/evm — 2.18.0 — exposes no higher-level helper for this; we call the
 // resourceServer verify/settle primitives directly.) See getSettleAmount() below.
-// This endpoint uses Mistral, not IONOS — see llm_service.ts's LLM_PROVIDERS. Legacy
-// sc_llm.ts (merkle settlement) is untouched and stays on IONOS.
+// See llm_service.ts's LLM_PROVIDERS for the provider registry.
 const LLM_PROVIDER = "mistral";
 
 const MAX_TOKENS_PER_MESSAGE = process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE ?? "2000";
@@ -369,7 +368,7 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     // Route to the provider that serves the requested model. Today only mistral is
     // advertised (resolved.provider === LLM_PROVIDER), so pricing (getSettleAmount /
     // USDC_MAX_PRICE_PER_MESSAGE, which use LLM_PROVIDER) stays correct. When a second
-    // provider (e.g. ionos) is advertised, per-provider pricing must follow suit here.
+    // provider is advertised, per-provider pricing must follow suit here.
     // TODO: getSettleAmount() and USDC_MAX_PRICE_PER_MESSAGE (above) are hardcoded to
     // LLM_PROVIDER = "mistral" and do NOT use resolved.provider. The moment a second model
     // is added to advertisedModelIds(), a request routed to that provider here will still be

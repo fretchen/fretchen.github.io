@@ -28,14 +28,14 @@ describe("llm_service.js", () => {
     const prompt = [{ role: "user", content: "Was ist die Hauptstadt von Frankreich?" }];
     const result = await callLLMAPI(prompt);
     expect(global.fetch).toHaveBeenCalledWith(
-      "https://openai.inference.de-txl.ionos.com/v1/chat/completions",
+      "https://api.mistral.ai/v1/chat/completions",
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({
-          Authorization: expect.stringContaining("test-token"),
+          Authorization: expect.stringContaining("test-mistral-key"),
         }),
         body: JSON.stringify({
-          model: "meta-llama/Llama-3.3-70B-Instruct",
+          model: "mistral-large-latest",
           messages: [{ role: "user", content: "Was ist die Hauptstadt von Frankreich?" }],
         }),
       }),
@@ -65,10 +65,10 @@ describe("llm_service.js", () => {
   });
 
   test("wirft Fehler, wenn kein API-Token gesetzt ist", async () => {
-    delete process.env.IONOS_API_TOKEN;
+    delete process.env.MISTRAL_API_KEY;
     const prompt = [{ role: "user", content: "Test" }];
     await expect(callLLMAPI(prompt)).rejects.toThrow(
-      "API token not found. Please configure the IONOS_API_TOKEN environment variable.",
+      "API token not found. Please configure the MISTRAL_API_KEY environment variable.",
     );
   });
 
@@ -79,7 +79,7 @@ describe("llm_service.js", () => {
       statusText: "Unauthorized",
     });
     const prompt = [{ role: "user", content: "Test" }];
-    await expect(callLLMAPI(prompt)).rejects.toThrow("Could not reach IONOS: 401 Unauthorized");
+    await expect(callLLMAPI(prompt)).rejects.toThrow("Could not reach Mistral: 401 Unauthorized");
   });
 
   test("wirft Fehler bei Netzwerkproblemen", async () => {
@@ -100,7 +100,7 @@ describe("llm_service.js", () => {
       expect.any(String),
       expect.objectContaining({
         body: JSON.stringify({
-          model: "meta-llama/Llama-3.3-70B-Instruct",
+          model: "mistral-large-latest",
           messages: [
             { role: "system", content: "Du bist ein Assistent." },
             { role: "user", content: "Erkläre Quantenphysik." },
@@ -155,36 +155,6 @@ describe("llm_service.js", () => {
 });
 
 describe("convertTokensToUsdcCost — per-provider, input/output-split USDC conversion", () => {
-  describe("ionos — blended rate (input === output), unchanged math", () => {
-    test("converts a known token split to the expected USDC atomic units", () => {
-      // 500,000 prompt + 500,000 completion = 1,000,000 tokens total, both priced at
-      // ionos's blended 0.71 EUR/USDC per 1M tokens = 710,000 atomic units ($0.71) —
-      // same total as the old single-rate formula, since input === output for ionos.
-      expect(
-        convertTokensToUsdcCost({ prompt_tokens: 500_000n, completion_tokens: 500_000n }, "ionos"),
-      ).toBe(710_000n);
-    });
-
-    test("blended rate is split-independent — same total regardless of prompt/completion mix", () => {
-      const allPrompt = convertTokensToUsdcCost(
-        { prompt_tokens: 1_000_000n, completion_tokens: 0n },
-        "ionos",
-      );
-      const allCompletion = convertTokensToUsdcCost(
-        { prompt_tokens: 0n, completion_tokens: 1_000_000n },
-        "ionos",
-      );
-      expect(allPrompt).toBe(710_000n);
-      expect(allCompletion).toBe(710_000n);
-    });
-
-    test("returns zero for zero tokens", () => {
-      expect(convertTokensToUsdcCost({ prompt_tokens: 0n, completion_tokens: 0n }, "ionos")).toBe(
-        0n,
-      );
-    });
-  });
-
   describe("mistral — asymmetric input/output rates ($0.50/M in, $1.50/M out)", () => {
     test("matches the estimated-tokens-per-message ceiling convention used by sc_llm_x402.ts", () => {
       // sc_llm_x402.ts prices the whole pre-auth estimate as completion (output)

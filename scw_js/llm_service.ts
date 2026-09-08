@@ -3,25 +3,16 @@ import pino from "pino";
 const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 
 interface LLMProviderConfig {
-  displayName: string; // for error messages/logs — e.g. "Could not reach IONOS: ..."
+  displayName: string; // for error messages/logs — e.g. "Could not reach Mistral: ..."
   baseUrl: string; // no trailing "/chat/completions" — appended at call time
   defaultModel: string;
   apiKeyEnvVar: string;
-  // Price per 1,000,000 tokens, num/den to stay exact bigint math. USD for mistral;
-  // EUR for ionos (see convertTokensToUsdcCost's doc comment on the EUR/USDC simplification).
+  // Price per 1,000,000 tokens, num/den to stay exact bigint math. USD-quoted.
   inputPricePerMillion: { num: bigint; den: bigint };
   outputPricePerMillion: { num: bigint; den: bigint };
 }
 
 const LLM_PROVIDERS: Record<string, LLMProviderConfig> = {
-  ionos: {
-    displayName: "IONOS",
-    baseUrl: "https://openai.inference.de-txl.ionos.com/v1",
-    defaultModel: "meta-llama/Llama-3.3-70B-Instruct",
-    apiKeyEnvVar: "IONOS_API_TOKEN",
-    inputPricePerMillion: { num: 71n, den: 100n },
-    outputPricePerMillion: { num: 71n, den: 100n }, // blended rate, unchanged — legacy sc_llm.ts path
-  },
   mistral: {
     displayName: "Mistral",
     baseUrl: "https://api.mistral.ai/v1",
@@ -78,9 +69,9 @@ export interface LLMResponse {
 /**
  * Resolve an OpenAI-style `model` id (as sent by a caller in the request body) to the
  * internal provider whose config serves it. Returns `null` for an unknown/unsupported model
- * so the handler can answer with an OpenAI-shaped `model_not_found` error. Today only
- * Mistral's `mistral-large-latest` is advertised; exposing IONOS later is a one-line change
- * (add its `defaultModel` here) — the registry (LLM_PROVIDERS) already carries the ids.
+ * so the handler can answer with an OpenAI-shaped `model_not_found` error. One provider is
+ * registered today; adding another means an entry in LLM_PROVIDERS and its id in
+ * advertisedModelIds().
  */
 export function resolveModel(modelId: string): { provider: string } | null {
   for (const [provider, config] of Object.entries(LLM_PROVIDERS)) {
@@ -93,14 +84,13 @@ export function resolveModel(modelId: string): { provider: string } | null {
 
 /** The model ids this endpoint currently advertises + serves (for OpenAPI enum + validation). */
 export function advertisedModelIds(): string[] {
-  // Only Mistral is live today (see sc_llm_x402.ts's LLM_PROVIDER); IONOS stays internal.
   return [LLM_PROVIDERS.mistral.defaultModel];
 }
 
 export async function callLLMAPI(
   prompt: LLMMessage[],
   dummy = false,
-  provider = "ionos",
+  provider = "mistral",
 ): Promise<LLMResponse> {
   if (dummy) {
     return {
@@ -216,10 +206,8 @@ function parseTokenCount(tokenCount: bigint | number | string): bigint {
  * $0.50/M input vs $1.50/M output — a 3x gap. See LLM_PROVIDERS above).
  *
  * USDC has 6 decimals and prices are quoted per 1,000,000 tokens, so the 1e6
- * factors cancel exactly — no separate decimals conversion needed. Treats 1
- * EUR = 1 USD = 1 USDC (documented simplification; only relevant for `ionos`,
- * whose price is EUR-quoted — `mistral`'s price is already USD, so USD≈USDC
- * needs no cross-currency approximation at all).
+ * factors cancel exactly — no separate decimals conversion needed. Prices are
+ * USD-quoted and treated as 1 USD = 1 USDC.
  */
 export function convertTokensToUsdcCost(
   usage: {

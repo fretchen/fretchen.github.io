@@ -23,7 +23,7 @@ describe("End-to-End Mock Tests", () => {
         "NFT_WALLET_PRIVATE_KEY",
         "SCW_ACCESS_KEY",
         "SCW_SECRET_KEY",
-        "IONOS_API_TOKEN",
+        "BFL_API_TOKEN",
       ];
 
       requiredEnvVars.forEach((envVar) => {
@@ -265,16 +265,16 @@ describe("End-to-End Mock Tests", () => {
       expect(s3Config.baseUrl).toMatch(/^https:\/\/.+\/$/);
     });
 
-    test("sollte IONOS API-Konfiguration validieren", () => {
-      const ionosConfig = {
-        endpoint: "https://openai.inference.de-txl.ionos.com/v1/images/generations",
-        model: "black-forest-labs/FLUX.1-schnell",
+    test("sollte BFL API-Konfiguration validieren", () => {
+      const bflConfig = {
+        endpoint: "https://api.bfl.ai/v1/flux-kontext-pro",
+        model: "flux-kontext-pro",
         imageSize: "1024x1024",
       };
 
-      expect(ionosConfig.endpoint).toMatch(/^https:\/\/.+/);
-      expect(ionosConfig.model).toBeTruthy();
-      expect(ionosConfig.imageSize).toMatch(/^\d+x\d+$/);
+      expect(bflConfig.endpoint).toMatch(/^https:\/\/.+/);
+      expect(bflConfig.model).toBeTruthy();
+      expect(bflConfig.imageSize).toMatch(/^\d+x\d+$/);
     });
   });
 });

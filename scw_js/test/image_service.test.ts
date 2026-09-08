@@ -31,7 +31,7 @@ describe("image_service.js Tests", () => {
     // Environment-Setup
     process.env.SCW_ACCESS_KEY = "test-access-key";
     process.env.SCW_SECRET_KEY = "test-secret-key";
-    process.env.IONOS_API_TOKEN = "test-ionos-token";
+    process.env.BFL_API_TOKEN = "test-bfl-token";
 
     // Reset aller Mocks
     vi.clearAllMocks();
@@ -43,7 +43,7 @@ describe("image_service.js Tests", () => {
   afterEach(() => {
     delete process.env.SCW_ACCESS_KEY;
     delete process.env.SCW_SECRET_KEY;
-    delete process.env.IONOS_API_TOKEN;
+    delete process.env.BFL_API_TOKEN;
   });
 
   describe("uploadToS3() Tests", () => {
@@ -138,96 +138,129 @@ describe("image_service.js Tests", () => {
   });
 
   describe("generateAndUploadImage() Tests", () => {
-    const mockImageResponse = {
-      ok: true,
-      status: 200,
-      json: () =>
-        Promise.resolve({
-          data: [
-            {
-              b64_json:
-                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==",
-            },
-          ],
-        }),
-    };
+    // BFL is a three-request flow, unlike a single-shot image API: submit returns a polling
+    // URL, the poll returns a delivery URL once status is "Ready", and the image itself is
+    // downloaded from there. Dispatching the mock on URL rather than chaining
+    // mockResolvedValueOnce keeps tests that call the function twice honest.
+    const BFL_ENDPOINT = "https://api.bfl.ai/v1/flux-kontext-pro";
+    const POLL_URL = "https://api.bfl.ai/v1/get_result?id=req-1";
+    const IMAGE_URL = "https://delivery.bfl.ai/req-1/sample.jpg";
+    const IMAGE_BYTES = Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46]);
+
+    function mockBfl({ pollStatus = "Ready", submit = { ok: true } } = {}) {
+      global.fetch.mockImplementation((url) => {
+        const u = String(url);
+        if (u === BFL_ENDPOINT) {
+          return Promise.resolve({
+            ...submit,
+            json: () => Promise.resolve({ id: "req-1", polling_url: POLL_URL }),
+          });
+        }
+        if (u === POLL_URL) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ status: pollStatus, result: { sample: IMAGE_URL } }),
+          });
+        }
+        if (u === IMAGE_URL) {
+          return Promise.resolve({
+            ok: true,
+            arrayBuffer: () => Promise.resolve(IMAGE_BYTES.buffer),
+          });
+        }
+        return Promise.reject(new Error(`unexpected fetch: ${u}`));
+      });
+    }
+
+    /** The submit call's parsed body — what BFL was actually asked to generate. */
+    function submitBody() {
+      const call = global.fetch.mock.calls.find((c) => String(c[0]) === BFL_ENDPOINT);
+      return JSON.parse(call[1].body);
+    }
 
     beforeEach(() => {
-      global.fetch.mockResolvedValue(mockImageResponse);
+      mockBfl();
       mockPutS3Object.mockResolvedValue(undefined);
     });
 
     test("sollte erfolgreich Bild generieren und hochladen", async () => {
-      const prompt = "beautiful landscape";
-      const tokenId = "123";
+      const result = await generateAndUploadImage("beautiful landscape", "123", "bfl");
 
-      const result = await generateAndUploadImage(prompt, tokenId, "ionos");
-
-      // Verify IONOS API call
       expect(global.fetch).toHaveBeenCalledWith(
-        "https://openai.inference.de-txl.ionos.com/v1/images/generations",
+        BFL_ENDPOINT,
         expect.objectContaining({
           method: "POST",
-          headers: {
-            Authorization: "Bearer test-ionos-token",
+          headers: expect.objectContaining({
+            // BFL authenticates with a non-standard x-key header, not Bearer.
+            "x-key": "test-bfl-token",
             "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "black-forest-labs/FLUX.1-schnell",
-            prompt,
-            size: "1024x1024",
           }),
         }),
       );
+      expect(submitBody()).toEqual({
+        prompt: "beautiful landscape",
+        aspect_ratio: "1:1",
+        output_format: "jpeg",
+      });
 
-      // Verify S3 uploads (image + metadata)
+      // Polled, then downloaded from the delivery URL the poll returned.
+      expect(global.fetch).toHaveBeenCalledWith(
+        POLL_URL,
+        expect.objectContaining({ method: "GET" }),
+      );
+      expect(global.fetch).toHaveBeenCalledWith(IMAGE_URL);
+
       expect(mockPutS3Object).toHaveBeenCalledTimes(2);
-
-      // Check result
       expect(result).toMatch(
         /^https:\/\/my-imagestore\.s3\.nl-ams\.scw\.cloud\/metadata\/metadata_123_[a-f0-9]{12}\.json$/,
       );
     });
 
     test("sollte Fehler werfen wenn kein Prompt bereitgestellt wird", async () => {
-      await expect(generateAndUploadImage("", "123", "ionos")).rejects.toThrow(
+      await expect(generateAndUploadImage("", "123", "bfl")).rejects.toThrow("No prompt provided.");
+      await expect(generateAndUploadImage(null, "123", "bfl")).rejects.toThrow(
         "No prompt provided.",
       );
-      await expect(generateAndUploadImage(null, "123", "ionos")).rejects.toThrow(
-        "No prompt provided.",
-      );
-      await expect(generateAndUploadImage(undefined, "123", "ionos")).rejects.toThrow(
+      await expect(generateAndUploadImage(undefined, "123", "bfl")).rejects.toThrow(
         "No prompt provided.",
       );
     });
 
-    test("sollte Fehler werfen wenn IONOS API Token fehlt", async () => {
-      delete process.env.IONOS_API_TOKEN;
+    test("sollte Fehler werfen wenn BFL API Token fehlt", async () => {
+      delete process.env.BFL_API_TOKEN;
 
-      await expect(generateAndUploadImage("test prompt", "123", "ionos")).rejects.toThrow(
-        "API token not found. Please configure the IONOS_API_TOKEN environment variable.",
+      await expect(generateAndUploadImage("test prompt", "123", "bfl")).rejects.toThrow(
+        "API token not found. Please configure the BFL_API_TOKEN environment variable.",
       );
     });
 
-    test("sollte Fehler bei IONOS API-Problemen behandeln", async () => {
-      global.fetch.mockResolvedValue({
-        ok: false,
-        status: 401,
-        statusText: "Unauthorized",
-      });
+    test("sollte Fehler bei BFL API-Problemen behandeln", async () => {
+      mockBfl({ submit: { ok: false, status: 401, statusText: "Unauthorized" } });
 
-      await expect(generateAndUploadImage("test prompt", "123", "ionos")).rejects.toThrow(
-        "Could not reach IONOS: 401 Unauthorized",
+      await expect(generateAndUploadImage("test prompt", "123", "bfl")).rejects.toThrow(
+        "Could not reach BFL: 401 Unauthorized",
       );
+    });
+
+    test("sollte sofort fehlschlagen wenn BFL die Generierung als Failed meldet", async () => {
+      // Regression guard: this used to be thrown inside the poll loop's own try, caught by its
+      // sibling catch, and retried for all 60 attempts — surfacing five minutes later as a
+      // *timeout* rather than the real reason. It must fail fast, on the first poll.
+      mockBfl({ pollStatus: "Failed" });
+
+      await expect(generateAndUploadImage("test prompt", "123", "bfl")).rejects.toThrow(
+        /BFL generation failed/,
+      );
+      // One submit + exactly one poll: no retry storm.
+      expect(global.fetch.mock.calls.filter((c) => String(c[0]) === POLL_URL)).toHaveLength(1);
     });
 
     test("sollte korrekte ERC-721 Metadaten erstellen", async () => {
       const prompt = "beautiful sunset";
       const tokenId = "456";
 
-      await generateAndUploadImage(prompt, tokenId, "ionos");
+      await generateAndUploadImage(prompt, tokenId, "bfl");
 
-      // Überprüfe, dass die Metadaten-Upload mit korrektem Format aufgerufen wurde
       const metadataCall = mockPutS3Object.mock.calls.find((call) =>
         call[0].startsWith("metadata/"),
       );
@@ -242,18 +275,9 @@ describe("image_service.js Tests", () => {
           /^https:\/\/my-imagestore\.s3\.nl-ams\.scw\.cloud\/images\/image_456_[a-f0-9]{12}\.jpg$/,
         ),
         attributes: [
-          {
-            trait_type: "Prompt",
-            value: prompt,
-          },
-          {
-            trait_type: "Model",
-            value: "black-forest-labs/FLUX.1-schnell",
-          },
-          {
-            trait_type: "Image Size",
-            value: "1024x1024",
-          },
+          { trait_type: "Prompt", value: prompt },
+          { trait_type: "Model", value: "flux-kontext-pro" },
+          { trait_type: "Image Size", value: "1024x1024" },
           {
             trait_type: "Creation Date",
             value: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/),
@@ -263,14 +287,9 @@ describe("image_service.js Tests", () => {
     });
 
     test("sollte einzigartige Dateinamen generieren", async () => {
-      const prompt = "test prompt";
-      const tokenId = "789";
+      await generateAndUploadImage("test prompt", "789", "bfl");
+      await generateAndUploadImage("test prompt", "789", "bfl");
 
-      // Führe die Funktion zweimal aus
-      await generateAndUploadImage(prompt, tokenId, "ionos");
-      await generateAndUploadImage(prompt, tokenId, "ionos");
-
-      // Überprüfe, dass verschiedene Dateinamen verwendet wurden
       const imageCalls = mockPutS3Object.mock.calls.filter((call) => call[0].startsWith("images/"));
       const metadataCalls = mockPutS3Object.mock.calls.filter((call) =>
         call[0].startsWith("metadata/"),
@@ -278,35 +297,28 @@ describe("image_service.js Tests", () => {
 
       expect(imageCalls).toHaveLength(2);
       expect(metadataCalls).toHaveLength(2);
-
-      // Dateinamen sollten unterschiedlich sein (wegen zufälligem String)
       expect(imageCalls[0][0]).not.toBe(imageCalls[1][0]);
       expect(metadataCalls[0][0]).not.toBe(metadataCalls[1][0]);
     });
 
     test("sollte Base64-zu-Buffer-Konvertierung korrekt handhaben", async () => {
-      const prompt = "test prompt";
-      const tokenId = "999";
+      await generateAndUploadImage("test prompt", "999", "bfl");
 
-      await generateAndUploadImage(prompt, tokenId, "ionos");
-
-      // Finde den Bild-Upload-Aufruf
       const imageCall = mockPutS3Object.mock.calls.find(
         (call) => call[0].startsWith("images/") && call[2].contentType === "image/jpeg",
       );
 
       expect(imageCall).toBeDefined();
       expect(Buffer.isBuffer(imageCall[1])).toBe(true);
+      // Round-trips the downloaded bytes rather than just being non-empty.
+      expect(Uint8Array.from(imageCall[1])).toEqual(IMAGE_BYTES);
     });
 
     test("sollte mit default tokenId umgehen", async () => {
-      const prompt = "test without tokenId";
-
-      const result = await generateAndUploadImage(prompt, "unknown", "ionos");
+      const result = await generateAndUploadImage("test without tokenId", "unknown", "bfl");
 
       expect(result).toMatch(/metadata_unknown_[a-f0-9]{12}\.json$/);
 
-      // Überprüfe Metadaten
       const metadataCall = mockPutS3Object.mock.calls.find((call) =>
         call[0].startsWith("metadata/"),
       );
@@ -317,147 +329,81 @@ describe("image_service.js Tests", () => {
     test("sollte Netzwerk-Timeouts handhaben", async () => {
       global.fetch.mockRejectedValue(new Error("Network timeout"));
 
-      await expect(generateAndUploadImage("test prompt", "123", "ionos")).rejects.toThrow(
+      await expect(generateAndUploadImage("test prompt", "123", "bfl")).rejects.toThrow(
         "Network timeout",
       );
     });
 
-    test("sollte custom size Parameter verwenden", async () => {
-      const prompt = "beautiful landscape";
-      const tokenId = "123";
-      const size = "1792x1024";
+    test("sollte size auf das BFL aspect_ratio abbilden", async () => {
+      // BFL takes an aspect ratio, not pixel dimensions — this mapping is where a size change
+      // would silently produce the wrong shape.
+      await generateAndUploadImage("beautiful landscape", "123", "bfl", "1792x1024");
+      expect(submitBody().aspect_ratio).toBe("16:9");
 
-      const result = await generateAndUploadImage(prompt, tokenId, "ionos", size);
-
-      // Verify IONOS API call with custom size
-      expect(global.fetch).toHaveBeenCalledWith(
-        "https://openai.inference.de-txl.ionos.com/v1/images/generations",
-        expect.objectContaining({
-          method: "POST",
-          headers: {
-            Authorization: "Bearer test-ionos-token",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "black-forest-labs/FLUX.1-schnell",
-            prompt,
-            size: "1792x1024",
-          }),
-        }),
-      );
-
-      expect(result).toMatch(
-        /^https:\/\/my-imagestore\.s3\.nl-ams\.scw\.cloud\/metadata\/metadata_123_[a-f0-9]{12}\.json$/,
-      );
+      vi.clearAllMocks();
+      mockBfl();
+      await generateAndUploadImage("beautiful landscape", "123", "bfl", "1024x1024");
+      expect(submitBody().aspect_ratio).toBe("1:1");
     });
 
     test("sollte standard size verwenden wenn keine size angegeben", async () => {
-      const prompt = "beautiful landscape";
-      const tokenId = "123";
-
-      await generateAndUploadImage(prompt, tokenId, "ionos");
-
-      // Verify IONOS API call with default size
-      expect(global.fetch).toHaveBeenCalledWith(
-        "https://openai.inference.de-txl.ionos.com/v1/images/generations",
-        expect.objectContaining({
-          body: JSON.stringify({
-            model: "black-forest-labs/FLUX.1-schnell",
-            prompt,
-            size: "1024x1024",
-          }),
-        }),
-      );
+      await generateAndUploadImage("beautiful landscape", "123", "bfl");
+      expect(submitBody().aspect_ratio).toBe("1:1");
     });
 
     test("sollte Fehler werfen bei ungültiger size", async () => {
-      const prompt = "beautiful landscape";
-      const tokenId = "123";
-      const invalidSize = "invalid_size";
-
-      await expect(generateAndUploadImage(prompt, tokenId, "ionos", invalidSize)).rejects.toThrow(
-        "Invalid size parameter. Must be one of: 1024x1024, 1792x1024",
-      );
+      await expect(
+        generateAndUploadImage("beautiful landscape", "123", "bfl", "invalid_size"),
+      ).rejects.toThrow("Invalid size parameter. Must be one of: 1024x1024, 1792x1024");
     });
 
-    test("sollte beide gültige sizes akzeptieren", async () => {
-      const prompt = "test prompt";
-      const tokenId = "123";
+    test("sollte im edit-Modus das Referenzbild mitschicken", async () => {
+      // The mode/referenceImage vendor extension — previously untested anywhere, and the reason
+      // a second provider cannot be advertised without honouring it.
+      const referenceImage = "dGVzdC1yZWZlcmVuY2UtaW1hZ2U=";
 
-      // Test 1024x1024
-      await generateAndUploadImage(prompt, tokenId, "ionos", "1024x1024");
-      expect(global.fetch).toHaveBeenLastCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          body: JSON.stringify({
-            model: "black-forest-labs/FLUX.1-schnell",
-            prompt,
-            size: "1024x1024",
-          }),
-        }),
+      await generateAndUploadImage(
+        "make it sunset",
+        "123",
+        "bfl",
+        "1024x1024",
+        "edit",
+        referenceImage,
       );
 
-      // Test 1792x1024
-      await generateAndUploadImage(prompt, tokenId, "ionos", "1792x1024");
-      expect(global.fetch).toHaveBeenLastCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          body: JSON.stringify({
-            model: "black-forest-labs/FLUX.1-schnell",
-            prompt,
-            size: "1792x1024",
-          }),
-        }),
-      );
+      expect(submitBody().input_image).toBe(referenceImage);
+    });
+
+    test("sollte im generate-Modus kein Referenzbild mitschicken", async () => {
+      await generateAndUploadImage("a cat", "123", "bfl", "1024x1024", "generate", null);
+
+      expect(submitBody()).not.toHaveProperty("input_image");
     });
 
     test("sollte size Parameter in Metadaten-Attributen einschließen", async () => {
-      // Test mit 1024x1024 size
-      await generateAndUploadImage("test prompt", "123", "ionos", "1024x1024");
+      await generateAndUploadImage("test prompt", "123", "bfl", "1024x1024");
 
-      // Überprüfe den Metadaten-Upload Call
       const metadataCall = mockPutS3Object.mock.calls.find((call) =>
         call[0].startsWith("metadata/"),
       );
-
       expect(metadataCall).toBeDefined();
-      const metadataJson = JSON.parse(metadataCall[1]);
-
-      // Überprüfe dass size Attribut vorhanden ist
-      const sizeAttribute = metadataJson.attributes.find(
+      const sizeAttribute = JSON.parse(metadataCall[1]).attributes.find(
         (attr) => attr.trait_type === "Image Size",
       );
-
-      expect(sizeAttribute).toBeDefined();
       expect(sizeAttribute.value).toBe("1024x1024");
 
-      // Test mit 1792x1024 size
       vi.clearAllMocks();
       mockPutS3Object.mockResolvedValue(undefined);
-      global.fetch.mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            data: [
-              {
-                b64_json:
-                  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==",
-              },
-            ],
-          }),
-      });
+      mockBfl();
 
-      await generateAndUploadImage("test prompt", "456", "ionos", "1792x1024");
+      await generateAndUploadImage("test prompt", "456", "bfl", "1792x1024");
 
       const metadataCall2 = mockPutS3Object.mock.calls.find((call) =>
         call[0].startsWith("metadata/"),
       );
-
-      const metadataJson2 = JSON.parse(metadataCall2[1]);
-      const sizeAttribute2 = metadataJson2.attributes.find(
+      const sizeAttribute2 = JSON.parse(metadataCall2[1]).attributes.find(
         (attr) => attr.trait_type === "Image Size",
       );
-
       expect(sizeAttribute2.value).toBe("1792x1024");
     });
   });

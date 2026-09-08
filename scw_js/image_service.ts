@@ -12,7 +12,12 @@ if (process.env.NODE_ENV === "test" && !process.env.CI) {
 import { putS3Object, getS3BaseUrl } from "@fretchen/s3-utils";
 import { randomBytes } from "crypto";
 
-export type Provider = "ionos" | "bfl";
+/**
+ * One entry today. Kept as a seam rather than inlined because `genimg_schemas.ts`'s
+ * `MODEL_TO_PROVIDER` maps advertised model ids onto it — adding a provider means adding an
+ * entry here and a mapping there, not restructuring both.
+ */
+export type Provider = "bfl";
 
 interface ProviderConfig {
   endpoint: string;
@@ -21,11 +26,6 @@ interface ProviderConfig {
 }
 
 const PROVIDER_CONFIGS: Record<Provider, ProviderConfig> = {
-  ionos: {
-    endpoint: "https://openai.inference.de-txl.ionos.com/v1/images/generations",
-    model: "black-forest-labs/FLUX.1-schnell",
-    tokenEnvVar: "IONOS_API_TOKEN",
-  },
   bfl: {
     endpoint: "https://api.bfl.ai/v1/flux-kontext-pro",
     model: "flux-kontext-pro",
@@ -70,33 +70,6 @@ export async function uploadToS3(
     console.error(`Error uploading file: ${error}`);
     throw error;
   }
-}
-
-async function generateImageIONOS(prompt: string, size: string): Promise<string> {
-  const config = PROVIDER_CONFIGS.ionos;
-  const apiToken = process.env[config.tokenEnvVar];
-
-  if (!apiToken) {
-    throw new Error(
-      `API token not found. Please configure the ${config.tokenEnvVar} environment variable.`,
-    );
-  }
-
-  const body = { model: config.model, prompt, size };
-
-  console.log("Sending IONOS image generation request...");
-  const response = await fetch(config.endpoint, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiToken}`, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Could not reach IONOS: ${response.status} ${response.statusText}`);
-  }
-
-  const responseData = (await response.json()) as { data: Array<{ b64_json: string }> };
-  return responseData.data[0]!.b64_json;
 }
 
 async function generateImageBFL(
@@ -157,6 +130,7 @@ async function generateImageBFL(
       await new Promise((resolve) => setTimeout(resolve, pollInterval));
     }
 
+    let pollData: { status: string; result?: { sample: string } };
     try {
       const pollResponse = await fetch(polling_url, {
         method: "GET",
@@ -168,28 +142,34 @@ async function generateImageBFL(
         continue;
       }
 
-      const pollData = (await pollResponse.json()) as {
-        status: string;
-        result?: { sample: string };
-      };
-      console.log(`Poll status: ${pollData.status}`);
-
-      if (pollData.status === "Ready") {
-        const imageUrl = pollData.result!.sample;
-        console.log("Downloading image from:", imageUrl);
-        const imageResponse = await fetch(imageUrl);
-
-        if (!imageResponse.ok) {
-          throw new Error(`Failed to download image: ${imageResponse.status}`);
-        }
-
-        const imageBuffer = await imageResponse.arrayBuffer();
-        return Buffer.from(imageBuffer).toString("base64");
-      } else if (pollData.status === "Error" || pollData.status === "Failed") {
-        throw new Error(`BFL generation failed: ${JSON.stringify(pollData)}`);
-      }
+      pollData = (await pollResponse.json()) as { status: string; result?: { sample: string } };
     } catch (error) {
+      // Only transport-level failures are retried. A transient network blip on one poll is
+      // worth another attempt; a generation the API has already declared failed is not.
       console.warn(`Polling error (attempt ${attempt + 1}):`, (error as Error).message);
+      continue;
+    }
+
+    console.log(`Poll status: ${pollData.status}`);
+
+    // Deliberately outside the try above. These used to be thrown inside it and caught by its
+    // own catch, so a generation BFL had reported as Failed was swallowed and retried for the
+    // full 60 attempts — five minutes — before surfacing as a *timeout*, hiding the real reason.
+    if (pollData.status === "Error" || pollData.status === "Failed") {
+      throw new Error(`BFL generation failed: ${JSON.stringify(pollData)}`);
+    }
+
+    if (pollData.status === "Ready") {
+      const imageUrl = pollData.result!.sample;
+      console.log("Downloading image from:", imageUrl);
+      const imageResponse = await fetch(imageUrl);
+
+      if (!imageResponse.ok) {
+        throw new Error(`Failed to download image: ${imageResponse.status}`);
+      }
+
+      const imageBuffer = await imageResponse.arrayBuffer();
+      return Buffer.from(imageBuffer).toString("base64");
     }
   }
 
@@ -206,8 +186,6 @@ async function generateImageFromProvider(
   referenceImageBase64: string | null = null,
 ): Promise<string> {
   switch (provider) {
-    case "ionos":
-      return generateImageIONOS(prompt, size);
     case "bfl":
       return generateImageBFL(prompt, size, mode, referenceImageBase64);
   }

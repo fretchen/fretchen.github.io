@@ -255,6 +255,56 @@ describe("image_service.js Tests", () => {
       expect(global.fetch.mock.calls.filter((c) => String(c[0]) === POLL_URL)).toHaveLength(1);
     });
 
+    test("sollte einen einzelnen Bild-Download-Fehler überstehen und beim nächsten Poll erneut versuchen", async () => {
+      // Regression guard, the counterpart to the test above: fixing the Error/Failed swallow-bug
+      // moved that check outside the poll's try/catch, but the image-download step sits in the
+      // same "Ready" branch — moving it out too (as an earlier version of this fix did) would
+      // have removed retry tolerance for a transient failure fetching BFL's delivery CDN, which
+      // used to self-heal on the next 5s poll cycle rather than aborting the whole request.
+      let imageFetchAttempts = 0;
+      global.fetch.mockImplementation((url) => {
+        const u = String(url);
+        if (u === BFL_ENDPOINT) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ id: "req-1", polling_url: POLL_URL }),
+          });
+        }
+        if (u === POLL_URL) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ status: "Ready", result: { sample: IMAGE_URL } }),
+          });
+        }
+        if (u === IMAGE_URL) {
+          imageFetchAttempts += 1;
+          if (imageFetchAttempts === 1) {
+            return Promise.resolve({ ok: false, status: 503 });
+          }
+          return Promise.resolve({
+            ok: true,
+            arrayBuffer: () => Promise.resolve(IMAGE_BYTES.buffer),
+          });
+        }
+        return Promise.reject(new Error(`unexpected fetch: ${u}`));
+      });
+
+      vi.useFakeTimers();
+      try {
+        const pending = generateAndUploadImage("test prompt", "123", "bfl");
+        // Drains the 5s wait before the next poll attempt, which is where the retry happens.
+        await vi.advanceTimersByTimeAsync(5000);
+        const result = await pending;
+
+        expect(result).toMatch(/metadata_123/);
+      } finally {
+        vi.useRealTimers();
+      }
+
+      // First download attempt failed, second succeeded — not zero, and not more than needed.
+      expect(imageFetchAttempts).toBe(2);
+    });
+
     test("sollte korrekte ERC-721 Metadaten erstellen", async () => {
       const prompt = "beautiful sunset";
       const tokenId = "456";

@@ -3,6 +3,8 @@
  */
 
 import { describe, test, expect, beforeAll, afterAll } from "vitest";
+import { ImageGenerationResponseSchema } from "../genimg_schemas.js";
+import { errorResponse, openAiError } from "../utils.js";
 
 describe("End-to-End Mock Tests", () => {
   let originalEnv;
@@ -206,35 +208,68 @@ describe("End-to-End Mock Tests", () => {
   });
 
   describe("API Response Format Tests", () => {
-    test("sollte korrekte Success-Response-Struktur validieren", () => {
+    // STALE FIXTURE, FIXED: this used to hand-build an object literal and assert properties on
+    // the literal it had just built — a tautology that called no real code and quietly kept
+    // documenting a response shape (metadata_url/image_url/transaction_hash at the top level)
+    // that stopped being real once the images/v1 envelope shipped. Validating against the actual
+    // Zod schema makes this a real regression test again: it now fails if the response contract
+    // changes without this test being updated, rather than never failing at all.
+    test("sollte die images/v1 Success-Response-Struktur validieren", () => {
       const successResponse = {
-        metadata_url: "https://example.com/metadata.json",
-        image_url: "https://example.com/image.png",
-        mintPrice: "1000000000000000000",
-        message: "Bild erfolgreich generiert und Token aktualisiert",
-        transaction_hash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        created: Math.floor(Date.now() / 1000),
+        data: [{ url: "https://example.com/image.png", revised_prompt: null }],
+        model: "flux-kontext-pro",
+        x_nft: {
+          status: "minted",
+          token_id: 42,
+          contract: "0x80f95d330417a4acEfEA415FE9eE28db7A0A1Cdb",
+          network: "eip155:10",
+          metadata_url: "https://example.com/metadata.json",
+          mint_tx: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+          transfer_tx: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+          listed: false,
+          mint_price: "1000000000000000000",
+          owner: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+        },
       };
 
-      expect(successResponse).toHaveProperty("metadata_url");
-      expect(successResponse).toHaveProperty("image_url");
-      expect(successResponse).toHaveProperty("mintPrice");
-      expect(successResponse).toHaveProperty("message");
-      expect(successResponse).toHaveProperty("transaction_hash");
+      const parsed = ImageGenerationResponseSchema.safeParse(successResponse);
+      expect(parsed.success).toBe(true);
 
-      expect(successResponse.metadata_url).toMatch(/^https?:\/\/.+/);
-      expect(successResponse.image_url).toMatch(/^https?:\/\/.+/);
-      expect(successResponse.transaction_hash).toMatch(/^0x[a-fA-F0-9]+/); // Erlaubt nur gültige Hexadezimalzeichen
+      expect(successResponse.data[0].url).toMatch(/^https?:\/\/.+/);
+      expect(successResponse.x_nft.metadata_url).toMatch(/^https?:\/\/.+/);
+      expect(successResponse.x_nft.mint_tx).toMatch(/^0x[a-fA-F0-9]+/);
     });
 
-    test("sollte korrekte Error-Response-Struktur validieren", () => {
-      const errorResponse = {
-        error: "Detailed error message",
-        mintPrice: "1000000000000000000",
+    test("sollte eine mint_failed Response weiterhin als gültig akzeptieren", () => {
+      // The one shape the old fixture never covered at all: a 200 whose mint failed. No
+      // token_id, no tx hashes — still a valid response, and the schema must say so.
+      const mintFailedResponse = {
+        created: Math.floor(Date.now() / 1000),
+        data: [{ url: "https://example.com/image.png", revised_prompt: null }],
+        model: "flux-kontext-pro",
+        x_nft: { status: "mint_failed", reason: "Could not find mint event in transaction" },
       };
 
-      expect(errorResponse).toHaveProperty("error");
-      expect(typeof errorResponse.error).toBe("string");
-      expect(errorResponse.error.length).toBeGreaterThan(0);
+      expect(ImageGenerationResponseSchema.safeParse(mintFailedResponse).success).toBe(true);
+    });
+
+    test("sollte die echten Error-Response-Formen erzeugen", () => {
+      // Same fix as above, applied to the error side: call the real helpers instead of
+      // asserting properties on a hand-built object that happened to have them.
+      const plain = JSON.parse(errorResponse(500, "Detailed error message").body);
+      expect(plain).toEqual({ error: "Detailed error message" });
+
+      const openAi = JSON.parse(
+        openAiError(400, "No prompt provided", "invalid_request_error", "invalid_value", "prompt")
+          .body,
+      );
+      expect(openAi.error).toEqual({
+        message: "No prompt provided",
+        type: "invalid_request_error",
+        code: "invalid_value",
+        param: "prompt",
+      });
     });
   });
 

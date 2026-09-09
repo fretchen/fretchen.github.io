@@ -162,14 +162,25 @@ async function generateImageBFL(
     if (pollData.status === "Ready") {
       const imageUrl = pollData.result!.sample;
       console.log("Downloading image from:", imageUrl);
-      const imageResponse = await fetch(imageUrl);
 
-      if (!imageResponse.ok) {
-        throw new Error(`Failed to download image: ${imageResponse.status}`);
+      // Its own try/catch, separate from the Error/Failed check above: a transient failure
+      // fetching the delivery CDN (a fresh URL that has not necessarily propagated yet) is
+      // exactly the kind of thing worth another poll cycle for, unlike a status BFL has already
+      // declared failed. Moving this whole block outside the transport try alongside the status
+      // check (an earlier fix here, aimed only at the status check) would have removed this
+      // tolerance too — a single 503 downloading the image would abort the request immediately
+      // instead of self-healing on the next attempt, as it always did before that fix.
+      try {
+        const imageResponse = await fetch(imageUrl);
+        if (!imageResponse.ok) {
+          throw new Error(`Failed to download image: ${imageResponse.status}`);
+        }
+        const imageBuffer = await imageResponse.arrayBuffer();
+        return Buffer.from(imageBuffer).toString("base64");
+      } catch (error) {
+        console.warn(`Image download error (attempt ${attempt + 1}):`, (error as Error).message);
+        continue;
       }
-
-      const imageBuffer = await imageResponse.arrayBuffer();
-      return Buffer.from(imageBuffer).toString("base64");
     }
   }
 

@@ -5,7 +5,7 @@ import { GENAI_NFT_NETWORKS, fromCAIP2, getViemChain } from "@fretchen/chain-uti
 import { ImageGeneratorProps } from "../types/components";
 import * as styles from "../layouts/shared";
 import { nftCard } from "./nft/styles";
-import { imageGen, successMessage } from "./ImageGenerator.styles";
+import { imageGen, successMessage, mintFailedMessage } from "./ImageGenerator.styles";
 import InfoIcon from "./InfoIcon";
 import { LocaleText } from "./LocaleText";
 import { useLocale } from "../hooks/useLocale";
@@ -136,6 +136,9 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   // Local state
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string>();
   const [tokenId, setTokenId] = useState<bigint>();
+  // Set when the image was generated but the on-chain mint did not complete. Nothing was
+  // settled in that case, so the notice can tell the user they were not charged.
+  const [mintFailedReason, setMintFailedReason] = useState<string>();
 
   // Preview area state
   const [currentPreviewImage, setCurrentPreviewImage] = useState<string>();
@@ -213,6 +216,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   const mintingInfoText = useLocale({ label: "imagegen.mintingInfo" });
   const artworkCreatedText = useLocale({ label: "imagegen.artworkCreated" });
   const checkGalleryText = useLocale({ label: "imagegen.checkGallery" });
+  const mintFailedText = useLocale({ label: "imagegen.mintFailed" });
 
   const getButtonState = (): string => {
     if (isLoading || x402Status === "awaiting-signature" || x402Status === "processing") return "loading";
@@ -290,11 +294,13 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
         isListed,
       });
 
-      // Update state with results
-      const newTokenId = BigInt(result.tokenId);
-      const imageUrl = result.image_url;
+      // Update state with results. `tokenId` is absent when the mint failed — the image is
+      // still real and still the user's, so it is shown either way.
+      const newTokenId = result.tokenId;
+      const imageUrl = result.imageUrl;
 
       setTokenId(newTokenId);
+      setMintFailedReason(result.mintFailedReason);
       setGeneratedImageUrl(imageUrl);
       setCurrentPreviewImage(imageUrl);
       setPreviewState("generated");
@@ -315,25 +321,30 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
         console.warn("Failed to convert generated image to base64:", fetchError);
       }
 
-      // Create metadata object
-      const metadata = {
-        name: `AI Generated Artwork #${newTokenId}`,
-        description: `AI generated artwork based on the prompt: "${prompt}"`,
-        image: imageUrl,
-        external_url: result.metadata_url || "",
-        attributes: [
-          { trait_type: "Prompt", value: prompt },
-          { trait_type: "Generation Method", value: "AI Generated" },
-          { trait_type: "Payment Method", value: "x402 USDC" },
-        ],
-      };
+      // onSuccess highlights the new NFT in the gallery, so it only runs when there *is* one.
+      // On a mint failure there is no token to highlight and no id to name it by — calling it
+      // with a placeholder would put a phantom entry in the gallery.
+      if (newTokenId !== undefined) {
+        const metadata = {
+          name: `AI Generated Artwork #${newTokenId}`,
+          description: `AI generated artwork based on the prompt: "${prompt}"`,
+          image: imageUrl,
+          external_url: result.metadataUrl || "",
+          attributes: [
+            { trait_type: "Prompt", value: prompt },
+            { trait_type: "Generation Method", value: "AI Generated" },
+            { trait_type: "Payment Method", value: "x402 USDC" },
+          ],
+        };
 
-      // Call success callback with network info
-      onSuccess?.(newTokenId, imageUrl, metadata, network);
+        onSuccess?.(newTokenId, imageUrl, metadata, network);
+      }
 
-      // Track success with analytics
+      // Track success with analytics. mintStatus rather than a bare tokenId, so a mint failure
+      // is visible in the data instead of showing up as `tokenId: undefined`.
       trackEvent("x402-image-generated", {
-        tokenId: result.tokenId,
+        tokenId: newTokenId !== undefined ? Number(newTokenId) : undefined,
+        mintStatus: result.mintFailedReason ? "mint_failed" : "minted",
         mode,
         hasTxReceipt: !!paymentReceipt,
       });
@@ -344,6 +355,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
         setSize("1024x1024");
         setGeneratedImageUrl(undefined);
         setTokenId(undefined);
+        setMintFailedReason(undefined);
         setError(null);
         resetX402();
       }, 3000);
@@ -913,6 +925,15 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
 
             {/* Error display - show x402 error or local error */}
             {(error || x402Error) && <div className={imageGen.compactError}>{error || x402Error}</div>}
+
+            {/* Image generated, mint didn't. Its own block rather than a variant of the success
+                one: neither of that block's two conditions holds here (no tokenId, and no
+                paymentReceipt because nothing was settled), so it renders nothing at all. */}
+            {mintFailedReason && generatedImageUrl && (
+              <div className={mintFailedMessage}>
+                <p className={css({ margin: 0, fontSize: "sm" })}>{mintFailedText}</p>
+              </div>
+            )}
 
             {/* One success block, not two: the mint and the payment that bought it are a
                 single outcome, so a stacked "artwork created" panel plus a "payment

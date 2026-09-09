@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "tsup",
+    "generate:openapi:genimg": "tsx scripts/generate-openapi-genimg.ts && prettier --write --log-level warn openapi.genimg.json",
+    "build": "npm run generate:openapi:genimg && tsup",
     "deploy": "npm run build && npx osls deploy",
     "test": "NODE_ENV=test vitest run",
     "test:watch": "NODE_ENV=test vitest",
@@ -49,6 +50,7 @@
     "dotenv": "^17.4.2",
     "pino": "^10.3.1",
     "tsx": "^4.23.12",
-    "viem": "^2.54.2"
+    "viem": "^2.54.2",
+    "zod": "^4.5.4"
   }
 }

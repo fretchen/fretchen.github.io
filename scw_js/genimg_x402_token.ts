@@ -7,7 +7,14 @@ import {
   loadPrivateKey,
   getRpcUrl,
 } from "@fretchen/chain-utils";
-import { parseJsonBody } from "./utils.js";
+import { parseJsonBody, CORS_HEADERS, errorResponse, openAiError } from "./utils.js";
+import {
+  ImageGenerationRequestSchema,
+  ADVERTISED_MODELS,
+  MODEL_TO_PROVIDER,
+  type ImageGenerationResponse,
+} from "./genimg_schemas.js";
+import type { z } from "zod";
 import {
   getContract,
   createWalletClient,
@@ -17,7 +24,7 @@ import {
   type PublicClient,
   type Chain,
 } from "viem";
-import { generateAndUploadImage, JSON_BASE_PATH } from "./image_service.js";
+import { generateAndUploadImage, JSON_BASE_PATH, type Provider } from "./image_service.js";
 import { privateKeyToAccount } from "viem/accounts";
 import {
   createResourceServer,
@@ -40,6 +47,61 @@ const GAS_BUFFER = parseEther("0.00001");
 
 // keccak256("Transfer(address,address,uint256)") — used to extract tokenId from mint tx logs
 const TRANSFER_EVENT_HASH = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+
+/**
+ * 402 bodies carry x402-specific diagnostic fields (reason, expected/received, payer) that
+ * `errorResponse` (plain `{error: string}`) can't express — x402 clients read them, so the
+ * shape stays as-is rather than folding into the OpenAI error contract. See utils.ts's
+ * errorResponse/openAiError for the two shapes this endpoint otherwise uses.
+ */
+/**
+ * Turns the first Zod issue into an OpenAI-shaped 400.
+ *
+ * `param` has to come from two different places: a rejected unknown field surfaces as
+ * `{ code: "unrecognized_keys", keys: ["quality"], path: [] }` — note the EMPTY path, so the
+ * field name is only in `keys` — while an ordinary field issue carries it in `path`.
+ */
+function zodErrorToResponse(error: z.ZodError) {
+  const issue = error.issues[0]!;
+  if (issue.code === "unrecognized_keys") {
+    const key = issue.keys[0];
+    return openAiError(
+      400,
+      `Unrecognized request argument supplied: ${issue.keys.join(", ")}`,
+      "invalid_request_error",
+      "unknown_parameter",
+      key,
+    );
+  }
+  const param = issue.path.length > 0 ? issue.path.join(".") : undefined;
+  return openAiError(400, issue.message, "invalid_request_error", "invalid_value", param);
+}
+
+/**
+ * The OpenAI-style success envelope. Everything chain-related lives under `x_nft`, so a caller
+ * that only wants an image reads `data[0].url` and never learns an NFT exists — that separation
+ * is what makes the published `images/v1` contract implementable by someone with no chain at all.
+ */
+function buildSuccessBody(args: {
+  imageUrl: string;
+  model: string;
+  nft: ImageGenerationResponse["x_nft"];
+}): ImageGenerationResponse {
+  return {
+    created: Math.floor(Date.now() / 1000),
+    data: [{ url: args.imageUrl, revised_prompt: null }],
+    model: args.model,
+    x_nft: args.nft,
+  };
+}
+
+function paymentError(reason: string | undefined, extra: Record<string, unknown> = {}) {
+  return {
+    statusCode: 402,
+    headers: CORS_HEADERS,
+    body: JSON.stringify({ error: "Payment verification failed", reason, ...extra }),
+  };
+}
 
 interface PreFlightSuccess {
   success: true;
@@ -189,84 +251,60 @@ async function mintNFTToClient(
   return { tokenId, mintTxHash, transferTxHash };
 }
 
-interface GenerateResult {
-  metadata_url: string;
-  image_url: string;
-  tokenId: number;
-  mintTxHash: `0x${string}`;
-  transferTxHash: `0x${string}`;
+interface GeneratedImage {
+  metadataUrl: string;
+  imageUrl: string;
 }
 
-async function generateImageAndMintNFT(
+/**
+ * Generation only — deliberately separate from `mintNFTToClient` so the handler owns the
+ * boundary between them. That boundary is the whole point: a failure here means the caller got
+ * nothing and must not be charged (500), while a failure in the mint means they hold a usable
+ * image and get a 200 with `x_nft.status: "mint_failed"`.
+ */
+async function generateImage(
   prompt: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  contract: any,
-  publicClient: PublicClient,
-  clientAddress: string,
-  contractAddress: string,
-  serverWallet: string,
   size = "1024x1024",
   mode = "generate",
   referenceImageBase64: string | null = null,
   useMockImage = false,
-  mintPrice = BigInt(0),
-  isListed = false,
-): Promise<GenerateResult> {
+  provider: Provider = "bfl",
+): Promise<GeneratedImage> {
   console.log(`🎨 Generating image: mode=${mode}, size=${size}, prompt="${prompt}"`);
 
   const tempTokenId = Date.now();
-  let metadataUrl: string;
-  let imageUrl: string;
 
   if (useMockImage) {
     console.log("🎭 Using mock image (test mode)");
-    imageUrl = "https://via.placeholder.com/1024x1024.png?text=Test+Image";
-    metadataUrl = `https://example.com/metadata/test_${tempTokenId}.json`;
-  } else {
-    metadataUrl = await generateAndUploadImage(
-      prompt,
-      tempTokenId,
-      "bfl",
-      size,
-      mode,
-      referenceImageBase64,
-    );
-
-    const baseDomain = new URL(JSON_BASE_PATH);
-    const url = new URL(metadataUrl);
-    if (url.hostname !== baseDomain.hostname) {
-      throw new Error(`Untrusted metadata URL: ${metadataUrl}`);
-    }
-
-    const metadataResponse = await fetch(metadataUrl);
-    if (!metadataResponse.ok) {
-      throw new Error(`Failed to load metadata: ${metadataResponse.status}`);
-    }
-
-    const metadata = (await metadataResponse.json()) as { image: string };
-    imageUrl = metadata.image;
+    const imageUrl = "https://via.placeholder.com/1024x1024.png?text=Test+Image";
+    const metadataUrl = `https://example.com/metadata/test_${tempTokenId}.json`;
+    console.log(`✅ Image mocked: ${imageUrl}`);
+    return { metadataUrl, imageUrl };
   }
 
-  console.log(`✅ Image ${useMockImage ? "mocked" : "generated"}: ${imageUrl}`);
-
-  const mintResult = await mintNFTToClient(
-    contract,
-    publicClient,
-    clientAddress,
-    metadataUrl,
-    contractAddress,
-    serverWallet,
-    mintPrice,
-    isListed,
+  const metadataUrl = await generateAndUploadImage(
+    prompt,
+    tempTokenId,
+    provider,
+    size,
+    mode,
+    referenceImageBase64,
   );
 
-  return {
-    metadata_url: metadataUrl,
-    image_url: imageUrl,
-    tokenId: mintResult.tokenId,
-    mintTxHash: mintResult.mintTxHash,
-    transferTxHash: mintResult.transferTxHash,
-  };
+  const baseDomain = new URL(JSON_BASE_PATH);
+  const url = new URL(metadataUrl);
+  if (url.hostname !== baseDomain.hostname) {
+    throw new Error(`Untrusted metadata URL: ${metadataUrl}`);
+  }
+
+  const metadataResponse = await fetch(metadataUrl);
+  if (!metadataResponse.ok) {
+    throw new Error(`Failed to load metadata: ${metadataResponse.status}`);
+  }
+
+  const metadata = (await metadataResponse.json()) as { image: string };
+  console.log(`✅ Image generated: ${metadata.image}`);
+  return { metadataUrl, imageUrl: metadata.image };
 }
 
 async function handle(
@@ -280,29 +318,13 @@ async function handle(
   isBase64Encoded?: boolean;
 }> {
   if (event.httpMethod === "OPTIONS") {
-    return {
-      statusCode: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        // Must cover every header @x402/fetch sets on the paid retry request, or the
-        // browser preflight fails with "... is not allowed by Access-Control-Allow-Headers".
-        // - PAYMENT-SIGNATURE: x402 v2 payment header (we negotiate x402Version: 2)
-        // - X-PAYMENT: x402 v1 payment header (fallback)
-        // - Access-Control-Expose-Headers: set on the request by @x402/fetch (spec-odd but real)
-        // Keep this in sync with @x402/fetch; the OPTIONS test enforces it.
-        "Access-Control-Allow-Headers":
-          "Content-Type, PAYMENT-SIGNATURE, X-PAYMENT, Access-Control-Expose-Headers",
-        "Access-Control-Allow-Methods": "GET, HEAD, POST, OPTIONS",
-        "Content-Type": "application/json",
-      },
-      body: "",
-    };
+    return { statusCode: 200, headers: CORS_HEADERS, body: "" };
   }
 
   if (event.httpMethod === "GET" && (event.path ?? "").replace(/^\/+/, "") === "openapi.json") {
     return {
       statusCode: 200,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      headers: CORS_HEADERS,
       body: JSON.stringify(openapiSpec),
     };
   }
@@ -324,7 +346,7 @@ async function handle(
     const isHead = event.httpMethod === "HEAD";
     return {
       statusCode: 200,
-      headers: { "Content-Type": faviconContentType, "Access-Control-Allow-Origin": "*" },
+      headers: { ...CORS_HEADERS, "Content-Type": faviconContentType },
       body: isHead ? "" : faviconBase64,
       isBase64Encoded: !isHead,
     };
@@ -334,115 +356,78 @@ async function handle(
     const isHead = event.httpMethod === "HEAD";
     return {
       statusCode: 200,
-      headers: { "Content-Type": "text/html; charset=utf-8", "Access-Control-Allow-Origin": "*" },
+      headers: { ...CORS_HEADERS, "Content-Type": "text/html; charset=utf-8" },
       body: isHead ? "" : FAVICON_DISCOVERY_HTML,
     };
   }
 
   if (event.httpMethod !== "POST") {
-    return {
-      body: JSON.stringify({ error: "Only POST requests are supported" }),
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      statusCode: 400,
-    };
+    return errorResponse(400, "Only POST requests are supported");
   }
 
   const body = parseJsonBody(event.body);
   if (!body) {
-    return {
-      body: JSON.stringify({ error: "Invalid JSON body" }),
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      statusCode: 400,
-    };
+    return openAiError(400, "Invalid JSON body", "invalid_request_error");
   }
 
   const paymentPayload = extractPaymentPayload(event.headers) ?? body["payment"];
-  const prompt = body["prompt"] as string | undefined;
-
-  if (!prompt) {
-    return {
-      body: JSON.stringify({ error: "No prompt provided" }),
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      statusCode: 400,
-    };
-  }
-
-  console.log(`📝 Prompt: "${prompt}"`);
 
   let account: ReturnType<typeof privateKeyToAccount>;
   try {
     account = privateKeyToAccount(loadPrivateKey("NFT_WALLET_PRIVATE_KEY"));
   } catch (err) {
-    return {
-      statusCode: 500,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify({
-        error: "Server configuration error",
-        message: (err as Error).message,
-      }),
-    };
+    return errorResponse(500, `Server configuration error: ${(err as Error).message}`);
   }
   const serverWallet = account.address;
 
-  const mode = (body["mode"] as string | undefined) ?? "generate";
-  const size = (body["size"] as string | undefined) ?? "1024x1024";
+  // Read, not validated — the 402 challenge below negotiates which networks to offer from it,
+  // and that has to happen before any request validation runs (see the comment on the branch).
   const requestedNetwork = (body["network"] as string | undefined) ?? null;
-  const isListed = body["isListed"] === true;
-
-  const validModes = ["generate", "edit"];
-  if (!validModes.includes(mode)) {
-    return {
-      body: JSON.stringify({
-        error: `Invalid mode parameter. Must be one of: ${validModes.join(", ")}`,
-      }),
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      statusCode: 400,
-    };
-  }
-
-  const validSizes = ["1024x1024", "1792x1024"];
-  if (!validSizes.includes(size)) {
-    return {
-      body: JSON.stringify({
-        error: `Invalid size parameter. Must be one of: ${validSizes.join(", ")}`,
-      }),
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      statusCode: 400,
-    };
-  }
-
-  let referenceImageBase64: string | null = null;
-  if (mode === "edit") {
-    referenceImageBase64 = (body["referenceImage"] as string | undefined) ?? null;
-    if (!referenceImageBase64) {
-      return {
-        body: JSON.stringify({ error: "Edit mode requires referenceImage parameter" }),
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-        statusCode: 400,
-      };
-    }
-    console.log("🖼️  Reference image provided for editing");
-  }
 
   if (requestedNetwork) {
     const isTestnetMode = isTestnet(requestedNetwork);
     console.log(`🌐 Network: ${requestedNetwork} (${isTestnetMode ? "testnet" : "mainnet"})`);
   }
 
+  // ─── Payment challenge comes BEFORE request validation ───
+  // An unpaid request is answered with the 402 whatever its body says — mirrors
+  // sc_llm_x402.ts's identical rule. Validating first means a client probing for the
+  // payment terms it is supposed to discover gets a 400 with no Payment-Required header
+  // instead. Nothing is charged here: this branch only advertises terms. A *paid* request
+  // still runs the full validation below before any voucher is verified or settled, so a
+  // malformed paid request is rejected without being charged.
   if (!paymentPayload) {
     console.log("❌ No payment provided → Returning 402");
 
+    // The one field validated before the challenge, because it is the one that *determines the
+    // terms*: `network` decides what the 402 offers, and the exact scheme signs for whatever it
+    // is offered. Everything else (prompt, size, model) stays after the challenge, so a client
+    // probing for the payment terms still gets them — a probe sends no network at all.
+    //
+    // This used to fall back to the mainnet list, so a caller naming a chain we do not serve was
+    // silently offered — and could pay on — a different, real-money chain. `eip155:84532` is the
+    // trap: Base Sepolia is sc_llm_x402's testnet but has no GenImNFT, so "our testnet" was a
+    // mainnet bill here.
     let networks: readonly string[];
     if (requestedNetwork) {
       const allNetworks = [...getExpectedNetworks(false), ...getExpectedNetworks(true)];
-      if (allNetworks.includes(requestedNetwork)) {
-        networks = [requestedNetwork];
-      } else {
-        networks = getExpectedNetworks(false);
+      if (!allNetworks.includes(requestedNetwork)) {
+        return openAiError(
+          400,
+          `Unsupported network '${requestedNetwork}'. This endpoint can only be paid on: ${allNetworks.join(", ")}`,
+          "invalid_request_error",
+          "unsupported_network",
+          "network",
+        );
       }
+      networks = [requestedNetwork];
     } else {
+      // No network named: offer every mainnet we accept. Deliberate — a third-party agent that
+      // pays should pay on mainnet, and this is the path an images/v1 client takes, since
+      // `network` is a vendor extension outside the interop floor.
       networks = getExpectedNetworks(false);
     }
+    console.log(`🌐 402 offering: ${networks.join(", ")}`);
 
     const paymentRequirements = createPaymentRequirements({
       resourceUrl: event.path ?? process.env.GENIMG_SERVICE_URL ?? "https://api.example.com/genimg",
@@ -454,6 +439,37 @@ async function handle(
     });
 
     return create402Response(paymentRequirements);
+  }
+
+  const parsed = ImageGenerationRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return zodErrorToResponse(parsed.error);
+  }
+
+  const { prompt, mode = "generate", size = "1024x1024" } = parsed.data;
+  const model = parsed.data.model ?? ADVERTISED_MODELS[0];
+  const provider = MODEL_TO_PROVIDER[model];
+  // `isListed` and its `x_nft.listed` alias mean the same thing; either being true is enough.
+  const isListed = parsed.data.isListed === true || parsed.data.x_nft?.listed === true;
+
+  console.log(`📝 Prompt: "${prompt}"`);
+
+  // Cross-field rule, deliberately outside the schema: JSON Schema cannot express
+  // "required when another field has this value" without if/then, and `.refine()` is not
+  // representable by z.toJSONSchema at all — it would silently vanish from the generated spec.
+  let referenceImageBase64: string | null = null;
+  if (mode === "edit") {
+    referenceImageBase64 = parsed.data.referenceImage ?? null;
+    if (!referenceImageBase64) {
+      return openAiError(
+        400,
+        "Edit mode requires referenceImage parameter",
+        "invalid_request_error",
+        "missing_required_parameter",
+        "referenceImage",
+      );
+    }
+    console.log("🖼️  Reference image provided for editing");
   }
 
   console.log("🔍 Payment received, verifying...");
@@ -471,16 +487,10 @@ async function handle(
   const networkValidation = validatePaymentNetwork(clientNetwork, clientIsTestnet);
   if (!networkValidation.valid) {
     console.error(`❌ Network validation failed: ${networkValidation.reason}`);
-    return {
-      statusCode: 402,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify({
-        error: "Payment verification failed",
-        reason: networkValidation.reason,
-        expected: networkValidation.expected,
-        received: networkValidation.received,
-      }),
-    };
+    return paymentError(networkValidation.reason, {
+      expected: networkValidation.expected,
+      received: networkValidation.received,
+    });
   }
 
   const usdcConfig = getUSDCConfig(clientNetwork!);
@@ -505,28 +515,12 @@ async function handle(
     verification = await resourceServer.verifyPayment(paymentPayload as any, paymentRequirements);
   } catch (error) {
     console.error(`❌ Payment verification error:`, error);
-    return {
-      statusCode: 402,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify({
-        error: "Payment verification failed",
-        reason: "facilitator_error",
-        details: (error as Error).message,
-      }),
-    };
+    return paymentError("facilitator_error", { details: (error as Error).message });
   }
 
   if (!verification.isValid) {
     console.log(`❌ Payment verification failed: ${verification.invalidReason}`);
-    return {
-      statusCode: 402,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify({
-        error: "Payment verification failed",
-        reason: verification.invalidReason,
-        payer: verification.payer,
-      }),
-    };
+    return paymentError(verification.invalidReason, { payer: verification.payer });
   }
 
   const clientAddress = verification.payer!;
@@ -564,7 +558,7 @@ async function handle(
       console.error(`❌ Pre-flight check failed: ${preFlightResult.error}`);
       return {
         statusCode: 500,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+        headers: CORS_HEADERS,
         body: JSON.stringify({
           error: "Service configuration error",
           reason: preFlightResult.error,
@@ -573,20 +567,56 @@ async function handle(
       };
     }
 
-    const result = await generateImageAndMintNFT(
+    // Generation failure means the caller got nothing — the outer catch turns it into a 500
+    // and no payment is settled.
+    const { metadataUrl, imageUrl } = await generateImage(
       prompt,
-      contract,
-      publicClient,
-      clientAddress,
-      contractAddress,
-      serverWallet,
       size,
       mode,
       referenceImageBase64,
       isTestnet(clientNetwork!),
-      mintPrice,
-      isListed,
+      provider,
     );
+
+    let mintResult: MintResult;
+    try {
+      mintResult = await mintNFTToClient(
+        contract,
+        publicClient,
+        clientAddress,
+        metadataUrl,
+        contractAddress,
+        serverWallet,
+        mintPrice,
+        isListed,
+      );
+    } catch (mintError) {
+      // The image exists and the caller can use it, so a 5xx would be a lie. Return 200 with
+      // the URL and report the chain-side failure in the extension.
+      //
+      // Nothing is settled here, and no settlement headers are attached — a Payment-Response
+      // would assert a settlement that never happened. This preserves the money behaviour
+      // exactly as it has always been: settlePayment only ever ran after a successful mint, so
+      // a failed mint was never charged. It is the one place this endpoint answers 200 while
+      // no payment settled.
+      console.error(`❌ Mint failed after successful generation:`, mintError);
+      return {
+        body: JSON.stringify(
+          buildSuccessBody({
+            imageUrl,
+            model,
+            nft: {
+              status: "mint_failed",
+              reason: (mintError as Error).message,
+              network: clientNetwork,
+              metadata_url: metadataUrl,
+            },
+          }),
+        ),
+        headers: CORS_HEADERS,
+        statusCode: 200,
+      };
+    }
 
     resourceServer
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -605,30 +635,30 @@ async function handle(
     });
 
     return {
-      body: JSON.stringify({
-        ...result,
-        payer: clientAddress,
-        network: clientNetwork,
-        size,
-        mode,
-        isListed,
-        mintPrice: mintPrice.toString(),
-        message: `Image successfully ${mode === "edit" ? "edited" : "generated"} and NFT minted`,
-      }),
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-        ...settlementHeaders,
-      },
+      body: JSON.stringify(
+        buildSuccessBody({
+          imageUrl,
+          model,
+          nft: {
+            status: "minted",
+            token_id: mintResult.tokenId,
+            contract: contractAddress,
+            network: clientNetwork,
+            metadata_url: metadataUrl,
+            mint_tx: mintResult.mintTxHash,
+            transfer_tx: mintResult.transferTxHash,
+            listed: isListed,
+            mint_price: mintPrice.toString(),
+            owner: clientAddress,
+          },
+        }),
+      ),
+      headers: { ...CORS_HEADERS, ...settlementHeaders },
       statusCode: 200,
     };
   } catch (error) {
     console.error(`❌ Error during operation: ${error}`);
-    return {
-      body: JSON.stringify({ error: "Operation failed", message: (error as Error).message }),
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      statusCode: 500,
-    };
+    return errorResponse(500, `Operation failed: ${(error as Error).message}`);
   }
 }
 

@@ -4,9 +4,7 @@ This directory contains Jupyter notebooks for blog-post research and analysis (g
 theory, quantum computing, economics/toll scenarios, and similar topics) — not tied to
 any specific package in this repo. Notebooks exploring a particular package's own
 backend/API behavior live with that package instead (e.g. `scw_js/notebooks/`,
-`growth-agent/notebooks/`, `x402_facilitator/notebooks/`); the merkle-tree/IONOS/BFL/
-genimg-client notebooks that used to live here moved to `scw_js/notebooks/` for that
-reason.
+`growth-agent/notebooks/`, `x402_facilitator/notebooks/`).
 
 ## Setup
 

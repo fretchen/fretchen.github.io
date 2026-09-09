@@ -10,6 +10,7 @@ import { useWalletClient } from "wagmi";
 import { useIsWalletConnected } from "./useIsWalletConnected";
 import { buildUsdcAllowedAssets } from "./x402SpendControls";
 import type { X402GenImgRequest, X402GenImgResponse, X402PaymentReceipt, X402GenerationStatus } from "../types/x402";
+import { normalizeImageResponse, type X402ImageResult } from "./x402ImageResponse";
 
 // API URL from environment (fallback to env var if not set)
 const X402_API_URL =
@@ -18,7 +19,11 @@ const X402_API_URL =
 // const X402_API_URL = import.meta.env.PUBLIC_ENV__IMAGE_URL;
 
 export interface UseX402ImageGenerationResult {
-  generateImage: (request: X402GenImgRequest) => Promise<X402GenImgResponse>;
+  /**
+   * Resolves to the *normalized* result, not the raw envelope — see `x402ImageResponse.ts`.
+   * `tokenId` is optional there because a 200 does not guarantee the NFT was minted.
+   */
+  generateImage: (request: X402GenImgRequest) => Promise<X402ImageResult>;
   status: X402GenerationStatus;
   error: string | null;
   paymentReceipt: X402PaymentReceipt | null;
@@ -38,7 +43,7 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
   const isReady = isConnected && !!walletClient;
 
   const generateImage = useCallback(
-    async (request: X402GenImgRequest): Promise<X402GenImgResponse> => {
+    async (request: X402GenImgRequest): Promise<X402ImageResult> => {
       if (!walletClient) {
         throw new Error("Wallet not connected");
       }
@@ -123,7 +128,7 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
           throw new Error(`Request failed: ${response.status} - ${errorText}`);
         }
 
-        const result = (await response.json()) as X402GenImgResponse;
+        const result = normalizeImageResponse((await response.json()) as X402GenImgResponse);
 
         // === Extract payment receipt (like Quickstart step 3) ===
         try {

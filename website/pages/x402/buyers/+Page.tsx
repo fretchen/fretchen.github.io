@@ -113,8 +113,10 @@ const response = await fetchWithPayment(
 );
 
 const result = await response.json();
-console.log("Image:", result.image_url);
-console.log("NFT mint tx:", result.transaction_hash);`}</CodeBlock>
+// data[0].url is the images/v1 contract — an image is all a caller needs.
+console.log("Image:", result.data[0].url);
+// x_nft is this agent's NFT extension. A 200 does not mean the mint succeeded.
+console.log("NFT status:", result.x_nft.status, result.x_nft.mint_tx);`}</CodeBlock>
           <SpecParamTable specUrl={IMAGEGEN_SPEC_URL} schemaName="ImageGenerationResponse" caption="Response body" />
 
           <h2>TypeScript — batch-settlement (chat)</h2>

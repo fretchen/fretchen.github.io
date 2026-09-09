@@ -41,7 +41,6 @@ const {
         provider: string,
       ) => {
         const RATES: Record<string, { in: bigint; out: bigint; den: bigint }> = {
-          ionos: { in: 71n, out: 71n, den: 100n },
           mistral: { in: 50n, out: 150n, den: 100n },
         };
         const rate = RATES[provider];

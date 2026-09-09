@@ -5,7 +5,7 @@ import {
   advertisedModelIds,
   type LLMMessage,
 } from "./llm_service.js";
-import { parseJsonBody } from "./utils.js";
+import { parseJsonBody, CORS_HEADERS, errorResponse, openAiError } from "./utils.js";
 import { getUSDCConfig, isTestnet } from "@fretchen/chain-utils";
 import pino from "pino";
 import {
@@ -47,8 +47,7 @@ const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 // with the ceiling amount, then pass a smaller usage-derived amount to settlePayment().
 // (The installed @x402/evm — 2.18.0 — exposes no higher-level helper for this; we call the
 // resourceServer verify/settle primitives directly.) See getSettleAmount() below.
-// This endpoint uses Mistral, not IONOS — see llm_service.ts's LLM_PROVIDERS. Legacy
-// sc_llm.ts (merkle settlement) is untouched and stays on IONOS.
+// See llm_service.ts's LLM_PROVIDERS for the provider registry.
 const LLM_PROVIDER = "mistral";
 
 const MAX_TOKENS_PER_MESSAGE = process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE ?? "2000";
@@ -75,41 +74,8 @@ function getSettleAmount(usage: { prompt_tokens: number; completion_tokens: numb
   return (actualCost > maxCost ? maxCost : actualCost).toString();
 }
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  // Must cover every header @x402/fetch sets on the paid retry request — see
-  // genimg_x402_token.ts's identical OPTIONS block for the same reasoning.
-  "Access-Control-Allow-Headers":
-    "Content-Type, PAYMENT-SIGNATURE, X-PAYMENT, Access-Control-Expose-Headers",
-  "Access-Control-Allow-Methods": "GET, HEAD, POST, OPTIONS",
-  "Content-Type": "application/json",
-};
-
 function isHexAddress(addr: unknown): addr is `0x${string}` {
   return typeof addr === "string" && /^0x[a-fA-F0-9]{40}$/.test(addr);
-}
-
-function errorResponse(statusCode: number, error: string): ScwResponse {
-  return { body: JSON.stringify({ error }), headers: CORS_HEADERS, statusCode };
-}
-
-/**
- * OpenAI-shaped error body ({ error: { message, type, code } }) for request/model validation
- * failures, so callers reusing OpenAI response types parse our errors too. Payment (402) and
- * internal (500) errors keep the plain x402-style `errorResponse` above — those are not part
- * of the OpenAI request contract.
- */
-function openAiError(
-  statusCode: number,
-  message: string,
-  type: string,
-  code: string | null = null,
-): ScwResponse {
-  return {
-    body: JSON.stringify({ error: { message, type, code } }),
-    headers: CORS_HEADERS,
-    statusCode,
-  };
 }
 
 export async function handle(event: ScwEvent, _context: unknown): Promise<ScwResponse> {
@@ -402,7 +368,7 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     // Route to the provider that serves the requested model. Today only mistral is
     // advertised (resolved.provider === LLM_PROVIDER), so pricing (getSettleAmount /
     // USDC_MAX_PRICE_PER_MESSAGE, which use LLM_PROVIDER) stays correct. When a second
-    // provider (e.g. ionos) is advertised, per-provider pricing must follow suit here.
+    // provider is advertised, per-provider pricing must follow suit here.
     // TODO: getSettleAmount() and USDC_MAX_PRICE_PER_MESSAGE (above) are hardcoded to
     // LLM_PROVIDER = "mistral" and do NOT use resolved.provider. The moment a second model
     // is added to advertisedModelIds(), a request routed to that provider here will still be

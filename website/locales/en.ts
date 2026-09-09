@@ -63,6 +63,8 @@ export default {
     generatingImage: "Generating image...",
     artworkCreated: "✅ Artwork created successfully!",
     checkGallery: "Check your gallery below",
+    mintFailed:
+      "⚠️ Your image is ready and yours to keep, but the NFT could not be minted — so you were not charged. Save the image if you want it, then try again to mint a collectible.",
     switchingToOptimism: "Switching to Optimism network...",
     // Metadata
     aiGeneratedArtworkName: "AI Generated Artwork",

@@ -109,8 +109,8 @@ export const testEnvironment = {
   SCW_SECRET_KEY: "test-secret-key",
 
   // API tokens
-  IONOS_API_TOKEN: "test-token",
   BFL_API_TOKEN: "test-bfl-token",
+  MISTRAL_API_KEY: "test-mistral-key",
 };
 
 export function setupTestEnvironment(envVars: Record<string, string> = {}) {

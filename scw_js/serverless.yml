@@ -10,7 +10,6 @@ provider:
   secret:
     SCW_SECRET_KEY: ${env:SCW_SECRET_KEY}
     SCW_ACCESS_KEY: ${env:SCW_ACCESS_KEY}
-    IONOS_API_TOKEN: ${env:IONOS_API_TOKEN}
     BFL_API_TOKEN: ${env:BFL_API_TOKEN}
     # Used by sc_llm_x402.ts (llmx402 function) — see LLM_PROVIDERS in llm_service.ts.
     MISTRAL_API_KEY: ${env:MISTRAL_API_KEY}

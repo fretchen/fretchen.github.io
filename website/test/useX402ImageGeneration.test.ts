@@ -39,6 +39,31 @@ vi.mock("@x402/evm/exact/client", () => ({
   registerExactEvmScheme: (...args: unknown[]) => mockRegisterExactEvmScheme(...args),
 }));
 
+/** A minimal valid images/v1 envelope — what genimg_x402_token.ts actually returns. */
+function envelopeResponse(nft: Record<string, unknown> = { status: "minted", token_id: 42 }) {
+  return new Response(
+    JSON.stringify({
+      created: 1757260000,
+      data: [{ url: "https://example.com/img.jpg", revised_prompt: null }],
+      model: "flux-kontext-pro",
+      x_nft: nft,
+    }),
+    { status: 200 },
+  );
+}
+
+function connectWallet() {
+  const mockWalletClient = {
+    account: { address: "0x1234567890123456789012345678901234567890" as `0x${string}` },
+    signTypedData: vi.fn(),
+  };
+  vi.mocked(useWalletClient).mockReturnValue(buildWalletClientData({ data: mockWalletClient }));
+  vi.mocked(useAccount).mockReturnValue(
+    buildAccountData({ isConnected: true, address: mockWalletClient.account.address }),
+  );
+  return mockWalletClient;
+}
+
 describe("useX402ImageGeneration", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -226,14 +251,7 @@ describe("useX402ImageGeneration", () => {
       vi.mocked(useAccount).mockReturnValue(
         buildAccountData({ isConnected: true, address: mockWalletClient.account.address }),
       );
-      vi.stubGlobal(
-        "fetch",
-        vi.fn().mockResolvedValue(
-          new Response(JSON.stringify({ imageUrl: "https://example.com/img.png" }), {
-            status: 200,
-          }),
-        ),
-      );
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(envelopeResponse()));
 
       const { result } = renderHook(() => useX402ImageGeneration());
       await act(async () => {
@@ -244,6 +262,65 @@ describe("useX402ImageGeneration", () => {
       expect(mockSetSpendControls.mock.invocationCallOrder[0]).toBeLessThan(
         mockRegisterExactEvmScheme.mock.invocationCallOrder[0],
       );
+    });
+  });
+
+  describe("Response envelope", () => {
+    // wrapFetchWithPayment is mocked to pass the caller's fetch straight through, so these drive
+    // the hook's real validatingFetch -> global.fetch -> normalizeImageResponse path.
+    it("resolves to the normalized result, not the raw envelope", async () => {
+      connectWallet();
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(envelopeResponse()));
+
+      const { result } = renderHook(() => useX402ImageGeneration());
+
+      let generated: Awaited<ReturnType<typeof result.current.generateImage>> | undefined;
+      await act(async () => {
+        generated = await result.current.generateImage({ prompt: "A dog", network: "eip155:10" });
+      });
+
+      expect(generated?.imageUrl).toBe("https://example.com/img.jpg");
+      expect(generated?.tokenId).toBe(42n);
+      expect(result.current.status).toBe("success");
+    });
+
+    it("surfaces a mint failure without a token id, and still returns the image", async () => {
+      connectWallet();
+      mockGetPaymentSettleResponse.mockReturnValue(null);
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(envelopeResponse({ status: "mint_failed", reason: "no mint event" })),
+      );
+
+      const { result } = renderHook(() => useX402ImageGeneration());
+
+      let generated: Awaited<ReturnType<typeof result.current.generateImage>> | undefined;
+      await act(async () => {
+        generated = await result.current.generateImage({ prompt: "A dog", network: "eip155:10" });
+      });
+
+      expect(generated?.imageUrl).toBe("https://example.com/img.jpg");
+      expect(generated?.tokenId).toBeUndefined();
+      expect(generated?.mintFailedReason).toBe("no mint event");
+      // A mint failure is not a request failure — the caller got what it asked for.
+      expect(result.current.status).toBe("success");
+      // Nothing settled, so there is no receipt to show.
+      expect(result.current.paymentReceipt).toBeNull();
+    });
+
+    it("rejects a response that does not match the contract", async () => {
+      connectWallet();
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ nope: true }), { status: 200 })));
+
+      const { result } = renderHook(() => useX402ImageGeneration());
+
+      await act(async () => {
+        await expect(result.current.generateImage({ prompt: "A dog", network: "eip155:10" })).rejects.toThrow(
+          /images\/v1/,
+        );
+      });
+
+      expect(result.current.status).toBe("error");
     });
   });
 });

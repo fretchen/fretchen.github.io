@@ -141,3 +141,17 @@ export const successMessage = css({
   borderRadius: "sm",
   marginTop: "sm",
 });
+
+/**
+ * The image generated but the NFT mint did not complete. Amber, not red: nothing failed from the
+ * user's point of view except the collectible — they have their image and were not charged.
+ */
+export const mintFailedMessage = css({
+  padding: "md",
+  backgroundColor: "warningSurface",
+  border: "1px solid",
+  borderColor: "warningBorder",
+  color: "warning",
+  borderRadius: "sm",
+  marginTop: "sm",
+});

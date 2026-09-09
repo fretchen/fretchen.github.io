@@ -3,7 +3,7 @@
       <head>
         <link rel="stylesheet" type="text/css" href="/assets/static/layouts_fonts-200407f8.C9G0VR3c.css">
         <link rel="stylesheet" type="text/css" href="/assets/static/layouts_style-b34a8e57.CtejDBFU.css">
-        <link rel="stylesheet" type="text/css" href="/assets/static/layouts_panda-c5b34b81.9hSklkzy.css">
+        <link rel="stylesheet" type="text/css" href="/assets/static/layouts_panda-c5b34b81.D7b0984B.css">
         <link rel="preload" href="/assets/static/source-serif-4-latin-wght-normal.D9elroTD.woff2" as="font" type="font/woff2" crossorigin>
         <link rel="preload" href="/assets/static/source-serif-4-latin-ext-wght-normal.CxNHBx-q.woff2" as="font" type="font/woff2" crossorigin>
         <link rel="preload" href="/assets/static/source-serif-4-latin-wght-italic.D2yaqPoE.woff2" as="font" type="font/woff2" crossorigin>
@@ -46,8 +46,10 @@
 );
 
 <span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> response.<span class="hljs-title function_">json</span>();
-<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&quot;Image:&quot;</span>, result.<span class="hljs-property">image_url</span>);
-<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&quot;NFT mint tx:&quot;</span>, result.<span class="hljs-property">transaction_hash</span>);</code></pre></div><p class="fs_sm c_gray.500">Loading the live spec…</p><h2>TypeScript — batch-settlement (chat)</h2><p>Unlike <code>exact</code>, this needs one network picked up front —<!-- --> <code>client.register(network, scheme)</code> below — because the channel it opens is specific to one chain.<!-- --> <code>registerExactEvmScheme</code> above has no such call because it can act on whichever network the 402 response names.</p><p>batch-settlement has no <code>registerExactEvmScheme</code>-style helper — the scheme is constructed directly with a signer and a channel store. The first call opens the channel: a deposit sized to cover several messages, not just one, so it moves more than the per-message price. Every call after that signs an off-chain voucher and settles instantly — no deposit, no wallet prompt:</p><div class="pos_relative mt_1 mb_2"><pre class="bg_codeSurface c_codeText p_4 bd_1px_solid bd-c_border bdr_lg ov-x_auto fs_sm lh_normal white-space_pre [&amp;_code]:bg_transparent [&amp;_code]:p_0 [&amp;_code]:fs_inherit [&amp;_code]:c_inherit [&amp;_.hljs-comment,_&amp;_.hljs-quote]:c_textMuted [&amp;_.hljs-comment,_&amp;_.hljs-quote]:font-style_italic [&amp;_.hljs-meta,_&amp;_.hljs-doctag]:c_textMuted [&amp;_.hljs-keyword,_&amp;_.hljs-built_in,_&amp;_.hljs-literal,_&amp;_.hljs-type,_&amp;_.hljs-selector-tag]:c_explore [&amp;_.hljs-string,_&amp;_.hljs-regexp,_&amp;_.hljs-char]:c_codeString [&amp;_.hljs-number,_&amp;_.hljs-attr,_&amp;_.hljs-attribute,_&amp;_.hljs-symbol,_&amp;_.hljs-variable,_&amp;_.hljs-template-variable]:c_brand [&amp;_.hljs-title,_&amp;_.hljs-section,_&amp;_.hljs-name]:c_codeText [&amp;_.hljs-title,_&amp;_.hljs-section,_&amp;_.hljs-name]:fw_semibold"><code class="hljs"><span class="hljs-keyword">import</span> { x402Client, wrapFetchWithPayment } <span class="hljs-keyword">from</span> <span class="hljs-string">&quot;@x402/fetch&quot;</span>;
+<span class="hljs-comment">// data[0].url is the images/v1 contract — an image is all a caller needs.</span>
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&quot;Image:&quot;</span>, result.<span class="hljs-property">data</span>[<span class="hljs-number">0</span>].<span class="hljs-property">url</span>);
+<span class="hljs-comment">// x_nft is this agent&#x27;s NFT extension. A 200 does not mean the mint succeeded.</span>
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&quot;NFT status:&quot;</span>, result.<span class="hljs-property">x_nft</span>.<span class="hljs-property">status</span>, result.<span class="hljs-property">x_nft</span>.<span class="hljs-property">mint_tx</span>);</code></pre></div><p class="fs_sm c_gray.500">Loading the live spec…</p><h2>TypeScript — batch-settlement (chat)</h2><p>Unlike <code>exact</code>, this needs one network picked up front —<!-- --> <code>client.register(network, scheme)</code> below — because the channel it opens is specific to one chain.<!-- --> <code>registerExactEvmScheme</code> above has no such call because it can act on whichever network the 402 response names.</p><p>batch-settlement has no <code>registerExactEvmScheme</code>-style helper — the scheme is constructed directly with a signer and a channel store. The first call opens the channel: a deposit sized to cover several messages, not just one, so it moves more than the per-message price. Every call after that signs an off-chain voucher and settles instantly — no deposit, no wallet prompt:</p><div class="pos_relative mt_1 mb_2"><pre class="bg_codeSurface c_codeText p_4 bd_1px_solid bd-c_border bdr_lg ov-x_auto fs_sm lh_normal white-space_pre [&amp;_code]:bg_transparent [&amp;_code]:p_0 [&amp;_code]:fs_inherit [&amp;_code]:c_inherit [&amp;_.hljs-comment,_&amp;_.hljs-quote]:c_textMuted [&amp;_.hljs-comment,_&amp;_.hljs-quote]:font-style_italic [&amp;_.hljs-meta,_&amp;_.hljs-doctag]:c_textMuted [&amp;_.hljs-keyword,_&amp;_.hljs-built_in,_&amp;_.hljs-literal,_&amp;_.hljs-type,_&amp;_.hljs-selector-tag]:c_explore [&amp;_.hljs-string,_&amp;_.hljs-regexp,_&amp;_.hljs-char]:c_codeString [&amp;_.hljs-number,_&amp;_.hljs-attr,_&amp;_.hljs-attribute,_&amp;_.hljs-symbol,_&amp;_.hljs-variable,_&amp;_.hljs-template-variable]:c_brand [&amp;_.hljs-title,_&amp;_.hljs-section,_&amp;_.hljs-name]:c_codeText [&amp;_.hljs-title,_&amp;_.hljs-section,_&amp;_.hljs-name]:fw_semibold"><code class="hljs"><span class="hljs-keyword">import</span> { x402Client, wrapFetchWithPayment } <span class="hljs-keyword">from</span> <span class="hljs-string">&quot;@x402/fetch&quot;</span>;
 <span class="hljs-keyword">import</span> { <span class="hljs-title class_">BatchSettlementEvmScheme</span>, <span class="hljs-title class_">InMemoryClientChannelStorage</span> }
   <span class="hljs-keyword">from</span> <span class="hljs-string">&quot;@x402/evm/batch-settlement/client&quot;</span>;
 <span class="hljs-keyword">import</span> { privateKeyToAccount } <span class="hljs-keyword">from</span> <span class="hljs-string">&quot;viem/accounts&quot;</span>;
@@ -83,10 +85,10 @@ client.<span class="hljs-title function_">register</span>(<span class="hljs-stri
         
         <script id="vike_pageContext" type="application/json">{"pageId":"\/pages\/x402\/buyers","routeParams":{}}</script>
         <script id="vike_globalContext" type="application/json">{}</script>
-        <script src="/assets/entries/entry-client-routing.wlZ6QqSf.js" type="module" async></script>
-        <link rel="modulepreload" href="/assets/entries/pages_x402_buyers.Dn5mwAIT.js" as="script" type="text/javascript">
+        <script src="/assets/entries/entry-client-routing.BGMVzp6t.js" type="module" async></script>
+        <link rel="modulepreload" href="/assets/entries/pages_x402_buyers.DMA3xJGt.js" as="script" type="text/javascript">
         <link rel="modulepreload" href="/assets/chunks/chunk-C_s2cVnS.js" as="script" type="text/javascript">
-        <link rel="modulepreload" href="/assets/chunks/chunk-Boyp6d8d.js" as="script" type="text/javascript">
+        <link rel="modulepreload" href="/assets/chunks/chunk-Bm0zbU1B.js" as="script" type="text/javascript">
         <link rel="modulepreload" href="/assets/chunks/chunk-BcF27t_0.js" as="script" type="text/javascript">
         <link rel="modulepreload" href="/assets/chunks/chunk-D-zESNa7.js" as="script" type="text/javascript">
         <link rel="modulepreload" href="/assets/chunks/chunk-B3c6Nd_W.js" as="script" type="text/javascript">
@@ -102,9 +104,9 @@ client.<span class="hljs-title function_">register</span>(<span class="hljs-stri
         <link rel="modulepreload" href="/assets/chunks/chunk-CCS_j0-j.js" as="script" type="text/javascript">
         <link rel="modulepreload" href="/assets/chunks/chunk-z0ZNmRC8.js" as="script" type="text/javascript">
         <link rel="modulepreload" href="/assets/chunks/chunk-UCgG8eGY.js" as="script" type="text/javascript">
-        <link rel="modulepreload" href="/assets/chunks/chunk-DwakNfxy.js" as="script" type="text/javascript">
-        <link rel="modulepreload" href="/assets/chunks/chunk-D0UOOZeO.js" as="script" type="text/javascript">
-        <link rel="modulepreload" href="/assets/chunks/chunk-B-2vNUVA.js" as="script" type="text/javascript">
+        <link rel="modulepreload" href="/assets/chunks/chunk-czo85TWp.js" as="script" type="text/javascript">
+        <link rel="modulepreload" href="/assets/chunks/chunk-C7926-n_.js" as="script" type="text/javascript">
+        <link rel="modulepreload" href="/assets/chunks/chunk-DjIw5buS.js" as="script" type="text/javascript">
         <link rel="modulepreload" href="/assets/chunks/chunk-CAcRBaRk.js" as="script" type="text/javascript">
       </body>
     </html>

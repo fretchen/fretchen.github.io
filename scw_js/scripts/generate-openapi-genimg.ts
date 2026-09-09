@@ -12,29 +12,17 @@
  * summaries, descriptions, guidance for callers — not data shapes, so they gain nothing from
  * codegen and stay hand-written below.
  *
- * Named for genimg specifically because `scw_js` has two spec files; `openapi.llm.json` is
- * still hand-maintained and converting it the same way is a natural follow-up.
+ * Named for genimg specifically because `scw_js` has two spec files, both now generated this way.
+ * The parts common to both live in `scripts/openapi-codegen.ts`.
  */
 
-import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { z } from "zod";
 import { ImageGenerationRequestSchema, ImageGenerationResponseSchema } from "../genimg_schemas.js";
+import { CONTACT, openApiJsonPath, toComponentSchema, writeSpec } from "./openapi-codegen.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUTPUT_PATH = join(__dirname, "..", "openapi.genimg.json");
-
-/**
- * zod's `toJSONSchema` stamps a top-level `$schema` key (correct for a standalone JSON Schema
- * document) — meaningless nested under `components.schemas.<Name>` in an OpenAPI document,
- * which declares its schema dialect once, globally, via `"openapi": "3.1.0"`. Strip it.
- */
-function toComponentSchema(schema: z.ZodType): Record<string, unknown> {
-  const jsonSchema = z.toJSONSchema(schema) as Record<string, unknown>;
-  delete jsonSchema["$schema"];
-  return jsonSchema;
-}
 
 export function generateOpenApiSpec(): object {
   return {
@@ -46,11 +34,7 @@ export function generateOpenApiSpec(): object {
       version: "1.0.0",
       "x-guidance":
         "OpenAI images-generation body. POST / with { prompt, size } and no payment header to receive a 402 with x402 v2 payment requirements (accepts[]). Pay in USDC on one of the offered networks, retry with the payment header, and the service returns { created, data: [{ url }], model } — data[0].url is the image. The mint recipient is derived from the payment payload, so there is no recipient field. Unknown request fields are rejected, not ignored. This agent also mints the image as an NFT and reports it under the x_nft response extension; that is a declared capability, not part of the images/v1 contract, and a client that only wants an image can ignore it. A 200 does not by itself mean the NFT was minted — check x_nft.status. Note: payment uses x402, so a stock OpenAI SDK cannot pay this endpoint — the OpenAI shape is for body legibility, not drop-in SDK use. Testnet networks return a placeholder image rather than a generated one.",
-      contact: {
-        name: "fretchen",
-        url: "https://www.fretchen.eu",
-        email: "fretchen.dev@proton.me",
-      },
+      contact: CONTACT,
     },
     "x-discovery": {
       ownershipProofs: [
@@ -112,19 +96,7 @@ export function generateOpenApiSpec(): object {
           },
         },
       },
-      "/openapi.json": {
-        get: {
-          operationId: "openapiSpec",
-          summary: "This document",
-          tags: ["x402"],
-          responses: {
-            "200": {
-              description: "This OpenAPI document.",
-              content: { "application/json": { schema: { type: "object" } } },
-            },
-          },
-        },
-      },
+      "/openapi.json": openApiJsonPath("x402"),
     },
     components: {
       schemas: {
@@ -136,13 +108,7 @@ export function generateOpenApiSpec(): object {
 }
 
 function main() {
-  const spec = generateOpenApiSpec();
-  // Written unformatted, then Prettier'd by the npm script — the repo's `format:check`
-  // covers openapi.genimg.json, so a raw JSON.stringify here would make every regeneration
-  // fail `npm run check`. The golden-file test compares parsed JSON, so formatting never
-  // affects it either way.
-  writeFileSync(OUTPUT_PATH, JSON.stringify(spec, null, 2) + "\n");
-  console.log(`Generated ${OUTPUT_PATH}`);
+  writeSpec(OUTPUT_PATH, generateOpenApiSpec());
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

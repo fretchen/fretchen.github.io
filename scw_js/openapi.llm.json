@@ -18,11 +18,24 @@
   },
   "x-service-type": "llm/v1",
   "x-interop-floor": "A compatible llm/v1 agent MUST advertise at least one accepts[] entry with asset USDC on network Optimism (eip155:10) or Base (eip155:8453), scheme batch-settlement. Request/response schema is defined by this document's LLMChatRequest/LLMChatResponse. See README.md.",
-  "servers": [{ "url": "https://llm-agent.fretchen.eu" }],
+  "servers": [
+    {
+      "url": "https://llm-agent.fretchen.eu"
+    }
+  ],
   "tags": [
-    { "name": "LLM", "description": "AI chat assistant / text completion" },
-    { "name": "Chat", "description": "Multi-turn conversational messages" },
-    { "name": "x402", "description": "Paid via x402 batch-settlement USDC payment channels" }
+    {
+      "name": "LLM",
+      "description": "AI chat assistant / text completion"
+    },
+    {
+      "name": "Chat",
+      "description": "Multi-turn conversational messages"
+    },
+    {
+      "name": "x402",
+      "description": "Paid via x402 batch-settlement USDC payment channels"
+    }
   ],
   "paths": {
     "/": {
@@ -34,13 +47,20 @@
         "security": [],
         "x-payment-info": {
           "protocols": ["x402"],
-          "price": { "mode": "dynamic", "currency": "USD", "min": "0", "max": "0.003" }
+          "price": {
+            "mode": "dynamic",
+            "currency": "USD",
+            "min": "0",
+            "max": "0.003"
+          }
         },
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/LLMChatRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/LLMChatRequest"
+              }
             }
           }
         },
@@ -49,12 +69,36 @@
             "description": "LLM response generated and payment settled successfully",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/LLMChatResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/LLMChatResponse"
+                }
               }
             }
           },
+          "400": {
+            "description": "Request validation failed — a missing or unserved model, an empty messages array, or stream:true. Body is { error: { message, type, code } }."
+          },
           "402": {
             "description": "Payment required. Body/headers (Payment-Required, X-Payment) carry the x402 batch-settlement payment requirements to satisfy and retry with."
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "operationId": "openapiSpec",
+        "summary": "This document",
+        "tags": ["x402"],
+        "responses": {
+          "200": {
+            "description": "This OpenAPI document.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
           }
         }
       }
@@ -64,8 +108,6 @@
     "schemas": {
       "LLMChatRequest": {
         "type": "object",
-        "required": ["model", "messages"],
-        "description": "OpenAI chat-completions request body.",
         "properties": {
           "model": {
             "type": "string",
@@ -73,63 +115,122 @@
             "description": "The model to use. Only the advertised model id(s) are served; others return model_not_found."
           },
           "messages": {
-            "type": "array",
             "minItems": 1,
-            "description": "The conversation so far.",
+            "type": "array",
             "items": {
               "type": "object",
-              "required": ["role", "content"],
               "properties": {
                 "role": {
                   "type": "string",
                   "enum": ["system", "user", "assistant"],
                   "description": "The speaker's role."
                 },
-                "content": { "type": "string", "description": "The message text." }
-              }
-            }
+                "content": {
+                  "type": "string",
+                  "description": "The message text."
+                }
+              },
+              "required": ["role", "content"],
+              "additionalProperties": {},
+              "description": "One turn of the conversation."
+            },
+            "description": "The conversation so far."
+          },
+          "stream": {
+            "description": "Streaming is not supported. Each message settles on its final token usage, which requires the whole completion, so stream:true is rejected rather than silently buffered.",
+            "type": "boolean",
+            "const": false
           },
           "useDummyData": {
-            "type": "boolean",
-            "description": "Vendor extension (not OpenAI): forces a mock completion. Testnet networks always mock regardless."
+            "description": "Vendor extension (not OpenAI): forces a mock completion. Testnet networks always mock regardless.",
+            "type": "boolean"
+          },
+          "payment": {
+            "description": "Vendor extension: x402 payment payload, as a body fallback for clients that cannot set the PAYMENT-SIGNATURE / X-PAYMENT header. Passed through as received; validated by @x402/evm, not here."
           }
-        }
+        },
+        "required": ["model", "messages"],
+        "additionalProperties": {},
+        "description": "OpenAI chat-completions request body, plus this agent's vendor extensions. Unknown fields are ignored rather than rejected."
       },
       "LLMChatResponse": {
         "type": "object",
-        "description": "OpenAI chat.completion object.",
         "properties": {
-          "id": { "type": "string" },
-          "object": { "type": "string", "enum": ["chat.completion"] },
-          "created": { "type": "integer", "description": "Unix timestamp (seconds)." },
-          "model": { "type": "string" },
+          "id": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string",
+            "const": "chat.completion"
+          },
+          "created": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Unix timestamp (seconds)."
+          },
+          "model": {
+            "type": "string"
+          },
           "choices": {
             "type": "array",
             "items": {
               "type": "object",
               "properties": {
-                "index": { "type": "integer" },
+                "index": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
                 "message": {
                   "type": "object",
                   "properties": {
-                    "role": { "type": "string" },
-                    "content": { "type": "string", "description": "The generated reply." }
-                  }
+                    "role": {
+                      "type": "string"
+                    },
+                    "content": {
+                      "type": "string",
+                      "description": "The generated reply."
+                    }
+                  },
+                  "required": ["role", "content"],
+                  "additionalProperties": false
                 },
-                "finish_reason": { "type": "string", "nullable": true }
-              }
+                "finish_reason": {
+                  "type": ["string", "null"]
+                }
+              },
+              "required": ["index", "message", "finish_reason"],
+              "additionalProperties": false
             }
           },
           "usage": {
             "type": "object",
-            "description": "Token usage; the settled charge is derived from it.",
             "properties": {
-              "prompt_tokens": { "type": "integer" },
-              "completion_tokens": { "type": "integer" },
-              "total_tokens": { "type": "integer" }
-            }
+              "prompt_tokens": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "completion_tokens": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "total_tokens": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": ["prompt_tokens", "completion_tokens", "total_tokens"],
+            "additionalProperties": false,
+            "description": "Token usage; the settled charge is derived from it."
           }
-        }
+        },
+        "required": ["id", "object", "created", "model", "choices", "usage"],
+        "additionalProperties": false,
+        "description": "OpenAI chat.completion object."
       }
     }
   }

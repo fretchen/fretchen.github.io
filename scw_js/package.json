@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "generate:openapi:genimg": "tsx scripts/generate-openapi-genimg.ts && prettier --write --log-level warn openapi.genimg.json",
-    "build": "npm run generate:openapi:genimg && tsup",
+    "generate:openapi:llm": "tsx scripts/generate-openapi-llm.ts && prettier --write --log-level warn openapi.llm.json",
+    "generate:openapi": "npm run generate:openapi:genimg && npm run generate:openapi:llm",
+    "build": "npm run generate:openapi && tsup",
     "deploy": "npm run build && npx osls deploy",
     "test": "NODE_ENV=test vitest run",
     "test:watch": "NODE_ENV=test vitest",

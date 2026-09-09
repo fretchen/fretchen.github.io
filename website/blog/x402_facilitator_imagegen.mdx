@@ -204,8 +204,8 @@ const response = await fetchWithPayment("https://imagegen-agent.fretchen.eu/geni
 
 // 4. Get result
 const result = await response.json();
-console.log("Image URL:", result.imageUrl);
-console.log("NFT Token ID:", result.tokenId);
+console.log("Image URL:", result.data[0].url);
+console.log("NFT Token ID:", result.x_nft.token_id);
 ```
 
 That's it! The `fetchWithPayment` wrapper automatically:

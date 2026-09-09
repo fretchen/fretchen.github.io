@@ -63,6 +63,8 @@ export default {
     generatingImage: "Bild wird generiert...",
     artworkCreated: "✅ Kunstwerk erfolgreich erstellt!",
     checkGallery: "Sieh in deiner Galerie unten nach",
+    mintFailed:
+      "⚠️ Dein Bild ist fertig und gehört dir, aber das NFT konnte nicht geprägt werden — dir wurde daher nichts berechnet. Speichere das Bild, wenn du es behalten willst, und versuche es erneut für ein Sammlerstück.",
     switchingToOptimism: "Wechsle zum Optimism-Netzwerk...",
     // Metadata
     aiGeneratedArtworkName: "KI-generiertes Kunstwerk",

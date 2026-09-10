@@ -69,6 +69,85 @@ export const LLMChatMessageSchema = z
   })
   .describe("One turn of the conversation.");
 
+/**
+ * One entry per param rejected with a 400 because it moves cost past the metered per-message
+ * ceiling. See the header for why these three and nothing else.
+ *
+ * Three consumers, one list: the schema fields below take their `.describe()` copy from `doc`,
+ * `sc_llm_x402.ts` loops the list to produce the 400s, and `scripts/generate-openapi-llm.ts`
+ * builds the published 400 description and `x-guidance` prose from `specPhrase`/`name`. Adding a
+ * fourth cost-mover (`tools`, when it lands) is one entry here plus its schema field — the
+ * published description cannot drift from what is enforced, which is exactly how `n` and
+ * `max_tokens` once became 400 causes that the spec never mentioned.
+ */
+export interface RejectedParam {
+  /** Request-body key. Also its key in `LLMChatRequestSchema.shape`, hence in OWN_REQUEST_KEYS. */
+  readonly name: string;
+  /** True when the value present in the body must be rejected. */
+  readonly predicate: (value: unknown) => boolean;
+  /** OpenAI error `code`. */
+  readonly code: string;
+  /** OpenAI error `param`. Omitted for stream, whose wire shape predates the param field. */
+  readonly errorParam?: string;
+  /** The 400 response message. Wire copy — asserted by test/sc_llm_x402.test.ts. */
+  readonly message: string;
+  /**
+   * The schema field's `.describe()`. PUBLISHED UI (SpecParamTable) — deliberately a separate
+   * string from `message`: one is documentation a caller reads before sending, the other is an
+   * error a caller reads after. They sit adjacent here so drift between them is a two-line diff.
+   */
+  readonly doc: string;
+  /** How this param is named in the generated 400 description prose. */
+  readonly specPhrase: string;
+}
+
+// Annotated rather than `as const satisfies`: under `as const` each entry narrows to its own
+// literal type, and `errorParam` then does not exist on the `stream` member of the union, so the
+// handler's loop cannot read it uniformly.
+export const REJECTED_PARAMS: readonly RejectedParam[] = [
+  {
+    name: "stream",
+    predicate: (v: unknown) => v === true,
+    code: "stream_unsupported",
+    message: "Streaming (stream: true) is not supported by this endpoint.",
+    doc: "Streaming is not supported. Each message settles on its final token usage, which requires the whole completion, so stream:true is rejected rather than silently buffered.",
+    specPhrase: "stream:true",
+  },
+  {
+    name: "n",
+    predicate: (v: unknown) => v !== undefined && v !== 1,
+    code: "unsupported_value",
+    errorParam: "n",
+    message:
+      "Only n=1 is supported. Each message is metered against a fixed per-message price ceiling, and additional completions multiply output tokens past it.",
+    doc: "Only n=1 is supported. Each message is metered against a fixed per-message price ceiling, and additional completions multiply output tokens past it.",
+    specPhrase: "n other than 1",
+  },
+  {
+    name: "max_tokens",
+    predicate: (v: unknown) => v !== undefined,
+    code: "unsupported_value",
+    errorParam: "max_tokens",
+    message:
+      "'max_tokens' is not supported. Output length is bounded by the per-message price ceiling this endpoint meters against, not by a caller-supplied limit.",
+    doc: "Not supported. Output length is bounded by the per-message price ceiling this endpoint meters against, not by a caller-supplied limit.",
+    specPhrase: "any max_tokens",
+  },
+];
+
+/**
+ * Pull one entry's copy by name, so the schema fields below read as declarations rather than
+ * index juggling. Throws at module load if the name is wrong — a typo here would otherwise
+ * silently publish an undefined description.
+ */
+function rejected(name: string): RejectedParam {
+  const param = REJECTED_PARAMS.find((p) => p.name === name);
+  if (!param) {
+    throw new Error(`No REJECTED_PARAMS entry named '${name}'`);
+  }
+  return param;
+}
+
 export const LLMChatRequestSchema = z
   .looseObject({
     model: z
@@ -79,24 +158,13 @@ export const LLMChatRequestSchema = z
     messages: z.array(LLMChatMessageSchema).min(1).describe("The conversation so far."),
     // The three cost-movers. Declared so the published schema names them and a caller sees the
     // constraint before hitting the 400 — everything else is forwarded and left unenumerated.
-    stream: z
-      .literal(false)
-      .optional()
-      .describe(
-        "Streaming is not supported. Each message settles on its final token usage, which requires the whole completion, so stream:true is rejected rather than silently buffered.",
-      ),
-    n: z
-      .literal(1)
-      .optional()
-      .describe(
-        "Only n=1 is supported. Each message is metered against a fixed per-message price ceiling, and additional completions multiply output tokens past it.",
-      ),
-    max_tokens: z
-      .never()
-      .optional()
-      .describe(
-        "Not supported. Output length is bounded by the per-message price ceiling this endpoint meters against, not by a caller-supplied limit.",
-      ),
+    // The constraints stay literal (not generated from REJECTED_PARAMS) because each is a
+    // different kind — const false, const 1, never — and because OWN_REQUEST_KEYS reads
+    // Object.keys(shape): a spread would make the forwarded-bag filter depend on construction
+    // order, and z.infer would lose the field types. Only the prose comes from the list.
+    stream: z.literal(false).optional().describe(rejected("stream").doc),
+    n: z.literal(1).optional().describe(rejected("n").doc),
+    max_tokens: z.never().optional().describe(rejected("max_tokens").doc),
     useDummyData: z
       .boolean()
       .optional()

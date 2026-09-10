@@ -1,4 +1,5 @@
 import pino from "pino";
+import { UpstreamChatCompletionSchema } from "./upstream_schemas.js";
 
 const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 
@@ -160,27 +161,34 @@ export async function callLLMAPI(
   // Upstream is OpenAI-compatible; forward its chat-completion envelope, synthesizing only
   // the fields a given provider might omit (id/created/object) so our response is a
   // well-formed OpenAI chat.completion regardless of upstream quirks.
-  const data = (await response.json()) as Partial<LLMResponse> & {
-    choices?: Array<{
-      index?: number;
-      message: { role?: string; content: string };
-      finish_reason?: string | null;
-    }>;
-    usage?: LLMUsage;
-    model?: string;
-  };
-  const firstChoice = data.choices?.[0];
-  if (!firstChoice || !data.usage) {
+  //
+  // Validated rather than cast, because the cast was load-bearing in a place it could not hold:
+  // `usage` feeds getSettleAmount() in sc_llm_x402.ts, which runs *after* the try/catch around
+  // this function has closed. A non-numeric prompt_tokens therefore threw a TypeError out of
+  // handle() as an unhandled rejection — no response, no CORS headers, no log line we own. The
+  // schema also subsumes the old `!firstChoice || !data.usage` guard (choices is .min(1), usage
+  // is required), so that check is gone rather than duplicated.
+  const raw: unknown = await response.json();
+  const parsed = UpstreamChatCompletionSchema.safeParse(raw);
+  if (!parsed.success) {
+    const upstreamModel = (raw as { model?: unknown } | null)?.model;
+    logger.error(
+      { provider, issues: parsed.error.issues },
+      "Upstream returned a completion we cannot bill from",
+    );
     throw new Error(
-      `LLM API returned an incomplete completion (model: ${data.model ?? config.defaultModel})`,
+      `LLM API returned an incomplete completion (model: ${
+        typeof upstreamModel === "string" ? upstreamModel : config.defaultModel
+      })`,
     );
   }
+  const data = parsed.data;
   return {
     id: data.id ?? `chatcmpl-${Date.now()}`,
     object: "chat.completion",
     created: data.created ?? Math.floor(Date.now() / 1000),
     model: data.model ?? config.defaultModel,
-    choices: data.choices!.map((c, i) => ({
+    choices: data.choices.map((c, i) => ({
       index: c.index ?? i,
       message: { role: c.message.role ?? "assistant", content: c.message.content },
       finish_reason: c.finish_reason ?? "stop",

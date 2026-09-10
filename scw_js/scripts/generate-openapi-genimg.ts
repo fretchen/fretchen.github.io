@@ -19,12 +19,29 @@
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { ImageGenerationRequestSchema, ImageGenerationResponseSchema } from "../genimg_schemas.js";
-import { CONTACT, openApiJsonPath, toComponentSchema, writeSpec } from "./openapi-codegen.js";
+import {
+  CONTACT,
+  openApiJsonPath,
+  toComponentSchema,
+  writeSpec,
+  type ServiceSpec,
+} from "./openapi-codegen.js";
+
+/**
+ * `x-capabilities` is optional on `ServiceSpec` (most services have none) but required here, and
+ * pinned to the exact tuple: the NFT mint sits outside the interop floor, so dropping the
+ * declaration would make the capability undiscoverable while the endpoint still performs it.
+ */
+type GenimgSpec = ServiceSpec<
+  "images/v1",
+  "ImageGenerationRequest" | "ImageGenerationResponse",
+  { protocols: readonly ["x402"]; price: { mode: "fixed"; currency: "USD"; amount: string } }
+> & { "x-capabilities": readonly ["nft-mint"] };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUTPUT_PATH = join(__dirname, "..", "openapi.genimg.json");
 
-export function generateOpenApiSpec(): object {
+export function generateOpenApiSpec(): GenimgSpec {
   return {
     openapi: "3.1.0",
     info: {

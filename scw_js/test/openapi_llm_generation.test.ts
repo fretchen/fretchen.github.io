@@ -18,13 +18,16 @@ describe("openapi.llm.json generation", () => {
    * `x-service-type` with `===`, so any other value makes this agent fail its own compatibility
    * checker — the shape sc_llm_x402.ts:174-195 records having fixed once. This is also why tool
    * support will be advertised as a capability rather than an `llm/v1.1` bump.
+   *
+   * What used to be asserted here and is now a COMPILE error, via the `LlmSpec` return type in
+   * scripts/generate-openapi-llm.ts: `x-service-type` being exactly "llm/v1", the two schema
+   * names, and `x-payment-info.price.max` staying present (that one twice over — sc_llm_x402.ts
+   * mutates it off the JSON import, so dropping it fails to compile there too). Do not re-add
+   * them; the golden equality test above carries the type's guarantee onto the committed file.
+   * What stays below is what a type cannot express — prose substrings and the proof's format.
    */
   describe("llm/v1 contract", () => {
     const spec = committedSpec as Record<string, unknown>;
-
-    it("declares x-service-type exactly llm/v1", () => {
-      expect(spec["x-service-type"]).toBe("llm/v1");
-    });
 
     it("keeps an interop floor naming the scheme and both mainnets", () => {
       const floor = spec["x-interop-floor"] as string;
@@ -39,32 +42,16 @@ describe("openapi.llm.json generation", () => {
       expect(proofs?.[0]).toMatch(/^0x[a-fA-F0-9]{130}$/);
     });
 
-    it("keeps the schema names the published docs reference", () => {
-      // website/pages/agent-onboarding and /x402/buyers both render these two by name via
-      // SpecParamTable — renaming either breaks both pages silently.
-      const schemas = (spec.components as { schemas: Record<string, unknown> }).schemas;
-      expect(Object.keys(schemas)).toEqual(
-        expect.arrayContaining(["LLMChatRequest", "LLMChatResponse"]),
-      );
-    });
-
-    it("documents every metered param the handler rejects with a 400", () => {
-      // The 400 description is hand-written prose in the generator, not schema-derived, so the
-      // golden test above can't catch it drifting from sc_llm_x402.ts's actual rejections —
-      // `n` and `max_tokens` were both added as 400 causes without this string being updated.
+    it("names every metered param in the published 400 description", () => {
+      // Both the description and the handler's rejections are now built from REJECTED_PARAMS
+      // (llm_schemas.ts), so the drift this originally caught — `n` and `max_tokens` becoming 400
+      // causes the spec never mentioned — is structurally gone. What it still checks is the prose
+      // assembly in the generator: that joinOr() renders the list into a readable sentence.
       const paths = spec.paths as Record<string, never>;
       const desc: string = paths["/"]["post"]["responses"]["400"]["description"];
       expect(desc).toContain("stream");
       expect(desc).toContain("n other than 1");
       expect(desc).toContain("max_tokens");
-    });
-
-    it("keeps the price ceiling key the handler overwrites at serve time", () => {
-      // sc_llm_x402.ts mutates paths["/"].post["x-payment-info"].price.max on a structuredClone,
-      // because the static value is a documentation-only baseline. Removing the key breaks that
-      // line at compile time; this asserts it stays reachable.
-      const paths = spec.paths as Record<string, never>;
-      expect(paths["/"]["post"]["x-payment-info"]["price"]["max"]).toBeDefined();
     });
   });
 

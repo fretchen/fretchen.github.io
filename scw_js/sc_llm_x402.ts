@@ -6,7 +6,7 @@ import {
   type LLMMessage,
 } from "./llm_service.js";
 import { parseJsonBody, CORS_HEADERS, errorResponse, openAiError } from "./utils.js";
-import { LLMChatRequestSchema } from "./llm_schemas.js";
+import { LLMChatRequestSchema, REJECTED_PARAMS } from "./llm_schemas.js";
 import { getUSDCConfig, isTestnet } from "@fretchen/chain-utils";
 import pino from "pino";
 import {
@@ -198,31 +198,14 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
   // (USDC_MAX_PRICE_PER_MESSAGE, ~$0.003 at 2000 output tokens). Rejecting is the honest answer:
   // ignoring them would charge for a request we did not fulfil as asked, and a caller who sets
   // max_tokens expects it to bound something. See llm_schemas.ts for the full reasoning.
-  if (body["stream"] === true) {
-    return openAiError(
-      400,
-      "Streaming (stream: true) is not supported by this endpoint.",
-      "invalid_request_error",
-      "stream_unsupported",
-    );
-  }
-  if (body["n"] !== undefined && body["n"] !== 1) {
-    return openAiError(
-      400,
-      "Only n=1 is supported. Each message is metered against a fixed per-message price ceiling, and additional completions multiply output tokens past it.",
-      "invalid_request_error",
-      "unsupported_value",
-      "n",
-    );
-  }
-  if (body["max_tokens"] !== undefined) {
-    return openAiError(
-      400,
-      "'max_tokens' is not supported. Output length is bounded by the per-message price ceiling this endpoint meters against, not by a caller-supplied limit.",
-      "invalid_request_error",
-      "unsupported_value",
-      "max_tokens",
-    );
+  //
+  // The list itself lives in llm_schemas.ts so the published 400 description is built from the
+  // same entries — openapi.llm.json used to name only `stream` after `n` and `max_tokens` were
+  // added here.
+  for (const param of REJECTED_PARAMS) {
+    if (param.predicate(body[param.name])) {
+      return openAiError(400, param.message, "invalid_request_error", param.code, param.errorParam);
+    }
   }
 
   const messages = body["messages"];

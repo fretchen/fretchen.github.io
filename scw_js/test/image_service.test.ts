@@ -255,6 +255,48 @@ describe("image_service.js Tests", () => {
       expect(global.fetch.mock.calls.filter((c) => String(c[0]) === POLL_URL)).toHaveLength(1);
     });
 
+    test("fails immediately when the submit response carries no polling_url", async () => {
+      // Before BflSubmitSchema this was `as { id, polling_url }`, so a missing polling_url became
+      // fetch(undefined) inside the poll loop's transport try — swallowed as a transient blip and
+      // retried for all 60 attempts, failing five minutes later as a *timeout*. It must fail at
+      // the boundary, before a single poll goes out.
+      global.fetch.mockImplementation((url) => {
+        if (String(url) === BFL_ENDPOINT) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve({ id: "req-1" }) });
+        }
+        return Promise.reject(new Error(`unexpected fetch: ${String(url)}`));
+      });
+
+      await expect(generateAndUploadImage("test prompt", "123", "bfl")).rejects.toThrow(
+        /unusable submit response/,
+      );
+      expect(global.fetch.mock.calls).toHaveLength(1);
+    });
+
+    test("fails immediately when BFL reports Ready with no result", async () => {
+      // Was `pollData.result!.sample` — the non-null assertion's TypeError landed in the image
+      // download's catch and was retried for every remaining attempt. A Ready without a URL is
+      // not a CDN blip, so it must name the real problem on the first poll.
+      global.fetch.mockImplementation((url) => {
+        const u = String(url);
+        if (u === BFL_ENDPOINT) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ id: "req-1", polling_url: POLL_URL }),
+          });
+        }
+        if (u === POLL_URL) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve({ status: "Ready" }) });
+        }
+        return Promise.reject(new Error(`unexpected fetch: ${u}`));
+      });
+
+      await expect(generateAndUploadImage("test prompt", "123", "bfl")).rejects.toThrow(
+        /Ready without a result URL/,
+      );
+      expect(global.fetch.mock.calls.filter((c) => String(c[0]) === POLL_URL)).toHaveLength(1);
+    });
+
     test("sollte einen einzelnen Bild-Download-Fehler überstehen und beim nächsten Poll erneut versuchen", async () => {
       // Regression guard, the counterpart to the test above: fixing the Error/Failed swallow-bug
       // moved that check outside the poll's try/catch, but the image-download step sits in the

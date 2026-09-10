@@ -26,13 +26,44 @@
 
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { LLMChatRequestSchema, LLMChatResponseSchema } from "../llm_schemas.js";
-import { CONTACT, openApiJsonPath, toComponentSchema, writeSpec } from "./openapi-codegen.js";
+import { LLMChatRequestSchema, LLMChatResponseSchema, REJECTED_PARAMS } from "../llm_schemas.js";
+import {
+  CONTACT,
+  openApiJsonPath,
+  toComponentSchema,
+  writeSpec,
+  type ServiceSpec,
+} from "./openapi-codegen.js";
+
+/**
+ * Metered pricing: `price.max` is a documentation-only baseline that `sc_llm_x402.ts` overwrites
+ * from the live ceiling at serve time.
+ */
+type LlmSpec = ServiceSpec<
+  "llm/v1",
+  "LLMChatRequest" | "LLMChatResponse",
+  {
+    protocols: readonly ["x402"];
+    price: { mode: "dynamic"; currency: "USD"; min: string; max: string };
+  }
+>;
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUTPUT_PATH = join(__dirname, "..", "openapi.llm.json");
 
-export function generateOpenApiSpec(): object {
+// "a, b, or c" / "a, b and c". Prose assembly stays here rather than in llm_schemas.ts: that file
+// is published UI, and stitching sentences is a codegen concern.
+const joinOr = (parts: readonly string[]): string =>
+  parts.length < 2 ? (parts[0] ?? "") : `${parts.slice(0, -1).join(", ")}, or ${parts.at(-1)}`;
+const joinAnd = (parts: readonly string[]): string =>
+  parts.length < 2 ? (parts[0] ?? "") : `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`;
+
+/** "stream:true, n other than 1, or any max_tokens" — for the 400 description. */
+const METERED_PHRASES = joinOr(REJECTED_PARAMS.map((p) => p.specPhrase));
+/** "stream, n and max_tokens" — for the x-guidance prose. */
+const METERED_NAMES = joinAnd(REJECTED_PARAMS.map((p) => p.name));
+
+export function generateOpenApiSpec(): LlmSpec {
   return {
     openapi: "3.1.0",
     info: {
@@ -40,7 +71,9 @@ export function generateOpenApiSpec(): object {
       description: "AI chat assistant, paid via x402 batch-settlement USDC payment channels.",
       version: "1.0.0",
       "x-guidance":
-        "OpenAI chat-completions body. POST / with { model, messages: [{ role, content }, ...] } and no payment header to receive a 402 with x402 batch-settlement payment requirements (accepts[]). Open/top up a payment channel per the requirements, retry with the payment header, and the service returns a standard OpenAI chat.completion object. Streaming (stream: true) is not supported. Each message is metered and settled up to a per-message price ceiling; the real cost is usage-derived and typically lower. Other standard OpenAI chat params (temperature, top_p, stop, seed, the penalties, response_format) are forwarded to the upstream model and work as normal; they are not enumerated here because the upstream owns that contract. The exceptions are stream, n and max_tokens, which are rejected with a 400 rather than ignored, because each would move cost past the fixed per-message ceiling this endpoint meters against. Note: payment uses x402 batch-settlement (a stateful channel), so a stock OpenAI SDK cannot pay this endpoint without batch-settlement client wiring — the OpenAI shape is for body legibility, not drop-in SDK use.",
+        "OpenAI chat-completions body. POST / with { model, messages: [{ role, content }, ...] } and no payment header to receive a 402 with x402 batch-settlement payment requirements (accepts[]). Open/top up a payment channel per the requirements, retry with the payment header, and the service returns a standard OpenAI chat.completion object. Streaming (stream: true) is not supported. Each message is metered and settled up to a per-message price ceiling; the real cost is usage-derived and typically lower. Other standard OpenAI chat params (temperature, top_p, stop, seed, the penalties, response_format) are forwarded to the upstream model and work as normal; they are not enumerated here because the upstream owns that contract. " +
+        `The exceptions are ${METERED_NAMES}, which are rejected with a 400 rather than ignored, because each would move cost past the fixed per-message ceiling this endpoint meters against. ` +
+        "Note: payment uses x402 batch-settlement (a stateful channel), so a stock OpenAI SDK cannot pay this endpoint without batch-settlement client wiring — the OpenAI shape is for body legibility, not drop-in SDK use.",
       contact: CONTACT,
     },
     "x-discovery": {
@@ -93,7 +126,9 @@ export function generateOpenApiSpec(): object {
             },
             "400": {
               description:
-                "Request validation failed — a missing or unserved model, an empty messages array, or one of the metered params past its ceiling: stream:true, n other than 1, or any max_tokens. Body is { error: { message, type, code } }.",
+                "Request validation failed — a missing or unserved model, an empty messages array, " +
+                `or one of the metered params past its ceiling: ${METERED_PHRASES}. ` +
+                "Body is { error: { message, type, code } }.",
             },
             "402": {
               description:

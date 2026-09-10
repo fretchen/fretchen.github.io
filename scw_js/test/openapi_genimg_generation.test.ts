@@ -20,32 +20,22 @@ describe("openapi.genimg.json generation", () => {
    * website/hooks/x402Discovery.ts refuses an agent whose x-service-type is wrong.
    * `images/v1` has no such checker, so the contract's load-bearing bits are asserted here
    * instead. Without this, a rename or a dropped key would ship silently.
+   *
+   * What used to be asserted here and is now a COMPILE error, via the `GenimgSpec` return type in
+   * scripts/generate-openapi-genimg.ts: `x-service-type` being exactly "images/v1",
+   * `x-capabilities` being exactly ["nft-mint"], and the two schema names. Do not re-add them —
+   * the golden equality test above carries the type's guarantee onto the committed file. What
+   * stays below is what a type cannot express: prose substrings, and assertions about
+   * `toComponentSchema`'s output, which is deliberately `Record<string, unknown>`.
    */
   describe("images/v1 contract", () => {
     const spec = committedSpec as Record<string, unknown>;
-
-    it("declares x-service-type: images/v1", () => {
-      expect(spec["x-service-type"]).toBe("images/v1");
-    });
 
     it("declares an interop floor naming the exact scheme and both mainnets", () => {
       const floor = spec["x-interop-floor"] as string;
       expect(floor).toContain("eip155:10");
       expect(floor).toContain("eip155:8453");
       expect(floor).toContain("exact");
-    });
-
-    it("declares the NFT mint as a capability, outside the floor", () => {
-      expect(spec["x-capabilities"]).toEqual(["nft-mint"]);
-    });
-
-    it("keeps the schema names the published docs reference", () => {
-      // website/pages/x402/buyers renders components.schemas.ImageGenerationResponse from the
-      // live spec via SpecParamTable — renaming either schema breaks that page silently.
-      const schemas = (spec.components as { schemas: Record<string, unknown> }).schemas;
-      expect(Object.keys(schemas)).toEqual(
-        expect.arrayContaining(["ImageGenerationRequest", "ImageGenerationResponse"]),
-      );
     });
 
     it("satisfies its own floor: the response carries data[].url", () => {

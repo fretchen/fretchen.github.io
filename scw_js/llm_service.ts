@@ -1,4 +1,5 @@
 import pino from "pino";
+import { UpstreamChatCompletionSchema } from "./upstream_schemas.js";
 
 const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 
@@ -91,6 +92,7 @@ export async function callLLMAPI(
   prompt: LLMMessage[],
   dummy = false,
   provider = "mistral",
+  forwardedParams: Record<string, unknown> = {},
 ): Promise<LLMResponse> {
   if (dummy) {
     return {
@@ -131,7 +133,13 @@ export async function callLLMAPI(
   }
   logger.debug({ prompt }, "Generating answer for prompt");
 
-  const body = { model: config.defaultModel, messages: prompt };
+  // Forward the caller's remaining chat params to the upstream model rather than dropping them —
+  // `temperature`, `top_p`, `stop`, `seed` and the like cost us nothing and are the upstream's
+  // contract to honour. Our own `model` and `messages` are written last so they always win: the
+  // model id is resolved against what we actually serve, and `messages` has already been validated.
+  // sc_llm_x402.ts strips the params that would move cost past the metered ceiling before we get
+  // here (see its deny-list), so anything still present is safe to pass on.
+  const body = { ...forwardedParams, model: config.defaultModel, messages: prompt };
 
   logger.debug("Sending answer generation request...");
   const response = await fetch(`${config.baseUrl}/chat/completions`, {
@@ -153,27 +161,32 @@ export async function callLLMAPI(
   // Upstream is OpenAI-compatible; forward its chat-completion envelope, synthesizing only
   // the fields a given provider might omit (id/created/object) so our response is a
   // well-formed OpenAI chat.completion regardless of upstream quirks.
-  const data = (await response.json()) as Partial<LLMResponse> & {
-    choices?: Array<{
-      index?: number;
-      message: { role?: string; content: string };
-      finish_reason?: string | null;
-    }>;
-    usage?: LLMUsage;
-    model?: string;
-  };
-  const firstChoice = data.choices?.[0];
-  if (!firstChoice || !data.usage) {
+  //
+  // Validated rather than cast: `usage` feeds getSettleAmount() in sc_llm_x402.ts, which runs
+  // after the try/catch around this function has closed, so a non-numeric prompt_tokens threw out
+  // of handle() as an unhandled rejection. The schema subsumes the old
+  // `!firstChoice || !data.usage` guard.
+  const raw: unknown = await response.json();
+  const parsed = UpstreamChatCompletionSchema.safeParse(raw);
+  if (!parsed.success) {
+    const upstreamModel = (raw as { model?: unknown } | null)?.model;
+    logger.error(
+      { provider, issues: parsed.error.issues },
+      "Upstream returned a completion we cannot bill from",
+    );
     throw new Error(
-      `LLM API returned an incomplete completion (model: ${data.model ?? config.defaultModel})`,
+      `LLM API returned an incomplete completion (model: ${
+        typeof upstreamModel === "string" ? upstreamModel : config.defaultModel
+      })`,
     );
   }
+  const data = parsed.data;
   return {
     id: data.id ?? `chatcmpl-${Date.now()}`,
     object: "chat.completion",
     created: data.created ?? Math.floor(Date.now() / 1000),
     model: data.model ?? config.defaultModel,
-    choices: data.choices!.map((c, i) => ({
+    choices: data.choices.map((c, i) => ({
       index: c.index ?? i,
       message: { role: c.message.role ?? "assistant", content: c.message.content },
       finish_reason: c.finish_reason ?? "stop",

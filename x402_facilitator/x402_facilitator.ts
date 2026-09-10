@@ -6,8 +6,13 @@
 import { verifyPayment } from "./x402_verify";
 import { settlePayment } from "./x402_settle";
 import { getSupportedCapabilities } from "./x402_supported";
-import type { VerifyResponseBody, SettleResponseBody } from "./x402_schemas";
+import {
+  PaymentRequestSchema,
+  type VerifyResponseBody,
+  type SettleResponseBody,
+} from "./x402_schemas";
 import openapiSpec from "./openapi.json" with { type: "json" };
+import type { z } from "zod";
 import pino from "pino";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
@@ -43,21 +48,11 @@ export interface ScalewayResponse {
 }
 
 /**
- * Payment request body structure
+ * Inferred from the published schema rather than hand-written beside it. `looseObject` keeps the
+ * index signatures, so the payload still satisfies verifyPayment/settlePayment's
+ * `Record<string, unknown>` parameters.
  */
-interface PaymentRequestBody {
-  paymentPayload?: {
-    accepted?: {
-      network?: string;
-      scheme?: string;
-    };
-    [key: string]: unknown;
-  };
-  paymentRequirements?: {
-    amount?: string;
-    [key: string]: unknown;
-  };
-}
+type PaymentRequestBody = z.infer<typeof PaymentRequestSchema>;
 
 /**
  * Common headers for all responses
@@ -201,23 +196,33 @@ async function handlePaymentRequest(
     };
   }
 
-  let body: PaymentRequestBody;
-  try {
-    body =
-      typeof event.body === "string"
-        ? (JSON.parse(event.body) as PaymentRequestBody)
-        : (event.body as PaymentRequestBody);
-  } catch (error) {
-    logger.error({ err: error }, "Failed to parse request body");
-    return {
-      statusCode: 400,
-      headers: CORS_HEADERS,
-      body: JSON.stringify({ error: "Invalid JSON in request body" }),
-    };
+  // Two distinct failures, two distinct messages. Scaleway hands us either a raw string or an
+  // already-parsed object, and only the string path can fail at JSON.parse.
+  let rawBody: unknown;
+  if (typeof event.body === "string") {
+    try {
+      rawBody = JSON.parse(event.body);
+    } catch (error) {
+      logger.error({ err: error }, "Failed to parse request body");
+      return {
+        statusCode: 400,
+        headers: CORS_HEADERS,
+        body: JSON.stringify({ error: "Invalid JSON in request body" }),
+      };
+    }
+  } else {
+    rawBody = event.body;
   }
 
-  // Validate request structure
-  if (!body.paymentPayload || !body.paymentRequirements) {
+  // Validate against the schema this service publishes, which until now generated the OpenAPI
+  // document and nothing else. It requires `paymentPayload.accepted`, and so does @x402/core;
+  // x402_settle.ts derives isBatchSettlement from accepted.scheme and x402_verify.ts reads
+  // asset/network/payTo off it, so a payload without it cannot be settled. Such a payload
+  // previously reached the SDK and came back isValid:false — an invalid payment, when it was
+  // really a malformed request.
+  const validation = PaymentRequestSchema.safeParse(rawBody);
+  if (!validation.success) {
+    logger.warn({ issues: validation.error.issues }, "Rejected malformed payment request");
     return {
       statusCode: 400,
       headers: CORS_HEADERS,
@@ -227,7 +232,10 @@ async function handlePaymentRequest(
     };
   }
 
-  const { paymentPayload, paymentRequirements } = body;
+  // GUARD ONLY — validation.data is discarded. safeParse on a looseObject returns a deep clone,
+  // and verifyPayment/settlePayment read arbitrary keys off the payload; forwarding the clone
+  // works today but breaks the moment this schema gains a transform, coercion or default.
+  const { paymentPayload, paymentRequirements } = rawBody as PaymentRequestBody;
 
   logger.info(
     {

@@ -88,6 +88,24 @@ describe("llm_service.js", () => {
     await expect(callLLMAPI(prompt)).rejects.toThrow("Network timeout");
   });
 
+  test("rejects a non-numeric usage instead of passing it downstream", async () => {
+    // `usage` is priced by getSettleAmount() in sc_llm_x402.ts, outside the try/catch around
+    // callLLMAPI — so a non-numeric prompt_tokens used to escape handle() as an unhandled
+    // rejection. Caught here, it is an ordinary 500.
+    mockFetchResponse({
+      ...mockLLMResponse,
+      usage: { prompt_tokens: "many", completion_tokens: 7, total_tokens: 12 },
+    });
+    const prompt = [{ role: "user", content: "Test" }];
+    await expect(callLLMAPI(prompt)).rejects.toThrow(/incomplete completion/);
+  });
+
+  test("rejects an empty choices array", async () => {
+    mockFetchResponse({ ...mockLLMResponse, choices: [] });
+    const prompt = [{ role: "user", content: "Test" }];
+    await expect(callLLMAPI(prompt)).rejects.toThrow(/incomplete completion/);
+  });
+
   test("verarbeitet Multi-Message-Prompts korrekt", async () => {
     const prompt = [
       { role: "system", content: "Du bist ein Assistent." },

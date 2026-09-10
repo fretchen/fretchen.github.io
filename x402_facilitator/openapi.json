@@ -158,11 +158,11 @@
                     "type": "string"
                   }
                 },
-                "additionalProperties": false
+                "additionalProperties": {}
               }
             },
             "required": ["accepted"],
-            "additionalProperties": false,
+            "additionalProperties": {},
             "description": "The x402 v2 PaymentPayload the buyer produced — includes accepted.network, accepted.scheme, and the signed authorization. Passed through as received; the facilitator does not re-derive it."
           },
           "paymentRequirements": {
@@ -173,12 +173,12 @@
                 "type": "string"
               }
             },
-            "additionalProperties": false,
+            "additionalProperties": {},
             "description": "The x402 v2 PaymentRequirements the seller advertised in its 402 response."
           }
         },
         "required": ["paymentPayload", "paymentRequirements"],
-        "additionalProperties": false,
+        "additionalProperties": {},
         "description": "Identical shape for /verify and /settle."
       },
       "VerifyResponse": {

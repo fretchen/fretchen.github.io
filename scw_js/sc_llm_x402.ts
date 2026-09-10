@@ -6,6 +6,7 @@ import {
   type LLMMessage,
 } from "./llm_service.js";
 import { parseJsonBody, CORS_HEADERS, errorResponse, openAiError } from "./utils.js";
+import { LLMChatRequestSchema, REJECTED_PARAMS } from "./llm_schemas.js";
 import { getUSDCConfig, isTestnet } from "@fretchen/chain-utils";
 import pino from "pino";
 import {
@@ -49,6 +50,14 @@ const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 // resourceServer verify/settle primitives directly.) See getSettleAmount() below.
 // See llm_service.ts's LLM_PROVIDERS for the provider registry.
 const LLM_PROVIDER = "mistral";
+
+// The request fields this endpoint owns: model/messages it resolves and validates itself,
+// useDummyData/payment are vendor extensions, and stream/n/max_tokens are the metered params
+// rejected below. Everything NOT in this set is forwarded verbatim to the upstream model.
+// Derived from the schema's own shape rather than a hand-written list, so adding a field to
+// LLMChatRequestSchema (e.g. `tools`) is the single edit that also keeps it out of the forwarded
+// bag — the two can't drift.
+const OWN_REQUEST_KEYS = new Set(Object.keys(LLMChatRequestSchema.shape));
 
 const MAX_TOKENS_PER_MESSAGE = process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE ?? "2000";
 // No real prompt/completion split exists yet for the ceiling, so price the entire
@@ -180,15 +189,22 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
   }
 
   // OpenAI chat-completions request body: { model, messages: [{ role, content }, ...] }.
-  // Streaming settles per message on the final usage, which requires the whole completion —
-  // so stream:true is rejected rather than silently buffered.
-  if (body["stream"] === true) {
-    return openAiError(
-      400,
-      "Streaming (stream: true) is not supported by this endpoint.",
-      "invalid_request_error",
-      "stream_unsupported",
-    );
+  //
+  // Everything else in the body is FORWARDED to the upstream model — Mistral owns the chat-param
+  // contract the way @x402/evm owns the payment-payload contract in x402_facilitator, so
+  // `temperature`, `top_p`, `stop`, `seed` and friends work rather than being silently dropped.
+  //
+  // The exceptions below are the params that move cost past the fixed per-message ceiling
+  // (USDC_MAX_PRICE_PER_MESSAGE, ~$0.003 at 2000 output tokens). Rejecting is the honest answer:
+  // ignoring them would charge for a request we did not fulfil as asked, and a caller who sets
+  // max_tokens expects it to bound something. See llm_schemas.ts for the full reasoning.
+  //
+  // The list lives in llm_schemas.ts so the published 400 description is built from the same
+  // entries — openapi.llm.json once named only `stream`.
+  for (const param of REJECTED_PARAMS) {
+    if (param.predicate(body[param.name])) {
+      return openAiError(400, param.message, "invalid_request_error", param.code, param.errorParam);
+    }
   }
 
   const messages = body["messages"];
@@ -374,7 +390,14 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     // is added to advertisedModelIds(), a request routed to that provider here will still be
     // priced/settled at Mistral's rate — fix pricing to key off resolved.provider before
     // advertising a second model.
-    llmData = await callLLMAPI(prompt, useMock, resolved.provider);
+    // Everything we do not own ourselves goes upstream. Stripping OWN_REQUEST_KEYS (the schema's
+    // own field set) rather than allow-listing the upstream's params is what keeps this
+    // self-maintaining: a param the upstream adds tomorrow works without a change here, and one
+    // that would move cost past the ceiling has already been rejected above.
+    const forwardedParams = Object.fromEntries(
+      Object.entries(body).filter(([key]) => !OWN_REQUEST_KEYS.has(key)),
+    );
+    llmData = await callLLMAPI(prompt, useMock, resolved.provider, forwardedParams);
   } catch (error) {
     logger.error({ err: error }, "Error during answer generation");
     const msg = (error as Error).message;

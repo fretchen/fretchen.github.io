@@ -521,6 +521,141 @@ describe("sc_llm_x402", () => {
       mockExtractPaymentPayload.mockReturnValue(samplePaymentPayload);
     });
 
+    /**
+     * The endpoint forwards the caller's chat params to the upstream model rather than dropping
+     * them — Mistral owns that contract, the way @x402/evm owns the payment-payload contract in
+     * x402_facilitator. Silently dropping a `temperature` the caller set would mean charging for a
+     * request not fulfilled as asked; rejecting it would make this a worse API than the one it
+     * imitates. See llm_schemas.ts.
+     */
+    describe("chat params are forwarded upstream", () => {
+      it("passes an unlisted param through to callLLMAPI", async () => {
+        const res = await handle(
+          makeEvent({
+            body: JSON.stringify({
+              model: TEST_MODEL,
+              messages: [{ role: "user", content: "hi" }],
+              temperature: 0,
+              top_p: 0.1,
+            }),
+          }) as never,
+          {},
+        );
+
+        expect(res.statusCode).toBe(200);
+        // 4th arg is the forwarded-params bag.
+        expect(mockCallLLMAPI).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.anything(),
+          expect.anything(),
+          { temperature: 0, top_p: 0.1 },
+        );
+      });
+
+      it("never forwards the keys we own", async () => {
+        await handle(
+          makeEvent({
+            body: JSON.stringify({
+              model: TEST_MODEL,
+              messages: [{ role: "user", content: "hi" }],
+              useDummyData: true,
+              payment: { some: "payload" },
+              temperature: 0.5,
+            }),
+          }) as never,
+          {},
+        );
+
+        const forwarded = mockCallLLMAPI.mock.calls[0][3];
+        // model/messages are set by us downstream; useDummyData and payment are ours entirely and
+        // must never reach the upstream model.
+        expect(forwarded).toEqual({ temperature: 0.5 });
+      });
+
+      it("forwards an empty bag when the caller sends nothing extra", async () => {
+        // Guards the byte-identical-to-before case: a plain request must not gain stray keys.
+        await handle(makeEvent() as never, {});
+        expect(mockCallLLMAPI.mock.calls[0][3]).toEqual({});
+      });
+
+      it("accepts a non-standard message role and forwards it verbatim", async () => {
+        // `role` is not a cost-mover, so the handler does not restrict it to the OpenAI three and
+        // the published schema must not either (LLMChatMessageSchema.role is z.string()). A role
+        // the upstream adds later — e.g. "tool" — has to reach Mistral untouched.
+        const res = await handle(
+          makeEvent({
+            body: JSON.stringify({
+              model: TEST_MODEL,
+              messages: [
+                { role: "user", content: "hi" },
+                { role: "tool", content: "result" },
+              ],
+            }),
+          }) as never,
+          {},
+        );
+
+        expect(res.statusCode).toBe(200);
+        const forwardedPrompt = mockCallLLMAPI.mock.calls[0][0];
+        expect(forwardedPrompt).toEqual([
+          { role: "user", content: "hi" },
+          { role: "tool", content: "result" },
+        ]);
+      });
+    });
+
+    /**
+     * The three exceptions to forwarding: params that move cost past the fixed per-message
+     * ceiling. Rejected rather than ignored, so a caller learns their limit instead of being
+     * quietly billed for something else.
+     */
+    describe("cost-moving params are rejected", () => {
+      const cases = [
+        { param: "n", body: { n: 5 } },
+        { param: "max_tokens", body: { max_tokens: 8000 } },
+      ];
+
+      for (const { param, body: extra } of cases) {
+        it(`rejects ${param} with a message naming the ceiling`, async () => {
+          const res = await handle(
+            makeEvent({
+              body: JSON.stringify({
+                model: TEST_MODEL,
+                messages: [{ role: "user", content: "hi" }],
+                ...extra,
+              }),
+            }) as never,
+            {},
+          );
+
+          expect(res.statusCode).toBe(400);
+          const parsed = JSON.parse(res.body);
+          expect(parsed.error.param).toBe(param);
+          expect(parsed.error.message).toMatch(/ceiling/i);
+          // Rejected before the upstream is called, so nothing is spent.
+          expect(mockCallLLMAPI).not.toHaveBeenCalled();
+          expect(mockSettlePayment).not.toHaveBeenCalled();
+        });
+      }
+
+      it("accepts n=1, which is what we actually serve", async () => {
+        const res = await handle(
+          makeEvent({
+            body: JSON.stringify({
+              model: TEST_MODEL,
+              messages: [{ role: "user", content: "hi" }],
+              n: 1,
+            }),
+          }) as never,
+          {},
+        );
+
+        expect(res.statusCode).toBe(200);
+        // n is ours to control, so it is not forwarded even when valid.
+        expect(mockCallLLMAPI.mock.calls[0][3]).toEqual({});
+      });
+    });
+
     it("returns 401 when the LLM API token is missing", async () => {
       mockCallLLMAPI.mockRejectedValue(new Error("API Token nicht gefunden"));
       const res = await handle(makeEvent() as never, {});
@@ -541,7 +676,7 @@ describe("sc_llm_x402", () => {
       const res = await handle(makeEvent() as never, {});
       expect(res.statusCode).toBe(200);
       // Third arg is the fixed provider — this endpoint always uses Mistral, live or mock.
-      expect(mockCallLLMAPI).toHaveBeenCalledWith(expect.anything(), true, "mistral");
+      expect(mockCallLLMAPI).toHaveBeenCalledWith(expect.anything(), true, "mistral", {});
     });
 
     it("uses the real LLM path on a mainnet payment", async () => {
@@ -551,7 +686,7 @@ describe("sc_llm_x402", () => {
       });
       const res = await handle(makeEvent() as never, {});
       expect(res.statusCode).toBe(200);
-      expect(mockCallLLMAPI).toHaveBeenCalledWith(expect.anything(), false, "mistral");
+      expect(mockCallLLMAPI).toHaveBeenCalledWith(expect.anything(), false, "mistral", {});
     });
 
     // ═══════════════════════════════════════════════════════════
@@ -590,7 +725,7 @@ describe("sc_llm_x402", () => {
         {},
       );
       expect(res.statusCode).toBe(200);
-      expect(mockCallLLMAPI).toHaveBeenCalledWith(expect.anything(), true, "mistral");
+      expect(mockCallLLMAPI).toHaveBeenCalledWith(expect.anything(), true, "mistral", {});
     });
 
     it("allows an explicit useDummyData=false on a mainnet network (real path proceeds)", async () => {
@@ -609,7 +744,7 @@ describe("sc_llm_x402", () => {
         {},
       );
       expect(res.statusCode).toBe(200);
-      expect(mockCallLLMAPI).toHaveBeenCalledWith(expect.anything(), false, "mistral");
+      expect(mockCallLLMAPI).toHaveBeenCalledWith(expect.anything(), false, "mistral", {});
     });
   });
 

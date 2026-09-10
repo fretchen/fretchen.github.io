@@ -185,6 +185,45 @@ describe("x402_facilitator handlers", () => {
       expect(result.statusCode).toBe(200);
       expect(JSON.parse(result.body).isValid).toBe(true);
     });
+
+    it("forwards the original payload object, not the validated clone", async () => {
+      // safeParse on a looseObject returns a deep clone, and verify/settle read keys the schema
+      // does not model. Passing validation.data would pass today and break the first time the
+      // schema gains a transform, coercion or default.
+      verifyPayment.mockResolvedValue({ isValid: true, payer: "0xabc" });
+
+      const event = {
+        httpMethod: "POST",
+        body: {
+          paymentPayload: {
+            accepted: { network: "eip155:10" },
+            payload: { signature: "0xdeadbeef" },
+          },
+          paymentRequirements: { amount: "1000000" },
+        },
+      };
+      await handleVerify(event, {});
+
+      expect(verifyPayment.mock.calls[0][0]).toBe(event.body.paymentPayload);
+      expect(verifyPayment.mock.calls[0][1]).toBe(event.body.paymentRequirements);
+    });
+
+    it("rejects a payload with no accepted envelope", async () => {
+      // @x402/core requires `accepted`, and so does the facilitator: settle derives
+      // isBatchSettlement from accepted.scheme. This used to reach the SDK and return
+      // isValid:false — an invalid payment, when it was really a malformed request.
+      const event = {
+        httpMethod: "POST",
+        body: JSON.stringify({
+          paymentPayload: { payload: { signature: "0xdeadbeef" } },
+          paymentRequirements: { amount: "1000000" },
+        }),
+      };
+      const result = await handleVerify(event, {});
+
+      expect(result.statusCode).toBe(400);
+      expect(verifyPayment).not.toHaveBeenCalled();
+    });
   });
 
   describe("handleSettle", () => {

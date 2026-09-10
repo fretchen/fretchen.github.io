@@ -11,6 +11,8 @@ if (process.env.NODE_ENV === "test" && !process.env.CI) {
 
 import { putS3Object, getS3BaseUrl } from "@fretchen/s3-utils";
 import { randomBytes } from "crypto";
+import { z } from "zod";
+import { BflSubmitSchema, BflPollSchema } from "./upstream_schemas.js";
 
 /**
  * One entry today. Kept as a seam rather than inlined because `genimg_schemas.ts`'s
@@ -115,8 +117,13 @@ async function generateImageBFL(
     throw new Error(`Could not reach BFL: ${response.status} ${response.statusText}`);
   }
 
-  const initData = (await response.json()) as { id: string; polling_url: string };
-  const { id: requestId, polling_url } = initData;
+  // Fail here rather than let a missing polling_url become fetch(undefined) in the loop below,
+  // where the transport catch retries it 60 times and then reports a timeout.
+  const submit = BflSubmitSchema.safeParse(await response.json());
+  if (!submit.success) {
+    throw new Error(`BFL returned an unusable submit response: ${z.prettifyError(submit.error)}`);
+  }
+  const { id: requestId, polling_url } = submit.data;
 
   console.log(`BFL request started with ID: ${requestId}`);
 
@@ -130,7 +137,7 @@ async function generateImageBFL(
       await new Promise((resolve) => setTimeout(resolve, pollInterval));
     }
 
-    let pollData: { status: string; result?: { sample: string } };
+    let rawPoll: unknown;
     try {
       const pollResponse = await fetch(polling_url, {
         method: "GET",
@@ -142,7 +149,7 @@ async function generateImageBFL(
         continue;
       }
 
-      pollData = (await pollResponse.json()) as { status: string; result?: { sample: string } };
+      rawPoll = await pollResponse.json();
     } catch (error) {
       // Only transport-level failures are retried. A transient network blip on one poll is
       // worth another attempt; a generation the API has already declared failed is not.
@@ -150,17 +157,34 @@ async function generateImageBFL(
       continue;
     }
 
+    // Outside the try for the same reason as the status checks below: valid JSON that is not a
+    // BFL poll response is not a transient blip worth retrying.
+    const poll = BflPollSchema.safeParse(rawPoll);
+    if (!poll.success) {
+      throw new Error(
+        `BFL returned an unrecognizable poll response: ${z.prettifyError(poll.error)}`,
+      );
+    }
+    const pollData = poll.data;
+
     console.log(`Poll status: ${pollData.status}`);
 
     // Deliberately outside the try above. These used to be thrown inside it and caught by its
     // own catch, so a generation BFL had reported as Failed was swallowed and retried for the
     // full 60 attempts — five minutes — before surfacing as a *timeout*, hiding the real reason.
+    //
+    // Stringifies rawPoll, not the Zod clone: this message is the only record of what BFL sent.
     if (pollData.status === "Error" || pollData.status === "Failed") {
-      throw new Error(`BFL generation failed: ${JSON.stringify(pollData)}`);
+      throw new Error(`BFL generation failed: ${JSON.stringify(rawPoll)}`);
     }
 
     if (pollData.status === "Ready") {
-      const imageUrl = pollData.result!.sample;
+      const imageUrl = pollData.result?.sample;
+      // Outside the download try below: a Ready without a result URL is not a CDN blip. This was
+      // a non-null assertion, whose TypeError landed in that catch and was retried.
+      if (!imageUrl) {
+        throw new Error(`BFL reported Ready without a result URL: ${JSON.stringify(rawPoll)}`);
+      }
       console.log("Downloading image from:", imageUrl);
 
       // Its own try/catch, separate from the Error/Failed check above: a transient failure

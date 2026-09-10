@@ -91,6 +91,7 @@ export async function callLLMAPI(
   prompt: LLMMessage[],
   dummy = false,
   provider = "mistral",
+  forwardedParams: Record<string, unknown> = {},
 ): Promise<LLMResponse> {
   if (dummy) {
     return {
@@ -131,7 +132,13 @@ export async function callLLMAPI(
   }
   logger.debug({ prompt }, "Generating answer for prompt");
 
-  const body = { model: config.defaultModel, messages: prompt };
+  // Forward the caller's remaining chat params to the upstream model rather than dropping them —
+  // `temperature`, `top_p`, `stop`, `seed` and the like cost us nothing and are the upstream's
+  // contract to honour. Our own `model` and `messages` are written last so they always win: the
+  // model id is resolved against what we actually serve, and `messages` has already been validated.
+  // sc_llm_x402.ts strips the params that would move cost past the metered ceiling before we get
+  // here (see its deny-list), so anything still present is safe to pass on.
+  const body = { ...forwardedParams, model: config.defaultModel, messages: prompt };
 
   logger.debug("Sending answer generation request...");
   const response = await fetch(`${config.baseUrl}/chat/completions`, {

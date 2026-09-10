@@ -4,7 +4,7 @@
     "title": "Fretchen AI Assistant (LLM) Service",
     "description": "AI chat assistant, paid via x402 batch-settlement USDC payment channels.",
     "version": "1.0.0",
-    "x-guidance": "OpenAI chat-completions body. POST / with { model, messages: [{ role, content }, ...] } and no payment header to receive a 402 with x402 batch-settlement payment requirements (accepts[]). Open/top up a payment channel per the requirements, retry with the payment header, and the service returns a standard OpenAI chat.completion object. Streaming (stream: true) is not supported. Each message is metered and settled up to a per-message price ceiling; the real cost is usage-derived and typically lower. Note: payment uses x402 batch-settlement (a stateful channel), so a stock OpenAI SDK cannot pay this endpoint without batch-settlement client wiring — the OpenAI shape is for body legibility, not drop-in SDK use.",
+    "x-guidance": "OpenAI chat-completions body. POST / with { model, messages: [{ role, content }, ...] } and no payment header to receive a 402 with x402 batch-settlement payment requirements (accepts[]). Open/top up a payment channel per the requirements, retry with the payment header, and the service returns a standard OpenAI chat.completion object. Streaming (stream: true) is not supported. Each message is metered and settled up to a per-message price ceiling; the real cost is usage-derived and typically lower. Other standard OpenAI chat params (temperature, top_p, stop, seed, the penalties, response_format) are forwarded to the upstream model and work as normal; they are not enumerated here because the upstream owns that contract. The exceptions are stream, n and max_tokens, which are rejected with a 400 rather than ignored, because each would move cost past the fixed per-message ceiling this endpoint meters against. Note: payment uses x402 batch-settlement (a stateful channel), so a stock OpenAI SDK cannot pay this endpoint without batch-settlement client wiring — the OpenAI shape is for body legibility, not drop-in SDK use.",
     "contact": {
       "name": "fretchen",
       "url": "https://www.fretchen.eu",
@@ -140,6 +140,15 @@
             "description": "Streaming is not supported. Each message settles on its final token usage, which requires the whole completion, so stream:true is rejected rather than silently buffered.",
             "type": "boolean",
             "const": false
+          },
+          "n": {
+            "description": "Only n=1 is supported. Each message is metered against a fixed per-message price ceiling, and additional completions multiply output tokens past it.",
+            "type": "number",
+            "const": 1
+          },
+          "max_tokens": {
+            "description": "Not supported. Output length is bounded by the per-message price ceiling this endpoint meters against, not by a caller-supplied limit.",
+            "not": {}
           },
           "useDummyData": {
             "description": "Vendor extension (not OpenAI): forces a mock completion. Testnet networks always mock regardless.",

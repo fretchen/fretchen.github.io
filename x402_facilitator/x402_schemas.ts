@@ -16,6 +16,18 @@
  * validates internally, and re-modeling that here would just be re-implementing the
  * SDK's own validation.
  *
+ * Because that request schema is a deliberately *partial* view of a payload we forward rather than
+ * own, it must publish as **permissive** — hence `z.looseObject`, not `z.object`. `z.object` only
+ * strips unknown keys at parse time, but `z.toJSONSchema` renders it as
+ * `additionalProperties: false`, and that shipped: the published `PaymentRequest` declared closed
+ * while every real payload carries `x402Version`, `resource`, `payload`, and an `accepted` with
+ * `amount`/`asset`/`payTo`/`maxTimeoutSeconds`/`extra`. A client trimming its payload to match the
+ * spec would have produced an unverifiable payment — the spec described a request that could not be
+ * paid with.
+ *
+ * Responses stay `z.object`: those are assembled field by field below, so closed is true of them.
+ * `test/openapi_generation.test.ts` asserts both directions, because nothing else does.
+ *
  * `/verify` and `/settle` hand-assemble their response bodies in `x402_facilitator.ts`
  * rather than serializing an internal result object directly (deliberately — internal
  * types like `SettleResult` carry fields, e.g. `errorMessage`, that must never reach
@@ -31,22 +43,22 @@ import { z } from "zod";
 
 // ── Request (shared by /verify and /settle) ──
 
-const AcceptedSchema = z.object({
+const AcceptedSchema = z.looseObject({
   network: z.string().optional().describe("CAIP-2 network id, e.g. eip155:10."),
   scheme: z.string().optional().describe("e.g. exact, batch-settlement."),
 });
 
 export const PaymentRequestSchema = z
-  .object({
+  .looseObject({
     paymentPayload: z
-      .object({ accepted: AcceptedSchema })
+      .looseObject({ accepted: AcceptedSchema })
       .describe(
         "The x402 v2 PaymentPayload the buyer produced — includes accepted.network, " +
           "accepted.scheme, and the signed authorization. Passed through as received; " +
           "the facilitator does not re-derive it.",
       ),
     paymentRequirements: z
-      .object({
+      .looseObject({
         amount: z.string().optional().describe("Atomic units of the payment asset."),
       })
       .describe("The x402 v2 PaymentRequirements the seller advertised in its 402 response."),

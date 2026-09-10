@@ -180,14 +180,39 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
   }
 
   // OpenAI chat-completions request body: { model, messages: [{ role, content }, ...] }.
-  // Streaming settles per message on the final usage, which requires the whole completion —
-  // so stream:true is rejected rather than silently buffered.
+  //
+  // Everything else in the body is FORWARDED to the upstream model — Mistral owns the chat-param
+  // contract the way @x402/evm owns the payment-payload contract in x402_facilitator, so
+  // `temperature`, `top_p`, `stop`, `seed` and friends work rather than being silently dropped.
+  //
+  // The exceptions below are the params that move cost past the fixed per-message ceiling
+  // (USDC_MAX_PRICE_PER_MESSAGE, ~$0.003 at 2000 output tokens). Rejecting is the honest answer:
+  // ignoring them would charge for a request we did not fulfil as asked, and a caller who sets
+  // max_tokens expects it to bound something. See llm_schemas.ts for the full reasoning.
   if (body["stream"] === true) {
     return openAiError(
       400,
       "Streaming (stream: true) is not supported by this endpoint.",
       "invalid_request_error",
       "stream_unsupported",
+    );
+  }
+  if (body["n"] !== undefined && body["n"] !== 1) {
+    return openAiError(
+      400,
+      "Only n=1 is supported. Each message is metered against a fixed per-message price ceiling, and additional completions multiply output tokens past it.",
+      "invalid_request_error",
+      "unsupported_value",
+      "n",
+    );
+  }
+  if (body["max_tokens"] !== undefined) {
+    return openAiError(
+      400,
+      "'max_tokens' is not supported. Output length is bounded by the per-message price ceiling this endpoint meters against, not by a caller-supplied limit.",
+      "invalid_request_error",
+      "unsupported_value",
+      "max_tokens",
     );
   }
 
@@ -374,7 +399,21 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     // is added to advertisedModelIds(), a request routed to that provider here will still be
     // priced/settled at Mistral's rate — fix pricing to key off resolved.provider before
     // advertising a second model.
-    llmData = await callLLMAPI(prompt, useMock, resolved.provider);
+    // Everything we do not own ourselves goes upstream. Removing our own keys rather than
+    // allow-listing theirs is what keeps this self-maintaining: a param the upstream adds
+    // tomorrow works without a change here, and one that would move cost past the ceiling has
+    // already been rejected above.
+    const {
+      model: _model,
+      messages: _messages,
+      useDummyData: _dummy,
+      payment: _payment,
+      stream: _stream,
+      n: _n,
+      max_tokens: _maxTokens,
+      ...forwardedParams
+    } = body;
+    llmData = await callLLMAPI(prompt, useMock, resolved.provider, forwardedParams);
   } catch (error) {
     logger.error({ err: error }, "Error during answer generation");
     const msg = (error as Error).message;

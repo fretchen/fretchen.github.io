@@ -8,25 +8,28 @@
  * `components.schemas`, discoverable only from the `x-guidance` prose. A machine reading the schema
  * could not find either.
  *
- * **Not strict — because that is what the handler currently does, not because it is right.**
- * `genimg_schemas.ts` rejects unknown fields, and the argument there transfers: this is also a paid
- * endpoint, so silently dropping a `temperature: 0` a caller believed in means charging for a
- * request not fulfilled as asked. Being lenient here is a wart, not a principle.
+ * **Permissive by design, not by neglect.** The body is forwarded to the upstream model, so Mistral
+ * owns the chat-param contract the same way `@x402/evm` owns the payment-payload contract in
+ * `x402_facilitator`. An unlisted OpenAI param (`temperature`, `top_p`, `stop`, `seed`, the
+ * penalties, `response_format`) is passed through and simply works, rather than being silently
+ * dropped — which is what would make charging for it dishonest — or rejected, which would make this
+ * a worse API than the one it imitates.
  *
- * It is left alone in this file because this file's job is to make the published spec describe
- * *current* behaviour. Tightening it is a behaviour change, and smuggling one into a codegen
- * refactor is how a "no functional change" PR ends up shipping a functional change.
+ * The disanalogy with the facilitator is **cost**, and it is what the exceptions are derived from.
+ * The facilitator's passthrough is cost-neutral; ours is not, because this endpoint meters each
+ * message against a fixed ceiling (2000 output tokens ≈ $0.003, see `sc_llm_x402.ts`). So the rule
+ * is: forward the body, and reject only what moves cost past that ceiling.
  *
- * Tightening it is also not a one-word flip, which is the real reason it is sequenced separately.
- * An OpenAI-chat-shaped endpoint has a large surface of standard params callers plausibly send —
- * `temperature`, `top_p`, `max_tokens`, `seed`, `stop`, `presence_penalty`, `frequency_penalty`,
- * `n`, `response_format`, `logprobs`, `user`. Strict rejects all of them, and for the two that
- * matter most (`temperature`, `max_tokens`, both accepted by Mistral) *supporting* them beats both
- * rejecting and ignoring. So the work is "decide the param surface", then close the schema.
+ *   `stream`      — settlement needs final usage, which needs the whole completion
+ *   `n`           — multiplies completions; `n: 5` is ~5x output against a fixed ceiling
+ *   `max_tokens`  — directly sets output length; 8000 is ~$0.012 against a $0.003 ceiling
  *
- * It becomes more urgent once `tools` lands: a caller sending `tool_choice: "required"` (valid
- * OpenAI, unsupported here) currently has it silently ignored, so the model may simply not call the
- * tool — a baffling failure that a 400 would have explained.
+ * Those three are declared below so the published schema names them rather than leaving a caller to
+ * discover the 400. Everything else is deliberately unenumerated: an allow-list would need editing
+ * every time the upstream adds a param, and would reject params that cost us nothing.
+ *
+ * The same reasoning covers `tools` when it lands — cap what the caller can inflate (definition
+ * count and serialized size), forward the rest.
  *
  * Mechanically that means `z.looseObject` on the request side, not `z.object`. `z.object` strips
  * unknown keys at parse time but `z.toJSONSchema` renders it as `additionalProperties: false`,
@@ -64,11 +67,25 @@ export const LLMChatRequestSchema = z
         "The model to use. Only the advertised model id(s) are served; others return model_not_found.",
       ),
     messages: z.array(LLMChatMessageSchema).min(1).describe("The conversation so far."),
+    // The three cost-movers. Declared so the published schema names them and a caller sees the
+    // constraint before hitting the 400 — everything else is forwarded and left unenumerated.
     stream: z
       .literal(false)
       .optional()
       .describe(
         "Streaming is not supported. Each message settles on its final token usage, which requires the whole completion, so stream:true is rejected rather than silently buffered.",
+      ),
+    n: z
+      .literal(1)
+      .optional()
+      .describe(
+        "Only n=1 is supported. Each message is metered against a fixed per-message price ceiling, and additional completions multiply output tokens past it.",
+      ),
+    max_tokens: z
+      .never()
+      .optional()
+      .describe(
+        "Not supported. Output length is bounded by the per-message price ceiling this endpoint meters against, not by a caller-supplied limit.",
       ),
     useDummyData: z
       .boolean()

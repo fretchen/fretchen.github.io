@@ -50,6 +50,8 @@ Two things that silently break payments if you get them wrong, both documented i
 - **EIP-712 domain names differ by network** (mainnet USDC is `"USD Coin"`, testnet is `"USDC"`). Follow the checklist in [`scw_js/README.md`](scw_js/README.md) → _Adding New Networks_, which carries the verified per-network table.
 - **The x402 recipient whitelist uses OR logic** across a manual list, testnet-only test wallets, and NFT-holder status. See [`x402_facilitator/README.md`](x402_facilitator/README.md) → _Whitelist Architecture_.
 
+**Generated OpenAPI specs must publish the strictness they actually enforce.** `scw_js` and `x402_facilitator` generate their `openapi.*.json` from Zod, and `z.object` renders as `additionalProperties: false` — so a schema that merely _strips_ unknown keys publishes a strictness its handler does not enforce. Use `z.looseObject` for a request the handler forwards or ignores extras on, `z.object` where the body is built field by field (every response, and `genimg`'s request, which really does reject unknown fields). Each package's `test/openapi_*_generation.test.ts` asserts this, because nothing else catches it — and it has shipped wrong: the facilitator's published `PaymentRequest` described a request that could not be paid with, since real payloads carry the very fields it declared forbidden.
+
 ### Frontend (`website/`)
 
 **Vike SSR** with file-based routing: pages in `pages/`, renderer in `renderer/`. Client-only components need `{ ssr: false }` in imports.

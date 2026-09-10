@@ -57,7 +57,9 @@ vi.mock("../hooks/useWebmentionUrls", () => ({
 
 // Simulate a failed chunk fetch (e.g. stale hashed URL after redeploy)
 vi.mock("../utils/lazyGlobRegistry", () => ({
-  loadLazyModuleFromDirectory: vi.fn().mockRejectedValue(new Error("Failed to fetch dynamically imported module")),
+  loadLazyModuleFromDirectory: vi.fn(async () => {
+    throw new Error("Failed to fetch dynamically imported module");
+  }),
 }));
 
 // Mock fetch globally (webmentions)

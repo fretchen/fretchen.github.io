@@ -1,4 +1,4 @@
-import "@testing-library/jest-dom";
+import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
 import type { useAccount, useConnect, useWalletClient } from "wagmi";
@@ -33,7 +33,10 @@ vi.stubGlobal("IntersectionObserver", MockIntersectionObserver);
 
 // Chain & Network Mocks
 export const mockChainId = vi.fn(() => 10); // Default: Optimism
-export const mockSwitchChainAsync = vi.fn().mockResolvedValue(undefined);
+// Defaults live in the vi.fn(impl) original, not in a .mockResolvedValue() applied
+// afterwards: `mockReset: true` restores the original implementation and drops any
+// override, so a post-hoc default would silently vanish before the first test.
+export const mockSwitchChainAsync = vi.fn(async () => undefined);
 
 // =============================================================================
 // SHARED HOOK-RETURN BUILDERS
@@ -173,7 +176,7 @@ vi.mock("wagmi/connectors", () => ({
 // Mock @wagmi/core
 vi.mock("@wagmi/core", () => ({
   getPublicClient: vi.fn(() => ({
-    readContract: vi.fn().mockResolvedValue("https://ipfs.io/ipfs/QmTest123/metadata.json"),
+    readContract: vi.fn(async () => "https://ipfs.io/ipfs/QmTest123/metadata.json"),
     chain: { id: 10, name: "Optimism" },
   })),
 }));
@@ -233,18 +236,9 @@ export const mockDisconnectedWallet = () => {
   mockAccountData.mockReturnValue(MOCK_DISCONNECTED_ACCOUNT);
 };
 
-// Clean up after each test
+// Clean up after each test. Mock state needs no hand-rolled reset here: `mockReset: true`
+// in vitest.config.ts restores every mock to the implementation it was declared with, so
+// the defaults above are the defaults each test starts from.
 afterEach(() => {
   cleanup();
-  // Reset all mock return values to defaults
-  mockChainId.mockReturnValue(10);
-  mockAccountData.mockReturnValue({
-    address: "0x123456789abcdef" as `0x${string}`,
-    isConnected: false,
-    status: "disconnected" as const,
-    isConnecting: false,
-    isDisconnected: true,
-    isReconnecting: false,
-  });
-  mockSwitchChainAsync.mockResolvedValue(undefined);
 });

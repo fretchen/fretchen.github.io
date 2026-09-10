@@ -26,6 +26,10 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "jsdom",
+    // Vitest 5 clears mock call history before each test by default. mockReset goes
+    // further and restores each mock's original vi.fn(impl), so the shared mocks in
+    // test/setup.ts return to their declared defaults without a manual afterEach.
+    mockReset: true,
     setupFiles: ["./test/setup.ts"],
     css: true,
     reporters: ["verbose"],

@@ -106,6 +106,120 @@ describe("llm_service.js", () => {
     await expect(callLLMAPI(prompt)).rejects.toThrow(/incomplete completion/);
   });
 
+  test("preserves tool_calls on a tool-call completion", async () => {
+    // A tool-call turn has content: null and carries tool_calls. Two independent layers used to
+    // break it: UpstreamChatCompletionSchema required a string content (a 500), and the
+    // field-by-field rebuild reconstructed `message` as { role, content }, dropping tool_calls
+    // even once validation passed — which would have been the quieter, worse failure.
+    const toolCall = {
+      id: "call_abc123",
+      type: "function",
+      function: { name: "generate_image", arguments: '{"prompt":"a cat"}' },
+    };
+    mockFetchResponse({
+      ...mockLLMResponse,
+      choices: [
+        {
+          message: { role: "assistant", content: null, tool_calls: [toolCall] },
+          finish_reason: "tool_calls",
+        },
+      ],
+    });
+
+    const result = await callLLMAPI([{ role: "user", content: "draw a cat" }]);
+
+    expect(result.choices[0].message.tool_calls).toEqual([toolCall]);
+    expect(result.choices[0].message.content).toBeNull();
+    expect(result.choices[0].finish_reason).toBe("tool_calls");
+  });
+
+  test("omits tool_calls entirely on an ordinary completion", async () => {
+    // Guards the conditional spread: a plain response must keep its exact previous shape rather
+    // than gaining a `tool_calls: undefined` key that would serialize into the wire body.
+    const result = await callLLMAPI([{ role: "user", content: "Test" }]);
+    expect("tool_calls" in result.choices[0].message).toBe(false);
+  });
+
+  // The mock upstream (dummy=true) is what testnet and `useDummyData: true` get. It had no
+  // coverage at all before it became tool-aware. These cases never touch `fetch` — the mock now
+  // flows through the same schema + rebuild as a real completion, so they also cover the schema
+  // accepting `content: null` and the rebuild preserving `tool_calls`.
+  describe("mock upstream completion (dummy=true)", () => {
+    const tool = {
+      type: "function",
+      function: { name: "generate_image", parameters: { type: "object" } },
+    };
+
+    test("returns a text completion when no tools are offered", async () => {
+      const result = await callLLMAPI([{ role: "user", content: "hi" }], true);
+
+      expect(result.model).toBe("placeholder-model");
+      expect(result.choices[0].finish_reason).toBe("stop");
+      expect(result.choices[0].message.content).toContain("Placeholder response");
+      expect("tool_calls" in result.choices[0].message).toBe(false);
+      // Unchanged from the pre-tool-aware mock: getSettleAmount is priced off these.
+      expect(result.usage).toEqual({ prompt_tokens: 5, completion_tokens: 15, total_tokens: 15 });
+    });
+
+    test("asks for the offered tool", async () => {
+      const result = await callLLMAPI([{ role: "user", content: "draw a cat" }], true, "mistral", {
+        tools: [tool],
+      });
+
+      expect(result.choices[0].finish_reason).toBe("tool_calls");
+      expect(result.choices[0].message.content).toBeNull();
+      expect(result.choices[0].message.tool_calls).toEqual([
+        {
+          id: "call_mock_1",
+          type: "function",
+          function: { name: "generate_image", arguments: "{}" },
+        },
+      ]);
+      // Identical to the text branch, so which branch ran cannot move the settled amount.
+      expect(result.usage).toEqual({ prompt_tokens: 5, completion_tokens: 15, total_tokens: 15 });
+    });
+
+    test("answers with text once a tool result is in the conversation", async () => {
+      // The second hop of the loop: tools are still offered, but the mock must not ask again or
+      // the caller would spin. Presence of a role:"tool" message is the signal.
+      const result = await callLLMAPI(
+        [
+          { role: "user", content: "draw a cat" },
+          {
+            role: "assistant",
+            content: null,
+            tool_calls: [
+              {
+                id: "call_mock_1",
+                type: "function",
+                function: { name: "generate_image", arguments: "{}" },
+              },
+            ],
+          },
+          { role: "tool", tool_call_id: "call_mock_1", content: '{"status":"ok"}' },
+        ],
+        true,
+        "mistral",
+        { tools: [tool] },
+      );
+
+      expect(result.choices[0].finish_reason).toBe("stop");
+      expect(result.choices[0].message.content).toContain("tool result came back");
+      expect("tool_calls" in result.choices[0].message).toBe(false);
+    });
+
+    test("synthesizes the fields the mock omits", async () => {
+      // created and the per-choice index/role are left out of the raw mock so the rebuild's
+      // synthesis path runs on this route too.
+      const result = await callLLMAPI([{ role: "user", content: "hi" }], true);
+
+      expect(result.object).toBe("chat.completion");
+      expect(result.created).toEqual(expect.any(Number));
+      expect(result.choices[0].index).toBe(0);
+      expect(result.choices[0].message.role).toBe("assistant");
+    });
+  });
+
   test("verarbeitet Multi-Message-Prompts korrekt", async () => {
     const prompt = [
       { role: "system", content: "Du bist ein Assistent." },

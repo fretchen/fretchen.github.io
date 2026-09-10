@@ -36,9 +36,23 @@ function getLLMProviderConfig(provider: string): LLMProviderConfig {
   return config;
 }
 
+/** One tool call the model wants made. `arguments` is a JSON *string*, per OpenAI. */
+export interface LLMToolCall {
+  id: string;
+  type: "function";
+  function: { name: string; arguments: string };
+}
+
+/**
+ * `content` is nullable and `tool_calls` optional so an assistant turn that requests a tool can be
+ * replayed back to the model on the next hop. A tool *result* turn is `{ role: "tool",
+ * tool_call_id, content }` — `role` is unconstrained, so it needs no separate variant.
+ */
 export interface LLMMessage {
   role: string;
-  content: string;
+  content?: string | null;
+  tool_calls?: LLMToolCall[];
+  tool_call_id?: string;
 }
 
 export interface LLMUsage {
@@ -61,7 +75,7 @@ export interface LLMResponse {
   model: string;
   choices: Array<{
     index: number;
-    message: { role: string; content: string };
+    message: { role: string; content: string | null; tool_calls?: LLMToolCall[] };
     finish_reason: string | null;
   }>;
   usage: LLMUsage;
@@ -88,74 +102,136 @@ export function advertisedModelIds(): string[] {
   return [LLM_PROVIDERS.mistral.defaultModel];
 }
 
+/**
+ * The stand-in for the provider, used on testnet and whenever a caller sends `useDummyData: true`.
+ *
+ * Input-aware rather than a fixed string: the endpoint behaviour worth exercising around a tool
+ * call — handing `tool_calls` back to the client, then accepting a `role: "tool"` follow-up — is
+ * only reachable if the stand-in actually asks for a tool. With a fixed text answer, a tool loop
+ * could only be driven against real, billed Mistral, which rules it out for the local dev server
+ * the frontend loop is built against and for `notebooks/sc_llm_x402_buyer.ipynb` on testnet.
+ *
+ * Returns a *raw* upstream shape rather than a finished LLMResponse, so it flows through the same
+ * schema + rebuild as a real completion below. That is what lets the mock cover the two things
+ * that otherwise need a mainnet run: the schema accepting `content: null`, and the rebuild
+ * preserving `tool_calls`. `created` and the per-choice `index`/`role` are omitted on purpose, to
+ * exercise the synthesis a real provider's omissions would.
+ */
+function buildMockUpstreamResponse(
+  prompt: LLMMessage[],
+  forwardedParams: Record<string, unknown>,
+): unknown {
+  const tools = forwardedParams.tools;
+  const firstTool = Array.isArray(tools)
+    ? (tools[0] as { function?: { name?: unknown } } | undefined)
+    : undefined;
+  const toolName = typeof firstTool?.function?.name === "string" ? firstTool.function.name : null;
+  const toolAlreadyRan = prompt.some((m) => m.role === "tool");
+
+  // Identical in both branches, so getSettleAmount — and the settlement assertions built on it —
+  // do not depend on which branch ran.
+  const usage = { prompt_tokens: 5, completion_tokens: 15, total_tokens: 15 };
+
+  // A tool was offered and nothing has come back yet: ask for it. `arguments` is deliberately an
+  // empty JSON object — the endpoint never checks tool-call arguments against the tool's own
+  // `parameters` (that is the caller's job), so inventing plausible ones would be theatre.
+  if (toolName && !toolAlreadyRan) {
+    return {
+      id: "chatcmpl-mock",
+      model: "placeholder-model",
+      choices: [
+        {
+          message: {
+            content: null,
+            tool_calls: [
+              {
+                id: "call_mock_1",
+                type: "function",
+                function: { name: toolName, arguments: "{}" },
+              },
+            ],
+          },
+          finish_reason: "tool_calls",
+        },
+      ],
+      usage,
+    };
+  }
+
+  const content = toolAlreadyRan
+    ? "**Placeholder response**\n\n" +
+      "The tool result came back, so this is the *mock* answer that would normally summarise it."
+    : "**Placeholder response**\n\n" +
+      "This is a *mock* answer used for local/testnet testing. It includes:\n\n" +
+      "- a list item\n" +
+      "- some `inline code`\n" +
+      "- a [link](https://example.com)\n\n" +
+      "```js\nconsole.log('mock code block');\n```";
+
+  return {
+    id: "chatcmpl-mock",
+    model: "placeholder-model",
+    choices: [{ message: { content }, finish_reason: "stop" }],
+    usage,
+  };
+}
+
 export async function callLLMAPI(
   prompt: LLMMessage[],
   dummy = false,
   provider = "mistral",
   forwardedParams: Record<string, unknown> = {},
 ): Promise<LLMResponse> {
-  if (dummy) {
-    return {
-      id: "chatcmpl-mock",
-      object: "chat.completion",
-      created: Math.floor(Date.now() / 1000),
-      model: "placeholder-model",
-      choices: [
-        {
-          index: 0,
-          message: {
-            role: "assistant",
-            content:
-              "**Placeholder response**\n\n" +
-              "This is a *mock* answer used for local/testnet testing. It includes:\n\n" +
-              "- a list item\n" +
-              "- some `inline code`\n" +
-              "- a [link](https://example.com)\n\n" +
-              "```js\nconsole.log('mock code block');\n```",
-          },
-          finish_reason: "stop",
-        },
-      ],
-      usage: { prompt_tokens: 5, completion_tokens: 15, total_tokens: 15 },
-    };
-  }
   const config = getLLMProviderConfig(provider);
-  const apiToken = process.env[config.apiKeyEnvVar];
-  logger.info({ provider }, "Work with real API");
-  if (!apiToken) {
-    throw new Error(
-      `API token not found. Please configure the ${config.apiKeyEnvVar} environment variable.`,
-    );
-  }
 
   if (!prompt || !prompt.length) {
     throw new Error("No prompt provided.");
   }
-  logger.debug({ prompt }, "Generating answer for prompt");
 
-  // Forward the caller's remaining chat params to the upstream model rather than dropping them —
-  // `temperature`, `top_p`, `stop`, `seed` and the like cost us nothing and are the upstream's
-  // contract to honour. Our own `model` and `messages` are written last so they always win: the
-  // model id is resolved against what we actually serve, and `messages` has already been validated.
-  // sc_llm_x402.ts strips the params that would move cost past the metered ceiling before we get
-  // here (see its deny-list), so anything still present is safe to pass on.
-  const body = { ...forwardedParams, model: config.defaultModel, messages: prompt };
+  // The mock and the real provider converge on one validated tail below, rather than the mock
+  // short-circuiting with a finished envelope. Sharing the tail is the point: a regression in the
+  // schema or the rebuild now fails on the mock path too, where it is free to catch.
+  let raw: unknown;
+  if (dummy) {
+    logger.info({ provider }, "Using mock upstream completion");
+    raw = buildMockUpstreamResponse(prompt, forwardedParams);
+  } else {
+    const apiToken = process.env[config.apiKeyEnvVar];
+    logger.info({ provider }, "Work with real API");
+    if (!apiToken) {
+      throw new Error(
+        `API token not found. Please configure the ${config.apiKeyEnvVar} environment variable.`,
+      );
+    }
 
-  logger.debug("Sending answer generation request...");
-  const response = await fetch(`${config.baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiToken}`, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+    logger.debug({ prompt }, "Generating answer for prompt");
 
-  if (!response.ok) {
-    logger.error(
-      { provider, status: response.status, statusText: response.statusText },
-      "LLM API error",
-    );
-    throw new Error(
-      `Could not reach ${config.displayName}: ${response.status} ${response.statusText}`,
-    );
+    // Forward the caller's remaining chat params to the upstream model rather than dropping them —
+    // `temperature`, `top_p`, `stop`, `seed` and the like cost us nothing and are the upstream's
+    // contract to honour. Our own `model` and `messages` are written last so they always win: the
+    // model id is resolved against what we actually serve, and `messages` has already been
+    // validated. sc_llm_x402.ts strips the params that would move cost past the metered ceiling
+    // before we get here (see its deny-list), so anything still present is safe to pass on.
+    const body = { ...forwardedParams, model: config.defaultModel, messages: prompt };
+
+    logger.debug("Sending answer generation request...");
+    const response = await fetch(`${config.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      logger.error(
+        { provider, status: response.status, statusText: response.statusText },
+        "LLM API error",
+      );
+      throw new Error(
+        `Could not reach ${config.displayName}: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    raw = await response.json();
   }
 
   // Upstream is OpenAI-compatible; forward its chat-completion envelope, synthesizing only
@@ -166,7 +242,6 @@ export async function callLLMAPI(
   // after the try/catch around this function has closed, so a non-numeric prompt_tokens threw out
   // of handle() as an unhandled rejection. The schema subsumes the old
   // `!firstChoice || !data.usage` guard.
-  const raw: unknown = await response.json();
   const parsed = UpstreamChatCompletionSchema.safeParse(raw);
   if (!parsed.success) {
     const upstreamModel = (raw as { model?: unknown } | null)?.model;
@@ -188,7 +263,15 @@ export async function callLLMAPI(
     model: data.model ?? config.defaultModel,
     choices: data.choices.map((c, i) => ({
       index: c.index ?? i,
-      message: { role: c.message.role ?? "assistant", content: c.message.content },
+      message: {
+        role: c.message.role ?? "assistant",
+        content: c.message.content ?? null,
+        // Conditional, so an ordinary completion keeps its exact previous shape instead of
+        // serializing a `tool_calls: undefined` key. `message` is rebuilt field by field, so
+        // anything not named here is dropped — which is how tool_calls used to vanish while
+        // finish_reason: "tool_calls" survived, producing self-contradictory JSON.
+        ...(c.message.tool_calls ? { tool_calls: c.message.tool_calls } : {}),
+      },
       finish_reason: c.finish_reason ?? "stop",
     })),
     usage: data.usage,

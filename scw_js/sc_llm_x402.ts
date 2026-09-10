@@ -6,6 +6,7 @@ import {
   type LLMMessage,
 } from "./llm_service.js";
 import { parseJsonBody, CORS_HEADERS, errorResponse, openAiError } from "./utils.js";
+import { LLMChatRequestSchema } from "./llm_schemas.js";
 import { getUSDCConfig, isTestnet } from "@fretchen/chain-utils";
 import pino from "pino";
 import {
@@ -49,6 +50,14 @@ const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 // resourceServer verify/settle primitives directly.) See getSettleAmount() below.
 // See llm_service.ts's LLM_PROVIDERS for the provider registry.
 const LLM_PROVIDER = "mistral";
+
+// The request fields this endpoint owns: model/messages it resolves and validates itself,
+// useDummyData/payment are vendor extensions, and stream/n/max_tokens are the metered params
+// rejected below. Everything NOT in this set is forwarded verbatim to the upstream model.
+// Derived from the schema's own shape rather than a hand-written list, so adding a field to
+// LLMChatRequestSchema (e.g. `tools`) is the single edit that also keeps it out of the forwarded
+// bag — the two can't drift.
+const OWN_REQUEST_KEYS = new Set(Object.keys(LLMChatRequestSchema.shape));
 
 const MAX_TOKENS_PER_MESSAGE = process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE ?? "2000";
 // No real prompt/completion split exists yet for the ceiling, so price the entire
@@ -399,20 +408,13 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     // is added to advertisedModelIds(), a request routed to that provider here will still be
     // priced/settled at Mistral's rate — fix pricing to key off resolved.provider before
     // advertising a second model.
-    // Everything we do not own ourselves goes upstream. Removing our own keys rather than
-    // allow-listing theirs is what keeps this self-maintaining: a param the upstream adds
-    // tomorrow works without a change here, and one that would move cost past the ceiling has
-    // already been rejected above.
-    const {
-      model: _model,
-      messages: _messages,
-      useDummyData: _dummy,
-      payment: _payment,
-      stream: _stream,
-      n: _n,
-      max_tokens: _maxTokens,
-      ...forwardedParams
-    } = body;
+    // Everything we do not own ourselves goes upstream. Stripping OWN_REQUEST_KEYS (the schema's
+    // own field set) rather than allow-listing the upstream's params is what keeps this
+    // self-maintaining: a param the upstream adds tomorrow works without a change here, and one
+    // that would move cost past the ceiling has already been rejected above.
+    const forwardedParams = Object.fromEntries(
+      Object.entries(body).filter(([key]) => !OWN_REQUEST_KEYS.has(key)),
+    );
     llmData = await callLLMAPI(prompt, useMock, resolved.provider, forwardedParams);
   } catch (error) {
     logger.error({ err: error }, "Error during answer generation");

@@ -76,7 +76,7 @@
             }
           },
           "400": {
-            "description": "Request validation failed — a missing or unserved model, an empty messages array, or stream:true. Body is { error: { message, type, code } }."
+            "description": "Request validation failed — a missing or unserved model, an empty messages array, or one of the metered params past its ceiling: stream:true, n other than 1, or any max_tokens. Body is { error: { message, type, code } }."
           },
           "402": {
             "description": "Payment required. Body/headers (Payment-Required, X-Payment) carry the x402 batch-settlement payment requirements to satisfy and retry with."
@@ -122,8 +122,7 @@
               "properties": {
                 "role": {
                   "type": "string",
-                  "enum": ["system", "user", "assistant"],
-                  "description": "The speaker's role."
+                  "description": "The speaker's role. Forwarded to the upstream model as sent — deliberately not restricted to the OpenAI \"system\"/\"user\"/\"assistant\" set, so a role the upstream adds later (e.g. \"tool\") works without a schema change, matching how the handler validates it."
                 },
                 "content": {
                   "type": "string",
@@ -160,7 +159,7 @@
         },
         "required": ["model", "messages"],
         "additionalProperties": {},
-        "description": "OpenAI chat-completions request body, plus this agent's vendor extensions. Unknown fields are ignored rather than rejected."
+        "description": "OpenAI chat-completions request body, plus this agent's vendor extensions. Unlisted fields are forwarded to the upstream model rather than dropped or rejected — except stream, n and max_tokens, which are rejected with a 400 because they move cost past the metered per-message ceiling."
       },
       "LLMChatResponse": {
         "type": "object",

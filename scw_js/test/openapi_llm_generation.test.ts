@@ -48,6 +48,17 @@ describe("openapi.llm.json generation", () => {
       );
     });
 
+    it("documents every metered param the handler rejects with a 400", () => {
+      // The 400 description is hand-written prose in the generator, not schema-derived, so the
+      // golden test above can't catch it drifting from sc_llm_x402.ts's actual rejections —
+      // `n` and `max_tokens` were both added as 400 causes without this string being updated.
+      const paths = spec.paths as Record<string, never>;
+      const desc: string = paths["/"]["post"]["responses"]["400"]["description"];
+      expect(desc).toContain("stream");
+      expect(desc).toContain("n other than 1");
+      expect(desc).toContain("max_tokens");
+    });
+
     it("keeps the price ceiling key the handler overwrites at serve time", () => {
       // sc_llm_x402.ts mutates paths["/"].post["x-payment-info"].price.max on a structuredClone,
       // because the static value is a documentation-only baseline. Removing the key breaks that
@@ -79,10 +90,11 @@ describe("openapi.llm.json generation", () => {
   });
 
   /**
-   * Strictness must match the handler, in both directions. This endpoint *ignores* unknown request
-   * fields (unlike genimg, which rejects them), so publishing `additionalProperties: false` on the
-   * request would advertise a strictness that does not exist. The response is the opposite case:
-   * `callLLMAPI` reconstructs the envelope field by field rather than forwarding upstream extras.
+   * Strictness must match the handler, in both directions. This endpoint *forwards* unknown request
+   * fields to the upstream model (unlike genimg, which rejects them), so publishing
+   * `additionalProperties: false` on the request would advertise a strictness that does not exist.
+   * The response is the opposite case: `callLLMAPI` reconstructs the envelope field by field rather
+   * than forwarding upstream extras.
    */
   describe("advertised strictness matches actual behaviour", () => {
     const schemas = (committedSpec as Record<string, never>).components["schemas"];
@@ -92,6 +104,16 @@ describe("openapi.llm.json generation", () => {
       expect(
         schemas["LLMChatRequest"]["properties"]["messages"]["items"]["additionalProperties"],
       ).toEqual({});
+    });
+
+    it("publishes message role as an unrestricted string, matching the handler", () => {
+      // sc_llm_x402.ts validates role with `typeof m.role === "string"` and forwards it verbatim —
+      // it does not restrict to system/user/assistant. An `enum` here would advertise a strictness
+      // the handler does not enforce, the same drift class as additionalProperties above.
+      const role =
+        schemas["LLMChatRequest"]["properties"]["messages"]["items"]["properties"]["role"];
+      expect(role["type"]).toBe("string");
+      expect(role["enum"]).toBeUndefined();
     });
 
     it("closes the response", () => {

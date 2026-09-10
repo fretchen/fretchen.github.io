@@ -93,7 +93,7 @@ export function generateOpenApiSpec(): object {
             },
             "400": {
               description:
-                "Request validation failed — a missing or unserved model, an empty messages array, or stream:true. Body is { error: { message, type, code } }.",
+                "Request validation failed — a missing or unserved model, an empty messages array, or one of the metered params past its ceiling: stream:true, n other than 1, or any max_tokens. Body is { error: { message, type, code } }.",
             },
             "402": {
               description:

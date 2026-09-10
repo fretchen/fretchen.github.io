@@ -46,15 +46,25 @@
  */
 
 import { z } from "zod";
+import { advertisedModelIds } from "./llm_service.js";
 
-/** The model ids this endpoint advertises. Mirrors `advertisedModelIds()` in `llm_service.ts`. */
-export const ADVERTISED_LLM_MODELS = ["mistral-large-latest"] as const;
+/**
+ * The model ids this endpoint advertises. Derived from `advertisedModelIds()` in `llm_service.ts`
+ * (the runtime source of truth, keyed off `LLM_PROVIDERS`) rather than hand-copied, so the
+ * published `model` enum cannot list a model the endpoint doesn't serve, or omit one it does.
+ * `llm_service.ts` does not import this file, so the dependency direction is safe.
+ */
+export const ADVERTISED_LLM_MODELS = advertisedModelIds() as [string, ...string[]];
 
 // ── Request ──
 
 export const LLMChatMessageSchema = z
   .looseObject({
-    role: z.enum(["system", "user", "assistant"]).describe("The speaker's role."),
+    role: z
+      .string()
+      .describe(
+        'The speaker\'s role. Forwarded to the upstream model as sent — deliberately not restricted to the OpenAI "system"/"user"/"assistant" set, so a role the upstream adds later (e.g. "tool") works without a schema change, matching how the handler validates it.',
+      ),
     content: z.string().describe("The message text."),
   })
   .describe("One turn of the conversation.");
@@ -101,7 +111,7 @@ export const LLMChatRequestSchema = z
       ),
   })
   .describe(
-    "OpenAI chat-completions request body, plus this agent's vendor extensions. Unknown fields are ignored rather than rejected.",
+    "OpenAI chat-completions request body, plus this agent's vendor extensions. Unlisted fields are forwarded to the upstream model rather than dropped or rejected — except stream, n and max_tokens, which are rejected with a 400 because they move cost past the metered per-message ceiling.",
   );
 
 export type LLMChatRequest = z.infer<typeof LLMChatRequestSchema>;

@@ -577,6 +577,31 @@ describe("sc_llm_x402", () => {
         await handle(makeEvent() as never, {});
         expect(mockCallLLMAPI.mock.calls[0][3]).toEqual({});
       });
+
+      it("accepts a non-standard message role and forwards it verbatim", async () => {
+        // `role` is not a cost-mover, so the handler does not restrict it to the OpenAI three and
+        // the published schema must not either (LLMChatMessageSchema.role is z.string()). A role
+        // the upstream adds later — e.g. "tool" — has to reach Mistral untouched.
+        const res = await handle(
+          makeEvent({
+            body: JSON.stringify({
+              model: TEST_MODEL,
+              messages: [
+                { role: "user", content: "hi" },
+                { role: "tool", content: "result" },
+              ],
+            }),
+          }) as never,
+          {},
+        );
+
+        expect(res.statusCode).toBe(200);
+        const forwardedPrompt = mockCallLLMAPI.mock.calls[0][0];
+        expect(forwardedPrompt).toEqual([
+          { role: "user", content: "hi" },
+          { role: "tool", content: "result" },
+        ]);
+      });
     });
 
     /**

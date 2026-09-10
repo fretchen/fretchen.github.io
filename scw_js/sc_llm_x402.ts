@@ -6,7 +6,13 @@ import {
   type LLMMessage,
 } from "./llm_service.js";
 import { parseJsonBody, CORS_HEADERS, errorResponse, openAiError } from "./utils.js";
-import { LLMChatRequestSchema, REJECTED_PARAMS } from "./llm_schemas.js";
+import { z } from "zod";
+import {
+  LLMChatRequestSchema,
+  LLMToolsSchema,
+  REJECTED_PARAMS,
+  FORWARDED_OWN_KEYS,
+} from "./llm_schemas.js";
 import { getUSDCConfig, isTestnet } from "@fretchen/chain-utils";
 import pino from "pino";
 import {
@@ -51,15 +57,26 @@ const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 // See llm_service.ts's LLM_PROVIDERS for the provider registry.
 const LLM_PROVIDER = "mistral";
 
-// The request fields this endpoint owns: model/messages it resolves and validates itself,
-// useDummyData/payment are vendor extensions, and stream/n/max_tokens are the metered params
-// rejected below. Everything NOT in this set is forwarded verbatim to the upstream model.
-// Derived from the schema's own shape rather than a hand-written list, so adding a field to
-// LLMChatRequestSchema (e.g. `tools`) is the single edit that also keeps it out of the forwarded
-// bag — the two can't drift.
-const OWN_REQUEST_KEYS = new Set(Object.keys(LLMChatRequestSchema.shape));
+// The request fields this endpoint consumes rather than passes on: model/messages it resolves and
+// validates itself, useDummyData/payment are vendor extensions, and stream/n/max_tokens are the
+// metered params rejected below. Everything NOT in this set is forwarded verbatim to the upstream
+// model. Derived from the schema's own shape rather than a hand-written list, minus the keys that
+// are declared *and* forwarded (tools/tool_choice) — so adding a field to LLMChatRequestSchema is
+// still the single edit, and the two can't drift.
+const STRIPPED_REQUEST_KEYS = new Set(
+  Object.keys(LLMChatRequestSchema.shape).filter((key) => !FORWARDED_OWN_KEYS.has(key)),
+);
 
-const MAX_TOKENS_PER_MESSAGE = process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE ?? "2000";
+// Raised from 2000 when tool support landed. Tool definitions and tool results are *input*
+// tokens, charged on every hop, and the ceiling is exhausted at ceiling_atomic / input_rate —
+// at 2000 that was 6000 input tokens, which an ordinary tool-using conversation reaches. Past it
+// getSettleAmount caps, and the operator absorbs the difference.
+//
+// Raising it costs plain-chat callers nothing: this is the *authorization* bound the 402
+// advertises and verifyPayment checks, while settlement is still usage-derived. It only means a
+// larger per-message voucher. At 6000: ceiling = 6000 × $1.50/M = $0.009, covering ~18,000 input
+// tokens or ~6000 output tokens.
+const MAX_TOKENS_PER_MESSAGE = process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE ?? "6000";
 // No real prompt/completion split exists yet for the ceiling, so price the entire
 // estimate as completion (output) tokens — the pricier of the two rates for a
 // provider with an asymmetric split like Mistral's. This guarantees the ceiling is
@@ -207,18 +224,42 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     }
   }
 
+  // Capped rather than refused, unlike the params above: tool definitions are input tokens on
+  // every hop, so an uncapped array inflates our metered cost for free. Validated with the
+  // published schema rather than a second hand-rolled check, so the caps a caller reads in the
+  // spec are the caps actually enforced. Runs before verifyPayment: a malformed paid request must
+  // be rejected without being charged.
+  if (body["tools"] !== undefined) {
+    const tools = LLMToolsSchema.safeParse(body["tools"]);
+    if (!tools.success) {
+      return openAiError(
+        400,
+        `Invalid 'tools': ${z.prettifyError(tools.error)}`,
+        "invalid_request_error",
+        "unsupported_value",
+        "tools",
+      );
+    }
+  }
+
   const messages = body["messages"];
   if (!Array.isArray(messages) || messages.length === 0) {
     return openAiError(400, "'messages' must be a non-empty array.", "invalid_request_error");
   }
+  // An assistant turn that requested tool calls has content: null, so content is required only
+  // when the message carries no tool_calls. A tool *result* turn is an ordinary string-content
+  // message with a tool_call_id, which already passes — `role` is unconstrained.
   const validMessages = messages.every(
     (m) =>
-      m && typeof m === "object" && typeof m.role === "string" && typeof m.content === "string",
+      m &&
+      typeof m === "object" &&
+      typeof m.role === "string" &&
+      (typeof m.content === "string" || Array.isArray(m.tool_calls)),
   );
   if (!validMessages) {
     return openAiError(
       400,
-      "Each message must have a string 'role' and string 'content'.",
+      "Each message must have a string 'role' and string 'content', unless it carries 'tool_calls'.",
       "invalid_request_error",
     );
   }
@@ -390,12 +431,13 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     // is added to advertisedModelIds(), a request routed to that provider here will still be
     // priced/settled at Mistral's rate — fix pricing to key off resolved.provider before
     // advertising a second model.
-    // Everything we do not own ourselves goes upstream. Stripping OWN_REQUEST_KEYS (the schema's
-    // own field set) rather than allow-listing the upstream's params is what keeps this
+    // Everything we do not consume ourselves goes upstream. Stripping STRIPPED_REQUEST_KEYS
+    // (derived from the schema) rather than allow-listing the upstream's params is what keeps this
     // self-maintaining: a param the upstream adds tomorrow works without a change here, and one
-    // that would move cost past the ceiling has already been rejected above.
+    // that would move cost past the ceiling has already been rejected above. tools/tool_choice are
+    // declared but deliberately not stripped — see FORWARDED_OWN_KEYS.
     const forwardedParams = Object.fromEntries(
-      Object.entries(body).filter(([key]) => !OWN_REQUEST_KEYS.has(key)),
+      Object.entries(body).filter(([key]) => !STRIPPED_REQUEST_KEYS.has(key)),
     );
     llmData = await callLLMAPI(prompt, useMock, resolved.provider, forwardedParams);
   } catch (error) {

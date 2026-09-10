@@ -4,7 +4,7 @@
     "title": "Fretchen AI Assistant (LLM) Service",
     "description": "AI chat assistant, paid via x402 batch-settlement USDC payment channels.",
     "version": "1.0.0",
-    "x-guidance": "OpenAI chat-completions body. POST / with { model, messages: [{ role, content }, ...] } and no payment header to receive a 402 with x402 batch-settlement payment requirements (accepts[]). Open/top up a payment channel per the requirements, retry with the payment header, and the service returns a standard OpenAI chat.completion object. Streaming (stream: true) is not supported. Each message is metered and settled up to a per-message price ceiling; the real cost is usage-derived and typically lower. Other standard OpenAI chat params (temperature, top_p, stop, seed, the penalties, response_format) are forwarded to the upstream model and work as normal; they are not enumerated here because the upstream owns that contract. The exceptions are stream, n and max_tokens, which are rejected with a 400 rather than ignored, because each would move cost past the fixed per-message ceiling this endpoint meters against. Note: payment uses x402 batch-settlement (a stateful channel), so a stock OpenAI SDK cannot pay this endpoint without batch-settlement client wiring — the OpenAI shape is for body legibility, not drop-in SDK use.",
+    "x-guidance": "OpenAI chat-completions body. POST / with { model, messages: [{ role, content }, ...] } and no payment header to receive a 402 with x402 batch-settlement payment requirements (accepts[]). Open/top up a payment channel per the requirements, retry with the payment header, and the service returns a standard OpenAI chat.completion object. Streaming (stream: true) is not supported. Each message is metered and settled up to a per-message price ceiling; the real cost is usage-derived and typically lower. Other standard OpenAI chat params (temperature, top_p, stop, seed, the penalties, response_format) are forwarded to the upstream model and work as normal; they are not enumerated here because the upstream owns that contract. The exceptions are stream, n and max_tokens, which are rejected with a 400 rather than ignored, because each would move cost past the fixed per-message ceiling this endpoint meters against. Tool calling is supported (see x-capabilities): send OpenAI-shaped tools, and a tool call comes back as choices[].message.tool_calls with finish_reason: \"tool_calls\" and content: null. Execute it yourself and send the result back as a role:\"tool\" message with the matching tool_call_id — this endpoint never calls a tool on your behalf, and accepts no callback or MCP server URL. Note: payment uses x402 batch-settlement (a stateful channel), so a stock OpenAI SDK cannot pay this endpoint without batch-settlement client wiring — the OpenAI shape is for body legibility, not drop-in SDK use.",
     "contact": {
       "name": "fretchen",
       "url": "https://www.fretchen.eu",
@@ -17,7 +17,8 @@
     ]
   },
   "x-service-type": "llm/v1",
-  "x-interop-floor": "A compatible llm/v1 agent MUST advertise at least one accepts[] entry with asset USDC on network Optimism (eip155:10) or Base (eip155:8453), scheme batch-settlement. Request/response schema is defined by this document's LLMChatRequest/LLMChatResponse. See README.md.",
+  "x-interop-floor": "A compatible llm/v1 agent MUST advertise at least one accepts[] entry with asset USDC on network Optimism (eip155:10) or Base (eip155:8453), scheme batch-settlement. Request/response schema is defined by this document's LLMChatRequest/LLMChatResponse. Tool calling is NOT part of the floor — see x-capabilities; a plain-chat agent that ignores tools is fully conformant. See README.md.",
+  "x-capabilities": ["tools"],
   "servers": [
     {
       "url": "https://llm-agent.fretchen.eu"
@@ -51,7 +52,7 @@
             "mode": "dynamic",
             "currency": "USD",
             "min": "0",
-            "max": "0.003"
+            "max": "0.009"
           }
         },
         "requestBody": {
@@ -125,11 +126,48 @@
                   "description": "The speaker's role. Forwarded to the upstream model as sent — deliberately not restricted to the OpenAI \"system\"/\"user\"/\"assistant\" set, so a role the upstream adds later (e.g. \"tool\") works without a schema change, matching how the handler validates it."
                 },
                 "content": {
-                  "type": "string",
-                  "description": "The message text."
+                  "description": "The message text. Required except on an assistant turn that carries tool_calls, where it is null.",
+                  "type": ["string", "null"]
+                },
+                "tool_calls": {
+                  "description": "Present when replaying an assistant turn that requested tool calls.",
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "description": "Echo this back as tool_call_id on the matching tool result message."
+                      },
+                      "type": {
+                        "type": "string",
+                        "const": "function"
+                      },
+                      "function": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "arguments": {
+                            "type": "string",
+                            "description": "JSON-encoded arguments, as a string."
+                          }
+                        },
+                        "required": ["name", "arguments"],
+                        "additionalProperties": {}
+                      }
+                    },
+                    "required": ["id", "type", "function"],
+                    "additionalProperties": {}
+                  }
+                },
+                "tool_call_id": {
+                  "description": "On a role:'tool' message, the id of the call this message answers.",
+                  "type": "string"
                 }
               },
-              "required": ["role", "content"],
+              "required": ["role"],
               "additionalProperties": {},
               "description": "One turn of the conversation."
             },
@@ -149,8 +187,48 @@
             "description": "Not supported. Output length is bounded by the per-message price ceiling this endpoint meters against, not by a caller-supplied limit.",
             "not": {}
           },
+          "tools": {
+            "description": "Tool definitions offered to the model, OpenAI shape. At most 8, and at most 8192 bytes serialized — tool definitions are input tokens charged on every hop, so an uncapped array inflates the metered cost. A tool call comes back as choices[].message.tool_calls with finish_reason: \"tool_calls\"; execute it and send the result back as a role:\"tool\" message. This endpoint never calls a tool itself.",
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "function"
+                },
+                "function": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "parameters": {
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": ["name"],
+                  "additionalProperties": {}
+                }
+              },
+              "required": ["type", "function"],
+              "additionalProperties": {}
+            }
+          },
+          "tool_choice": {
+            "description": "Whether the model may call a tool. Only \"auto\" and \"none\" are served; a forced or named choice is not.",
+            "type": "string",
+            "enum": ["auto", "none"]
+          },
           "useDummyData": {
-            "description": "Vendor extension (not OpenAI): forces a mock completion. Testnet networks always mock regardless.",
+            "description": "Vendor extension (not OpenAI): forces a mock completion. Testnet networks always mock regardless. The mock is tool-aware — offered a tool with no result in the conversation yet it returns a tool_calls turn, and once a role:'tool' message is present it answers with text — so the whole tool loop can be exercised without a billed completion.",
             "type": "boolean"
           },
           "payment": {
@@ -197,8 +275,41 @@
                       "type": "string"
                     },
                     "content": {
-                      "type": "string",
-                      "description": "The generated reply."
+                      "description": "The generated reply, or null when the model is requesting a tool call.",
+                      "type": ["string", "null"]
+                    },
+                    "tool_calls": {
+                      "description": "Present only when finish_reason is tool_calls. Execute them and send the results back as role:'tool' messages carrying the matching tool_call_id.",
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Echo this back as tool_call_id on the matching tool result message."
+                          },
+                          "type": {
+                            "type": "string",
+                            "const": "function"
+                          },
+                          "function": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "arguments": {
+                                "type": "string",
+                                "description": "JSON-encoded arguments, as a string."
+                              }
+                            },
+                            "required": ["name", "arguments"],
+                            "additionalProperties": {}
+                          }
+                        },
+                        "required": ["id", "type", "function"],
+                        "additionalProperties": {}
+                      }
                     }
                   },
                   "required": ["role", "content"],

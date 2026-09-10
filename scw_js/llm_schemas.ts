@@ -56,6 +56,55 @@ import { advertisedModelIds } from "./llm_service.js";
  */
 export const ADVERTISED_LLM_MODELS = advertisedModelIds() as [string, ...string[]];
 
+// ── Tools ──
+
+/** How many tool definitions one request may carry. */
+export const MAX_TOOLS = 8;
+
+/** Serialized byte cap on the whole `tools` array. */
+export const MAX_TOOLS_BYTES = 8192;
+
+/** One tool call the model wants made. `arguments` is a JSON *string*, per OpenAI. */
+export const LLMToolCallSchema = z.looseObject({
+  id: z.string().describe("Echo this back as tool_call_id on the matching tool result message."),
+  type: z.literal("function"),
+  function: z.looseObject({
+    name: z.string(),
+    arguments: z.string().describe("JSON-encoded arguments, as a string."),
+  }),
+});
+
+/**
+ * Tool definitions a caller may offer the model.
+ *
+ * Capped on both count and serialized size because tool definitions are *input tokens* charged on
+ * every hop, and this endpoint meters each message against a fixed ceiling — an uncapped `tools`
+ * array is a way to inflate our cost for free. That is the same reasoning as the REJECTED_PARAMS
+ * below; tools differ only in being worth capping rather than refusing.
+ *
+ * `function.parameters` stays loose: it is a JSON Schema the upstream model owns, and re-modelling
+ * it here would be the allow-list mistake this file's header argues against.
+ *
+ * The byte cap is a `.refine()`, which `z.toJSONSchema` does not render — so it is stated in the
+ * `.describe()` on the request field instead. We enforce slightly more than we publish, which is
+ * the safe direction, but it is a real gap: `maxItems` publishes itself, the byte cap cannot.
+ */
+export const LLMToolsSchema = z
+  .array(
+    z.looseObject({
+      type: z.literal("function"),
+      function: z.looseObject({
+        name: z.string().min(1),
+        description: z.string().optional(),
+        parameters: z.looseObject({}).optional(),
+      }),
+    }),
+  )
+  .max(MAX_TOOLS)
+  .refine((tools) => JSON.stringify(tools).length <= MAX_TOOLS_BYTES, {
+    error: `tools must serialize to at most ${MAX_TOOLS_BYTES} bytes`,
+  });
+
 // ── Request ──
 
 export const LLMChatMessageSchema = z
@@ -65,7 +114,21 @@ export const LLMChatMessageSchema = z
       .describe(
         'The speaker\'s role. Forwarded to the upstream model as sent — deliberately not restricted to the OpenAI "system"/"user"/"assistant" set, so a role the upstream adds later (e.g. "tool") works without a schema change, matching how the handler validates it.',
       ),
-    content: z.string().describe("The message text."),
+    content: z
+      .string()
+      .nullable()
+      .optional()
+      .describe(
+        "The message text. Required except on an assistant turn that carries tool_calls, where it is null.",
+      ),
+    tool_calls: z
+      .array(LLMToolCallSchema)
+      .optional()
+      .describe("Present when replaying an assistant turn that requested tool calls."),
+    tool_call_id: z
+      .string()
+      .optional()
+      .describe("On a role:'tool' message, the id of the call this message answers."),
   })
   .describe("One turn of the conversation.");
 
@@ -150,11 +213,20 @@ export const LLMChatRequestSchema = z
     stream: z.literal(false).optional().describe(rejected("stream").doc),
     n: z.literal(1).optional().describe(rejected("n").doc),
     max_tokens: z.never().optional().describe(rejected("max_tokens").doc),
+    tools: LLMToolsSchema.optional().describe(
+      `Tool definitions offered to the model, OpenAI shape. At most ${MAX_TOOLS}, and at most ${MAX_TOOLS_BYTES} bytes serialized — tool definitions are input tokens charged on every hop, so an uncapped array inflates the metered cost. A tool call comes back as choices[].message.tool_calls with finish_reason: "tool_calls"; execute it and send the result back as a role:"tool" message. This endpoint never calls a tool itself.`,
+    ),
+    tool_choice: z
+      .enum(["auto", "none"])
+      .optional()
+      .describe(
+        'Whether the model may call a tool. Only "auto" and "none" are served; a forced or named choice is not.',
+      ),
     useDummyData: z
       .boolean()
       .optional()
       .describe(
-        "Vendor extension (not OpenAI): forces a mock completion. Testnet networks always mock regardless.",
+        "Vendor extension (not OpenAI): forces a mock completion. Testnet networks always mock regardless. The mock is tool-aware — offered a tool with no result in the conversation yet it returns a tool_calls turn, and once a role:'tool' message is present it answers with text — so the whole tool loop can be exercised without a billed completion.",
       ),
     payment: z
       .unknown()
@@ -169,6 +241,17 @@ export const LLMChatRequestSchema = z
 
 export type LLMChatRequest = z.infer<typeof LLMChatRequestSchema>;
 
+/**
+ * Keys declared above that must still be sent upstream.
+ *
+ * `sc_llm_x402.ts` strips every declared key from the bag it forwards to the model, on the
+ * principle that a declared key is one this endpoint handles itself. `tools`/`tool_choice` are the
+ * first exception: declared so the published schema names them and the caps apply, forwarded
+ * because the model is the thing that has to see them. Without this set they would be silently
+ * dropped and the caller charged for a completion that ignored their tools.
+ */
+export const FORWARDED_OWN_KEYS = new Set<string>(["tools", "tool_choice"]);
+
 // ── Response ──
 
 export const LLMChatResponseSchema = z
@@ -182,7 +265,16 @@ export const LLMChatResponseSchema = z
         index: z.number().int(),
         message: z.object({
           role: z.string(),
-          content: z.string().describe("The generated reply."),
+          content: z
+            .string()
+            .nullable()
+            .describe("The generated reply, or null when the model is requesting a tool call."),
+          tool_calls: z
+            .array(LLMToolCallSchema)
+            .optional()
+            .describe(
+              "Present only when finish_reason is tool_calls. Execute them and send the results back as role:'tool' messages carrying the matching tool_call_id.",
+            ),
         }),
         finish_reason: z.string().nullable(),
       }),

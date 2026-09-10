@@ -46,11 +46,22 @@ export const UpstreamUsageSchema = z.looseObject({
   total_tokens: z.number().int().nonnegative(),
 });
 
+/** One tool call the model wants made. `arguments` is a JSON *string*, per OpenAI. */
+const UpstreamToolCallSchema = z.looseObject({
+  id: z.string(),
+  type: z.literal("function"),
+  function: z.looseObject({ name: z.string(), arguments: z.string() }),
+});
+
 /**
  * Not `LLMChatResponseSchema` — that describes what we return, with every field required. This
  * describes what we receive, so everything `callLLMAPI` synthesizes (`id`, `created`, `object`,
- * `index`, `role`, `finish_reason`) is optional. Required is only what we cannot proceed without:
- * one choice with string content, and a numeric `usage` to price settlement from.
+ * `index`, `role`, `finish_reason`) is optional.
+ *
+ * `content` is nullable because a tool-call turn has none. The refine keeps the check that
+ * loosening it would otherwise throw away: a message must carry content *or* tool calls, so a
+ * genuinely empty completion is still rejected rather than billed for. Refines are invisible to
+ * `z.toJSONSchema`, which is free here — this file is never published.
  */
 export const UpstreamChatCompletionSchema = z.looseObject({
   id: z.string().optional(),
@@ -60,10 +71,15 @@ export const UpstreamChatCompletionSchema = z.looseObject({
     .array(
       z.looseObject({
         index: z.number().int().optional(),
-        message: z.looseObject({
-          role: z.string().optional(),
-          content: z.string(),
-        }),
+        message: z
+          .looseObject({
+            role: z.string().optional(),
+            content: z.string().nullable().optional(),
+            tool_calls: z.array(UpstreamToolCallSchema).min(1).optional(),
+          })
+          .refine((m) => typeof m.content === "string" || m.tool_calls !== undefined, {
+            error: "message must carry either content or tool_calls",
+          }),
         finish_reason: z.string().nullable().optional(),
       }),
     )

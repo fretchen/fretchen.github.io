@@ -35,7 +35,14 @@ import {
   type ServiceSpec,
 } from "./openapi-codegen.js";
 
-/** `price.max` is a baseline that `sc_llm_x402.ts` overwrites from the live ceiling at serve time. */
+/**
+ * `price.max` is a baseline that `sc_llm_x402.ts` overwrites from the live ceiling at serve time.
+ *
+ * `x-capabilities` is optional on `ServiceSpec` but required here: tool support is additive, so it
+ * is advertised as a capability rather than a version bump. `x-service-type` has no minor-version
+ * semantics — every consumer matches the whole string — so `"llm/v1.1"` would read as a different
+ * contract, not as v1 plus a feature.
+ */
 type LlmSpec = ServiceSpec<
   "llm/v1",
   "LLMChatRequest" | "LLMChatResponse",
@@ -43,7 +50,7 @@ type LlmSpec = ServiceSpec<
     protocols: readonly ["x402"];
     price: { mode: "dynamic"; currency: "USD"; min: string; max: string };
   }
->;
+> & { "x-capabilities": readonly ["tools"] };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUTPUT_PATH = join(__dirname, "..", "openapi.llm.json");
@@ -69,6 +76,7 @@ export function generateOpenApiSpec(): LlmSpec {
       "x-guidance":
         "OpenAI chat-completions body. POST / with { model, messages: [{ role, content }, ...] } and no payment header to receive a 402 with x402 batch-settlement payment requirements (accepts[]). Open/top up a payment channel per the requirements, retry with the payment header, and the service returns a standard OpenAI chat.completion object. Streaming (stream: true) is not supported. Each message is metered and settled up to a per-message price ceiling; the real cost is usage-derived and typically lower. Other standard OpenAI chat params (temperature, top_p, stop, seed, the penalties, response_format) are forwarded to the upstream model and work as normal; they are not enumerated here because the upstream owns that contract. " +
         `The exceptions are ${METERED_NAMES}, which are rejected with a 400 rather than ignored, because each would move cost past the fixed per-message ceiling this endpoint meters against. ` +
+        'Tool calling is supported (see x-capabilities): send OpenAI-shaped tools, and a tool call comes back as choices[].message.tool_calls with finish_reason: "tool_calls" and content: null. Execute it yourself and send the result back as a role:"tool" message with the matching tool_call_id — this endpoint never calls a tool on your behalf, and accepts no callback or MCP server URL. ' +
         "Note: payment uses x402 batch-settlement (a stateful channel), so a stock OpenAI SDK cannot pay this endpoint without batch-settlement client wiring — the OpenAI shape is for body legibility, not drop-in SDK use.",
       contact: CONTACT,
     },
@@ -78,11 +86,14 @@ export function generateOpenApiSpec(): LlmSpec {
         "0x08fd2874a7a85b7250830bf6be396953c108e197739ccc758e373036b2fe78a71ddcaf48183690b5f1d2a0049eb0af93068fb35eaaf59d266168eaeea1df357d1c",
       ],
     },
-    // Exactly "llm/v1" — see the header note. Tool support, when it lands, is advertised as a
-    // capability rather than a version bump, so this string does not move.
+    // Exactly "llm/v1" — see the header note. Tool support is advertised as a capability rather
+    // than a version bump, so this string does not move.
     "x-service-type": "llm/v1",
     "x-interop-floor":
-      "A compatible llm/v1 agent MUST advertise at least one accepts[] entry with asset USDC on network Optimism (eip155:10) or Base (eip155:8453), scheme batch-settlement. Request/response schema is defined by this document's LLMChatRequest/LLMChatResponse. See README.md.",
+      "A compatible llm/v1 agent MUST advertise at least one accepts[] entry with asset USDC on network Optimism (eip155:10) or Base (eip155:8453), scheme batch-settlement. Request/response schema is defined by this document's LLMChatRequest/LLMChatResponse. Tool calling is NOT part of the floor — see x-capabilities; a plain-chat agent that ignores tools is fully conformant. See README.md.",
+    // Tool calling sits outside the floor for the same reason genimg's mint does: requiring it
+    // would make every plain-chat implementer non-conformant to add an optional feature.
+    "x-capabilities": ["tools"],
     servers: [{ url: "https://llm-agent.fretchen.eu" }],
     tags: [
       { name: "LLM", description: "AI chat assistant / text completion" },
@@ -101,7 +112,8 @@ export function generateOpenApiSpec(): LlmSpec {
           "x-payment-info": {
             protocols: ["x402"],
             // price.max is overwritten at serve time from the live ceiling — see header note 1.
-            price: { mode: "dynamic", currency: "USD", min: "0", max: "0.003" },
+            // The baseline tracks LLM_ESTIMATED_TOKENS_PER_MESSAGE's default: 6000 × $1.50/M.
+            price: { mode: "dynamic", currency: "USD", min: "0", max: "0.009" },
           },
           requestBody: {
             required: true,

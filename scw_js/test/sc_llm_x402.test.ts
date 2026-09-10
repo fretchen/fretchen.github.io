@@ -118,6 +118,16 @@ const VALID_ADDRESS = "0x1234567890abcdef1234567890abcdef12345678";
 // The endpoint's request body is the OpenAI chat-completions shape.
 const TEST_MODEL = "mistral-large-latest";
 
+/** A minimal well-formed tool definition, for the tools cap and forwarding tests. */
+const TEST_TOOL = {
+  type: "function",
+  function: {
+    name: "generate_image",
+    description: "Generate an image from a prompt.",
+    parameters: { type: "object", properties: { prompt: { type: "string" } } },
+  },
+};
+
 // callLLMAPI now resolves to an OpenAI chat.completion object; build one for the mock.
 function openAiCompletion(
   content: string,
@@ -230,7 +240,7 @@ describe("sc_llm_x402", () => {
       expect(body["x-service-type"]).toBe("llm/v1");
       expect(body.paths["/"].post["x-payment-info"]).toEqual({
         protocols: ["x402"],
-        price: { mode: "dynamic", currency: "USD", min: "0", max: "0.003" },
+        price: { mode: "dynamic", currency: "USD", min: "0", max: "0.009" },
       });
       expect(body.paths["/"].post.responses["402"]).toBeDefined();
     });
@@ -312,7 +322,7 @@ describe("sc_llm_x402", () => {
         expect(res.statusCode).toBe(200);
         const body = JSON.parse(res.body);
         // 4000 tokens * 150n/100n (mistral output rate, mocked to match llm_service.ts) = 6000n
-        // atomic units = "0.006" decimal USD -- distinct from the static file's "0.003".
+        // atomic units = "0.006" decimal USD -- distinct from the static file's "0.009".
         expect(body.paths["/"].post["x-payment-info"].price.max).toBe("0.006");
       } finally {
         if (originalEstimate === undefined) {
@@ -435,10 +445,10 @@ describe("sc_llm_x402", () => {
     it("returns a 402 built from createBatchSettlementPaymentRequirements", async () => {
       const res = await handle(makeEvent() as never, {});
       expect(res.statusCode).toBe(402);
-      // Ceiling: the whole 2000-token estimate priced as completion (output) tokens
-      // at Mistral's $1.50/M rate — 2000 * 150 / 100 = 3000.
+      // Ceiling: the whole 6000-token estimate priced as completion (output) tokens
+      // at Mistral's $1.50/M rate — 6000 * 150 / 100 = 9000.
       expect(mockCreateBatchSettlementPaymentRequirements).toHaveBeenCalledWith(
-        expect.objectContaining({ payTo: VALID_ADDRESS, scheme: mockScheme, amount: "3000" }),
+        expect.objectContaining({ payTo: VALID_ADDRESS, scheme: mockScheme, amount: "9000" }),
       );
       expect(mockCreate402Response).toHaveBeenCalled();
     });
@@ -578,6 +588,29 @@ describe("sc_llm_x402", () => {
         expect(mockCallLLMAPI.mock.calls[0][3]).toEqual({});
       });
 
+      it("forwards tools and tool_choice, which are declared but not stripped", async () => {
+        // The direct counterpart to "accepts n=1, which is what we actually serve" below: every
+        // other declared key is consumed here, but tools/tool_choice are declared (so the spec
+        // names them and the caps apply) *and* forwarded, because the model is what must see
+        // them. Dropping them would charge for a completion that ignored the caller's tools.
+        await handle(
+          makeEvent({
+            body: JSON.stringify({
+              model: TEST_MODEL,
+              messages: [{ role: "user", content: "draw a cat" }],
+              tools: [TEST_TOOL],
+              tool_choice: "auto",
+            }),
+          }) as never,
+          {},
+        );
+
+        expect(mockCallLLMAPI.mock.calls[0][3]).toEqual({
+          tools: [TEST_TOOL],
+          tool_choice: "auto",
+        });
+      });
+
       it("accepts a non-standard message role and forwards it verbatim", async () => {
         // `role` is not a cost-mover, so the handler does not restrict it to the OpenAI three and
         // the published schema must not either (LLMChatMessageSchema.role is z.string()). A role
@@ -653,6 +686,110 @@ describe("sc_llm_x402", () => {
         expect(res.statusCode).toBe(200);
         // n is ours to control, so it is not forwarded even when valid.
         expect(mockCallLLMAPI.mock.calls[0][3]).toEqual({});
+      });
+    });
+
+    describe("tools are capped rather than refused", () => {
+      // Unlike the params above, tools are a feature — but tool definitions are input tokens
+      // billed on every hop, so an uncapped array inflates the metered cost for free. Both caps
+      // must bite before verifyPayment, or a caller could make us pay for the inference.
+      function toolsEvent(tools: unknown) {
+        return makeEvent({
+          body: JSON.stringify({
+            model: TEST_MODEL,
+            messages: [{ role: "user", content: "hi" }],
+            tools,
+          }),
+        }) as never;
+      }
+
+      it("rejects more than 8 tools before any payment is verified", async () => {
+        const res = await handle(toolsEvent(Array(9).fill(TEST_TOOL)), {});
+
+        expect(res.statusCode).toBe(400);
+        expect(JSON.parse(res.body).error.param).toBe("tools");
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
+        expect(mockCallLLMAPI).not.toHaveBeenCalled();
+      });
+
+      it("rejects a tools array over the byte cap", async () => {
+        // Two tools, well under the count cap, but one carries a huge description — the count cap
+        // alone does not bound input tokens.
+        const fat = {
+          ...TEST_TOOL,
+          function: { ...TEST_TOOL.function, description: "x".repeat(9000) },
+        };
+        const res = await handle(toolsEvent([TEST_TOOL, fat]), {});
+
+        expect(res.statusCode).toBe(400);
+        expect(JSON.parse(res.body).error.param).toBe("tools");
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
+      });
+
+      it("rejects a malformed tool definition", async () => {
+        const res = await handle(toolsEvent([{ type: "function", function: { name: "" } }]), {});
+
+        expect(res.statusCode).toBe(400);
+        expect(JSON.parse(res.body).error.param).toBe("tools");
+      });
+
+      it("accepts a tool bag at the count cap", async () => {
+        const res = await handle(toolsEvent(Array(8).fill(TEST_TOOL)), {});
+        expect(res.statusCode).toBe(200);
+      });
+    });
+
+    describe("tool-call conversation turns", () => {
+      it("accepts an assistant turn with null content and tool_calls", async () => {
+        // The shape a caller replays on the second hop. The old check required a string content
+        // and rejected this with a 400, making a tool loop impossible to continue.
+        const res = await handle(
+          makeEvent({
+            body: JSON.stringify({
+              model: TEST_MODEL,
+              messages: [
+                { role: "user", content: "draw a cat" },
+                {
+                  role: "assistant",
+                  content: null,
+                  tool_calls: [
+                    {
+                      id: "call_1",
+                      type: "function",
+                      function: { name: "generate_image", arguments: "{}" },
+                    },
+                  ],
+                },
+                { role: "tool", tool_call_id: "call_1", content: '{"status":"ok"}' },
+              ],
+            }),
+          }) as never,
+          {},
+        );
+
+        expect(res.statusCode).toBe(200);
+        // The whole turn, tool_call_id included, must reach the model untouched.
+        expect(mockCallLLMAPI.mock.calls[0][0]).toHaveLength(3);
+        expect(mockCallLLMAPI.mock.calls[0][0][2]).toEqual({
+          role: "tool",
+          tool_call_id: "call_1",
+          content: '{"status":"ok"}',
+        });
+      });
+
+      it("still rejects a message with neither content nor tool_calls", async () => {
+        const res = await handle(
+          makeEvent({
+            body: JSON.stringify({
+              model: TEST_MODEL,
+              messages: [{ role: "user" }],
+            }),
+          }) as never,
+          {},
+        );
+
+        expect(res.statusCode).toBe(400);
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
       });
     });
 
@@ -797,7 +934,7 @@ describe("sc_llm_x402", () => {
 
     it("settles for the LLM's actual token usage, not the ceiling", async () => {
       // 200 prompt + 800 completion -> 0.5*200 + 1.5*800 = 100 + 1200 = 1300 (Mistral
-      // rates), well under the 3000 ceiling (2000 tokens, all priced as completion).
+      // rates), well under the 9000 ceiling (6000 tokens, all priced as completion).
       mockCallLLMAPI.mockResolvedValue(
         openAiCompletion("answer", {
           prompt_tokens: 200,
@@ -809,12 +946,12 @@ describe("sc_llm_x402", () => {
       const res = await handle(makeEvent() as never, {});
       expect(res.statusCode).toBe(200);
 
-      // verifyPayment must still see the pre-authorized ceiling (3000) — the client signed
+      // verifyPayment must still see the pre-authorized ceiling (9000) — the client signed
       // its voucher against that, and handleBeforeVerify requires an exact match.
       const enhancedRequirements = await mockEnhancePaymentRequirements.mock.results[0]?.value;
       expect(mockVerifyPayment).toHaveBeenCalledWith(
         samplePaymentPayload,
-        expect.objectContaining({ amount: "3000" }),
+        expect.objectContaining({ amount: "9000" }),
       );
 
       // settlePayment must see the real, usage-derived amount instead.
@@ -825,14 +962,14 @@ describe("sc_llm_x402", () => {
     });
 
     it("caps the settlement amount at the ceiling when usage runs over the estimate", async () => {
-      // 500 prompt + 2500 completion -> 0.5*500 + 1.5*2500 = 250 + 3750 = 4000, which
-      // exceeds the 3000 ceiling — must be capped there rather than settling for more
+      // 1000 prompt + 6000 completion -> 0.5*1000 + 1.5*6000 = 500 + 9000 = 9500, which
+      // exceeds the 9000 ceiling — must be capped there rather than settling for more
       // than the client authorized (or aborting).
       mockCallLLMAPI.mockResolvedValue(
         openAiCompletion("answer", {
-          prompt_tokens: 500,
-          completion_tokens: 2500,
-          total_tokens: 3000,
+          prompt_tokens: 1000,
+          completion_tokens: 6000,
+          total_tokens: 7000,
         }),
       );
 
@@ -840,7 +977,7 @@ describe("sc_llm_x402", () => {
       expect(res.statusCode).toBe(200);
       expect(mockSettlePayment).toHaveBeenCalledWith(
         samplePaymentPayload,
-        expect.objectContaining({ amount: "3000" }),
+        expect.objectContaining({ amount: "9000" }),
       );
     });
 

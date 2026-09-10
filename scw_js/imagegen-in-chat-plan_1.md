@@ -16,7 +16,7 @@ envelope change, this needs no website-before-function care.
 
 | PR               | Steps   | Why separate                                                                                                                                                                                                                      |
 | ---------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **A — backend**  | 1, 2, 9 | Additive and independently deployable; verifiable with one `curl`. Isolates the pricing-ceiling question (§1) in a diff small enough that it cannot be skimmed past — that is the only place this feature can quietly cost money. |
+| **A — backend**  | 1, 2, 3 | Additive and independently deployable; verifiable with one `curl`. Isolates the pricing-ceiling question (§1) in a diff small enough that it cannot be skimmed past — that is the only place this feature can quietly cost money. |
 | **B — frontend** | 3–8     | All wiring and UI, no ceiling risk. Commits as review units inside.                                                                                                                                                               |
 
 Steps 3–5 alone would ship nothing observable, so there is no third PR. PR B can be developed
@@ -37,7 +37,8 @@ Most of this is wiring, not new code:
 | Image backend       | `scw_js/genimg_x402_token.ts`                                                                                                         | ⚠️ changed a lot (`images/v1` envelope), still tool-compatible |
 | LLM backend         | `scw_js/sc_llm_x402.ts`                                                                                                               | needs `tools` support                                          |
 
-Genuinely new: tool support in `llm/v1.1`, a tool-call loop in the frontend, and a confirmation card.
+Genuinely new: tool support as an `llm/v1` capability, a tool-call loop in the frontend, and a
+confirmation card.
 
 ⚠️ **The executor's return shape changed.** `useX402ImageGeneration` no longer returns the raw
 response — it returns the normalized `X402ImageResult` from `hooks/x402ImageResponse.ts`. That is
@@ -68,7 +69,7 @@ design for it until checked.
 
 ---
 
-## 1. Backend — `llm/v1.1` (`sc_llm_x402.ts`)
+## 1. Backend — tools as an `llm/v1` capability (`sc_llm_x402.ts`)
 
 Additive, no break for existing callers.
 
@@ -97,30 +98,42 @@ when input dominates output — a `tool_calls` response is a few dozen output to
 larger input. This is the one place the change can quietly cost you money, and it is why PR A
 exists as its own PR.
 
-⚠️ Quantified, from the current constants:
+✅ **Resolved.** `LLM_ESTIMATED_TOKENS_PER_MESSAGE` was raised from 2000 to 6000:
 
 ```
-ceiling  = LLM_ESTIMATED_TOKENS_PER_MESSAGE (2000) × $1.50/M   = $0.003
+ceiling  = LLM_ESTIMATED_TOKENS_PER_MESSAGE (6000) × $1.50/M   = $0.009
              ^ priced entirely as OUTPUT tokens, the pricier rate
 input rate                                        $0.50/M
-break-even: 0.003 / 0.0000005                   ≈ 6000 input tokens
+break-even: 0.009 / 0.0000005                  ≈ 18,000 input tokens
 ```
 
-Past roughly **6000 input tokens** the real usage-derived cost exceeds the signed ceiling, and
-`getSettleAmount` caps it there — the operator absorbs the difference. Not a fund-safety issue for
-the payer (the voucher protects them), but a revenue leak. Tool definitions add fixed overhead on
-_every_ hop and `MAX_HOPS = 3` accumulates tool results, so 6000 is reachable in an ordinary
-conversation. The ceiling is per-message and does not scale with conversation length — a
-pre-existing property that tools make materially easier to hit.
+At 2000 the break-even was ~6000 input tokens, which a tool-using conversation reaches: tool
+definitions add fixed overhead on _every_ hop and `MAX_HOPS = 3` accumulates tool results. Past the
+break-even the real usage-derived cost exceeds the signed ceiling and `getSettleAmount` caps it —
+never a fund-safety issue for the payer (the voucher protects them), but a revenue leak.
+
+Raising the ceiling costs plain-chat callers nothing: it is the _authorization_ bound the 402
+advertises and `verifyPayment` checks, while settlement stays usage-derived. It only means a larger
+per-message voucher. `tools` is separately capped at 8 definitions / 8 KB serialized, so a caller
+cannot inflate our input tokens for free.
+
+The ceiling remains per-message and does not scale with conversation length — a pre-existing
+property that tools make easier to hit.
 
 ### OpenAPI (`openapi.llm.json`)
 
 ```json
-"x-service-type": "llm/v1.1",
+"x-service-type": "llm/v1",
 "x-capabilities": ["tools"]
 ```
 
 Advertise as a **capability, not a requirement** — a plain-chat endpoint must stay conformant, or interchangeability is broken to add a feature.
+
+⚠️ **This section originally specified `x-service-type: "llm/v1.1"`, contradicting the line above.**
+`x-service-type` has no minor-version semantics anywhere: every consumer matches the whole string,
+so `"llm/v1.1"` is read as a _different contract_, not as v1 plus a feature — which is exactly what
+"capability, not a requirement" forbids. The version string stays `llm/v1`; `x-capabilities` is the
+mechanism that carries additive features, as genimg already does with `nft-mint`.
 
 ---
 
@@ -303,7 +316,7 @@ backward-compatible even if the frontend never lands):
 
 1. `tools` + `role: "tool"` support in `sc_llm_x402.ts` + tests
 2. Re-verify the pricing ceiling under input-heavy load — see §1, this is the money risk
-3. OpenAPI bump → `llm/v1.1`, `x-capabilities: ["tools"]`
+3. OpenAPI → `x-capabilities: ["tools"]`, `x-service-type` unchanged at `llm/v1`
 
 **PR B — frontend** (develop against `npm run dev:llmx402` on port 8085; needs A _deployed_ only
 before B deploys):

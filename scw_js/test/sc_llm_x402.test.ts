@@ -737,6 +737,54 @@ describe("sc_llm_x402", () => {
         const res = await handle(toolsEvent(Array(8).fill(TEST_TOOL)), {});
         expect(res.statusCode).toBe(200);
       });
+
+      it("measures the byte cap in UTF-8 bytes, not UTF-16 code units", async () => {
+        // ~3200 three-byte chars: ~3200 UTF-16 units (under the 8192 cap by that measure) but
+        // ~9600 UTF-8 bytes (over it). Must be rejected — tool definitions are billed by byte.
+        const wide = {
+          ...TEST_TOOL,
+          function: { ...TEST_TOOL.function, description: "あ".repeat(3200) },
+        };
+        const res = await handle(toolsEvent([wide]), {});
+
+        expect(res.statusCode).toBe(400);
+        expect(JSON.parse(res.body).error.param).toBe("tools");
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
+      });
+    });
+
+    describe("tool_choice is restricted to the published enum", () => {
+      function toolChoiceEvent(tool_choice: unknown) {
+        return makeEvent({
+          body: JSON.stringify({
+            model: TEST_MODEL,
+            messages: [{ role: "user", content: "hi" }],
+            tools: [TEST_TOOL],
+            tool_choice,
+          }),
+        }) as never;
+      }
+
+      it.each([
+        ["a forced string", "required"],
+        ["a named function", { type: "function", function: { name: "generate_image" } }],
+      ])("rejects %s before any payment is verified", async (_label, choice) => {
+        const res = await handle(toolChoiceEvent(choice), {});
+
+        expect(res.statusCode).toBe(400);
+        expect(JSON.parse(res.body).error.param).toBe("tool_choice");
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
+        expect(mockCallLLMAPI).not.toHaveBeenCalled();
+      });
+
+      it('forwards tool_choice: "none"', async () => {
+        const res = await handle(toolChoiceEvent("none"), {});
+        expect(res.statusCode).toBe(200);
+        expect(mockCallLLMAPI.mock.calls[0][3]).toEqual({
+          tools: [TEST_TOOL],
+          tool_choice: "none",
+        });
+      });
     });
 
     describe("tool-call conversation turns", () => {
@@ -775,6 +823,53 @@ describe("sc_llm_x402", () => {
           tool_call_id: "call_1",
           content: '{"status":"ok"}',
         });
+      });
+
+      it("rejects a message whose tool_calls entries are malformed", async () => {
+        const res = await handle(
+          makeEvent({
+            body: JSON.stringify({
+              model: TEST_MODEL,
+              messages: [{ role: "assistant", content: null, tool_calls: [{ id: "call_1" }] }],
+            }),
+          }) as never,
+          {},
+        );
+
+        expect(res.statusCode).toBe(400);
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
+      });
+
+      it("rejects a message with an empty tool_calls array", async () => {
+        // content: null is only allowed when the turn actually carries a call. An empty array
+        // would otherwise reach Mistral, 400 there, and surface as an opaque 500.
+        const res = await handle(
+          makeEvent({
+            body: JSON.stringify({
+              model: TEST_MODEL,
+              messages: [{ role: "assistant", content: null, tool_calls: [] }],
+            }),
+          }) as never,
+          {},
+        );
+
+        expect(res.statusCode).toBe(400);
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
+      });
+
+      it("rejects a message with a non-string content", async () => {
+        const res = await handle(
+          makeEvent({
+            body: JSON.stringify({
+              model: TEST_MODEL,
+              messages: [{ role: "user", content: 42 }],
+            }),
+          }) as never,
+          {},
+        );
+
+        expect(res.statusCode).toBe(400);
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
       });
 
       it("still rejects a message with neither content nor tool_calls", async () => {

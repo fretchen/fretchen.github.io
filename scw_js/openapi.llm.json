@@ -131,6 +131,7 @@
                 },
                 "tool_calls": {
                   "description": "Present when replaying an assistant turn that requested tool calls.",
+                  "minItems": 1,
                   "type": "array",
                   "items": {
                     "type": "object",
@@ -280,6 +281,7 @@
                     },
                     "tool_calls": {
                       "description": "Present only when finish_reason is tool_calls. Execute them and send the results back as role:'tool' messages carrying the matching tool_call_id.",
+                      "minItems": 1,
                       "type": "array",
                       "items": {
                         "type": "object",

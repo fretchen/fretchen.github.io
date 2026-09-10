@@ -9,6 +9,7 @@ import { parseJsonBody, CORS_HEADERS, errorResponse, openAiError } from "./utils
 import { z } from "zod";
 import {
   LLMChatRequestSchema,
+  LLMChatMessageSchema,
   LLMToolsSchema,
   REJECTED_PARAMS,
   FORWARDED_OWN_KEYS,
@@ -242,28 +243,37 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     }
   }
 
+  // Published as enum ["auto", "none"] in the schema, so enforce that here rather than forwarding a
+  // forced or named choice verbatim. Runs before verifyPayment, like the tools check above.
+  const toolChoice = body["tool_choice"];
+  if (toolChoice !== undefined && toolChoice !== "auto" && toolChoice !== "none") {
+    return openAiError(
+      400,
+      'Only tool_choice "auto" or "none" is supported by this endpoint; a forced or named choice is not.',
+      "invalid_request_error",
+      "unsupported_value",
+      "tool_choice",
+    );
+  }
+
   const messages = body["messages"];
   if (!Array.isArray(messages) || messages.length === 0) {
     return openAiError(400, "'messages' must be a non-empty array.", "invalid_request_error");
   }
-  // An assistant turn that requested tool calls has content: null, so content is required only
-  // when the message carries no tool_calls. A tool *result* turn is an ordinary string-content
-  // message with a tool_call_id, which already passes — `role` is unconstrained.
-  const validMessages = messages.every(
-    (m) =>
-      m &&
-      typeof m === "object" &&
-      typeof m.role === "string" &&
-      (typeof m.content === "string" || Array.isArray(m.tool_calls)),
-  );
-  if (!validMessages) {
+  // Validated against the published LLMChatMessageSchema rather than a hand-rolled check, so the
+  // enforced shape matches the spec: tool_calls entries must be well-formed, content must be a
+  // string or null, and its .refine() keeps "content required unless the turn carries tool_calls".
+  // The schema is a looseObject, so tool_call_id / name and other upstream keys survive in .data
+  // and still reach the model.
+  const parsedMessages = z.array(LLMChatMessageSchema).min(1).safeParse(messages);
+  if (!parsedMessages.success) {
     return openAiError(
       400,
-      "Each message must have a string 'role' and string 'content', unless it carries 'tool_calls'.",
+      `Invalid 'messages': ${z.prettifyError(parsedMessages.error)}`,
       "invalid_request_error",
     );
   }
-  const prompt = messages as LLMMessage[];
+  const prompt = parsedMessages.data as LLMMessage[];
 
   const requestedModel = body["model"];
   if (typeof requestedModel !== "string" || !requestedModel) {

@@ -101,7 +101,7 @@ export const LLMToolsSchema = z
     }),
   )
   .max(MAX_TOOLS)
-  .refine((tools) => JSON.stringify(tools).length <= MAX_TOOLS_BYTES, {
+  .refine((tools) => Buffer.byteLength(JSON.stringify(tools), "utf8") <= MAX_TOOLS_BYTES, {
     error: `tools must serialize to at most ${MAX_TOOLS_BYTES} bytes`,
   });
 
@@ -123,6 +123,7 @@ export const LLMChatMessageSchema = z
       ),
     tool_calls: z
       .array(LLMToolCallSchema)
+      .min(1) // an assistant turn either carries a tool call or omits the key — never []
       .optional()
       .describe("Present when replaying an assistant turn that requested tool calls."),
     tool_call_id: z
@@ -130,7 +131,10 @@ export const LLMChatMessageSchema = z
       .optional()
       .describe("On a role:'tool' message, the id of the call this message answers."),
   })
-  .describe("One turn of the conversation.");
+  .describe("One turn of the conversation.")
+  .refine((m) => (m.content !== null && m.content !== undefined) || m.tool_calls !== undefined, {
+    error: "message must have content unless it carries tool_calls",
+  });
 
 /**
  * The params rejected with a 400 because they move cost past the metered ceiling — see the header
@@ -271,6 +275,7 @@ export const LLMChatResponseSchema = z
             .describe("The generated reply, or null when the model is requesting a tool call."),
           tool_calls: z
             .array(LLMToolCallSchema)
+            .min(1)
             .optional()
             .describe(
               "Present only when finish_reason is tool_calls. Execute them and send the results back as role:'tool' messages carrying the matching tool_call_id.",

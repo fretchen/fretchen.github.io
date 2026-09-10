@@ -199,9 +199,8 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
   // ignoring them would charge for a request we did not fulfil as asked, and a caller who sets
   // max_tokens expects it to bound something. See llm_schemas.ts for the full reasoning.
   //
-  // The list itself lives in llm_schemas.ts so the published 400 description is built from the
-  // same entries — openapi.llm.json used to name only `stream` after `n` and `max_tokens` were
-  // added here.
+  // The list lives in llm_schemas.ts so the published 400 description is built from the same
+  // entries — openapi.llm.json once named only `stream`.
   for (const param of REJECTED_PARAMS) {
     if (param.predicate(body[param.name])) {
       return openAiError(400, param.message, "invalid_request_error", param.code, param.errorParam);

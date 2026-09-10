@@ -21,12 +21,10 @@ describe("openapi.genimg.json generation", () => {
    * `images/v1` has no such checker, so the contract's load-bearing bits are asserted here
    * instead. Without this, a rename or a dropped key would ship silently.
    *
-   * What used to be asserted here and is now a COMPILE error, via the `GenimgSpec` return type in
-   * scripts/generate-openapi-genimg.ts: `x-service-type` being exactly "images/v1",
-   * `x-capabilities` being exactly ["nft-mint"], and the two schema names. Do not re-add them —
-   * the golden equality test above carries the type's guarantee onto the committed file. What
-   * stays below is what a type cannot express: prose substrings, and assertions about
-   * `toComponentSchema`'s output, which is deliberately `Record<string, unknown>`.
+   * `x-service-type`, `x-capabilities` and the two schema names are no longer asserted here: the
+   * `GenimgSpec` return type in scripts/generate-openapi-genimg.ts makes each a compile error,
+   * and the golden test above carries that onto the committed file. What stays is what a type
+   * cannot express — prose substrings, and `toComponentSchema`'s untyped output.
    */
   describe("images/v1 contract", () => {
     const spec = committedSpec as Record<string, unknown>;

@@ -70,40 +70,31 @@ export const LLMChatMessageSchema = z
   .describe("One turn of the conversation.");
 
 /**
- * One entry per param rejected with a 400 because it moves cost past the metered per-message
- * ceiling. See the header for why these three and nothing else.
+ * The params rejected with a 400 because they move cost past the metered ceiling — see the header
+ * for why these three and nothing else.
  *
- * Three consumers, one list: the schema fields below take their `.describe()` copy from `doc`,
- * `sc_llm_x402.ts` loops the list to produce the 400s, and `scripts/generate-openapi-llm.ts`
- * builds the published 400 description and `x-guidance` prose from `specPhrase`/`name`. Adding a
- * fourth cost-mover (`tools`, when it lands) is one entry here plus its schema field — the
- * published description cannot drift from what is enforced, which is exactly how `n` and
- * `max_tokens` once became 400 causes that the spec never mentioned.
+ * One list, three consumers: the schema fields below (`doc`), the handler's rejection loop in
+ * `sc_llm_x402.ts`, and the generated 400 description and x-guidance (`specPhrase`/`name`). `n`
+ * and `max_tokens` once became 400 causes the published spec never mentioned; this is what stops
+ * that recurring.
  */
 export interface RejectedParam {
   /** Request-body key. Also its key in `LLMChatRequestSchema.shape`, hence in OWN_REQUEST_KEYS. */
   readonly name: string;
-  /** True when the value present in the body must be rejected. */
   readonly predicate: (value: unknown) => boolean;
-  /** OpenAI error `code`. */
   readonly code: string;
   /** OpenAI error `param`. Omitted for stream, whose wire shape predates the param field. */
   readonly errorParam?: string;
-  /** The 400 response message. Wire copy — asserted by test/sc_llm_x402.test.ts. */
+  /** The 400 response message. */
   readonly message: string;
-  /**
-   * The schema field's `.describe()`. PUBLISHED UI (SpecParamTable) — deliberately a separate
-   * string from `message`: one is documentation a caller reads before sending, the other is an
-   * error a caller reads after. They sit adjacent here so drift between them is a two-line diff.
-   */
+  /** The schema field's `.describe()` — published UI, hence separate copy from `message`. */
   readonly doc: string;
   /** How this param is named in the generated 400 description prose. */
   readonly specPhrase: string;
 }
 
-// Annotated rather than `as const satisfies`: under `as const` each entry narrows to its own
-// literal type, and `errorParam` then does not exist on the `stream` member of the union, so the
-// handler's loop cannot read it uniformly.
+// Annotated rather than `as const satisfies`, which narrows each entry to its own literal type and
+// leaves `errorParam` missing from the `stream` member of the union.
 export const REJECTED_PARAMS: readonly RejectedParam[] = [
   {
     name: "stream",
@@ -135,11 +126,7 @@ export const REJECTED_PARAMS: readonly RejectedParam[] = [
   },
 ];
 
-/**
- * Pull one entry's copy by name, so the schema fields below read as declarations rather than
- * index juggling. Throws at module load if the name is wrong — a typo here would otherwise
- * silently publish an undefined description.
- */
+/** Throws at module load rather than silently publishing an undefined description. */
 function rejected(name: string): RejectedParam {
   const param = REJECTED_PARAMS.find((p) => p.name === name);
   if (!param) {
@@ -158,10 +145,8 @@ export const LLMChatRequestSchema = z
     messages: z.array(LLMChatMessageSchema).min(1).describe("The conversation so far."),
     // The three cost-movers. Declared so the published schema names them and a caller sees the
     // constraint before hitting the 400 — everything else is forwarded and left unenumerated.
-    // The constraints stay literal (not generated from REJECTED_PARAMS) because each is a
-    // different kind — const false, const 1, never — and because OWN_REQUEST_KEYS reads
-    // Object.keys(shape): a spread would make the forwarded-bag filter depend on construction
-    // order, and z.infer would lose the field types. Only the prose comes from the list.
+    // Only the prose comes from REJECTED_PARAMS: the constraints must stay literal, because
+    // OWN_REQUEST_KEYS reads Object.keys(shape) and z.infer would lose the field types.
     stream: z.literal(false).optional().describe(rejected("stream").doc),
     n: z.literal(1).optional().describe(rejected("n").doc),
     max_tokens: z.never().optional().describe(rejected("max_tokens").doc),

@@ -48,12 +48,9 @@ export interface ScalewayResponse {
 }
 
 /**
- * Payment request body structure.
- *
- * Inferred from the schema the service publishes rather than hand-written beside it: the previous
- * interface declared every field optional, which described neither what the spec advertised nor
- * what the handler required. `looseObject` keeps the index signatures, so the payload still
- * satisfies the `Record<string, unknown>` parameters of verifyPayment/settlePayment.
+ * Inferred from the published schema rather than hand-written beside it. `looseObject` keeps the
+ * index signatures, so the payload still satisfies verifyPayment/settlePayment's
+ * `Record<string, unknown>` parameters.
  */
 type PaymentRequestBody = z.infer<typeof PaymentRequestSchema>;
 
@@ -217,16 +214,12 @@ async function handlePaymentRequest(
     rawBody = event.body;
   }
 
-  // Validate against the schema this service publishes as its contract, rather than the shallow
-  // truthiness check that used to stand here — until now `PaymentRequestSchema` generated the
-  // OpenAPI document and nothing else, so the published request shape was a claim no code checked.
-  //
-  // It requires `paymentPayload.accepted`, and so does @x402/core: its own PaymentPayload type
-  // declares `accepted: PaymentRequirements` with no `?`, while `resource` and `extensions` are
-  // optional. It is load-bearing here too — x402_settle.ts derives isBatchSettlement from
-  // accepted.scheme, and x402_verify.ts reads asset/network/payTo off it. A payload without it
-  // cannot be settled, so a 400 is the accurate answer; it previously reached the SDK and came
-  // back isValid:false, which called a malformed request an invalid payment.
+  // Validate against the schema this service publishes, which until now generated the OpenAPI
+  // document and nothing else. It requires `paymentPayload.accepted`, and so does @x402/core;
+  // x402_settle.ts derives isBatchSettlement from accepted.scheme and x402_verify.ts reads
+  // asset/network/payTo off it, so a payload without it cannot be settled. Such a payload
+  // previously reached the SDK and came back isValid:false — an invalid payment, when it was
+  // really a malformed request.
   const validation = PaymentRequestSchema.safeParse(rawBody);
   if (!validation.success) {
     logger.warn({ issues: validation.error.issues }, "Rejected malformed payment request");
@@ -239,12 +232,9 @@ async function handlePaymentRequest(
     };
   }
 
-  // GUARD ONLY — validation.data is deliberately discarded. safeParse on a looseObject returns a
-  // deep CLONE, and verifyPayment/settlePayment cast the payload to Record<string, unknown> and
-  // read arbitrary keys off it (x402_verify.ts, x402_settle.ts). Forwarding the clone would work
-  // today but silently change what they see the moment this schema gains a transform, a coercion
-  // or a default. The cast is safe precisely because safeParse just proved the shape, and a loose
-  // schema means the original carries a superset of the parsed value's keys.
+  // GUARD ONLY — validation.data is discarded. safeParse on a looseObject returns a deep clone,
+  // and verifyPayment/settlePayment read arbitrary keys off the payload; forwarding the clone
+  // works today but breaks the moment this schema gains a transform, coercion or default.
   const { paymentPayload, paymentRequirements } = rawBody as PaymentRequestBody;
 
   logger.info(

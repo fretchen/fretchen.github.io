@@ -187,11 +187,9 @@ describe("x402_facilitator handlers", () => {
     });
 
     it("forwards the original payload object, not the validated clone", async () => {
-      // PaymentRequestSchema is a looseObject, so safeParse returns a deep clone. verifyPayment
-      // and settlePayment cast the payload to Record<string, unknown> and read keys the schema
-      // does not model, so validation must stay a guard and the original object must go
-      // downstream. Passing validation.data instead would pass today and break silently the first
-      // time the schema gains a transform, coercion or default.
+      // safeParse on a looseObject returns a deep clone, and verify/settle read keys the schema
+      // does not model. Passing validation.data would pass today and break the first time the
+      // schema gains a transform, coercion or default.
       verifyPayment.mockResolvedValue({ isValid: true, payer: "0xabc" });
 
       const event = {
@@ -211,10 +209,9 @@ describe("x402_facilitator handlers", () => {
     });
 
     it("rejects a payload with no accepted envelope", async () => {
-      // @x402/core requires `accepted` on PaymentPayload, and the facilitator cannot work without
-      // it: settle derives isBatchSettlement from accepted.scheme, verify reads asset/network/
-      // payTo off it. Before the schema ran here this reached the SDK and returned isValid:false,
-      // calling a malformed request an invalid payment.
+      // @x402/core requires `accepted`, and so does the facilitator: settle derives
+      // isBatchSettlement from accepted.scheme. This used to reach the SDK and return
+      // isValid:false — an invalid payment, when it was really a malformed request.
       const event = {
         httpMethod: "POST",
         body: JSON.stringify({

@@ -162,12 +162,10 @@ export async function callLLMAPI(
   // the fields a given provider might omit (id/created/object) so our response is a
   // well-formed OpenAI chat.completion regardless of upstream quirks.
   //
-  // Validated rather than cast, because the cast was load-bearing in a place it could not hold:
-  // `usage` feeds getSettleAmount() in sc_llm_x402.ts, which runs *after* the try/catch around
-  // this function has closed. A non-numeric prompt_tokens therefore threw a TypeError out of
-  // handle() as an unhandled rejection — no response, no CORS headers, no log line we own. The
-  // schema also subsumes the old `!firstChoice || !data.usage` guard (choices is .min(1), usage
-  // is required), so that check is gone rather than duplicated.
+  // Validated rather than cast: `usage` feeds getSettleAmount() in sc_llm_x402.ts, which runs
+  // after the try/catch around this function has closed, so a non-numeric prompt_tokens threw out
+  // of handle() as an unhandled rejection. The schema subsumes the old
+  // `!firstChoice || !data.usage` guard.
   const raw: unknown = await response.json();
   const parsed = UpstreamChatCompletionSchema.safeParse(raw);
   if (!parsed.success) {

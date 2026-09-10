@@ -28,9 +28,8 @@ import {
 } from "./openapi-codegen.js";
 
 /**
- * `x-capabilities` is optional on `ServiceSpec` (most services have none) but required here, and
- * pinned to the exact tuple: the NFT mint sits outside the interop floor, so dropping the
- * declaration would make the capability undiscoverable while the endpoint still performs it.
+ * `x-capabilities` is optional on `ServiceSpec` but required here: the NFT mint sits outside the
+ * interop floor, so dropping it would hide a capability the endpoint still performs.
  */
 type GenimgSpec = ServiceSpec<
   "images/v1",

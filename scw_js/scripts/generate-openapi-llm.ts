@@ -35,10 +35,7 @@ import {
   type ServiceSpec,
 } from "./openapi-codegen.js";
 
-/**
- * Metered pricing: `price.max` is a documentation-only baseline that `sc_llm_x402.ts` overwrites
- * from the live ceiling at serve time.
- */
+/** `price.max` is a baseline that `sc_llm_x402.ts` overwrites from the live ceiling at serve time. */
 type LlmSpec = ServiceSpec<
   "llm/v1",
   "LLMChatRequest" | "LLMChatResponse",
@@ -51,8 +48,7 @@ type LlmSpec = ServiceSpec<
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUTPUT_PATH = join(__dirname, "..", "openapi.llm.json");
 
-// "a, b, or c" / "a, b and c". Prose assembly stays here rather than in llm_schemas.ts: that file
-// is published UI, and stitching sentences is a codegen concern.
+// "a, b, or c" / "a, b and c".
 const joinOr = (parts: readonly string[]): string =>
   parts.length < 2 ? (parts[0] ?? "") : `${parts.slice(0, -1).join(", ")}, or ${parts.at(-1)}`;
 const joinAnd = (parts: readonly string[]): string =>

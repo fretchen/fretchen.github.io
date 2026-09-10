@@ -17,10 +17,8 @@ import { writeFileSync } from "node:fs";
 import { z } from "zod";
 
 /**
- * What `toComponentSchema` produces: JSON Schema 2020-12 as `z.toJSONSchema` emits it. Left
- * unmodelled on purpose — it is a superset of OpenAPI's own schema object (`const`, `prefixItems`,
- * `$defs`), so any field-by-field type here would be a lie that costs casts at every call site.
- * This is also why `openapi-types` is not a dependency: its `SchemaObject` does not accept this.
+ * What `toComponentSchema` produces. Left unmodelled: JSON Schema 2020-12 is a superset of
+ * OpenAPI's own schema object, so a field-by-field type would cost casts at every call site.
  */
 export type JsonSchemaObject = Record<string, unknown>;
 
@@ -37,10 +35,7 @@ interface ResponseObject {
   content?: Record<string, { schema: { $ref: string } | JsonSchemaObject }>;
 }
 
-/**
- * A paid operation. `x-payment-info` is required: an endpoint that charges and does not say so is
- * undiscoverable, and the omission is invisible in review.
- */
+/** `x-payment-info` is required: an endpoint that charges without saying so is undiscoverable. */
 export interface PaidOperation<P extends PaymentInfo = PaymentInfo> {
   operationId: string;
   summary: string;
@@ -54,19 +49,14 @@ export interface PaidOperation<P extends PaymentInfo = PaymentInfo> {
 }
 
 /**
- * The shape every spec this package publishes must have, so that dropping or misspelling a
- * load-bearing key is a compile error rather than a test assertion.
+ * Makes dropping or misspelling a load-bearing key a compile error rather than a test assertion.
  *
- * `TServiceType` is a string *literal* per service — `website/hooks/x402Discovery.ts` compares
- * `x-service-type` with `===`, so a typo there makes the agent fail its own compatibility checker.
- * `TSchema` is the union of schema names the published docs render by name via `SpecParamTable`;
- * as a literal union it makes each name required and any third name an excess-property error.
+ * `TServiceType` is a literal per service — `x402Discovery.ts` compares `x-service-type` with
+ * `===`. `TSchema` is the union of schema names the published docs render via `SpecParamTable`;
+ * as a literal union it makes each required and any third an excess-property error.
  *
- * What this deliberately does NOT do: check conformance to the OpenAPI 3.1 standard. That would
- * need `openapi-types`, whose `paths` is an index signature (so it enforces nothing about `"/"` or
- * `post`) and whose operation extensions are all-or-nothing via `Document<T>` — it cannot express
- * any of the four guarantees above. See `test/openapi_*_generation.test.ts` for what remains
- * asserted at runtime and why.
+ * Not an OpenAPI 3.1 conformance check: `openapi-types` cannot express any of these, since its
+ * `paths` is an index signature and its operation extensions are all-or-nothing via `Document<T>`.
  */
 export interface ServiceSpec<
   TServiceType extends string,

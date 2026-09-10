@@ -19,12 +19,10 @@ describe("openapi.llm.json generation", () => {
    * checker — the shape sc_llm_x402.ts:174-195 records having fixed once. This is also why tool
    * support will be advertised as a capability rather than an `llm/v1.1` bump.
    *
-   * What used to be asserted here and is now a COMPILE error, via the `LlmSpec` return type in
-   * scripts/generate-openapi-llm.ts: `x-service-type` being exactly "llm/v1", the two schema
-   * names, and `x-payment-info.price.max` staying present (that one twice over — sc_llm_x402.ts
-   * mutates it off the JSON import, so dropping it fails to compile there too). Do not re-add
-   * them; the golden equality test above carries the type's guarantee onto the committed file.
-   * What stays below is what a type cannot express — prose substrings and the proof's format.
+   * `x-service-type`, the two schema names and `x-payment-info.price.max` are no longer asserted
+   * here: the `LlmSpec` return type in scripts/generate-openapi-llm.ts makes each a compile
+   * error, and the golden test above carries that onto the committed file. What stays is what a
+   * type cannot express — prose substrings and the proof's format.
    */
   describe("llm/v1 contract", () => {
     const spec = committedSpec as Record<string, unknown>;

@@ -89,11 +89,9 @@ describe("llm_service.js", () => {
   });
 
   test("rejects a non-numeric usage instead of passing it downstream", async () => {
-    // The reason UpstreamChatCompletionSchema exists. `usage` is priced by getSettleAmount() in
-    // sc_llm_x402.ts, which runs *after* the try/catch around callLLMAPI has closed — so a
-    // non-numeric prompt_tokens used to reach parseTokenCount, throw a TypeError, and escape
-    // handle() as an unhandled rejection: no response body, no CORS headers, no log we own.
-    // Caught here, it is an ordinary 500.
+    // `usage` is priced by getSettleAmount() in sc_llm_x402.ts, outside the try/catch around
+    // callLLMAPI — so a non-numeric prompt_tokens used to escape handle() as an unhandled
+    // rejection. Caught here, it is an ordinary 500.
     mockFetchResponse({
       ...mockLLMResponse,
       usage: { prompt_tokens: "many", completion_tokens: 7, total_tokens: 12 },

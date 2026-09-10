@@ -256,10 +256,8 @@ describe("image_service.js Tests", () => {
     });
 
     test("fails immediately when the submit response carries no polling_url", async () => {
-      // Before BflSubmitSchema this was `as { id, polling_url }`, so a missing polling_url became
-      // fetch(undefined) inside the poll loop's transport try — swallowed as a transient blip and
-      // retried for all 60 attempts, failing five minutes later as a *timeout*. It must fail at
-      // the boundary, before a single poll goes out.
+      // A missing polling_url used to become fetch(undefined) in the poll loop, get swallowed as
+      // a transient blip, and fail five minutes later as a *timeout*. No poll should go out.
       global.fetch.mockImplementation((url) => {
         if (String(url) === BFL_ENDPOINT) {
           return Promise.resolve({ ok: true, json: () => Promise.resolve({ id: "req-1" }) });
@@ -274,9 +272,8 @@ describe("image_service.js Tests", () => {
     });
 
     test("fails immediately when BFL reports Ready with no result", async () => {
-      // Was `pollData.result!.sample` — the non-null assertion's TypeError landed in the image
-      // download's catch and was retried for every remaining attempt. A Ready without a URL is
-      // not a CDN blip, so it must name the real problem on the first poll.
+      // Was `pollData.result!.sample`, whose TypeError landed in the image download's catch and
+      // was retried. A Ready without a URL is not a CDN blip.
       global.fetch.mockImplementation((url) => {
         const u = String(url);
         if (u === BFL_ENDPOINT) {

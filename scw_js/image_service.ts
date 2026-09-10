@@ -118,7 +118,7 @@ async function generateImageBFL(
   }
 
   // Fail here rather than let a missing polling_url become fetch(undefined) in the loop below,
-  // where the transport catch would retry it for the full 60 attempts and report a timeout.
+  // where the transport catch retries it 60 times and then reports a timeout.
   const submit = BflSubmitSchema.safeParse(await response.json());
   if (!submit.success) {
     throw new Error(`BFL returned an unusable submit response: ${z.prettifyError(submit.error)}`);
@@ -157,9 +157,8 @@ async function generateImageBFL(
       continue;
     }
 
-    // Parsed outside the try for the same reason the status checks below are: a body that is
-    // valid JSON but not a BFL poll response is not a transient blip, and retrying it for the
-    // full 60 attempts would surface as a timeout naming the wrong cause.
+    // Outside the try for the same reason as the status checks below: valid JSON that is not a
+    // BFL poll response is not a transient blip worth retrying.
     const poll = BflPollSchema.safeParse(rawPoll);
     if (!poll.success) {
       throw new Error(
@@ -174,17 +173,15 @@ async function generateImageBFL(
     // own catch, so a generation BFL had reported as Failed was swallowed and retried for the
     // full 60 attempts — five minutes — before surfacing as a *timeout*, hiding the real reason.
     //
-    // Stringifies rawPoll, not pollData: Zod hands back a clone, and this message is the
-    // operator's only record of exactly what BFL sent.
+    // Stringifies rawPoll, not the Zod clone: this message is the only record of what BFL sent.
     if (pollData.status === "Error" || pollData.status === "Failed") {
       throw new Error(`BFL generation failed: ${JSON.stringify(rawPoll)}`);
     }
 
     if (pollData.status === "Ready") {
       const imageUrl = pollData.result?.sample;
-      // Outside the download try below, on purpose: a Ready without a result URL is not a CDN
-      // blip. This was a non-null assertion, whose TypeError landed in that catch and was
-      // retried for every remaining attempt.
+      // Outside the download try below: a Ready without a result URL is not a CDN blip. This was
+      // a non-null assertion, whose TypeError landed in that catch and was retried.
       if (!imageUrl) {
         throw new Error(`BFL reported Ready without a result URL: ${JSON.stringify(rawPoll)}`);
       }

@@ -116,6 +116,11 @@ export default {
     viewPayment: "View payment",
     network: "Network",
     networkFallback: "This agent doesn't accept that network, so payment will use",
+    toolConfirmTitle: "Generate an image?",
+    toolConfirmPromptLabel: "Prompt",
+    toolConfirmSizeLabel: "Size",
+    toolConfirmMintNotice: "This will mint an NFT to your wallet.",
+    toolConfirmGenerate: "Generate ($0.07)",
   },
   walletoptions: {
     connect: "Connect",

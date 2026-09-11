@@ -81,15 +81,38 @@ export type X402GenerationStatus = "idle" | "awaiting-signature" | "processing" 
  * off-chain voucher signatures. See hooks/useX402Chat.ts.
  */
 
-/** A single chat turn, matching the OpenAI `messages[]` contract of sc_llm_x402.ts. */
+/** One tool call the model wants made. `arguments` is a JSON *string*, per OpenAI. */
+export interface X402ToolCall {
+  id: string;
+  type: "function";
+  function: { name: string; arguments: string };
+}
+
+/** A tool definition offered to the model, OpenAI shape. Mirrors `scw_js/llm_schemas.ts`. */
+export interface X402Tool {
+  type: "function";
+  function: { name: string; description?: string; parameters: Record<string, unknown> };
+}
+
+/**
+ * A single chat turn, matching the OpenAI `messages[]` contract of sc_llm_x402.ts.
+ *
+ * `content` is nullable/optional because an assistant turn requesting a tool call has none, and
+ * `tool_calls`/`tool_call_id` only appear on those turns and their `role: "tool"` results
+ * respectively. See `scw_js/llm_service.ts`'s `LLMMessage` — this is the wire shape it validates.
+ */
 export interface X402ChatMessage {
   role: string;
-  content: string;
+  content?: string | null;
+  tool_calls?: X402ToolCall[];
+  tool_call_id?: string;
 }
 
 /**
  * OpenAI chat.completion response from sc_llm_x402.ts on a settled request. The reply text is
  * `choices[0].message.content`; `usage` is what the endpoint settled the charge from.
+ *
+ * `content` is nullable and `tool_calls` present exactly when `finish_reason` is `"tool_calls"`.
  */
 export interface X402ChatResponse {
   id?: string;
@@ -98,7 +121,7 @@ export interface X402ChatResponse {
   model?: string;
   choices: Array<{
     index?: number;
-    message: { role: string; content: string };
+    message: { role: string; content: string | null; tool_calls?: X402ToolCall[] };
     finish_reason?: string | null;
   }>;
   usage?: {

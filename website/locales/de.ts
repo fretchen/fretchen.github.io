@@ -116,6 +116,11 @@ export default {
     viewPayment: "Zahlung ansehen",
     network: "Netzwerk",
     networkFallback: "Dieser Agent akzeptiert dieses Netzwerk nicht, die Zahlung läuft daher über",
+    toolConfirmTitle: "Bild generieren?",
+    toolConfirmPromptLabel: "Prompt",
+    toolConfirmSizeLabel: "Größe",
+    toolConfirmMintNotice: "Dies erzeugt ein NFT in deiner Wallet.",
+    toolConfirmGenerate: "Generieren (0,07 $)",
   },
   walletoptions: {
     connect: "Verbinden",

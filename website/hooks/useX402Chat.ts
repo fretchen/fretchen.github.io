@@ -19,7 +19,13 @@ import { getConfiguredPublicClient } from "./useConfiguredPublicClient";
 import { useIsWalletConnected } from "./useIsWalletConnected";
 import { probeAccepts, negotiateNetwork, LLM_V1_FLOOR } from "./x402Discovery";
 import { buildUsdcAllowedAssets } from "./x402SpendControls";
-import type { X402ChatMessage, X402ChatResponse, X402PaymentReceipt, X402GenerationStatus } from "../types/x402";
+import type {
+  X402ChatMessage,
+  X402ChatResponse,
+  X402PaymentReceipt,
+  X402GenerationStatus,
+  X402Tool,
+} from "../types/x402";
 // Type-only import — erased at compile time, so no @x402 runtime is pulled into SSR.
 import type {
   ClientChannelStorage,
@@ -137,8 +143,14 @@ function describePaymentError(status: number, body: string): string {
   return `Request failed: ${status} - ${body}`;
 }
 
+/** Additive: offering tools is opt-in per call, so every existing caller is unaffected. */
+export interface SendMessageOptions {
+  tools?: X402Tool[];
+  tool_choice?: "auto" | "none";
+}
+
 export interface UseX402ChatResult {
-  sendMessage: (prompt: X402ChatMessage[]) => Promise<X402ChatResponse>;
+  sendMessage: (prompt: X402ChatMessage[], options?: SendMessageOptions) => Promise<X402ChatResponse>;
   status: X402GenerationStatus;
   error: string | null;
   paymentReceipt: X402PaymentReceipt | null;
@@ -193,7 +205,7 @@ export function useX402Chat(network: string, agentUrl: string = DEFAULT_LLM_AGEN
   const isReady = isConnected && !!walletClient;
 
   const sendMessage = useCallback(
-    async (prompt: X402ChatMessage[]): Promise<X402ChatResponse> => {
+    async (prompt: X402ChatMessage[], options?: SendMessageOptions): Promise<X402ChatResponse> => {
       if (!walletClient) {
         throw new Error("Wallet not connected");
       }
@@ -272,8 +284,14 @@ export function useX402Chat(network: string, agentUrl: string = DEFAULT_LLM_AGEN
           method: "POST",
           headers: { "Content-Type": "application/json" },
           // OpenAI chat-completions body. `model` must be one the agent advertises in its
-          // openapi.json (mistral-large-latest for fretchen's default agent).
-          body: JSON.stringify({ model: LLM_MODEL, messages: prompt }),
+          // openapi.json (mistral-large-latest for fretchen's default agent). `tools` is
+          // spread in only when offered, so a caller that never passes `options` sends the
+          // exact body it always has — no behaviour change for existing callers.
+          body: JSON.stringify({
+            model: LLM_MODEL,
+            messages: prompt,
+            ...(options?.tools ? { tools: options.tools, tool_choice: options.tool_choice ?? "auto" } : {}),
+          }),
         });
 
         setStatus("processing");

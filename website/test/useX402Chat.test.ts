@@ -463,6 +463,78 @@ describe("useX402Chat", () => {
     });
   });
 
+  describe("Request body — tools (additive)", () => {
+    beforeEach(() => {
+      vi.mocked(useWalletClient).mockReturnValue(buildWalletClientData({ data: mockWalletClient }));
+      vi.mocked(useAccount).mockReturnValue(buildAccountData({ isConnected: true }));
+    });
+
+    const tool = {
+      type: "function" as const,
+      function: { name: "generate_image", parameters: { type: "object" } },
+    };
+
+    // sendMessage also issues an unpaid discovery probe (a body with model: "probe") before
+    // the real paid POST — see the "Network negotiation" describe block above. Every assertion
+    // here needs the real request, not whichever the mock happened to see first.
+    function paidRequestBody(fetchMock: ReturnType<typeof vi.fn>): Record<string, unknown> {
+      const call = fetchMock.mock.calls.find((args: unknown[]) => {
+        const init = args[1] as RequestInit | undefined;
+        try {
+          return (JSON.parse(init?.body as string) as { model?: string }).model !== "probe";
+        } catch {
+          return false;
+        }
+      }) as [string, RequestInit] | undefined;
+      if (!call) throw new Error("no non-probe fetch call recorded");
+      return JSON.parse(call[1].body as string) as Record<string, unknown>;
+    }
+
+    it("omits tools/tool_choice entirely when no options are given", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ content: "hi" }), { status: 200 }));
+      vi.stubGlobal("fetch", fetchMock);
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+      });
+
+      const body = paidRequestBody(fetchMock);
+      expect(body).not.toHaveProperty("tools");
+      expect(body).not.toHaveProperty("tool_choice");
+    });
+
+    it("includes tools and defaults tool_choice to auto when tools are offered", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ content: "hi" }), { status: 200 }));
+      vi.stubGlobal("fetch", fetchMock);
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }], { tools: [tool] });
+      });
+
+      const body = paidRequestBody(fetchMock);
+      expect(body.tools).toEqual([tool]);
+      expect(body.tool_choice).toBe("auto");
+    });
+
+    it("forwards an explicit tool_choice", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ content: "hi" }), { status: 200 }));
+      vi.stubGlobal("fetch", fetchMock);
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }], {
+          tools: [tool],
+          tool_choice: "none",
+        });
+      });
+
+      const body = paidRequestBody(fetchMock);
+      expect(body.tool_choice).toBe("none");
+    });
+  });
+
   describe("Reset Functionality", () => {
     it("should reset state to initial values", () => {
       vi.mocked(useWalletClient).mockReturnValue(buildWalletClientData({ data: mockWalletClient }));

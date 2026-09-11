@@ -30,13 +30,13 @@ vi.mock("../hooks/useConfiguredPublicClient", () => ({
 
 vi.mock("@x402/fetch", () => ({
   // vi.fn() needs a real `function`, not an arrow, to remain usable via `new`.
-  x402Client: vi.fn().mockImplementation(function MockX402Client() {
+  x402Client: vi.fn(function MockX402Client() {
     return { register: mockRegister, setSpendControls: mockSetSpendControls };
   }),
   // Pass the caller's fetch straight through — lets us drive the real
   // validatingFetch → global fetch path from the hook without a real SDK.
   wrapFetchWithPayment: vi.fn((fetchFn: typeof fetch) => fetchFn),
-  x402HTTPClient: vi.fn().mockImplementation(function MockX402HTTPClient() {
+  x402HTTPClient: vi.fn(function MockX402HTTPClient() {
     return { getPaymentSettleResponse: mockGetPaymentSettleResponse };
   }),
 }));

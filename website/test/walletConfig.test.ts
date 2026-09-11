@@ -6,6 +6,16 @@ import { createConfig } from "wagmi";
 // factories the config invokes rather than on the (mocked-away) config object.
 import "../wagmi.config";
 
+// Vitest resets mock state before each test, so the import-time calls are captured here,
+// at module scope, while they are still recorded — by the time an it() body runs they are
+// gone. Re-executing the module per test instead (vi.resetModules + dynamic import) would
+// re-run the vi.mock factories and hand wagmi.config fresh mock instances that no longer
+// match the bindings imported above.
+const walletConnectCalls = vi.mocked(walletConnect).mock.calls.length;
+const injectedCalls = vi.mocked(injected).mock.calls.length;
+const metaMaskCalls = vi.mocked(metaMask).mock.calls.length;
+const configArg = vi.mocked(createConfig).mock.calls[0]?.[0] as { connectors?: unknown[] };
+
 /**
  * Guards the connector setup against silently re-introducing the broken dedicated
  * MetaMask SDK connector (or a redundant generic injected() that would duplicate
@@ -14,13 +24,12 @@ import "../wagmi.config";
  */
 describe("wagmi.config connectors", () => {
   it("wires up only walletConnect as an explicit connector", () => {
-    expect(vi.mocked(walletConnect)).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(injected)).not.toHaveBeenCalled();
-    expect(vi.mocked(metaMask)).not.toHaveBeenCalled();
+    expect(walletConnectCalls).toBe(1);
+    expect(injectedCalls).toBe(0);
+    expect(metaMaskCalls).toBe(0);
   });
 
   it("passes exactly one connector to createConfig", () => {
-    const arg = vi.mocked(createConfig).mock.calls[0]?.[0] as { connectors?: unknown[] };
-    expect(arg.connectors).toHaveLength(1);
+    expect(configArg.connectors).toHaveLength(1);
   });
 });

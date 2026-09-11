@@ -12,15 +12,17 @@
  */
 
 import React from "react";
-import { describe, it, expect, beforeEach, beforeAll, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { screen, fireEvent } from "@testing-library/react";
 import { renderWithQuery } from "./testUtils";
 import { ImageGenerator } from "../components/ImageGenerator";
 import { useAccount, useWalletClient } from "wagmi";
 import { buildAccountData, buildWalletClientData } from "./setup";
 
-// Override wagmi mock for this file to force connected state for all tests
-beforeAll(() => {
+// Override wagmi mock for this file to force connected state for all tests. Must be
+// beforeEach, not beforeAll: `mockReset: true` restores every mock to its declared
+// implementation before each test, so a one-time override would only survive the first.
+beforeEach(() => {
   vi.mocked(useAccount).mockReturnValue(
     buildAccountData({
       address: "0x1234567890123456789012345678901234567890" as `0x${string}`,

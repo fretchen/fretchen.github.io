@@ -71,7 +71,12 @@ export interface X402PaymentReceipt {
   network: string;
 }
 
-export type X402GenerationStatus = "idle" | "awaiting-signature" | "processing" | "success" | "error";
+/**
+ * `topping-up` is batch-settlement only (see useX402Chat): the channel's deposit ran out and the
+ * SDK is depositing again before the message can go through. The exact-scheme image hook never
+ * sets it.
+ */
+export type X402GenerationStatus = "idle" | "awaiting-signature" | "processing" | "topping-up" | "success" | "error";
 
 /**
  * x402 Payment Types for the batch-settlement LLM chat service (sc_llm_x402).

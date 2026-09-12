@@ -93,6 +93,7 @@ export default {
     you: "Du",
     assistant: "Assistent",
     typing: "Assistent tippt...",
+    toppingUp: "Zahlungskanal wird aufgefüllt…",
     placeholder: "Gib hier deine Nachricht ein...",
     send: "Senden",
     sending: "Wird gesendet...",

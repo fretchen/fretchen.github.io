@@ -320,6 +320,121 @@ describe("useX402Chat", () => {
       expect(result.current.status).toBe("error");
       expect(result.current.error).toMatch(/wait a few seconds/i);
     });
+
+    /**
+     * A drained channel is recoverable and the SDK knows how: it tops up inside
+     * createPaymentPayload. It decides whether to from the `balance` on our cached record though,
+     * so a stale record suppresses it — and its corrective-402 recovery covers
+     * cumulative_amount_mismatch and below_claimed but not this reason. Dropping the record makes
+     * recoverChannel re-read the chain on the retry, after which the SDK deposits on its own.
+     *
+     * Each stub returns a FRESH Response per call: a body is single-use, and a shared
+     * mockResolvedValue object would fail the retry with "Body has already been read" — an
+     * artifact of the mock, not of the code.
+     */
+    const drained402 = () =>
+      new Response(
+        JSON.stringify({
+          x402Version: 2,
+          error: "invalid_batch_settlement_evm_cumulative_exceeds_balance",
+          accepts: [{ scheme: "batch-settlement", network: NETWORK, amount: "9000" }],
+        }),
+        { status: 402 },
+      );
+
+    it("clears the stale channel record and retries once when the channel is drained", async () => {
+      window.localStorage.setItem("x402-channel:0xstalechannel", JSON.stringify({ balance: "500000" }));
+      // sendMessage issues an unpaid discovery probe first, so "first call" and "first paid call"
+      // are not the same thing — count only the paid ones, or the drained 402 lands on the probe
+      // and the real request sails through unaffected.
+      let paidCalls = 0;
+      const fetchMock = vi.fn((_input: string, init?: RequestInit) => {
+        const isProbe = (() => {
+          try {
+            return (JSON.parse(init?.body as string) as { model?: string }).model === "probe";
+          } catch {
+            return false;
+          }
+        })();
+        if (isProbe) return Promise.resolve(new Response("{}", { status: 200 }));
+        paidCalls += 1;
+        return Promise.resolve(
+          paidCalls === 1 ? drained402() : new Response(JSON.stringify({ content: "hi" }), { status: 200 }),
+        );
+      });
+      vi.stubGlobal("fetch", fetchMock);
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+
+      let returned: unknown;
+      await act(async () => {
+        returned = await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+      });
+
+      // The cached record is gone, so the SDK re-reads on-chain state instead of trusting it.
+      expect(window.localStorage.getItem("x402-channel:0xstalechannel")).toBeNull();
+      // And the message went through rather than dead-ending on the 402.
+      expect(returned).toEqual({ content: "hi" });
+      expect(result.current.status).toBe("success");
+      expect(result.current.error).toBeNull();
+    });
+
+    it("retries a drained channel only once, then reports it honestly", async () => {
+      // If the top-up itself cannot complete — a declined signature, an empty wallet — looping
+      // would sign a fresh real deposit on every pass.
+      const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(drained402()));
+      vi.stubGlobal("fetch", fetchMock);
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+
+      let thrown: Error | undefined;
+      await act(async () => {
+        try {
+          await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+        } catch (err) {
+          thrown = err as Error;
+        }
+      });
+
+      const paidCalls = fetchMock.mock.calls.filter((args: unknown[]) => {
+        const init = args[1] as RequestInit | undefined;
+        try {
+          return (JSON.parse(init?.body as string) as { model?: string }).model !== "probe";
+        } catch {
+          return false;
+        }
+      });
+      expect(paidCalls).toHaveLength(2); // the original and exactly one retry
+      expect(thrown?.message).toMatch(/needs topping up/i);
+      expect(thrown?.message).not.toContain("cumulative_exceeds_balance");
+      expect(thrown?.message).not.toContain("x402Version");
+    });
+
+    it("does not clear or retry for an unrelated 402", async () => {
+      window.localStorage.setItem("x402-channel:0xkeepme", JSON.stringify({ balance: "500000" }));
+      const fetchMock = vi
+        .fn()
+        .mockImplementation(() =>
+          Promise.resolve(
+            new Response(JSON.stringify({ error: "invalid_batch_settlement_evm_channel_busy" }), { status: 402 }),
+          ),
+        );
+      vi.stubGlobal("fetch", fetchMock);
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+
+      let thrown: Error | undefined;
+      await act(async () => {
+        try {
+          await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+        } catch (err) {
+          thrown = err as Error;
+        }
+      });
+
+      expect(window.localStorage.getItem("x402-channel:0xkeepme")).not.toBeNull();
+      expect(thrown?.message).toMatch(/still being settled/i);
+    });
   });
 
   describe("Agent URL targeting (open-agent-platform)", () => {

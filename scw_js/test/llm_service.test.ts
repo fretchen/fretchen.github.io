@@ -147,7 +147,12 @@ describe("llm_service.js", () => {
     // — after two earlier tool calls in the same conversation had already run and been paid for.
     mockFetchResponse({
       ...mockLLMResponse,
-      choices: [{ message: { role: "assistant", content: "Here is your image!", tool_calls: null }, finish_reason: "stop" }],
+      choices: [
+        {
+          message: { role: "assistant", content: "Here is your image!", tool_calls: null },
+          finish_reason: "stop",
+        },
+      ],
     });
 
     const result = await callLLMAPI([{ role: "user", content: "draw a cat" }]);

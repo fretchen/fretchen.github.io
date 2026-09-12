@@ -71,6 +71,22 @@ export class WebStorageClientChannelStorage implements ClientChannelStorage {
     this.backend.removeItem(this.keyFor(key));
     return Promise.resolve();
   }
+  /**
+   * Drop every cached channel record. Each one is only a local mirror of on-chain state that the
+   * SDK's `recoverChannel` rebuilds on the next send, so clearing one we did not strictly need to
+   * costs a resync and nothing else — no funds, no channel. That is why this is deliberately
+   * blunt rather than deriving the one `channelId` at fault, which would mean `buildChannelConfig`
+   * + `computeChannelId` + parsing `accepts[]` out of a 402 body: more code, more to go wrong, no
+   * better outcome. See the drained-channel retry in `sendMessage`.
+   */
+  clearAll(): void {
+    const staleKeys: string[] = [];
+    for (let i = 0; i < this.backend.length; i++) {
+      const key = this.backend.key(i);
+      if (key?.startsWith(this.prefix)) staleKeys.push(key);
+    }
+    staleKeys.forEach((key) => this.backend.removeItem(key));
+  }
 }
 
 /**
@@ -140,7 +156,29 @@ function describePaymentError(status: number, body: string): string {
   if (errorCode?.includes("channel_busy")) {
     return "Your previous message is still being settled on-chain. Please wait a few seconds and send it again.";
   }
+  // Only reached once the automatic top-up retry in sendMessage has ALSO failed — the first
+  // occurrence is handled there and never surfaces. By this point the resync has happened, so the
+  // channel really cannot be funded: a declined signature, or no USDC left in the wallet.
+  if (errorCode?.includes("cumulative_exceeds_balance")) {
+    return "Your payment channel needs topping up, but that didn't complete. Check your wallet has USDC and approve the signature, then send again.";
+  }
   return `Request failed: ${status} - ${body}`;
+}
+
+/**
+ * Whether a 402 body says the channel's deposit can no longer cover another message's ceiling.
+ *
+ * Worth singling out because the SDK *can* fix it and doesn't: `BatchSettlementEvmScheme` tops up
+ * inside `createPaymentPayload`, but decides whether to from the `balance` on our own cached
+ * record, so a stale record suppresses it — and its corrective-402 recovery explicitly handles
+ * only `cumulative_amount_mismatch` and `cumulative_amount_below_claimed`, not this.
+ */
+function isDrainedChannel(body: string): boolean {
+  try {
+    return ((JSON.parse(body) as { error?: string }).error ?? "").includes("cumulative_exceeds_balance");
+  } catch {
+    return false;
+  }
 }
 
 /** Additive: offering tools is opt-in per call, so every existing caller is unaffected. */
@@ -280,26 +318,47 @@ export function useX402Chat(network: string, agentUrl: string = DEFAULT_LLM_AGEN
         // First bare request → 402 → SDK opens channel (deposit) or signs a voucher → retries.
         // Wrapped in try/catch as defense-in-depth (see notebook: a client-side crash could
         // once mask a successful settlement; the underlying facilitator bug is fixed).
-        const response = await fetchWithPayment(agentUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          // OpenAI chat-completions body. `model` must be one the agent advertises in its
-          // openapi.json (mistral-large-latest for fretchen's default agent). `tools` is
-          // spread in only when offered, so a caller that never passes `options` sends the
-          // exact body it always has — no behaviour change for existing callers.
-          body: JSON.stringify({
-            model: LLM_MODEL,
-            messages: prompt,
-            ...(options?.tools ? { tools: options.tools, tool_choice: options.tool_choice ?? "auto" } : {}),
-          }),
-        });
+        const doPaidRequest = () =>
+          fetchWithPayment(agentUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            // OpenAI chat-completions body. `model` must be one the agent advertises in its
+            // openapi.json (mistral-large-latest for fretchen's default agent). `tools` is
+            // spread in only when offered, so a caller that never passes `options` sends the
+            // exact body it always has — no behaviour change for existing callers.
+            body: JSON.stringify({
+              model: LLM_MODEL,
+              messages: prompt,
+              ...(options?.tools ? { tools: options.tools, tool_choice: options.tool_choice ?? "auto" } : {}),
+            }),
+          });
 
-        setStatus("processing");
+        let response = await doPaidRequest();
 
         if (!response.ok) {
+          // A Response body is single-use, so read it once here and once more after any retry.
           const errorText = await response.text();
-          throw new Error(describePaymentError(response.status, errorText));
+
+          if (isDrainedChannel(errorText)) {
+            // The SDK would have topped up on its own, but decides from the `balance` on our
+            // cached record, which had drifted from the chain. Dropping the record makes its
+            // `recoverChannel` re-read on-chain state on the retry, after which its own top-up
+            // branch fires — one wallet signature, exactly like opening the channel did.
+            //
+            // Once only: looping here would sign a fresh real deposit on every pass if the true
+            // problem were something else.
+            storage.clearAll();
+            setStatus("topping-up");
+            response = await doPaidRequest();
+            if (!response.ok) {
+              throw new Error(describePaymentError(response.status, await response.text()));
+            }
+          } else {
+            throw new Error(describePaymentError(response.status, errorText));
+          }
         }
+
+        setStatus("processing");
 
         const result = (await response.json()) as X402ChatResponse;
 

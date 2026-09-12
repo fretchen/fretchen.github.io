@@ -23,7 +23,7 @@ import { useX402ImageGeneration } from "../hooks/useX402ImageGeneration";
 import { fetchAgentCard, precheckLlmV1Agent, type AgentCard } from "../hooks/x402Discovery";
 import { generateImageTool } from "../tools/generateImage";
 import type { X402ChatMessage, X402ToolCall } from "../types/x402";
-import { getViemChain, toCAIP2, fromCAIP2, GENAI_NFT_NETWORKS } from "@fretchen/chain-utils";
+import { getViemChain, toCAIP2, fromCAIP2, getGenAiNFTMainnetNetworks } from "@fretchen/chain-utils";
 import { useChainId } from "wagmi";
 import { ChainBadge, getChainName } from "./ChainBadge";
 import { button } from "../styled-system/recipes";
@@ -33,6 +33,10 @@ import { PageHeader } from "./PageHeader";
 // circuit breaker on a model that keeps requesting tools instead of answering. Each hop is a
 // separately metered chat message, so this also bounds worst-case cost per user turn.
 const MAX_HOPS = 3;
+
+// Hoisted so the array identity is stable across renders. Mainnet-only on purpose — see the
+// useAutoNetwork call in the component for why a testnet entry here would be a real hazard.
+const IMAGE_TOOL_NETWORKS = getGenAiNFTMainnetNetworks();
 
 /**
  * Classify a thrown `generateImage` error into what the model needs to react sensibly, without
@@ -49,6 +53,18 @@ function classifyImageError(err: unknown): "user_declined" | "wrong_network" | "
   const message = err instanceof Error ? err.message : String(err);
   if (message.startsWith("Network mismatch!")) return "wrong_network";
   return "generation_failed";
+}
+
+/**
+ * A short, single-line version of a tool failure to hand back to the model, so it can tell the
+ * user what actually went wrong instead of "I'm having trouble". Truncated and newline-stripped
+ * because this goes into the conversation as a tool result and is billed as input tokens on
+ * every subsequent hop — wallet and SDK errors are routinely multi-line and very long.
+ */
+function describeToolFailure(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err);
+  const singleLine = message.replace(/\s+/g, " ").trim();
+  return singleLine.length > 200 ? `${singleLine.slice(0, 200)}…` : singleLine;
 }
 
 // The custom-URL escape hatch (AgentSelector) lets the chat pay any llm/v1 agent. It is also
@@ -139,6 +155,7 @@ export function AssistantChat() {
   const sendLabel = useLocale({ label: "assistent.send" });
   const unknownErrorLabel = useLocale({ label: "assistent.unknownError" });
   const typingLabel = useLocale({ label: "assistent.typing" });
+  const toppingUpLabel = useLocale({ label: "assistent.toppingUp" });
   const actionsLabel = useLocale({ label: "assistent.actions" });
   const clearChatLabel = useLocale({ label: "assistent.clearChat" });
   const titleLabel = useLocale({ label: "assistent.title" });
@@ -187,13 +204,30 @@ export function AssistantChat() {
   // The hook may negotiate away from `desiredNetwork` when the agent doesn't offer it (e.g. a
   // Base-only third-party agent while the user prefers Optimism), so the wallet must be
   // switched to what will actually be paid — `paymentNetwork`, not the preference.
-  const { sendMessage: payAndSend, paymentReceipt, paymentNetwork } = useX402Chat(desiredNetwork, agentUrl);
+  const {
+    sendMessage: payAndSend,
+    paymentReceipt,
+    paymentNetwork,
+    status: chatStatus,
+  } = useX402Chat(desiredNetwork, agentUrl);
   const { network, switchIfNeeded, switchError } = useAutoNetwork([paymentNetwork]);
 
   // The image tool pays on a different network/scheme (exact, genimg's own wallet signature)
   // than chat's batch-settlement channel — see useX402ImageGeneration.ts. It does not switch
-  // chains itself, so this mirrors ImageGenerator.tsx's own useAutoNetwork(GENAI_NFT_NETWORKS).
-  const { network: imageNetwork, switchIfNeeded: switchImageIfNeeded } = useAutoNetwork(GENAI_NFT_NETWORKS);
+  // chains itself, hence the second useAutoNetwork here.
+  //
+  // MAINNET only, unlike ImageGenerator.tsx's useAutoNetwork(GENAI_NFT_NETWORKS): that list also
+  // contains OP Sepolia, and useAutoNetwork keeps the wallet's current chain whenever it is in
+  // the list. A wallet left on Sepolia from earlier testing would therefore make switchIfNeeded
+  // a no-op and generate a *placeholder* image against the testnet mock — while the chat itself,
+  // whose CHAT_NETWORKS are mainnet-only, had already taken a real USDC deposit. The standalone
+  // /imagegen page can afford the testnet entry because it has a visible network picker; this
+  // tool has none beyond the confirm card's badge.
+  const {
+    network: imageNetwork,
+    switchIfNeeded: switchImageIfNeeded,
+    switchError: switchImageError,
+  } = useAutoNetwork(IMAGE_TOOL_NETWORKS);
   const { generateImage } = useX402ImageGeneration();
 
   // The confirm card is transient UI state, never a chat message — it cannot be scrolled back
@@ -282,7 +316,7 @@ export function AssistantChat() {
    */
   async function runToolCall(
     call: X402ToolCall,
-  ): Promise<{ result: { status: string; network?: string }; imageUrl?: string }> {
+  ): Promise<{ result: { status: string; network?: string; reason?: string }; imageUrl?: string }> {
     let args: { prompt?: string; size?: string } = {};
     try {
       args = JSON.parse(call.function.arguments) as typeof args;
@@ -304,7 +338,9 @@ export function AssistantChat() {
     const switchedToImageNetwork = await switchImageIfNeeded();
     if (!switchedToImageNetwork) {
       setToolCard(null);
-      return { result: { status: "wrong_network" } };
+      return {
+        result: { status: "wrong_network", reason: switchImageError ?? undefined },
+      };
     }
 
     try {
@@ -319,7 +355,12 @@ export function AssistantChat() {
       return { result: { status: "ok", network: imageNetwork }, imageUrl: image.imageUrl };
     } catch (err) {
       setToolCard(null);
-      return { result: { status: classifyImageError(err) } };
+      // Both of these exist because the first version of this catch classified the error into a
+      // one-word status and dropped the error itself. A real failure then produced no console
+      // output at all and told the model only "generation_failed", so the user got "I'm having
+      // trouble generating the image" with no way — for them or for us — to find out why.
+      console.error("generate_image tool call failed:", err);
+      return { result: { status: classifyImageError(err), reason: describeToolFailure(err) } };
     }
   }
 
@@ -356,6 +397,8 @@ export function AssistantChat() {
 
       let finalContent: string | null = null;
       let finalImageUrl: string | undefined;
+      // Once a tool call has failed, later hops stop offering the tool — see the tool_choice below.
+      let toolFailed = false;
 
       for (let hop = 0; hop < MAX_HOPS; hop++) {
         // Cheap no-op once the wallet is already on the right chain — re-checked every hop
@@ -365,7 +408,15 @@ export function AssistantChat() {
           throw new Error(switchError ?? `Please switch your wallet to ${getViemChain(network).name}`);
         }
 
-        const data = await payAndSend(convo, { tools: [generateImageTool], tool_choice: "auto" });
+        // After a failed tool call the model is told what went wrong and given one turn to say so
+        // — but NOT another chance to call the same failing tool. Left on "auto" it just retries:
+        // a real conversation burned all three hops re-requesting an image that kept failing, so
+        // the user approved three wallet prompts, paid for three attempts, and got the generic
+        // "no response" fallback because no hop ever produced text.
+        const data = await payAndSend(convo, {
+          tools: [generateImageTool],
+          tool_choice: toolFailed ? "none" : "auto",
+        });
         const choice = data.choices?.[0];
         const toolCalls = choice?.message.tool_calls;
 
@@ -383,6 +434,7 @@ export function AssistantChat() {
         for (const call of toolCalls) {
           const { result, imageUrl } = await runToolCall(call);
           if (imageUrl) finalImageUrl = imageUrl;
+          if (result.status !== "ok") toolFailed = true;
           convo.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
         }
       }
@@ -568,7 +620,9 @@ export function AssistantChat() {
 
             {isLoading && (
               <div className={chat.loadingMessage}>
-                <div className={chat.loadingBubble}>{typingLabel}</div>
+                {/* A drained channel tops itself up mid-send (see useX402Chat). Saying so keeps
+                    the wallet signature that follows from arriving unexplained. */}
+                <div className={chat.loadingBubble}>{chatStatus === "topping-up" ? toppingUpLabel : typingLabel}</div>
               </div>
             )}
 

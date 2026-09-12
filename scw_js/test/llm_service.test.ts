@@ -140,6 +140,23 @@ describe("llm_service.js", () => {
     expect("tool_calls" in result.choices[0].message).toBe(false);
   });
 
+  test("accepts an explicit tool_calls: null on the closing turn of a tool loop", async () => {
+    // Production incident: Mistral sends tool_calls: null (not omitted) on the turn after a
+    // tool call, once it has real content to answer with. UpstreamChatCompletionSchema only
+    // accepted `undefined` there, so safeParse failed, callLLMAPI threw, and the whole hop 500'd
+    // — after two earlier tool calls in the same conversation had already run and been paid for.
+    mockFetchResponse({
+      ...mockLLMResponse,
+      choices: [{ message: { role: "assistant", content: "Here is your image!", tool_calls: null }, finish_reason: "stop" }],
+    });
+
+    const result = await callLLMAPI([{ role: "user", content: "draw a cat" }]);
+
+    expect(result.choices[0].message.content).toBe("Here is your image!");
+    expect("tool_calls" in result.choices[0].message).toBe(false);
+    expect(result.choices[0].finish_reason).toBe("stop");
+  });
+
   // The mock upstream (dummy=true) is what testnet and `useDummyData: true` get. It had no
   // coverage at all before it became tool-aware. These cases never touch `fetch` — the mock now
   // flows through the same schema + rebuild as a real completion, so they also cover the schema

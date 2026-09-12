@@ -58,10 +58,14 @@ const UpstreamToolCallSchema = z.looseObject({
  * describes what we receive, so everything `callLLMAPI` synthesizes (`id`, `created`, `object`,
  * `index`, `role`, `finish_reason`) is optional.
  *
- * `content` is nullable because a tool-call turn has none. The refine keeps the check that
- * loosening it would otherwise throw away: a message must carry content *or* tool calls, so a
- * genuinely empty completion is still rejected rather than billed for. Refines are invisible to
- * `z.toJSONSchema`, which is free here — this file is never published.
+ * `content` is nullable because a tool-call turn has none. `tool_calls` is nullable too — real
+ * evidence, not speculative: Mistral sends `tool_calls: null` explicitly on an ordinary text
+ * turn rather than omitting the key, which `.optional()` alone does not accept. This crashed the
+ * third hop of a real tool-calling conversation in production (safeParse failure → 500, after
+ * two tool calls had already run and been paid for). The refine uses `Array.isArray` rather than
+ * `!== undefined` for the same reason: `null !== undefined` is true, so that check would have
+ * let a genuinely empty `{content: null, tool_calls: null}` completion through. Refines are
+ * invisible to `z.toJSONSchema`, which is free here — this file is never published.
  */
 export const UpstreamChatCompletionSchema = z.looseObject({
   id: z.string().optional(),
@@ -75,9 +79,9 @@ export const UpstreamChatCompletionSchema = z.looseObject({
           .looseObject({
             role: z.string().optional(),
             content: z.string().nullable().optional(),
-            tool_calls: z.array(UpstreamToolCallSchema).min(1).optional(),
+            tool_calls: z.array(UpstreamToolCallSchema).min(1).nullable().optional(),
           })
-          .refine((m) => typeof m.content === "string" || m.tool_calls !== undefined, {
+          .refine((m) => typeof m.content === "string" || Array.isArray(m.tool_calls), {
             error: "message must carry either content or tool_calls",
           }),
         finish_reason: z.string().nullable().optional(),

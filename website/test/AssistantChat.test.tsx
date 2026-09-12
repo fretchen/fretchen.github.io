@@ -156,6 +156,19 @@ describe("AssistantChat", () => {
     });
   });
 
+  it("falls back to the no-response message when the model returns empty content", async () => {
+    // Mistral can return content: "" with finish_reason: "stop" — a real, non-nullish empty
+    // completion. `??` alone doesn't catch it, and used to render a literally blank bubble.
+    mockSendMessage.mockResolvedValueOnce(textResponse(""));
+
+    render(<AssistantChat />);
+    sendUserMessage("Draw a dog playing piano");
+
+    await waitFor(() => {
+      expect(screen.getByText("assistent.noResponse")).toBeInTheDocument();
+    });
+  });
+
   it("switches the network before paying", async () => {
     render(<AssistantChat />);
 

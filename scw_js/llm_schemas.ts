@@ -124,6 +124,10 @@ export const LLMChatMessageSchema = z
     tool_calls: z
       .array(LLMToolCallSchema)
       .min(1) // an assistant turn either carries a tool call or omits the key — never []
+      .nullable() // some OpenAI-compatible upstreams (Mistral included) send `null` rather than
+      // omitting the key on a plain turn — a caller replaying that turn verbatim sends the same.
+      // See upstream_schemas.ts's UpstreamChatCompletionSchema for the production incident this
+      // mirrors.
       .optional()
       .describe("Present when replaying an assistant turn that requested tool calls."),
     tool_call_id: z
@@ -132,7 +136,9 @@ export const LLMChatMessageSchema = z
       .describe("On a role:'tool' message, the id of the call this message answers."),
   })
   .describe("One turn of the conversation.")
-  .refine((m) => (m.content !== null && m.content !== undefined) || m.tool_calls !== undefined, {
+  // Array.isArray, not `!== undefined`: null !== undefined is true, so that check would accept
+  // a genuinely empty {content: null, tool_calls: null} turn now that tool_calls is nullable.
+  .refine((m) => (m.content !== null && m.content !== undefined) || Array.isArray(m.tool_calls), {
     error: "message must have content unless it carries tool_calls",
   });
 

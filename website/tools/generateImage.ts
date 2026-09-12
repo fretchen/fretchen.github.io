@@ -17,8 +17,11 @@ export const generateImageTool: X402Tool = {
   function: {
     name: "generate_image",
     description:
-      "Generate an image from a text prompt. Costs $0.07 USDC and requires the user to approve " +
-      "a wallet signature. Only call when the user has clearly asked for an image.",
+      "Generate an image from a text prompt. Call this as soon as the user has described the " +
+      "image they want — do not ask them to confirm in chat first. Calling it shows the user a " +
+      "confirmation card themselves (prompt, size, the $0.07 USDC cost, a wallet signature " +
+      "prompt) before anything is generated or charged, so their approval is already handled by " +
+      "the app, not by you. Only call it when the user has clearly asked for an image.",
     parameters: {
       type: "object",
       properties: {

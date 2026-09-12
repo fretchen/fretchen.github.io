@@ -370,7 +370,11 @@ export function AssistantChat() {
         const toolCalls = choice?.message.tool_calls;
 
         if (choice?.finish_reason !== "tool_calls" || !toolCalls?.length) {
-          finalContent = choice?.message.content ?? noResponseMessage;
+          // `??` alone doesn't catch this: Mistral can return content: "" (or whitespace) with
+          // finish_reason: "stop" — a real, empty-but-not-nullish completion — which used to
+          // render as a literally blank bubble instead of falling back to noResponseMessage.
+          const content = choice?.message.content;
+          finalContent = content && content.trim().length > 0 ? content : noResponseMessage;
           break;
         }
 

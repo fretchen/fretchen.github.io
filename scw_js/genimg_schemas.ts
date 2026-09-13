@@ -165,7 +165,7 @@ export const NftReceiptSchema = z
     status: z
       .enum(["minted", "mint_failed"])
       .describe(
-        "'minted': the NFT exists and belongs to the payer. 'mint_failed': the image was generated and is yours, but the on-chain mint did not complete — no payment was settled in that case.",
+        "'minted': the NFT exists and belongs to the payer. 'mint_failed': the image was generated and is yours, but the on-chain mint did not complete. The payment settled in that case — settlement precedes the mint, so a failed mint means you were charged for the generation you received, not for the token.",
       ),
     token_id: z.number().int().optional().describe("Token id of the minted NFT."),
     contract: z.string().optional().describe("Address of the NFT contract holding the token."),

@@ -21,9 +21,10 @@ export interface X402ImageResult {
   /** Address of the NFT contract holding the token. */
   contract?: string;
   /**
-   * Set only when the image exists but the on-chain mint did not complete. The payment was NOT
-   * settled in that case — the server attaches no settlement headers and takes no money — so any
-   * message shown to the user can say so.
+   * Set only when the image exists but the on-chain mint did not complete. The payment HAS
+   * settled in that case — the endpoint settles before minting, so that a cancelled
+   * authorization cannot leave it having minted an NFT for free. The user paid for the
+   * generation they received; what is missing is the token.
    */
   mintFailedReason?: string;
 }

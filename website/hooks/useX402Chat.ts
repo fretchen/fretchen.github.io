@@ -72,20 +72,38 @@ export class WebStorageClientChannelStorage implements ClientChannelStorage {
     return Promise.resolve();
   }
   /**
-   * Drop every cached channel record. Each one is only a local mirror of on-chain state that the
-   * SDK's `recoverChannel` rebuilds on the next send, so clearing one we did not strictly need to
-   * costs a resync and nothing else — no funds, no channel. That is why this is deliberately
-   * blunt rather than deriving the one `channelId` at fault, which would mean `buildChannelConfig`
-   * + `computeChannelId` + parsing `accepts[]` out of a 402 body: more code, more to go wrong, no
-   * better outcome. See the drained-channel retry in `sendMessage`.
+   * Make the SDK deposit on the next attempt, by zeroing the `balance` it decides from.
+   *
+   * `BatchSettlementEvmScheme.createPaymentPayload` reads `balance` from THIS record, never from
+   * the chain, so `balance: "0"` flips its `needsInitialDeposit` branch on and the next payload
+   * carries a real deposit (sized by `depositStrategy` below).
+   *
+   * **`chargedCumulativeAmount` is deliberately kept.** It is the one value the chain cannot
+   * restore: settlement here is batched by `scw_js/llm_x402_cron.ts`, so the on-chain
+   * `totalClaimed` lags the server's cumulative, and the SDK's `recoverChannel` sets
+   * `chargedCumulativeAmount` to exactly that lagging figure. Deleting the record — which this
+   * used to do — therefore made the client sign a voucher below the server's state and get
+   * `cumulative_amount_mismatch` instead of the deposit it needed.
+   *
+   * Deliberately blunt across all records rather than deriving the one `channelId` at fault:
+   * that would mean `buildChannelConfig` + `computeChannelId` + parsing `accepts[]` out of a 402
+   * body, and since `depositStrategy` floors every deposit at the same amount anyway, it would
+   * buy nothing. A record zeroed unnecessarily costs one extra top-up, never funds.
    */
-  clearAll(): void {
-    const staleKeys: string[] = [];
+  forceDeposit(): void {
     for (let i = 0; i < this.backend.length; i++) {
       const key = this.backend.key(i);
-      if (key?.startsWith(this.prefix)) staleKeys.push(key);
+      if (!key?.startsWith(this.prefix)) continue;
+      const raw = this.backend.getItem(key);
+      if (!raw) continue;
+      try {
+        const context = JSON.parse(raw) as BatchSettlementClientContext;
+        this.backend.setItem(key, JSON.stringify({ ...context, balance: "0" }));
+      } catch {
+        // Unparseable record: leave it alone. The SDK treats it as absent and recovers, which is
+        // no worse than what we would write over it.
+      }
     }
-    staleKeys.forEach((key) => this.backend.removeItem(key));
   }
 }
 
@@ -156,11 +174,15 @@ function describePaymentError(status: number, body: string): string {
   if (errorCode?.includes("channel_busy")) {
     return "Your previous message is still being settled on-chain. Please wait a few seconds and send it again.";
   }
-  // Only reached once the automatic top-up retry in sendMessage has ALSO failed — the first
-  // occurrence is handled there and never surfaces. By this point the resync has happened, so the
-  // channel really cannot be funded: a declined signature, or no USDC left in the wallet.
+  // The facilitator has a separate code for an underfunded wallet (see below), so reaching this
+  // one means the money is there and the deposit itself did not go through — realistically a
+  // declined or dismissed signature prompt. Saying "check you have USDC" here, as this used to,
+  // sends people to look at the one thing already known to be fine.
   if (errorCode?.includes("cumulative_exceeds_balance")) {
-    return "Your payment channel needs topping up, but that didn't complete. Check your wallet has USDC and approve the signature, then send again.";
+    return "Your payment channel needs topping up. Approve the wallet signature when it appears, then send again.";
+  }
+  if (errorCode?.includes("insufficient_balance")) {
+    return "Not enough USDC in your wallet to fund the payment channel. Note that only native USDC works — a bridged variant such as USDC.e cannot be used.";
   }
   return `Request failed: ${status} - ${body}`;
 }
@@ -341,13 +363,13 @@ export function useX402Chat(network: string, agentUrl: string = DEFAULT_LLM_AGEN
 
           if (isDrainedChannel(errorText)) {
             // The SDK would have topped up on its own, but decides from the `balance` on our
-            // cached record, which had drifted from the chain. Dropping the record makes its
-            // `recoverChannel` re-read on-chain state on the retry, after which its own top-up
-            // branch fires — one wallet signature, exactly like opening the channel did.
+            // cached record, which had drifted from the chain. Zeroing that balance — while
+            // keeping the cumulative, see forceDeposit() — makes the retry carry a real deposit:
+            // one wallet signature, exactly like opening the channel did.
             //
             // Once only: looping here would sign a fresh real deposit on every pass if the true
             // problem were something else.
-            storage.clearAll();
+            storage.forceDeposit();
             setStatus("topping-up");
             response = await doPaidRequest();
             if (!response.ok) {

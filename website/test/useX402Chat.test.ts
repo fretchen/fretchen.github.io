@@ -329,8 +329,8 @@ describe("useX402Chat", () => {
      * A drained channel is recoverable and the SDK knows how: it tops up inside
      * createPaymentPayload. It decides whether to from the `balance` on our cached record though,
      * so a stale record suppresses it — and its corrective-402 recovery covers
-     * cumulative_amount_mismatch and below_claimed but not this reason. Dropping the record makes
-     * recoverChannel re-read the chain on the retry, after which the SDK deposits on its own.
+     * cumulative_amount_mismatch and below_claimed but not this reason. Zeroing that balance
+     * forces the deposit, while keeping the cumulative the chain cannot restore.
      *
      * Each stub returns a FRESH Response per call: a body is single-use, and a shared
      * mockResolvedValue object would fail the retry with "Body has already been read" — an
@@ -346,8 +346,11 @@ describe("useX402Chat", () => {
         { status: 402 },
       );
 
-    it("clears the stale channel record and retries once when the channel is drained", async () => {
-      window.localStorage.setItem("x402-channel:0xstalechannel", JSON.stringify({ balance: "500000" }));
+    it("forces a deposit and retries once when the channel is drained", async () => {
+      window.localStorage.setItem(
+        "x402-channel:0xstalechannel",
+        JSON.stringify({ balance: "500000", chargedCumulativeAmount: "7062" }),
+      );
       // sendMessage issues an unpaid discovery probe first, so "first call" and "first paid call"
       // are not the same thing — count only the paid ones, or the drained 402 lands on the probe
       // and the real request sails through unaffected.
@@ -375,8 +378,15 @@ describe("useX402Chat", () => {
         returned = await result.current.sendMessage([{ role: "user", content: "Hi" }]);
       });
 
-      // The cached record is gone, so the SDK re-reads on-chain state instead of trusting it.
-      expect(window.localStorage.getItem("x402-channel:0xstalechannel")).toBeNull();
+      // The record survives with a zeroed balance, which is what makes the SDK deposit. Deleting
+      // it instead would lose chargedCumulativeAmount and produce cumulative_amount_mismatch,
+      // because recoverChannel would refill that field from the (lagging) on-chain totalClaimed.
+      const record = JSON.parse(window.localStorage.getItem("x402-channel:0xstalechannel") ?? "{}") as {
+        balance?: string;
+        chargedCumulativeAmount?: string;
+      };
+      expect(record.balance).toBe("0");
+      expect(record.chargedCumulativeAmount).toBe("7062");
       // And the message went through rather than dead-ending on the 402.
       expect(returned).toEqual({ content: "hi" });
       expect(result.current.status).toBe("success");
@@ -412,6 +422,95 @@ describe("useX402Chat", () => {
       expect(thrown?.message).toMatch(/needs topping up/i);
       expect(thrown?.message).not.toContain("cumulative_exceeds_balance");
       expect(thrown?.message).not.toContain("x402Version");
+      // The wallet balance is NOT the suspect here: the facilitator has a separate code for that
+      // (insufficient_balance), so pointing at USDC would send the user to check a non-problem.
+      expect(thrown?.message).not.toMatch(/has USDC/i);
+    });
+
+    it("zeroes every channel record without deleting any of them", async () => {
+      window.localStorage.setItem(
+        "x402-channel:0xone",
+        JSON.stringify({ balance: "500000", chargedCumulativeAmount: "10" }),
+      );
+      window.localStorage.setItem(
+        "x402-channel:0xtwo",
+        JSON.stringify({ balance: "250000", chargedCumulativeAmount: "20" }),
+      );
+      window.localStorage.setItem("unrelated-key", "keep me");
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockImplementation(() => Promise.resolve(drained402())),
+      );
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]).catch(() => {});
+      });
+
+      for (const [key, charged] of [
+        ["x402-channel:0xone", "10"],
+        ["x402-channel:0xtwo", "20"],
+      ] as const) {
+        const stored = window.localStorage.getItem(key);
+        expect(stored).not.toBeNull();
+        const record = JSON.parse(stored!) as { balance: string; chargedCumulativeAmount: string };
+        expect(record.balance).toBe("0");
+        expect(record.chargedCumulativeAmount).toBe(charged);
+      }
+      expect(window.localStorage.getItem("unrelated-key")).toBe("keep me");
+    });
+
+    it("leaves an unparseable channel record alone instead of throwing", async () => {
+      window.localStorage.setItem("x402-channel:0xbroken", "{not json");
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockImplementation(() => Promise.resolve(drained402())),
+      );
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+      let thrown: Error | undefined;
+      await act(async () => {
+        try {
+          await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+        } catch (err) {
+          thrown = err as Error;
+        }
+      });
+
+      // It fails on the payment, not on a JSON parse of our own storage.
+      expect(thrown?.message).toMatch(/needs topping up/i);
+      expect(window.localStorage.getItem("x402-channel:0xbroken")).toBe("{not json");
+    });
+
+    it("names the real problem when the wallet itself is short of USDC", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockImplementation(() =>
+          Promise.resolve(
+            new Response(
+              JSON.stringify({
+                x402Version: 2,
+                error: "invalid_batch_settlement_evm_insufficient_balance",
+                accepts: [{ scheme: "batch-settlement", network: NETWORK, amount: "9000" }],
+              }),
+              { status: 402 },
+            ),
+          ),
+        ),
+      );
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+      let thrown: Error | undefined;
+      await act(async () => {
+        try {
+          await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+        } catch (err) {
+          thrown = err as Error;
+        }
+      });
+
+      expect(thrown?.message).toMatch(/Not enough USDC/i);
+      expect(thrown?.message).toMatch(/USDC\.e/);
     });
 
     it("does not clear or retry for an unrelated 402", async () => {

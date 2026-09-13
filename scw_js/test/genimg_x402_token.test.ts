@@ -1072,6 +1072,22 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       const mockTokenId = 101;
       setupSuccessfulMintingFlow(mockTokenId, "eip155:11155420"); // Specify Sepolia network
 
+      // A testnet payment gets a mock image, so generateImage never fetches metadata — the
+      // sequence is verify then settle, not verify/metadata/settle. Re-mock accordingly, since
+      // settlement is awaited now and would otherwise be handed the metadata fixture.
+      global.fetch = vi
+        .fn()
+        .mockResolvedValueOnce(
+          makeMockResponse({ isValid: true, payer: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb" }),
+        )
+        .mockResolvedValueOnce(
+          makeMockResponse({
+            success: true,
+            transaction: "0xsettlement",
+            network: "eip155:11155420",
+          }),
+        );
+
       const sepoliaPayment = {
         x402Version: 2,
         accepted: {
@@ -1236,9 +1252,11 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
       const body = JSON.parse(response.body);
       expect(body.error).toBe("Payment verification failed");
-      // Ethereum Mainnet is not in any supported network list
+      // Ethereum Mainnet is not in any supported network list. `expected` is every chain the
+      // endpoint can be paid on, testnets included — the check is "is GenImNFT deployed here",
+      // not a production/test split (see validatePaymentNetwork).
       expect(body.reason).toBe("unsupported_network");
-      expect(body.expected).toEqual(["eip155:10", "eip155:8453"]);
+      expect(body.expected).toEqual(["eip155:10", "eip155:8453", "eip155:11155420"]);
       expect(body.received).toBe("eip155:1");
     });
 
@@ -1340,13 +1358,17 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
       mockViemFunctions.createPublicClient.mockReturnValue(mockPublicClient);
 
-      // Mock facilitator verification AND image service response
+      // Mock facilitator verification, image service response AND settlement — settlement now
+      // runs BEFORE the mint, so it is reached even on this failing-mint path.
       global.fetch = vi
         .fn()
         .mockResolvedValueOnce(
           makeMockResponse({ isValid: true, payer: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb" }),
         )
-        .mockResolvedValueOnce(makeMockResponse(mockMetadataResponse));
+        .mockResolvedValueOnce(makeMockResponse(mockMetadataResponse))
+        .mockResolvedValueOnce(
+          makeMockResponse({ success: true, transaction: "0xsettlement", network: "eip155:10" }),
+        );
 
       const event = {
         httpMethod: "POST",
@@ -1376,11 +1398,11 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(body.x_nft.reason).toContain("mint event");
       expect(body.x_nft.token_id).toBeUndefined();
 
-      // Nothing settled: no Payment-Response header, and the facilitator's /settle was never
-      // called (only /verify and the metadata fetch — the settlement-flow test sees 3).
-      expect(response.headers["Payment-Response"]).toBeUndefined();
-      await new Promise((resolve) => setTimeout(resolve, 50));
-      expect(global.fetch).toHaveBeenCalledTimes(2);
+      // The payment settled: settlement precedes the mint, so the caller was charged for the
+      // generation they received and the Payment-Response header says so. /verify, the metadata
+      // fetch and /settle — three calls, same as the fully successful flow.
+      expect(response.headers["Payment-Response"]).toBeDefined();
+      expect(global.fetch).toHaveBeenCalledTimes(3);
     });
 
     test("should still return 500 when generation itself fails", async () => {
@@ -1830,13 +1852,10 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
   });
 
   describe("Settlement flow", () => {
-    test("should settle payment via facilitator (async)", async () => {
+    test("should settle payment via facilitator before minting", async () => {
       const mockTokenId = 88;
       setupSuccessfulMintingFlow(mockTokenId);
 
-      // Settlement runs fire-and-forget and only logs on failure, so without
-      // this spy a malformed settle fixture (e.g. missing a required field in
-      // the facilitator's response schema) would fail silently.
       const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
@@ -1865,17 +1884,13 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       const response = await handle(event, {});
       expect(response.statusCode).toBe(200);
 
-      // Settlement is async, so we check that it was initiated
-      // Wait a bit for async settlement
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // Verify settlement endpoint was called (3rd fetch call)
+      // Settlement is awaited, so by the time handle() resolves the facilitator's /settle has
+      // been called (the 3rd fetch) and resolved.
       expect(global.fetch).toHaveBeenCalledTimes(3);
 
-      // Verify settlement actually resolved successfully, not just that the
-      // facilitator was called. Catches schema drift in the settle response
-      // (e.g. a required field missing from the mock) that would otherwise be
-      // silently swallowed by the fire-and-forget .catch() in genimg_x402_token.ts.
+      // Verify settlement actually resolved successfully, not just that the facilitator was
+      // called. Catches schema drift in the settle response (e.g. a required field missing from
+      // the mock).
       expect(consoleErrorSpy).not.toHaveBeenCalled();
       expect(consoleLogSpy).toHaveBeenCalledWith(
         "✅ Payment settled:",
@@ -1884,6 +1899,49 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
       consoleErrorSpy.mockRestore();
       consoleLogSpy.mockRestore();
+    });
+
+    test("should answer 402 and never mint when settlement fails", async () => {
+      // The reason settlement moved ahead of the mint: a payer can invalidate their EIP-3009
+      // authorization (cancelAuthorization, or simply moving the balance) during the minutes
+      // generation takes. Settling first means that costs them the image rather than costing us
+      // an NFT whose mintPrice and gas we already paid.
+      const mockTokenId = 91;
+      setupSuccessfulMintingFlow(mockTokenId);
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      // Same verify + metadata fixtures, but the facilitator refuses to settle.
+      global.fetch = vi
+        .fn()
+        .mockResolvedValueOnce(
+          makeMockResponse({ isValid: true, payer: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb" }),
+        )
+        .mockResolvedValueOnce(makeMockResponse(mockMetadataResponse))
+        .mockResolvedValueOnce(
+          makeMockResponse({
+            success: false,
+            errorReason: "invalid_exact_evm_payload_authorization_valid_before",
+          }),
+        );
+
+      const event = {
+        httpMethod: "POST",
+        headers: { "x-payment": JSON.stringify(paidRequestPaymentHeader) },
+        body: JSON.stringify({ prompt: "Test" }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
+
+      expect(response.statusCode).toBe(402);
+      expect(JSON.parse(response.body).reason).toBe("settlement_failed");
+      expect(response.headers["Payment-Response"]).toBeUndefined();
+
+      // The whole point: no NFT was minted and nothing was transferred.
+      expect(mockContract.write.safeMint).not.toHaveBeenCalled();
+      expect(mockContract.write.safeTransferFrom).not.toHaveBeenCalled();
+
+      consoleErrorSpy.mockRestore();
     });
   });
 });

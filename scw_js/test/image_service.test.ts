@@ -271,6 +271,55 @@ describe("image_service.js Tests", () => {
       expect(global.fetch.mock.calls).toHaveLength(1);
     });
 
+    test("refuses to poll a polling_url pointing off the BFL domain", async () => {
+      // The poll carries our BFL_API_TOKEN in the `x-key` header, so an off-domain polling_url
+      // would hand the key to whoever it points at. No poll should go out.
+      global.fetch.mockImplementation((url) => {
+        if (String(url) === BFL_ENDPOINT) {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({ id: "req-1", polling_url: "https://evil.example/get_result?id=1" }),
+          });
+        }
+        return Promise.reject(new Error(`unexpected fetch: ${String(url)}`));
+      });
+
+      await expect(generateAndUploadImage("test prompt", "123", "bfl")).rejects.toThrow(
+        /Untrusted BFL polling URL/,
+      );
+      expect(global.fetch.mock.calls).toHaveLength(1);
+    });
+
+    test("accepts a regional BFL polling host", async () => {
+      // BFL answers from api.eu.bfl.ai / api.us1.bfl.ai, so the pin is a suffix match on the
+      // domain, not equality with the submit host.
+      const REGIONAL_POLL = "https://api.eu.bfl.ai/v1/get_result?id=req-1";
+      global.fetch.mockImplementation((url) => {
+        const u = String(url);
+        if (u === BFL_ENDPOINT) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ id: "req-1", polling_url: REGIONAL_POLL }),
+          });
+        }
+        if (u === REGIONAL_POLL) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ status: "Ready", result: { sample: IMAGE_URL } }),
+          });
+        }
+        if (u === IMAGE_URL) {
+          return Promise.resolve({ ok: true, arrayBuffer: () => Promise.resolve(IMAGE_BYTES.buffer) });
+        }
+        return Promise.reject(new Error(`unexpected fetch: ${u}`));
+      });
+
+      await expect(generateAndUploadImage("test prompt", "123", "bfl")).resolves.toContain(
+        "metadata/metadata_123",
+      );
+    });
+
     test("fails immediately when BFL reports Ready with no result", async () => {
       // Was `pollData.result!.sample`, whose TypeError landed in the image download's catch and
       // was retried. A Ready without a URL is not a CDN blip.

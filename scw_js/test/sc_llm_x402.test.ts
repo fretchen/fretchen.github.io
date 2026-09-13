@@ -753,6 +753,57 @@ describe("sc_llm_x402", () => {
       });
     });
 
+    describe("messages are capped by serialized size", () => {
+      // The same reasoning as the tools cap above, applied to the far larger input: conversation
+      // turns are input tokens billed on every hop, while the charge is capped at a fixed
+      // per-message ceiling. Without this, one request filling the model's context window cost
+      // several times what it settled for, repeatably.
+      function messagesEvent(messages: unknown) {
+        return makeEvent({
+          body: JSON.stringify({ model: TEST_MODEL, messages }),
+        }) as never;
+      }
+
+      it("rejects a conversation over the byte cap before any payment is verified", async () => {
+        const res = await handle(messagesEvent([{ role: "user", content: "x".repeat(70_000) }]), {});
+
+        expect(res.statusCode).toBe(400);
+        expect(JSON.parse(res.body).error.param).toBe("messages");
+        expect(JSON.parse(res.body).error.message).toMatch(/ceiling/i);
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
+        expect(mockCallLLMAPI).not.toHaveBeenCalled();
+        expect(mockSettlePayment).not.toHaveBeenCalled();
+      });
+
+      it("counts the whole conversation, not the largest single turn", async () => {
+        // Twenty turns, each comfortably small on its own, summing to over the cap.
+        const messages = Array.from({ length: 20 }, () => ({
+          role: "user",
+          content: "y".repeat(4_000),
+        }));
+        const res = await handle(messagesEvent(messages), {});
+
+        expect(res.statusCode).toBe(400);
+        expect(JSON.parse(res.body).error.param).toBe("messages");
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
+      });
+
+      it("measures the cap in UTF-8 bytes, not UTF-16 code units", async () => {
+        // ~30k three-byte chars: ~30k UTF-16 units (under the 65536 cap by that measure) but
+        // ~90k UTF-8 bytes (over it). Billed by byte, so it must be rejected.
+        const res = await handle(messagesEvent([{ role: "user", content: "あ".repeat(30_000) }]), {});
+
+        expect(res.statusCode).toBe(400);
+        expect(JSON.parse(res.body).error.param).toBe("messages");
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
+      });
+
+      it("accepts a conversation just under the cap", async () => {
+        const res = await handle(messagesEvent([{ role: "user", content: "z".repeat(60_000) }]), {});
+        expect(res.statusCode).toBe(200);
+      });
+    });
+
     describe("tool_choice is restricted to the published enum", () => {
       function toolChoiceEvent(tool_choice: unknown) {
         return makeEvent({

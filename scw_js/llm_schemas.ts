@@ -72,6 +72,24 @@ export const LLMToolsSchema = z
 
 // ── Request ──
 
+/**
+ * Byte cap on the serialized `messages` array, for the same reason `tools` has one: conversation
+ * turns are input tokens charged on every hop, and the per-message charge is capped at a fixed
+ * ceiling (see `USDC_MAX_PRICE_PER_MESSAGE` in `sc_llm_x402.ts`), so an uncapped conversation is
+ * billed at a flat rate no matter what it costs us. `tools` was capped and this was not, which
+ * left the far larger of the two open: a request filling the model's context window cost several
+ * times the ceiling it was charged, repeatably.
+ *
+ * Sized from the ceiling: 6000 output tokens ≈ 9000 atomic USDC, which at the $0.50/M *input*
+ * rate buys ~18,000 input tokens ≈ ~72 KB of English. 64 KB stays under that with room for
+ * `tools` (8 KB) and the system turn.
+ *
+ * Enforced as a byte count rather than a character count because that is what the upstream bills
+ * against; a `.refine()` here would not survive `z.toJSONSchema`, so the handler checks it and
+ * the `messages` field restates it in prose below.
+ */
+export const MAX_MESSAGES_BYTES = 65_536;
+
 export const LLMChatMessageSchema = z
   .looseObject({
     role: z
@@ -172,7 +190,12 @@ export const LLMChatRequestSchema = z
       .describe(
         "The model to use. Only the advertised model id(s) are served; others return model_not_found.",
       ),
-    messages: z.array(LLMChatMessageSchema).min(1).describe("The conversation so far."),
+    messages: z
+      .array(LLMChatMessageSchema)
+      .min(1)
+      .describe(
+        `The conversation so far. At most ${MAX_MESSAGES_BYTES} bytes serialized — conversation turns are input tokens charged on every hop, and this endpoint meters each message against a fixed price ceiling, so an uncapped conversation would be billed far below what it costs to serve.`,
+      ),
     // Only the prose comes from REJECTED_PARAMS; the constraints must stay literal, because
     // OWN_REQUEST_KEYS reads Object.keys(shape) and z.infer would lose the field types.
     stream: z.literal(false).optional().describe(rejected("stream").doc),

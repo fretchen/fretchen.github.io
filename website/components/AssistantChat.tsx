@@ -166,13 +166,6 @@ export function AssistantChat() {
   const viewPaymentLabel = useLocale({ label: "assistent.viewPayment" });
   const networkLabel = useLocale({ label: "assistent.network" });
   const networkFallbackLabel = useLocale({ label: "assistent.networkFallback" });
-  const cancelLabel = useLocale({ label: "assistent.cancel" });
-  const processingLabel = useLocale({ label: "assistent.processing" });
-  const toolConfirmTitleLabel = useLocale({ label: "assistent.toolConfirmTitle" });
-  const toolConfirmPromptLabel = useLocale({ label: "assistent.toolConfirmPromptLabel" });
-  const toolConfirmSizeLabel = useLocale({ label: "assistent.toolConfirmSizeLabel" });
-  const toolConfirmMintNoticeLabel = useLocale({ label: "assistent.toolConfirmMintNotice" });
-  const toolConfirmGenerateLabel = useLocale({ label: "assistent.toolConfirmGenerate" });
 
   // Mobile detection
   React.useEffect(() => {
@@ -632,13 +625,6 @@ export function AssistantChat() {
                 size={toolCard.size}
                 phase={toolCard.phase}
                 network={imageNetwork}
-                title={toolConfirmTitleLabel}
-                promptLabel={toolConfirmPromptLabel}
-                sizeLabel={toolConfirmSizeLabel}
-                mintNotice={toolConfirmMintNoticeLabel}
-                generateLabel={toolConfirmGenerateLabel}
-                processingLabel={processingLabel}
-                cancelLabel={cancelLabel}
                 onConfirm={handleToolConfirm}
                 onCancel={handleToolCancel}
               />

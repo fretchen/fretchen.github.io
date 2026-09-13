@@ -19,13 +19,6 @@ function renderCard(overrides: Partial<React.ComponentProps<typeof ToolConfirmCa
       size="1024x1024"
       phase="confirm"
       network="eip155:10"
-      title="Generate an image?"
-      promptLabel="Prompt"
-      sizeLabel="Size"
-      mintNotice="This will mint an NFT to your wallet."
-      generateLabel="Generate ($0.07)"
-      processingLabel="Processing..."
-      cancelLabel="Cancel"
       onConfirm={onConfirm}
       onCancel={onCancel}
       {...overrides}
@@ -66,7 +59,7 @@ describe("ToolConfirmCard", () => {
 
   it("calls onCancel", () => {
     const { onCancel } = renderCard();
-    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    fireEvent.click(screen.getByRole("button", { name: "assistent.cancel" }));
     expect(onCancel).toHaveBeenCalledOnce();
   });
 
@@ -75,8 +68,8 @@ describe("ToolConfirmCard", () => {
     expect(screen.getByDisplayValue("a red bicycle")).toBeDisabled();
     expect(screen.getByRole("button", { name: "1024x1024" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "1792x1024" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Processing..." })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "assistent.processing" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "assistent.cancel" })).toBeDisabled();
   });
 
   it("shows the network badge", () => {

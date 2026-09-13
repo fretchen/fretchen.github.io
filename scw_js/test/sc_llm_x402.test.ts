@@ -925,10 +925,15 @@ describe("sc_llm_x402", () => {
       });
     });
 
-    it("returns 401 when the LLM API token is missing", async () => {
-      mockCallLLMAPI.mockRejectedValue(new Error("API Token nicht gefunden"));
+    it("does not settle when the LLM API token is missing", async () => {
+      // Our own misconfiguration, not the caller's fault: a 500, and above all no charge.
+      mockCallLLMAPI.mockRejectedValue(
+        new Error(
+          "API token not found. Please configure the MISTRAL_API_KEY environment variable.",
+        ),
+      );
       const res = await handle(makeEvent() as never, {});
-      expect(res.statusCode).toBe(401);
+      expect(res.statusCode).toBe(500);
       expect(mockSettlePayment).not.toHaveBeenCalled();
     });
 

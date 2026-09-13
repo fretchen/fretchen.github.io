@@ -80,33 +80,6 @@ describe("normalizeImageResponse", () => {
     });
   });
 
-  describe("deploy-window compatibility", () => {
-    it("falls back to the pre-envelope flat shape", () => {
-      // Covers the window where the website is deployed ahead of the function. Delete this test
-      // together with the fallbacks once the function deploy is confirmed live.
-      const legacy = {
-        image_url: IMAGE,
-        metadata_url: METADATA,
-        tokenId: 42,
-      } as unknown as X402GenImgResponse;
-
-      const result = normalizeImageResponse(legacy);
-
-      expect(result.imageUrl).toBe(IMAGE);
-      expect(result.tokenId).toBe(42n);
-      expect(result.metadataUrl).toBe(METADATA);
-    });
-
-    it("prefers the envelope when both shapes are present", () => {
-      const both = envelope({ image_url: "https://stale.example/old.jpg", tokenId: 999 });
-
-      const result = normalizeImageResponse(both);
-
-      expect(result.imageUrl).toBe(IMAGE);
-      expect(result.tokenId).toBe(42n);
-    });
-  });
-
   describe("malformed responses", () => {
     it("throws a contract-shaped error when there is no image URL", () => {
       // Loud, not silent: an undefined imageUrl would otherwise reach an <img src> and render a

@@ -47,23 +47,12 @@ export interface X402NftReceipt {
  * was declared here and never sent by the backend at all. Treat a change to the endpoint's
  * schema as requiring a manual edit here, and prefer `normalizeImageResponse` over reading these
  * fields directly.
- *
- * `image_url` / `metadata_url` / `tokenId` are the pre-envelope flat shape, kept optional only to
- * survive the window where the website is deployed ahead of the function. Delete them, and the
- * fallbacks in `hooks/x402ImageResponse.ts`, once the function deploy is confirmed live.
  */
 export interface X402GenImgResponse {
   created: number;
   data: Array<{ url: string; revised_prompt: string | null }>;
   model: string;
   x_nft?: X402NftReceipt;
-
-  /** @deprecated pre-envelope shape; see the note above. */
-  image_url?: string;
-  /** @deprecated pre-envelope shape; see the note above. */
-  metadata_url?: string;
-  /** @deprecated pre-envelope shape; see the note above. */
-  tokenId?: number;
 }
 
 export interface X402PaymentReceipt {

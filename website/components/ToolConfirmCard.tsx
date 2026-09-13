@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import * as styles from "./ToolConfirmCard.styles";
 import { ChainBadge } from "./ChainBadge";
+import { useLocale } from "../hooks/useLocale";
 import { button } from "../styled-system/recipes";
 
 export type ToolSize = "1024x1024" | "1792x1024";
@@ -12,13 +13,6 @@ interface ToolConfirmCardProps {
   /** No "failed" phase — see the type comment on ToolCardState in AssistantChat.tsx. */
   phase: "confirm" | "generating";
   network: string;
-  title: string;
-  promptLabel: string;
-  sizeLabel: string;
-  mintNotice: string;
-  generateLabel: string;
-  processingLabel: string;
-  cancelLabel: string;
   onConfirm: (prompt: string, size: ToolSize) => void;
   onCancel: () => void;
 }
@@ -34,21 +28,15 @@ const SIZE_OPTIONS: ToolSize[] = ["1024x1024", "1792x1024"];
  * afterward (see `imagegen-in-chat-plan_1.md` §0.1) — informed consent before an irreversible
  * chain-write and UI clutter after it are different concerns.
  */
-export function ToolConfirmCard({
-  prompt,
-  size,
-  phase,
-  network,
-  title,
-  promptLabel,
-  sizeLabel,
-  mintNotice,
-  generateLabel,
-  processingLabel,
-  cancelLabel,
-  onConfirm,
-  onCancel,
-}: ToolConfirmCardProps) {
+export function ToolConfirmCard({ prompt, size, phase, network, onConfirm, onCancel }: ToolConfirmCardProps) {
+  const title = useLocale({ label: "assistent.toolConfirmTitle" });
+  const promptLabel = useLocale({ label: "assistent.toolConfirmPromptLabel" });
+  const sizeLabel = useLocale({ label: "assistent.toolConfirmSizeLabel" });
+  const mintNotice = useLocale({ label: "assistent.toolConfirmMintNotice" });
+  const generateLabel = useLocale({ label: "assistent.toolConfirmGenerate" });
+  const processingLabel = useLocale({ label: "assistent.processing" });
+  const cancelLabel = useLocale({ label: "assistent.cancel" });
+
   const [editedPrompt, setEditedPrompt] = useState(prompt);
   const [editedSize, setEditedSize] = useState(size);
   const disabled = phase === "generating";

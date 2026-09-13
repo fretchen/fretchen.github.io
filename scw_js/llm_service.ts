@@ -1,5 +1,5 @@
 import pino from "pino";
-import { UpstreamChatCompletionSchema } from "./upstream_schemas.js";
+import { UpstreamChatCompletionSchema, flattenUpstreamContent } from "./upstream_schemas.js";
 
 const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 
@@ -265,7 +265,9 @@ export async function callLLMAPI(
       index: c.index ?? i,
       message: {
         role: c.message.role ?? "assistant",
-        content: c.message.content ?? null,
+        // Upstream may send a string, an array of content parts, or null — our published
+        // envelope says `string | null`, so normalize rather than republish the variation.
+        content: flattenUpstreamContent(c.message.content),
         // Conditional, so an ordinary completion keeps its exact previous shape instead of
         // serializing a `tool_calls: undefined` key. `message` is rebuilt field by field, so
         // anything not named here is dropped — which is how tool_calls used to vanish while

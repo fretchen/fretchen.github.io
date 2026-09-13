@@ -886,12 +886,54 @@ describe("sc_llm_x402", () => {
         expect(res.statusCode).toBe(400);
         expect(mockVerifyPayment).not.toHaveBeenCalled();
       });
+
+      it("still rejects an explicit tool_calls: null with no content", async () => {
+        const res = await handle(
+          makeEvent({
+            body: JSON.stringify({
+              model: TEST_MODEL,
+              messages: [{ role: "assistant", content: null, tool_calls: null }],
+            }),
+          }) as never,
+          {},
+        );
+
+        expect(res.statusCode).toBe(400);
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
+      });
+
+      it("accepts a replayed assistant turn with content and an explicit tool_calls: null", async () => {
+        // Real-world shape: an llm/v1 caller that forwards an upstream's own message verbatim
+        // gets tool_calls: null (not omitted) on a plain turn — see upstream_schemas.ts for the
+        // production incident. The published request schema must accept the same thing it just
+        // learned to accept from the upstream, or a well-behaved caller gets a 400 for it.
+        const res = await handle(
+          makeEvent({
+            body: JSON.stringify({
+              model: TEST_MODEL,
+              messages: [
+                { role: "user", content: "draw a cat" },
+                { role: "assistant", content: "Here you go!", tool_calls: null },
+                { role: "user", content: "thanks" },
+              ],
+            }),
+          }) as never,
+          {},
+        );
+
+        expect(res.statusCode).toBe(200);
+      });
     });
 
-    it("returns 401 when the LLM API token is missing", async () => {
-      mockCallLLMAPI.mockRejectedValue(new Error("API Token nicht gefunden"));
+    it("does not settle when the LLM API token is missing", async () => {
+      // Our own misconfiguration, not the caller's fault: a 500, and above all no charge.
+      mockCallLLMAPI.mockRejectedValue(
+        new Error(
+          "API token not found. Please configure the MISTRAL_API_KEY environment variable.",
+        ),
+      );
       const res = await handle(makeEvent() as never, {});
-      expect(res.statusCode).toBe(401);
+      expect(res.statusCode).toBe(500);
       expect(mockSettlePayment).not.toHaveBeenCalled();
     });
 

@@ -105,17 +105,41 @@ const PROBE_BODY = JSON.stringify({ model: "probe", messages: [{ role: "user", c
  * Never throws — every caller treats `null` as "unknown".
  */
 export async function probeAccepts(agentUrl: string): Promise<AcceptsEntry[] | null> {
+  const hit = acceptsCache.get(agentUrl);
+  if (hit && Date.now() - hit.at < ACCEPTS_TTL_MS) return hit.accepts;
+
+  let accepts: AcceptsEntry[] | null = null;
   try {
     const res = await fetch(agentUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: PROBE_BODY,
     });
-    if (res.status !== 402) return null;
-    return decodePaymentRequired(res.headers.get("Payment-Required"));
+    if (res.status === 402) {
+      accepts = decodePaymentRequired(res.headers.get("Payment-Required"));
+    }
   } catch {
-    return null;
+    accepts = null;
   }
+
+  // Only successes are cached: a transient CORS/offline null must not stick for the whole TTL.
+  if (accepts) acceptsCache.set(agentUrl, { at: Date.now(), accepts });
+  return accepts;
+}
+
+/**
+ * One probe per agent per turn. This is a POST to the agent's *paid* endpoint, and
+ * `useX402Chat.sendMessage` probes on every call — which AssistantChat's tool loop makes once per
+ * hop, so a 3-hop conversation fired three unpaid POSTs on top of the three paid ones. The TTL is
+ * far shorter than any realistic change to an agent's offer, and a stale one still surfaces as a
+ * real 402 exactly as it does today.
+ */
+const acceptsCache = new Map<string, { at: number; accepts: AcceptsEntry[] }>();
+const ACCEPTS_TTL_MS = 30_000;
+
+/** Tests share one agent URL across cases; without this the second case reads the first's answer. */
+export function resetAcceptsCache(): void {
+  acceptsCache.clear();
 }
 
 /** Provenance derived from an agent's OpenAPI doc + live 402, for pre-payment disclosure. */

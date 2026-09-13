@@ -452,9 +452,7 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     llmData = await callLLMAPI(prompt, useMock, resolved.provider, forwardedParams);
   } catch (error) {
     logger.error({ err: error }, "Error during answer generation");
-    const msg = (error as Error).message;
-    const statusCode = msg.includes("API Token nicht gefunden") ? 401 : 500;
-    return errorResponse(statusCode, msg);
+    return errorResponse(500, (error as Error).message);
   }
 
   // Commits chargedCumulativeAmount locally for a voucher payload (no on-chain tx, no

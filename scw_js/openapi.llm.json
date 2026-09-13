@@ -131,37 +131,44 @@
                 },
                 "tool_calls": {
                   "description": "Present when replaying an assistant turn that requested tool calls.",
-                  "minItems": 1,
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "description": "Echo this back as tool_call_id on the matching tool result message."
-                      },
-                      "type": {
-                        "type": "string",
-                        "const": "function"
-                      },
-                      "function": {
+                  "anyOf": [
+                    {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
                         "type": "object",
                         "properties": {
-                          "name": {
-                            "type": "string"
-                          },
-                          "arguments": {
+                          "id": {
                             "type": "string",
-                            "description": "JSON-encoded arguments, as a string."
+                            "description": "Echo this back as tool_call_id on the matching tool result message."
+                          },
+                          "type": {
+                            "type": "string",
+                            "const": "function"
+                          },
+                          "function": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "arguments": {
+                                "type": "string",
+                                "description": "JSON-encoded arguments, as a string."
+                              }
+                            },
+                            "required": ["name", "arguments"],
+                            "additionalProperties": {}
                           }
                         },
-                        "required": ["name", "arguments"],
+                        "required": ["id", "type", "function"],
                         "additionalProperties": {}
                       }
                     },
-                    "required": ["id", "type", "function"],
-                    "additionalProperties": {}
-                  }
+                    {
+                      "type": "null"
+                    }
+                  ]
                 },
                 "tool_call_id": {
                   "description": "On a role:'tool' message, the id of the call this message answers.",

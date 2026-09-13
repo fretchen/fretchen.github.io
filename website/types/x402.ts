@@ -47,23 +47,12 @@ export interface X402NftReceipt {
  * was declared here and never sent by the backend at all. Treat a change to the endpoint's
  * schema as requiring a manual edit here, and prefer `normalizeImageResponse` over reading these
  * fields directly.
- *
- * `image_url` / `metadata_url` / `tokenId` are the pre-envelope flat shape, kept optional only to
- * survive the window where the website is deployed ahead of the function. Delete them, and the
- * fallbacks in `hooks/x402ImageResponse.ts`, once the function deploy is confirmed live.
  */
 export interface X402GenImgResponse {
   created: number;
   data: Array<{ url: string; revised_prompt: string | null }>;
   model: string;
   x_nft?: X402NftReceipt;
-
-  /** @deprecated pre-envelope shape; see the note above. */
-  image_url?: string;
-  /** @deprecated pre-envelope shape; see the note above. */
-  metadata_url?: string;
-  /** @deprecated pre-envelope shape; see the note above. */
-  tokenId?: number;
 }
 
 export interface X402PaymentReceipt {
@@ -71,7 +60,12 @@ export interface X402PaymentReceipt {
   network: string;
 }
 
-export type X402GenerationStatus = "idle" | "awaiting-signature" | "processing" | "success" | "error";
+/**
+ * `topping-up` is batch-settlement only (see useX402Chat): the channel's deposit ran out and the
+ * SDK is depositing again before the message can go through. The exact-scheme image hook never
+ * sets it.
+ */
+export type X402GenerationStatus = "idle" | "awaiting-signature" | "processing" | "topping-up" | "success" | "error";
 
 /**
  * x402 Payment Types for the batch-settlement LLM chat service (sc_llm_x402).
@@ -81,15 +75,38 @@ export type X402GenerationStatus = "idle" | "awaiting-signature" | "processing" 
  * off-chain voucher signatures. See hooks/useX402Chat.ts.
  */
 
-/** A single chat turn, matching the OpenAI `messages[]` contract of sc_llm_x402.ts. */
+/** One tool call the model wants made. `arguments` is a JSON *string*, per OpenAI. */
+export interface X402ToolCall {
+  id: string;
+  type: "function";
+  function: { name: string; arguments: string };
+}
+
+/** A tool definition offered to the model, OpenAI shape. Mirrors `scw_js/llm_schemas.ts`. */
+export interface X402Tool {
+  type: "function";
+  function: { name: string; description?: string; parameters: Record<string, unknown> };
+}
+
+/**
+ * A single chat turn, matching the OpenAI `messages[]` contract of sc_llm_x402.ts.
+ *
+ * `content` is nullable/optional because an assistant turn requesting a tool call has none, and
+ * `tool_calls`/`tool_call_id` only appear on those turns and their `role: "tool"` results
+ * respectively. See `scw_js/llm_service.ts`'s `LLMMessage` — this is the wire shape it validates.
+ */
 export interface X402ChatMessage {
   role: string;
-  content: string;
+  content?: string | null;
+  tool_calls?: X402ToolCall[];
+  tool_call_id?: string;
 }
 
 /**
  * OpenAI chat.completion response from sc_llm_x402.ts on a settled request. The reply text is
  * `choices[0].message.content`; `usage` is what the endpoint settled the charge from.
+ *
+ * `content` is nullable and `tool_calls` present exactly when `finish_reason` is `"tool_calls"`.
  */
 export interface X402ChatResponse {
   id?: string;
@@ -98,7 +115,7 @@ export interface X402ChatResponse {
   model?: string;
   choices: Array<{
     index?: number;
-    message: { role: string; content: string };
+    message: { role: string; content: string | null; tool_calls?: X402ToolCall[] };
     finish_reason?: string | null;
   }>;
   usage?: {

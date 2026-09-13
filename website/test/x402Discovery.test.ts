@@ -9,6 +9,8 @@ import {
   negotiateNetwork,
   precheckLlmV1Agent,
   checkLlmV1Agent,
+  probeAccepts,
+  resetAcceptsCache,
   type AcceptsEntry,
   type CheckReport,
 } from "../hooks/x402Discovery";
@@ -84,8 +86,62 @@ describe("negotiateNetwork", () => {
   });
 });
 
+/**
+ * The probe is a POST to the agent's *paid* endpoint, and `useX402Chat.sendMessage` runs it on
+ * every call — once per hop in AssistantChat's tool loop. Without the cache a 3-hop conversation
+ * fired three unpaid POSTs on top of the three paid ones.
+ */
+describe("probeAccepts caching", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    resetAcceptsCache();
+  });
+
+  function mockProbe(status: number, accepts: AcceptsEntry[] | null) {
+    const fetchMock = vi.fn(async () => ({
+      status,
+      headers: { get: () => (accepts ? paymentRequiredHeader(accepts) : null) },
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+    return fetchMock;
+  }
+
+  it("probes an agent once and serves repeat calls from cache", async () => {
+    const fetchMock = mockProbe(402, [floorEntry]);
+
+    const first = await probeAccepts("https://agent.example");
+    const second = await probeAccepts("https://agent.example");
+
+    expect(second).toEqual(first);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not cache a failed probe, so a transient outage cannot stick", async () => {
+    const failing = mockProbe(500, null);
+    expect(await probeAccepts("https://agent.example")).toBeNull();
+    expect(failing).toHaveBeenCalledTimes(1);
+
+    // The agent comes back; the next call must re-probe rather than replay the null.
+    const recovered = mockProbe(402, [floorEntry]);
+    expect(await probeAccepts("https://agent.example")).toEqual([floorEntry]);
+    expect(recovered).toHaveBeenCalledTimes(1);
+  });
+
+  it("keys the cache per agent", async () => {
+    const fetchMock = mockProbe(402, [floorEntry]);
+
+    await probeAccepts("https://agent-a.example");
+    await probeAccepts("https://agent-b.example");
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe("precheckLlmV1Agent", () => {
-  beforeEach(() => vi.restoreAllMocks());
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    resetAcceptsCache();
+  });
 
   function mockFetch(handlers: {
     openapi?: { status: number; body?: unknown };
@@ -156,7 +212,10 @@ describe("precheckLlmV1Agent", () => {
 });
 
 describe("checkLlmV1Agent (build-your-own-agent diagnostic)", () => {
-  beforeEach(() => vi.restoreAllMocks());
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    resetAcceptsCache();
+  });
 
   // Like precheckLlmV1Agent's mockFetch but also lets us thread ownershipProofs and
   // simulate a fetch that throws (the browser CORS/network signature).

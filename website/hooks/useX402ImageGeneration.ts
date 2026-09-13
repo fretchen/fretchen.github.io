@@ -16,7 +16,6 @@ import { normalizeImageResponse, type X402ImageResult } from "./x402ImageRespons
 const X402_API_URL =
   (import.meta.env.PUBLIC_ENV__IMAGE_URL as string | undefined) ??
   "https://mypersonaljscloudivnad9dy-genimgx402token.functions.fnc.fr-par.scw.cloud";
-// const X402_API_URL = import.meta.env.PUBLIC_ENV__IMAGE_URL;
 
 export interface UseX402ImageGenerationResult {
   /**

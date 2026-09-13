@@ -294,6 +294,52 @@ describe("image_service.js Tests", () => {
       expect(global.fetch.mock.calls.filter((c) => String(c[0]) === POLL_URL)).toHaveLength(1);
     });
 
+    test("keeps polling through a Pending poll whose result is null", async () => {
+      // BFL sends `result: null` on every poll before the job finishes, and `.optional()` alone
+      // rejects an explicit null — so generation died on poll 1 of 60 while merely Pending.
+      let polls = 0;
+      global.fetch.mockImplementation((url) => {
+        const u = String(url);
+        if (u === BFL_ENDPOINT) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ id: "req-1", polling_url: POLL_URL }),
+          });
+        }
+        if (u === POLL_URL) {
+          polls += 1;
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve(
+                polls === 1
+                  ? { status: "Pending", result: null }
+                  : { status: "Ready", result: { sample: IMAGE_URL } },
+              ),
+          });
+        }
+        if (u === IMAGE_URL) {
+          return Promise.resolve({
+            ok: true,
+            arrayBuffer: () => Promise.resolve(IMAGE_BYTES.buffer),
+          });
+        }
+        return Promise.reject(new Error(`unexpected fetch: ${u}`));
+      });
+
+      vi.useFakeTimers();
+      try {
+        const pending = generateAndUploadImage("test prompt", "123", "bfl");
+        // Drains the 5s wait before poll 2, same as the download-retry test below.
+        await vi.advanceTimersByTimeAsync(5000);
+        await expect(pending).resolves.toBeTruthy();
+      } finally {
+        vi.useRealTimers();
+      }
+
+      expect(polls).toBe(2); // survived the Pending poll instead of throwing on it
+    });
+
     test("sollte einen einzelnen Bild-Download-Fehler überstehen und beim nächsten Poll erneut versuchen", async () => {
       // Regression guard, the counterpart to the test above: fixing the Error/Failed swallow-bug
       // moved that check outside the poll's try/catch, but the image-download step sits in the

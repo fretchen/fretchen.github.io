@@ -1918,7 +1918,10 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         )
         .mockResolvedValueOnce(makeMockResponse(mockMetadataResponse))
         .mockResolvedValueOnce(
-          makeMockResponse({ success: false, errorReason: "invalid_exact_evm_payload_authorization_valid_before" }),
+          makeMockResponse({
+            success: false,
+            errorReason: "invalid_exact_evm_payload_authorization_valid_before",
+          }),
         );
 
       const event = {

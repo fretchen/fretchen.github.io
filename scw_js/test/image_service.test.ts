@@ -310,7 +310,10 @@ describe("image_service.js Tests", () => {
           });
         }
         if (u === IMAGE_URL) {
-          return Promise.resolve({ ok: true, arrayBuffer: () => Promise.resolve(IMAGE_BYTES.buffer) });
+          return Promise.resolve({
+            ok: true,
+            arrayBuffer: () => Promise.resolve(IMAGE_BYTES.buffer),
+          });
         }
         return Promise.reject(new Error(`unexpected fetch: ${u}`));
       });

@@ -18,9 +18,7 @@ export type NetworkValidationResult =
  * one. What actually stops a testnet payment from buying real work is the mock-image path in
  * `genimg_x402_token.ts`, which keys off `isTestnet()` directly.
  */
-export function validatePaymentNetwork(
-  clientNetwork: string | undefined,
-): NetworkValidationResult {
+export function validatePaymentNetwork(clientNetwork: string | undefined): NetworkValidationResult {
   if (!clientNetwork) {
     return { valid: false, reason: "missing_network" };
   }

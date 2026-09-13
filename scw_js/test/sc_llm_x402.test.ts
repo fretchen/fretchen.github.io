@@ -765,7 +765,10 @@ describe("sc_llm_x402", () => {
       }
 
       it("rejects a conversation over the byte cap before any payment is verified", async () => {
-        const res = await handle(messagesEvent([{ role: "user", content: "x".repeat(70_000) }]), {});
+        const res = await handle(
+          messagesEvent([{ role: "user", content: "x".repeat(70_000) }]),
+          {},
+        );
 
         expect(res.statusCode).toBe(400);
         expect(JSON.parse(res.body).error.param).toBe("messages");
@@ -791,7 +794,10 @@ describe("sc_llm_x402", () => {
       it("measures the cap in UTF-8 bytes, not UTF-16 code units", async () => {
         // ~30k three-byte chars: ~30k UTF-16 units (under the 65536 cap by that measure) but
         // ~90k UTF-8 bytes (over it). Billed by byte, so it must be rejected.
-        const res = await handle(messagesEvent([{ role: "user", content: "あ".repeat(30_000) }]), {});
+        const res = await handle(
+          messagesEvent([{ role: "user", content: "あ".repeat(30_000) }]),
+          {},
+        );
 
         expect(res.statusCode).toBe(400);
         expect(JSON.parse(res.body).error.param).toBe("messages");
@@ -799,7 +805,10 @@ describe("sc_llm_x402", () => {
       });
 
       it("accepts a conversation just under the cap", async () => {
-        const res = await handle(messagesEvent([{ role: "user", content: "z".repeat(60_000) }]), {});
+        const res = await handle(
+          messagesEvent([{ role: "user", content: "z".repeat(60_000) }]),
+          {},
+        );
         expect(res.statusCode).toBe(200);
       });
     });

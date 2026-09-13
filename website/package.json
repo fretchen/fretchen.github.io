@@ -13,6 +13,7 @@
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
+    "check": "npm run lint && npm run typecheck && npm run test:coverage",
     "send-webmentions": "tsx ./utils/sendWebmentions.ts",
     "build-coasts": "tsx ./utils/coastsToTs.ts"
   },
@@ -76,7 +77,8 @@
   },
   "//overrides": "rehype-katex@7.0.1 still declares katex ^0.16.0 and would otherwise install its own nested copy. KaTeX 0.17 prefixed ~20 internal layout classes with `katex-` (.newline -> .katex-newline, plus .base, .strut, .vbox, .rule, ...), so a nested 0.16 renderer emits markup that the 0.18 katex.min.css imported by components/Post.tsx does not style -- silently, and visibly enough to drop every `\\` line break in display math. `$katex` tracks the dependency above, so future bumps stay consistent by construction.",
   "overrides": {
-    "katex": "$katex"
+    "katex": "$katex",
+    "toml": "^4.2.0"
   },
   "type": "module"
 }

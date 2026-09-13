@@ -41,11 +41,11 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@": resolve(__dirname, "./"),
-      "@components": resolve(__dirname, "./components"),
-      "@layouts": resolve(__dirname, "./layouts"),
-      "@utils": resolve(__dirname, "./utils"),
-      "@types": resolve(__dirname, "./types"),
+      "@": resolve(import.meta.dirname, "./"),
+      "@components": resolve(import.meta.dirname, "./components"),
+      "@layouts": resolve(import.meta.dirname, "./layouts"),
+      "@utils": resolve(import.meta.dirname, "./utils"),
+      "@types": resolve(import.meta.dirname, "./types"),
     },
   },
 });

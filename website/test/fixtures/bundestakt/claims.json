@@ -1,0 +1,354 @@
+{
+  "lizenz": "CC BY 4.0 – Nutzung mit Quellenangabe „Bundestakt“ erlaubt",
+  "quelle": "https://www.bundestakt.de",
+  "methodik": "https://www.bundestakt.de/methodik",
+  "bewertungsskala": ["belegt", "teilweise", "irrefuehrend", "falsch", "unbelegbar"],
+  "anzahl": 5,
+  "claims": [
+    {
+      "id": 188,
+      "url": "https://www.bundestakt.de/sitzung/21-92-2026-09-09#claim-188",
+      "sitzungDatum": "2026-09-09",
+      "sprecher": "Alice Weidel",
+      "fraktion": "AfD",
+      "aussage": "Deutschland ist mit 2,7 Millionen Flüchtlingen nach Kolumbien weltweit das zweitgrößte Aufnahmeland für Flüchtlinge.",
+      "bewertung": "belegt",
+      "begruendung": "Die Aussage deckt sich in Zahl und Rangfolge mit der aktuellen amtlichen Datenlage. Das Statistische Bundesamt referiert die Zahlen des UN-Flüchtlingshilfswerks UNHCR so: Deutschland war Ende 2025 laut UNHCR mit rund 2,7 Millionen anerkannten Geflüchteten das weltweit zweitgrößte Aufnahmeland von Schutzsuchenden. Vor Deutschland liegt genau ein Land: Das größte Aufnahmeland weltweit war Kolumbien mit rund 2,8 Millionen Venezolanerinnen und Venezolanern; weitere besonders bedeutende Aufnahmeländer waren die Türkei mit 2,4 Millionen Geflüchteten aus Syrien und der Iran mit 1,7 Millionen Geflüchteten aus Afghanistan. Der UNHCR selbst nennt für Ende 2025 dieselbe Spitzengruppe: Kolumbien, Deutschland, die Türkei, Uganda, der Iran, der Tschad und Pakistan beherbergten die größten Populationen von Flüchtlingen und anderen international schutzbedürftigen Personen.\r\n\r\nDrei Präzisierungen sind für das Verständnis wichtig, ohne die Aussage zu entkräften:\r\n\r\n**Erstens** handelt es sich um eine erweiterte Definition: Die 2,7 Millionen umfassen nicht nur Anerkennungen nach der Genfer Flüchtlingskonvention, sondern auch andere Schutzformen – die größte Einzelgruppe sind Ukrainerinnen und Ukrainer mit vorübergehendem Schutz. Ende 2025 lebten laut UNHCR rund 1,2 Millionen ukrainische Flüchtlinge im Land, danach folgen 668.600 Syrer und 288.300 Afghanen. Zur Einordnung: Nach dem Ausländerzentralregister waren zum Jahresende 2025 rund 3,2 Millionen Menschen als Schutzsuchende erfasst, rund 3,9 Prozent der Bevölkerung – ein Rückgang um 2,1 Prozent gegenüber 2024.\r\n\r\n**Zweitens** ist der Aufstieg auf Platz zwei nicht durch höhere Zuwanderung nach Deutschland entstanden. Die Zahl von 2,7 Millionen galt bereits für Ende 2024, damals aber nur für Rang vier: Als viertgrößtes Aufnahmeland hat Deutschland 2,7 Millionen Geflüchtete aufgenommen, 43 Prozent von ihnen aus der Ukraine. Verschoben hat sich die Rangfolge, weil die Bestände in Iran und Türkei durch Rückkehr sanken: Der Rückgang zwischen 2024 und 2025 ergab sich daraus, dass die Zahl der Flüchtlinge im Iran, in Jordanien, im Libanon und in der Türkei jeweils zurückging.\r\n\r\n**Drittens** gilt der Rang nur in absoluten Zahlen. Pro Kopf liegt Deutschland deutlich hinter anderen Staaten – relativ zur eigenen Einwohnerzahl haben Libanon, Montenegro, Jordanien, Tschad und Zypern die meisten Flüchtlinge und Asylsuchenden aufgenommen. Und global betrachtet wurden Ende 2025 65 Prozent der Flüchtlinge in Nachbarländern ihrer Herkunftsstaaten aufgenommen, und Länder mit niedrigem und mittlerem Einkommen beherbergten 68 Prozent aller Flüchtlinge und sonstigen Schutzbedürftigen.\r\n\r\nDie daraus abgeleitete politische Forderung nach einem Migrationsstopp ist eine Bewertung und damit nicht Gegenstand dieser Faktenprüfung.",
+      "geprueftAm": "2026-09-11T22:33:50.774Z",
+      "quellen": [
+        {
+          "url": "https://www.destatis.de/DE/Themen/Laender-Regionen/Internationales/Thema/bevoelkerung-arbeit-soziales/bevoelkerung/Fluchtbewegungen.html",
+          "titel": "Weltweit rund 118 Millionen Menschen auf der Flucht (Stand 18.06.2026)",
+          "herausgeber": "Statistisches Bundesamt (Destatis)",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://www.unhcr.org/refugee-statistics",
+          "titel": "Refugee Data Finder – Key Indicators",
+          "herausgeber": "UNHCR",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://www.destatis.de/DE/Presse/Pressemitteilungen/2026/05/PD26_162_125.html",
+          "titel": "Pressemitteilung Nr. 162: 3,2 Millionen Schutzsuchende zum Jahresende 2025 (12.05.2026)",
+          "herausgeber": "Statistisches Bundesamt (Destatis)",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://www.bpb.de/kurz-knapp/zahlen-und-fakten/globalisierung/271425/fluechtlinge-asylantragsteller-und-binnenvertriebene/",
+          "titel": "Flüchtlinge, Asylantragsteller und Binnenvertriebene (Zahlen und Fakten)",
+          "herausgeber": "Bundeszentrale für politische Bildung (bpb)",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://www.t-online.de/nachrichten/ausland/krisen/id_101290638/un-zahlen-zu-flucht-die-aktuellen-entwicklungen-in-der-welt.html",
+          "titel": "Neue UN-Zahlen zu weltweiten Fluchtbewegungen (12.06.2026)",
+          "herausgeber": "t-online",
+          "istPrimaerquelle": false,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://www.unhcr.org/global-trends",
+          "titel": "Global Trends (Bericht veröffentlicht Juni 2026, Daten zum 31.12.2025)",
+          "herausgeber": "UNHCR",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://www.unhcr.org/refugee-statistics/insights/explainers/refugee-hosting-metrics.html",
+          "titel": "Refugee hosting metrics (Explainer)",
+          "herausgeber": "UNHCR",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://www.bpb.de/kurz-knapp/hintergrund-aktuell/563237/weltfluechtlingstag-2025/",
+          "titel": "Hintergrund aktuell: Weltflüchtlingstag 2025",
+          "herausgeber": "Bundeszentrale für politische Bildung (bpb)",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://www.uno-fluechtlingshilfe.de/informieren/fluechtlingszahlen",
+          "titel": "Flüchtlingszahlen – Global Trends",
+          "herausgeber": "UNO-Flüchtlingshilfe",
+          "istPrimaerquelle": false,
+          "abgerufenAm": "2026-09-11"
+        }
+      ]
+    },
+    {
+      "id": 190,
+      "url": "https://www.bundestakt.de/sitzung/21-92-2026-09-09#claim-190",
+      "sitzungDatum": "2026-09-09",
+      "sprecher": "Alice Weidel",
+      "fraktion": "AfD",
+      "aussage": "Währenddessen verliert Deutschland jeden Monat 12 000 Arbeitsplätze in der Industrie, haben im vergangenen Jahr 190 000 Unternehmen in Deutschland aufgegeben, plant jeder dritte deutsche Mittelständler die Abwanderung ins Ausland, steigt die Zahl der Arbeitslosen wieder über die 3-Millionen-Marke",
+      "bewertung": "teilweise",
+      "begruendung": "Drei der vier genannten Zahlen lassen sich mit aktuellen Daten belegen, eine ist zu weit verallgemeinert, und bei einer fehlt entscheidender Kontext.\r\n\r\n**Industriejobs (belegt):** Das Statistische Bundesamt zählte Ende des 1. Halbjahres 2026 im Verarbeitenden Gewerbe 5,29 Millionen Beschäftigte – 144.100 oder 2,7 Prozent weniger als ein Jahr zuvor. Auf zwölf Monate verteilt sind das rund 12.000 Stellen pro Monat. Der stärkste Rückgang traf die Automobilindustrie mit 42.300 Beschäftigten weniger (-5,8 Prozent) und einem Stand von 691.500.\r\n\r\n**190.000 Unternehmensaufgaben (teilweise):** Creditreform und das ZEW Mannheim kommen für 2025 auf rund 188.000 geschlossene Unternehmen, zehn Prozent mehr als im Vorjahr und der höchste Wert seit fast 20 Jahren. \"Fast 190.000\" trifft das also. Ausgeblendet bleibt aber, dass nur etwa 13 Prozent davon Insolvenzen waren (24.064 Fälle) und knapp ein Drittel der freiwilligen Schließungen aus Altersgründen erfolgte – also wegen fehlender Nachfolge, nicht wegen Standortflucht. Ebenfalls unerwähnt: Laut Destatis wurden 2025 rund 640.500 Gewerbe neu gegründet (+7,7 Prozent), bei 502.200 vollständigen Gewerbeaufgaben (-0,2 Prozent); die Gründungen größerer Betriebe stiegen um 7,6 Prozent auf 130.100.\r\n\r\n**\"Jeder dritte Mittelständler\" (nicht belegt in dieser Form):** Der KfW-Internationalisierungsbericht befragte 1.700 Unternehmen, davon rund 600 mit Auslandsgeschäft. Das Ergebnis betrifft nicht \"jeden dritten deutschen Mittelständler\", sondern knapp jedes dritte **auslandsaktive Industrie**-Unternehmen des Mittelstands, das für die kommenden fünf Jahre eine Verlagerung erwägt (in der Industrie 29 Prozent). Damit wird eine Teilgruppe auf den gesamten Mittelstand hochgerechnet – der Kern der Entwicklung stimmt, die Größenordnung der Aussage nicht.\r\n\r\n**Über drei Millionen Arbeitslose (belegt):** Die Bundesagentur für Arbeit meldete für August 2026 3.061.000 Arbeitslose (+54.000 zum Vormonat, +36.000 zum Vorjahr, Quote 6,5 Prozent); im Juli 2026 waren es 3.007.000. Einschränkend gilt: Saisonbereinigt betrug der Anstieg im August nur 4.000, der Zuwachs ist also überwiegend die üblich Sommerpause – die Drei-Millionen-Marke wurde erstmals im Januar 2026 mit 3,085 Millionen überschritten.\r\n\r\n**Hinweis zur Methode:** Die KfW-Ergebnisse konnten nur über Sekundärberichterstattung geprüft werden, da der Originalbericht nicht direkt abrufbar war. Die Prozentangaben stammen einheitlich aus Berichten über denselben Bericht.",
+      "geprueftAm": "2026-09-11T22:34:40.010Z",
+      "quellen": [
+        {
+          "url": "https://www.destatis.de/DE/Presse/Pressemitteilungen/2026/03/PD26_074_52311.html",
+          "titel": "7,6 % mehr Neugründungen größerer Betriebe im Jahr 2025",
+          "herausgeber": "Statistisches Bundesamt (Destatis)",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://www.arbeitsagentur.de/presse/2026-31-arbeitsmarkt-im-august-2026",
+          "titel": "Der Arbeitsmarkt im August 2026",
+          "herausgeber": "Bundesagentur für Arbeit",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://www.creditreform.de/aktuelles-wissen/pressemeldungen-fachbeitraege/news-details/show/schliessungszahlen-deutschland-verliert-zu-viele-gesunde-betriebe",
+          "titel": "Schließungszahlen: Deutschland verliert zu viele gesunde Betriebe",
+          "herausgeber": "Creditreform / ZEW Mannheim (Mannheimer Unternehmenspanel)",
+          "istPrimaerquelle": false,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://www.handelsblatt.com/politik/deutschland/arbeitsmarkt-deutsche-arbeitslosenzahl-steigt-auf-zwoelf-jahres-hoch/100196131.html",
+          "titel": "Arbeitsmarkt: Deutsche Arbeitslosenzahl steigt auf Zwölf-Jahres-Hoch (Januar 2026)",
+          "herausgeber": "Handelsblatt",
+          "istPrimaerquelle": false,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://www.destatis.de/DE/Presse/Pressemitteilungen/2026/08/PD26_N057_42.html",
+          "titel": "Stellenabbau in der Automobilindustrie: 42 300 weniger Beschäftigte zum Ende des 1. Halbjahres 2026 als ein Jahr zuvor",
+          "herausgeber": "Statistisches Bundesamt (Destatis)",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://www.destatis.de/DE/Presse/Pressemitteilungen/2026/08/PD26_287_52311.html",
+          "titel": "3,0 % mehr Gründungen größerer Betriebe im 1. Halbjahr 2026 als im Vorjahreszeitraum",
+          "herausgeber": "Statistisches Bundesamt (Destatis)",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://www.bmas.de/DE/Service/Presse/Pressemitteilungen/2026/arbeitsmarktzahlen-august-2026.html",
+          "titel": "Arbeitsmarkt bleibt angespannt (Arbeitsmarktzahlen August 2026)",
+          "herausgeber": "Bundesministerium für Arbeit und Soziales (BMAS)",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://www.leadersnet.de/news/103394,mittelstand-richtet-auslandsgeschaeft-neu-aus.html",
+          "titel": "Mittelstand richtet Auslandsgeschäft neu aus (KfW-Internationalisierungsbericht 2026)",
+          "herausgeber": "Leadersnet",
+          "istPrimaerquelle": false,
+          "abgerufenAm": "2026-09-11"
+        }
+      ]
+    },
+    {
+      "id": 189,
+      "url": "https://www.bundestakt.de/sitzung/21-92-2026-09-09#claim-189",
+      "sitzungDatum": "2026-09-09",
+      "sprecher": "Alice Weidel",
+      "fraktion": "AfD",
+      "aussage": "Rund drei Viertel der Bürgergeldempfänger sind Ausländer oder haben einen Migrationshintergrund.",
+      "bewertung": "irrefuehrend",
+      "begruendung": "Zutreffend ist der Kern, dass eine Mehrheit der Bürgergeld-Beziehenden einen Migrationshintergrund hat – die Größenordnung \"drei Viertel\" ist aber deutlich zu hoch angesetzt. Nach den Erhebungen der Bundesagentur für Arbeit (BA) liegt der Anteil der Menschen mit Migrationshintergrund unter den erwerbsfähigen Leistungsberechtigten bei rund 63 bis 64 Prozent, nicht bei etwa 75 Prozent; für 2024 wurden 63,1 Prozent berichtet, in neueren Auswertungen 63,7 Prozent. Die Behauptung überzeichnet den belegbaren Wert damit um etwa elf bis zwölf Prozentpunkte. Noch klarer wird die Lücke bei der Staatsangehörigkeit: Der Ausländeranteil unter allen Bürgergeld-Beziehenden liegt bei rund 47 bis 48 Prozent – die Mehrheit der etwa 5,4 Millionen Beziehenden, rund 52 Prozent oder etwa 2,8 Millionen Menschen, besitzt einen deutschen Pass.\r\n\r\nZwei methodische Punkte sind für die Einordnung wichtig. Erstens ist \"Migrationshintergrund\" eine weit gefasste Kategorie: Dazu zählen auch in Deutschland geborene deutsche Staatsbürger, bei denen mindestens ein Elternteil ohne deutsche Staatsangehörigkeit geboren wurde – rund 17 Prozent dieser Gruppe im Bürgergeld haben keine eigene Migrationserfahrung. Die Zahl trägt die im Kontext aufgestellte Deutung einer laufend \"finanzierten Einwanderung in die Sozialsysteme\" deshalb nur begrenzt. Zweitens erhebt die BA den Migrationshintergrund über freiwillige Befragungen in Jobcentern und rechnet die Ergebnisse hoch; sie weist selbst auf eingeschränkte Datenqualität hin. Regional liegen die Anteile teils über 70 Prozent, bundesweit aber nicht bei drei Vierteln – ein Bundesdurchschnitt von rund 75 Prozent ist durch keine amtliche Quelle gedeckt.\r\n\r\n**Hinweis zur Aktualität:** Die jüngsten bundesweit verfügbaren BA-Werte zum Migrationshintergrund stammen aus Auswertungen für 2024/2025. Sollte die BA für 2026 neuere Zahlen veröffentlicht haben, wäre die Bewertung daran zu prüfen; ein Sprung auf rund 75 Prozent wäre gegenüber dem bisherigen Trend von etwa 63 bis 64 Prozent jedoch außergewöhnlich.",
+      "geprueftAm": "2026-09-11T22:34:13.827Z",
+      "quellen": [
+        {
+          "url": "https://statistik.arbeitsagentur.de/DE/Navigation/Statistiken/Themen-im-Fokus/Migration/Migrationshintergrund/Migrationshintergrund-Nav.html",
+          "titel": "Statistik der Bundesagentur für Arbeit: \"Migrationshintergrund\" (Methodik und Tabellen, Erhebung nach § 281 Abs. 4 SGB III i. V. m. MighEV)",
+          "herausgeber": "Bundesagentur für Arbeit",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://www.destatis.de/DE/Themen/Gesellschaft-Umwelt/Bevoelkerung/Migration-Integration/Tabellen/migrationshintergrund-lebensunterhalt.html",
+          "titel": "Bevölkerung in Privathaushalten nach Migrationshintergrund und überwiegendem Lebensunterhalt, Stand 13.04.2026",
+          "herausgeber": "Statistisches Bundesamt (Destatis)",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://correctiv.org/faktencheck/hintergrund/2023/09/15/buergergeld-empfaenger-wer-faellt-unter-62-prozent-mit-migrationshintergrund/",
+          "titel": "CORRECTIV.Faktencheck: Einordnung der Kategorie Migrationshintergrund im Bürgergeld",
+          "herausgeber": "CORRECTIV",
+          "istPrimaerquelle": false,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://www.stuttgarter-zeitung.de/inhalt.sozialleistungen-in-deutschland-buergergeld-63-prozent-der-bezieher-haben-migrationshintergrund.d7d73f17-2b85-4d18-909a-91905a15009a.html",
+          "titel": "Bürgergeld: 63 Prozent der Bezieher haben Migrationshintergrund (nach BA-Erhebung)",
+          "herausgeber": "Stuttgarter Zeitung",
+          "istPrimaerquelle": false,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://statistik.arbeitsagentur.de/DE/Navigation/Statistiken/Themen-im-Fokus/Migration/Personen-nach-Staatsangehoerigkeiten/Personen-nach-Staatsangehoerigkeiten-Nav.html",
+          "titel": "Statistik der Bundesagentur für Arbeit: \"Personen nach Staatsangehörigkeiten\" / Migrationsmonitor",
+          "herausgeber": "Bundesagentur für Arbeit",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://dpa-factchecking.com/germany/260506-99-346137/",
+          "titel": "dpa-Faktencheck: \"Grafik verbreitet falsche Zahlen zu Bürgergeldempfängern\"",
+          "herausgeber": "dpa",
+          "istPrimaerquelle": false,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://de.statista.com/themen/11031/buergergeld",
+          "titel": "Statista, Themenseite Bürgergeld (Ausländeranteil 47,9 Prozent, SGB-II-Quoten)",
+          "herausgeber": "Statista",
+          "istPrimaerquelle": false,
+          "abgerufenAm": "2026-09-11"
+        }
+      ]
+    },
+    {
+      "id": 191,
+      "url": "https://www.bundestakt.de/sitzung/21-92-2026-09-09#claim-191",
+      "sitzungDatum": "2026-09-09",
+      "sprecher": "Friedrich Merz",
+      "fraktion": "CDU/CSU",
+      "aussage": "1,3 Prozent Wirtschaftswachstum für das Jahr 2026 zeigen, dass unsere ersten Maßnahmen helfen,",
+      "bewertung": "falsch",
+      "begruendung": "Die Zahl 1,3 Prozent entspricht keiner aktuellen Prognose für das Jahr 2026 – sie ist rund ein Jahr alt. Sie stammt aus der **Herbstprojektion der Bundesregierung vom Oktober 2025**, die für 2026 ein reales Plus von 1,3 Prozent und für 2027 von 1,4 Prozent erwartete. Seitdem hat die Bundesregierung ihre eigene Erwartung zweimal deutlich gesenkt: Im Jahreswirtschaftsbericht 2026 (Januar 2026) auf 1,0 Prozent, in der **Frühjahrsprojektion vom April 2026** auf 0,5 Prozent für 2026 (und 0,9 Prozent für 2027). Auch die unabhängigen Institutionen liegen klar darunter: Die **Deutsche Bundesbank** rechnete in ihrer Prognose vom 12. Juni 2026 mit 0,5 Prozent kalenderbereinigtem Wachstum für 2026 und 0,8 Prozent für 2027; die **Gemeinschaftsdiagnose der Wirtschaftsforschungsinstitute** vom Frühjahr 2026 kam auf 0,6 Prozent für 2026. Als Grund für die Korrekturen nennen die Quellen vor allem den Energiepreisschock nach dem Iran-Krieg, der den staatlichen Fiskalimpuls überlagert.\r\n\r\nRichtig ist, dass die deutsche Wirtschaft wieder wächst: Das Statistische Bundesamt weist für das 2. Quartal 2026 ein preis-, saison- und kalenderbereinigtes Plus von 0,3 Prozent gegenüber dem Vorquartal aus (revidiert von zunächst 0,2 Prozent), gegenüber dem Vorjahresquartal 1,0 Prozent. Ein Jahreswachstum von 1,3 Prozent für 2026 ist damit aber nicht belegt – der genannte Wert ist mehr als doppelt so hoch wie die aktuellste Projektion der Bundesregierung selbst. Der zweite Teil der Aussage – die Ursachenzuschreibung an die „ersten Maßnahmen\" – lässt sich mit den vorliegenden Quellen ohnehin nicht überprüfen; die Bundesbank führt die erwartete Belebung überwiegend auf staatliche Ausgaben und wieder anziehende Exporte zurück.\r\n\r\n**Einschränkung:** Die Herbstprojektion 2026 der Bundesregierung und die Gemeinschaftsdiagnose Herbst 2026 (Veröffentlichung: 24. September 2026) lagen zum Zeitpunkt der Rede noch nicht vor. Maßstab sind daher die am 9. September 2026 aktuellsten amtlichen Zahlen – und die stützen den genannten Wert nicht.",
+      "geprueftAm": "2026-09-11T22:34:58.646Z",
+      "quellen": [
+        {
+          "url": "https://www.bundesregierung.de/breg-de/aktuelles/herbstprojektion-2025-2388008",
+          "titel": "Herbstprojektion 2025 (1,3 % für 2026)",
+          "herausgeber": "Bundesregierung",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://www.bundesfinanzministerium.de/Monatsberichte/Ausgabe/2026/02/Inhalte/Kapitel-2-Analysen/2-4-jahreswirtschaftsbericht-2026.html",
+          "titel": "Jahreswirtschaftsbericht 2026 (1,0 % für 2026)",
+          "herausgeber": "Bundesfinanzministerium",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://www.destatis.de/DE/Presse/Pressemitteilungen/2026/08/PD26_303_811.html",
+          "titel": "Ausführliche Ergebnisse 2. Quartal 2026 (+0,3 % zum Vorquartal)",
+          "herausgeber": "Statistisches Bundesamt",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://www.bundesregierung.de/breg-de/aktuelles/bundeskanzler-generaldebatte-haushaltswoche-2451890",
+          "titel": "Bericht zur Rede des Kanzlers am 09.09.2026 (Belegstelle für die Aussage)",
+          "herausgeber": "Bundesregierung",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://www.bundesregierung.de/breg-de/aktuelles/fruehjahrsprojektion-2026-2422692",
+          "titel": "Vorstellung der Frühjahrsprojektion 2026 (0,5 % für 2026)",
+          "herausgeber": "Bundesregierung / BMWE",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://www.bundesbank.de/de/presse/pressenotizen/deutschland-prognose-der-bundesbank-energiepreis-schock-bremst-konjunkturerholung-964728",
+          "titel": "Deutschland-Prognose vom 12.06.2026 (0,5 % / 0,8 %)",
+          "herausgeber": "Deutsche Bundesbank",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://gemeinschaftsdiagnose.de/",
+          "titel": "Gemeinschaftsdiagnose Frühjahr 2026 (0,6 % für 2026)",
+          "herausgeber": "Projektgruppe Gemeinschaftsdiagnose",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-09-11"
+        },
+        {
+          "url": "https://www.bundestag.de/dokumente/textarchiv/2026/kw37-de-generaldebatte-1194750",
+          "titel": "Debattenbericht Generaldebatte 09.09.2026",
+          "herausgeber": "Deutscher Bundestag",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-09-11"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "url": "https://www.bundestakt.de/sitzung/21-1-2025-03-25#claim-10",
+      "sitzungDatum": "2025-03-25",
+      "sprecher": "Christian Görke",
+      "fraktion": "Die Linke",
+      "aussage": "So sind in den letzten dreieinhalb Jahren so viele Antworten wie noch nie in die Geheimschutzstelle gewandert.",
+      "bewertung": "unbelegbar",
+      "begruendung": "Worum es geht: Ministerien können Antworten auf Kleine Anfragen oder Schriftliche Fragen als Verschlusssache einstufen („VS-Vertraulich\", „VS-Geheim\") und statt in einer öffentlichen Drucksache in der **Geheimschutzstelle** des Bundestages hinterlegen – einem gesicherten Raum, in dem Abgeordnete den Text nur unter Auflagen einsehen und nichts daraus zitieren dürfen. Dass diese Praxis in der 20. Wahlperiode (2021–2025) laufend angewandt wurde, ist unstrittig und in zahlreichen Bundestagsdrucksachen dokumentiert, etwa mit der Standardformel, die Antwort sei „in der Geheimschutzstelle des Deutschen Bundestages hinterlegt\" (u. a. Drucksachen 20/2995, 20/6233, 20/7344, 20/12862, 20/14954). Der entscheidende Teil der Aussage ist aber ein Superlativ – „so viele wie noch nie\" –, und der lässt sich nur mit einer Zählung über mehrere Wahlperioden hinweg prüfen. Eine solche amtliche Statistik ist in der Recherche nicht auffindbar: Weder die Bundestagsverwaltung noch die Bundesregierung veröffentlichen regelmäßig, wie viele Antworten pro Wahlperiode in der Geheimschutzstelle landen; die einzelnen Fälle sind nur verstreut in tausenden Drucksachen erkennbar. Auch Sekundärquellen liefern keine belastbare Zählung – ein Tagesspiegel-Bericht von 2017 gibt lediglich die damalige Beobachtung der Linksfraktion wieder, dass zunehmend Antworten eingestuft würden, was den Zeitraum 2021–2025 nicht abdeckt. Die Zeitangabe „dreieinhalb Jahre\" passt plausibel zur Amtszeit der Ampel-Regierung (Dezember 2021 bis März 2025, rund drei Jahre und vier Monate). Ergebnis: Die Aussage ist nach dem verfügbaren Quellenstand weder zu bestätigen noch zu widerlegen – sie kann zutreffen, ist aber öffentlich nicht nachprüfbar und sollte deshalb nicht als belegte Tatsache weitergetragen werden.\r\n\r\n**Was Klarheit schaffen würde:** eine Auskunft der Bundestagsverwaltung bzw. eine Antwort der Bundesregierung auf eine Schriftliche Frage mit Fallzahlen je Wahlperiode. Solange die nicht vorliegt, bleibt der Superlativ eine Behauptung ohne prüfbare Zahlenbasis.\r\n\r\n**Recherchehinweis für die Transparenz:** Das Suchkontingent dieser Prüfung war nach mehreren Anläufen ausgeschöpft, ohne dass eine wahlperiodenübergreifende Zählung auffindbar war. Sollte die Bundestagsverwaltung solche Zahlen auf Anfrage herausgeben, ist die Bewertung entsprechend zu aktualisieren.",
+      "geprueftAm": "2026-08-26T22:08:18.646Z",
+      "quellen": [
+        {
+          "url": "https://dserver.bundestag.de/btp/21/21001.pdf",
+          "titel": "Plenarprotokoll 21/1, 1. Sitzung, 25.03.2025 (Rede Görke)",
+          "herausgeber": "Deutscher Bundestag",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-08-26"
+        },
+        {
+          "url": "https://dserver.bundestag.de/btd/20/029/2002995.pdf",
+          "titel": "Drucksache 20/2995 (Antwort teilweise „VS-Vertraulich\", Hinterlegung in der Geheimschutzstelle)",
+          "herausgeber": "Deutscher Bundestag",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-08-26"
+        },
+        {
+          "url": "https://dserver.bundestag.de/btd/20/062/2006233.pdf",
+          "titel": "Drucksache 20/6233 (Einstufung „VS-Geheim\", Hinterlegung in der Geheimschutzstelle)",
+          "herausgeber": "Deutscher Bundestag",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-08-26"
+        },
+        {
+          "url": "https://dserver.bundestag.de/btd/20/073/2007344.pdf",
+          "titel": "Drucksache 20/7344 (Anlage „VS-Geheim\", Geheimschutzstelle)",
+          "herausgeber": "Deutscher Bundestag",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-08-26"
+        },
+        {
+          "url": "https://dserver.bundestag.de/btd/20/149/2014954.pdf",
+          "titel": "Drucksache 20/14954 (Teil der Antwort „VS-Vertraulich\", Februar 2025)",
+          "herausgeber": "Deutscher Bundestag",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-08-26"
+        },
+        {
+          "url": "https://www.bundestag.de/resource/blob/538904/7e7c2e1ee6f6f93855da8d1d7dd6f68e/WD-3-220-17-pdf-data.pdf",
+          "titel": "Gutachten WD 3 – 3000 – 220/17 zum parlamentarischen Frage- und Informationsrecht",
+          "herausgeber": "Wissenschaftliche Dienste des Bundestages",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-08-26"
+        },
+        {
+          "url": "https://www.bmi.bund.de/DE/themen/sicherheit/spionageabwehr-wirtschafts-und-geheimschutz/staatlicher-geheimschutz/staatlicher-geheimschutz-node.html",
+          "titel": "Informationen zum staatlichen Geheimschutz / Verschlusssachenanweisung",
+          "herausgeber": "Bundesministerium des Innern",
+          "istPrimaerquelle": true,
+          "abgerufenAm": "2026-08-26"
+        },
+        {
+          "url": "https://tagesspiegel.de/politik/kleine-anfragen-im-bundestag-wenn-die-regierung-mauert/19985854.html",
+          "titel": "„Kleine Anfragen im Bundestag: Wenn die Regierung mauert\" (2017)",
+          "herausgeber": "Tagesspiegel",
+          "istPrimaerquelle": false,
+          "abgerufenAm": "2026-08-26"
+        }
+      ]
+    }
+  ]
+}

@@ -95,9 +95,17 @@ export default {
     send: "Senden",
     cancel: "Abbrechen",
     processing: "Wird verarbeitet...",
-    systemPrompt: "Du bist ein hilfreicher Assistent.",
+    systemPrompt:
+      "Du bist ein hilfreicher Assistent. Für Fragen zu Bundestagssitzungen, Redezeiten oder " +
+      "Faktenchecks von Aussagen Abgeordneter stehen dir get_sitzungen und search_claims zur " +
+      "Verfügung. Rufe get_sitzungen zuerst ohne slug auf, um die passende Sitzung zu finden, " +
+      "und dann mit deren slug für die Details. Die Daten stammen von bundestakt.de, einer " +
+      "KI-gestützten Analyse amtlicher Protokolle — nicht amtlich selbst. Verlinke in deiner " +
+      "Antwort immer die `url` aus dem Tool-Ergebnis. Wenn etwas nicht im Ergebnis auftaucht, " +
+      "sage das offen, statt aus Trainingswissen zu raten.",
     noResponse: "Keine Antwort erhalten",
     imageReady: "Hier ist dein Bild.",
+    bundestaktSource: "Quelle: Bundestakt",
     errorPrefix: "Fehler:",
     unknownError: "Unbekannter Fehler",
     loading: "Lädt...",

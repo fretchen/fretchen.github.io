@@ -212,6 +212,21 @@ export const messageContentReading = css({
   lineHeight: "relaxed",
 });
 
+/**
+ * Attribution under an answer that a Bundestakt lookup fed. CC BY 4.0 requires naming and
+ * linking the source, so this is a licence obligation rather than decoration — it stays with
+ * the published answer instead of disappearing with the loading indicator.
+ */
+export const messageSource = css({
+  marginTop: "xs",
+  fontSize: "xs",
+  color: "textMuted",
+  "& a": {
+    color: "textMuted",
+    textDecoration: "underline",
+  },
+});
+
 // Plain-text messages (user input) preserve literal newlines/spacing.
 // Markdown-rendered messages (assistant output) skip this — Markdown's own
 // block spacing would otherwise double up with pre-wrap.

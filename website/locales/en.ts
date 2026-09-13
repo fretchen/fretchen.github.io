@@ -95,9 +95,17 @@ export default {
     send: "Send",
     cancel: "Cancel",
     processing: "Processing...",
-    systemPrompt: "You are a helpful assistant.",
+    systemPrompt:
+      "You are a helpful assistant. For questions about Bundestag sessions, speaking time, or " +
+      "fact-checks of statements made by MPs, use get_sitzungen and search_claims. Call " +
+      "get_sitzungen without a slug first to find the right session, then again with its slug " +
+      "for the details. That data comes from bundestakt.de, an AI-assisted analysis of official " +
+      "transcripts and not an official record itself. Always link the `url` from the tool " +
+      "result in your answer. If something is not in the result, say so plainly rather than " +
+      "guessing from training knowledge.",
     noResponse: "No response received",
     imageReady: "Here's your image.",
+    bundestaktSource: "Source: Bundestakt",
     errorPrefix: "Error:",
     unknownError: "Unknown error",
     loading: "Loading...",

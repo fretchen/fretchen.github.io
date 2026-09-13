@@ -13,6 +13,7 @@ import { renderHook, act } from "@testing-library/react";
 import { useWalletClient, useAccount } from "wagmi";
 import { useX402Chat, WebStorageClientChannelStorage } from "../hooks/useX402Chat";
 import { buildUsdcAllowedAssets } from "../hooks/x402SpendControls";
+import { resetAcceptsCache } from "../hooks/x402Discovery";
 import type { X402ChatMessage } from "../types/x402";
 import { buildAccountData, buildWalletClientData } from "./setup";
 
@@ -59,6 +60,9 @@ describe("useX402Chat", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.localStorage.clear();
+    // Every case here probes the same agent URL; a cached hit would serve the previous case's
+    // accepts[] and silently defeat the per-case fetch mocks.
+    resetAcceptsCache();
     mockGetPaymentSettleResponse.mockReturnValue({
       success: true,
       transaction: "0xdeposit",

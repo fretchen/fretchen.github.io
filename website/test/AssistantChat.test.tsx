@@ -360,7 +360,9 @@ describe("AssistantChat", () => {
       consoleError.mockRestore();
     });
 
-    it("gives up after MAX_HOPS and falls back to the no-response message", async () => {
+    it("stops after MAX_HOPS and captions the image it did generate", async () => {
+      // The model never produced a closing sentence, but the user approved and paid for the
+      // images and they are on screen — so the bubble must not read "No response received".
       mockSendMessage.mockResolvedValue(toolCallResponse("generate_image", { prompt: "x", size: "1024x1024" }));
       mockGenerateImage.mockResolvedValue({ imageUrl: "https://example.com/x.png" });
 
@@ -375,10 +377,32 @@ describe("AssistantChat", () => {
       }
 
       await waitFor(() => {
-        expect(screen.getByText("assistent.noResponse")).toBeInTheDocument();
+        expect(screen.getByText("assistent.imageReady")).toBeInTheDocument();
       });
+      expect(screen.queryByText("assistent.noResponse")).not.toBeInTheDocument();
       expect(mockSendMessage).toHaveBeenCalledTimes(3); // MAX_HOPS, no 4th attempt
       expect(mockGenerateImage).toHaveBeenCalledTimes(3);
+    });
+
+    it("still says no-response when the hops run out without an image", async () => {
+      // The other side of the caption branch. tool_choice: "none" after the first decline is a
+      // request, not a guarantee — an upstream that keeps asking anyway burns every hop, and with
+      // nothing generated there is nothing to caption.
+      mockSendMessage.mockResolvedValue(toolCallResponse("generate_image", { prompt: "x", size: "1024x1024" }));
+
+      render(<AssistantChat />);
+      sendUserMessage("Draw x");
+
+      for (let i = 0; i < 3; i++) {
+        const cancelButton = await screen.findByRole("button", { name: "assistent.cancel" });
+        fireEvent.click(cancelButton);
+        await waitFor(() => expect(mockSendMessage).toHaveBeenCalledTimes(i + 1));
+      }
+
+      await waitFor(() => {
+        expect(screen.getByText("assistent.noResponse")).toBeInTheDocument();
+      });
+      expect(mockGenerateImage).not.toHaveBeenCalled();
     });
 
     it("never offers the image tool a testnet network", async () => {

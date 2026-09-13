@@ -97,6 +97,7 @@ export default {
     processing: "Wird verarbeitet...",
     systemPrompt: "Du bist ein hilfreicher Assistent.",
     noResponse: "Keine Antwort erhalten",
+    imageReady: "Hier ist dein Bild.",
     errorPrefix: "Fehler:",
     unknownError: "Unbekannter Fehler",
     loading: "Lädt...",

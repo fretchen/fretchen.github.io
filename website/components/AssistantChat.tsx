@@ -149,6 +149,7 @@ export function AssistantChat() {
   // Localized messages (reuse the existing assistent.* namespace)
   const systemPromptMessage = useLocale({ label: "assistent.systemPrompt" });
   const noResponseMessage = useLocale({ label: "assistent.noResponse" });
+  const imageReadyMessage = useLocale({ label: "assistent.imageReady" });
   const errorPrefixMessage = useLocale({ label: "assistent.errorPrefix" });
   const connectWalletMessageLabel = useLocale({ label: "assistent.connectWalletMessage" });
   const loadingLabel = useLocale({ label: "assistent.loading" });
@@ -434,7 +435,9 @@ export function AssistantChat() {
 
       const assistantMsg: ChatMessage = {
         role: "assistant",
-        content: finalContent ?? noResponseMessage,
+        // Hops exhausted after a successful generation: the image is on screen and paid for, so
+        // "no response" is wrong. Only the model's closing sentence is missing.
+        content: finalContent ?? (finalImageUrl ? imageReadyMessage : noResponseMessage),
         timestamp: Date.now(),
         imageUrl: finalImageUrl,
       };

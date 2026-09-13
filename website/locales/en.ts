@@ -97,6 +97,7 @@ export default {
     processing: "Processing...",
     systemPrompt: "You are a helpful assistant.",
     noResponse: "No response received",
+    imageReady: "Here's your image.",
     errorPrefix: "Error:",
     unknownError: "Unknown error",
     loading: "Loading...",

@@ -19,9 +19,10 @@ const mockSwitchImageIfNeeded = vi.fn();
 const mockGenerateImage = vi.fn();
 // vi.hoisted because the vi.mock factory below spreads these in immediately, rather than
 // behind an inner closure like the hook mocks do — a plain const is still uninitialised then.
-const { mockFetchSitzungen, mockFetchClaims } = vi.hoisted(() => ({
+const { mockFetchSitzungen, mockFetchClaims, mockFetchStats } = vi.hoisted(() => ({
   mockFetchSitzungen: vi.fn(),
   mockFetchClaims: vi.fn(),
+  mockFetchStats: vi.fn(),
 }));
 
 vi.mock("../hooks/useX402Chat", () => ({
@@ -92,6 +93,12 @@ vi.mock("../tools/bundestakt", async (importOriginal) => {
   return { ...actual, fetchSitzungen: mockFetchSitzungen, fetchClaims: mockFetchClaims };
 });
 
+// Same treatment for analytics: real selector, stubbed fetcher.
+vi.mock("../tools/analytics", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../tools/analytics")>();
+  return { ...actual, fetchStats: mockFetchStats };
+});
+
 import { AssistantChat } from "../components/AssistantChat";
 import { precheckLlmV1Agent } from "../hooks/x402Discovery";
 import { useX402Chat } from "../hooks/useX402Chat";
@@ -99,6 +106,7 @@ import { useWalletConnection } from "../hooks/useWalletConnection";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
 import sitzungenFixture from "./fixtures/bundestakt/sitzungen.json";
 import claimsFixture from "./fixtures/bundestakt/claims.json";
+import { OWNER_ADDRESS } from "../utils/getChain";
 
 /** A tool-call turn, as sc_llm_x402 returns it: content: null, finish_reason: "tool_calls". */
 function toolCallResponse(name: string, args: Record<string, unknown>) {
@@ -120,6 +128,27 @@ function textResponse(content: string) {
   return { choices: [{ message: { role: "assistant", content }, finish_reason: "stop" }] };
 }
 
+/** A minimal `Stats` payload — the real selectAnalytics runs against it. */
+function statsFixture() {
+  const to = new Date().toISOString().slice(0, 10);
+  return {
+    site: "fretchen.eu",
+    from: to,
+    to,
+    days: { [to]: { hits: 42, landings: 12, pages: { "/blog/hello": 30, "/": 12 }, source: "beacon" } },
+  };
+}
+
+/** The chat's default mocked wallet is NOT the owner; this is what flips the owner-only tools on. */
+function connectAsOwner() {
+  vi.mocked(useWalletConnection).mockReturnValue({
+    address: OWNER_ADDRESS,
+    hasMounted: true,
+    isConnected: true,
+    connectWallet: mockConnectWallet,
+  });
+}
+
 function sendUserMessage(text: string) {
   fireEvent.change(screen.getByPlaceholderText("assistent.placeholder"), { target: { value: text } });
   fireEvent.click(screen.getByRole("button", { name: /assistent\.send/ }));
@@ -132,6 +161,7 @@ describe("AssistantChat", () => {
     mockSwitchImageIfNeeded.mockResolvedValue(true);
     mockFetchSitzungen.mockResolvedValue(sitzungenFixture);
     mockFetchClaims.mockResolvedValue(claimsFixture);
+    mockFetchStats.mockResolvedValue(statsFixture());
     mockSendMessage.mockResolvedValue({
       choices: [{ message: { role: "assistant", content: "Paris is the capital of France." } }],
     });
@@ -615,6 +645,76 @@ describe("AssistantChat", () => {
 
       await waitFor(() => expect(screen.getByText("I could not reach Bundestakt.")).toBeInTheDocument());
       expect(screen.queryByText("assistent.bundestaktSource")).not.toBeInTheDocument();
+    });
+
+    it("does not offer the analytics tool to a visitor who is not the owner", async () => {
+      // /stats answers 401 to anyone else, so offering it would burn a hop on a guaranteed
+      // failure — and would put its description in front of the model for people it cannot serve.
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("How is the site doing?");
+
+      await waitFor(() => expect(mockSendMessage).toHaveBeenCalledOnce());
+      const offered = (mockSendMessage.mock.calls[0][1] as { tools: { function: { name: string } }[] }).tools;
+      expect(offered.map((t) => t.function.name)).not.toContain("get_analytics");
+      // The other tools are unaffected by the gate.
+      expect(offered.map((t) => t.function.name)).toEqual(
+        expect.arrayContaining(["generate_image", "get_sitzungen", "search_claims"]),
+      );
+    });
+
+    it("offers the analytics tool to the owner and credits the source", async () => {
+      connectAsOwner();
+      mockSendMessage
+        .mockResolvedValueOnce(toolCallResponse("get_analytics", { range: "30d" }))
+        .mockResolvedValueOnce(textResponse("Your best page was /blog/hello."));
+
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("Which pages did best?");
+
+      await waitFor(() => expect(mockSendMessage).toHaveBeenCalledTimes(2));
+      const offered = (mockSendMessage.mock.calls[0][1] as { tools: { function: { name: string } }[] }).tools;
+      expect(offered.map((t) => t.function.name)).toContain("get_analytics");
+
+      // Read-only and free, so no confirmation card — but the source is named afterwards.
+      expect(screen.queryByRole("button", { name: /assistent\.toolConfirmGenerate/ })).not.toBeInTheDocument();
+      expect(mockFetchStats).toHaveBeenCalledTimes(1);
+      await waitFor(() => expect(screen.getByText("assistent.analyticsSource")).toBeInTheDocument());
+
+      // The real selector ran: the projected figures reach the model.
+      const secondConvo = mockSendMessage.mock.calls[1][0] as { role: string; content: string }[];
+      const toolResult = secondConvo.find((m) => m.role === "tool");
+      const parsed = JSON.parse(toolResult!.content) as { status: string; totalHits: number };
+      expect(parsed.status).toBe("ok");
+      expect(parsed.totalHits).toBe(42);
+    });
+
+    it("does not credit analytics when the lookup failed", async () => {
+      connectAsOwner();
+      mockFetchStats.mockRejectedValue(new Error("Failed to fetch"));
+      mockSendMessage
+        .mockResolvedValueOnce(toolCallResponse("get_analytics", {}))
+        .mockResolvedValueOnce(textResponse("I could not read the analytics."));
+
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("How is the site doing?");
+
+      await waitFor(() => expect(screen.getByText("I could not read the analytics.")).toBeInTheDocument());
+      expect(screen.queryByText("assistent.analyticsSource")).not.toBeInTheDocument();
+    });
+
+    it("names both sources when one turn used both", async () => {
+      connectAsOwner();
+      mockSendMessage
+        .mockResolvedValueOnce(toolCallResponse("get_sitzungen", {}))
+        .mockResolvedValueOnce(toolCallResponse("get_analytics", {}))
+        .mockResolvedValueOnce(textResponse("Here is both."));
+
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("Sessions and traffic please");
+
+      await waitFor(() => expect(screen.getByText("Here is both.")).toBeInTheDocument());
+      expect(screen.getByText("assistent.bundestaktSource")).toBeInTheDocument();
+      expect(screen.getByText("assistent.analyticsSource")).toBeInTheDocument();
     });
 
     it("never offers the image tool a testnet network", async () => {

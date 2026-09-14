@@ -32,6 +32,15 @@ import {
   fetchFailed,
   type BundestaktResult,
 } from "../tools/bundestakt";
+import {
+  getAnalyticsTool,
+  fetchStats,
+  selectAnalytics,
+  fetchFailed as analyticsFetchFailed,
+  type AnalyticsResult,
+} from "../tools/analytics";
+import { useWalletAuth } from "../hooks/useWalletAuth";
+import { OWNER_ADDRESS } from "../utils/getChain";
 import type { X402ChatMessage, X402ToolCall } from "../types/x402";
 import { useQueryClient } from "@tanstack/react-query";
 import { getViemChain, toCAIP2, fromCAIP2, getGenAiNFTMainnetNetworks } from "@fretchen/chain-utils";
@@ -50,10 +59,28 @@ const MAX_HOPS = 4;
 
 // Everything offered to the model. Hoisted for a stable identity across renders; the loop
 // filters this down as tools fail, which is why the array itself stays constant.
-const TOOLS = [generateImageTool, getSitzungenTool, searchClaimsTool];
+const TOOLS = [generateImageTool, getSitzungenTool, searchClaimsTool, getAnalyticsTool];
 
-// Read-only lookups that carry a CC BY attribution obligation when they actually contribute.
-const BUNDESTAKT_TOOL_NAMES = new Set([getSitzungenTool.function.name, searchClaimsTool.function.name]);
+// Tools only the site owner can use: the analytics endpoint answers 401 to anyone else, so
+// offering it to a visitor would burn a hop on a guaranteed failure — and would put the tool's
+// description in front of the upstream model for people it can never serve.
+const OWNER_ONLY_TOOLS = new Set([getAnalyticsTool.function.name]);
+
+/**
+ * Which tools oblige the answer to name where it got its facts. Bundestakt is a CC BY licence
+ * requirement; analytics is about honesty — a figure about this site should say it was looked up
+ * rather than read as something the model knew.
+ */
+type ToolSource = "bundestakt" | "analytics";
+const TOOL_SOURCES: Record<string, ToolSource> = {
+  [getSitzungenTool.function.name]: "bundestakt",
+  [searchClaimsTool.function.name]: "bundestakt",
+  [getAnalyticsTool.function.name]: "analytics",
+};
+const SOURCE_HREFS: Record<ToolSource, string> = {
+  bundestakt: "https://www.bundestakt.de",
+  analytics: "/analytics",
+};
 
 // Hoisted so the array identity is stable across renders. Mainnet-only on purpose — see the
 // useAutoNetwork call in the component for why a testnet entry here would be a real hazard.
@@ -110,10 +137,10 @@ interface ChatMessage {
   /** Set when this turn's answer came after a generate_image tool call. Display only — never
    *  sent back to the model; the model's own closing text is its memory of having made it. */
   imageUrl?: string;
-  /** Set when a Bundestakt lookup actually fed this answer. Display only, like imageUrl.
-   *  CC BY 4.0 requires naming and linking the source, so this is a licence obligation — and
-   *  it is set only on a successful lookup, since a failed one contributed nothing to cite. */
-  bundestaktUsed?: boolean;
+  /** The data sources that actually fed this answer. Display only, like imageUrl — never sent
+   *  back to the model. Filled only from successful lookups, since a failed one contributed
+   *  nothing to cite. See TOOL_SOURCES for why each one is named. */
+  sources?: ToolSource[];
 }
 
 /** The confirm card's lifecycle. No "failed" phase: a cancel or error clears the card
@@ -186,6 +213,7 @@ export function AssistantChat() {
   const noResponseMessage = useLocale({ label: "assistent.noResponse" });
   const imageReadyMessage = useLocale({ label: "assistent.imageReady" });
   const bundestaktSourceLabel = useLocale({ label: "assistent.bundestaktSource" });
+  const analyticsSourceLabel = useLocale({ label: "assistent.analyticsSource" });
   const errorPrefixMessage = useLocale({ label: "assistent.errorPrefix" });
   const connectWalletMessageLabel = useLocale({ label: "assistent.connectWalletMessage" });
   const loadingLabel = useLocale({ label: "assistent.loading" });
@@ -212,7 +240,11 @@ export function AssistantChat() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  const { isConnected, connectWallet } = useWalletConnection();
+  const { address, isConnected, connectWallet } = useWalletConnection();
+
+  // Same check as pages/analytics and pages/growth: isConnected is reconnect-aware and
+  // hydration-safe, so the owner test never trusts `address` before wagmi has reconnected.
+  const isOwner = isConnected && address?.toLowerCase() === OWNER_ADDRESS.toLowerCase();
 
   // The user's explicit network choice, if they made one.
   const preferredNetwork = useSyncExternalStore(subscribeToStoredNetwork, readStoredNetwork, () => null);
@@ -261,6 +293,9 @@ export function AssistantChat() {
   const { generateImage } = useX402ImageGeneration();
   // Bundestakt's caching lives here rather than in tools/bundestakt.ts — see loadBundestakt().
   const queryClient = useQueryClient();
+  // Same auth prefix as useAnalyticsStats, so a visit to /analytics in the last 4 minutes leaves
+  // the token cached and the tool call costs no signature at all.
+  const getAnalyticsAuth = useWalletAuth("analytics-api");
 
   // The confirm card is transient UI state, never a chat message — it cannot be scrolled back
   // to or replayed. `confirmResolverRef` is how a linear async loop (sendMessage) pauses for a
@@ -421,8 +456,31 @@ export function AssistantChat() {
   }
 
   /**
+   * Reads the site's own traffic figures. `GET /stats` takes no range and always returns the
+   * trailing year, so it is fetched once and every `range` is a local slice of that one payload.
+   *
+   * `getAnalyticsAuth()` opens a wallet signature prompt when its 4-minute token cache is cold —
+   * unusual for a silent tool, but unavoidable for an owner-gated endpoint, and free whenever the
+   * owner has touched /analytics recently.
+   */
+  async function loadAnalytics(args: Record<string, unknown>): Promise<AnalyticsResult> {
+    try {
+      const auth = await getAnalyticsAuth();
+      const raw = await queryClient.fetchQuery({
+        queryKey: ["analytics", "stats"],
+        queryFn: () => fetchStats(auth),
+        staleTime: 5 * 60_000,
+        retry: 0,
+      });
+      return selectAnalytics(raw, typeof args.range === "string" ? args.range : undefined);
+    } catch (err) {
+      return analyticsFetchFailed(err);
+    }
+  }
+
+  /**
    * Dispatches one tool call by name. Only `generate_image` is confirmation-gated and costs
-   * money; the Bundestakt lookups are free and read-only, so they run silently.
+   * money; the Bundestakt and analytics lookups are free and read-only, so they run silently.
    */
   async function runToolCall(
     call: X402ToolCall,
@@ -434,6 +492,8 @@ export function AssistantChat() {
         return { result: await loadBundestakt("sitzungen", parseToolArgs(call)) };
       case searchClaimsTool.function.name:
         return { result: await loadBundestakt("claims", parseToolArgs(call)) };
+      case getAnalyticsTool.function.name:
+        return { result: await loadAnalytics(parseToolArgs(call)) };
       default:
         // A model that invents a tool name gets told so and can correct itself, rather than
         // the whole message failing.
@@ -474,7 +534,7 @@ export function AssistantChat() {
 
       let finalContent: string | null = null;
       let finalImageUrl: string | undefined;
-      let usedBundestakt = false;
+      const usedSources = new Set<ToolSource>();
       // Per tool, not global: a failed Bundestakt lookup must not also disable generate_image
       // for the rest of the turn. A failed tool is simply no longer offered on later hops.
       const failedTools = new Set<string>();
@@ -492,7 +552,9 @@ export function AssistantChat() {
         // a real conversation burned all three hops re-requesting an image that kept failing, so
         // the user approved three wallet prompts, paid for three attempts, and got the generic
         // "no response" fallback because no hop ever produced text.
-        const offered = TOOLS.filter((t) => !failedTools.has(t.function.name));
+        const offered = TOOLS.filter(
+          (t) => !failedTools.has(t.function.name) && (isOwner || !OWNER_ONLY_TOOLS.has(t.function.name)),
+        );
         const data = await payAndSend(convo, {
           // `[]` is truthy, and useX402Chat spreads `tools` in on truthiness — an empty array
           // would be sent as `tools: []`. `undefined` drops the key (and tool_choice with it),
@@ -522,7 +584,9 @@ export function AssistantChat() {
           // of the list-then-detail pattern in the system prompt is that the model can retry with
           // a corrected slug. Only a real failure withdraws the tool for the rest of the turn.
           if (result.status !== "ok" && result.status !== "not_found") failedTools.add(call.function.name);
-          else if (BUNDESTAKT_TOOL_NAMES.has(call.function.name)) usedBundestakt = true;
+          else if (result.status === "ok" && TOOL_SOURCES[call.function.name]) {
+            usedSources.add(TOOL_SOURCES[call.function.name]);
+          }
           convo.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
         }
       }
@@ -534,7 +598,7 @@ export function AssistantChat() {
         content: finalContent ?? (finalImageUrl ? imageReadyMessage : noResponseMessage),
         timestamp: Date.now(),
         imageUrl: finalImageUrl,
-        bundestaktUsed: usedBundestakt,
+        sources: usedSources.size > 0 ? [...usedSources] : undefined,
       };
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (error) {
@@ -712,13 +776,13 @@ export function AssistantChat() {
                           className={css({ maxWidth: "100%", borderRadius: "md", marginTop: "2" })}
                         />
                       )}
-                      {message.bundestaktUsed && (
-                        <div className={chat.messageSource}>
-                          <a href="https://www.bundestakt.de" target="_blank" rel="noopener noreferrer">
-                            {bundestaktSourceLabel}
+                      {message.sources?.map((source) => (
+                        <div key={source} className={chat.messageSource}>
+                          <a href={SOURCE_HREFS[source]} target="_blank" rel="noopener noreferrer">
+                            {source === "bundestakt" ? bundestaktSourceLabel : analyticsSourceLabel}
                           </a>
                         </div>
-                      )}
+                      ))}
                     </div>
                   </div>
                 </div>

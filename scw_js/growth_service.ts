@@ -1,6 +1,6 @@
 import { getS3Object, putS3Object } from "@fretchen/s3-utils";
 import pino from "pino";
-import { verifySignedMessage } from "@fretchen/chain-utils";
+import { parseOwnerAddresses, verifySignedMessage } from "@fretchen/chain-utils";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
@@ -199,12 +199,14 @@ export async function verifyOwner(
   signature: string,
   message: string,
 ): Promise<void> {
-  const ownerAddress = process.env.OWNER_ETH_ADDRESS;
-  if (!ownerAddress) {
+  // One address or a comma-separated list. An empty list authorises nobody, so this throw covers
+  // both "unset" and "set to nothing usable" rather than silently opening the endpoint.
+  const ownerAddresses = parseOwnerAddresses(process.env.OWNER_ETH_ADDRESS);
+  if (ownerAddresses.length === 0) {
     throw new Error("OWNER_ETH_ADDRESS not configured");
   }
 
-  const err = await verifySignedMessage(address, signature, message, "growth-api", ownerAddress);
+  const err = await verifySignedMessage(address, signature, message, "growth-api", ownerAddresses);
   if (!err) {
     logger.info({ address }, "Owner verified");
     return;

@@ -12,10 +12,13 @@ import {
   AUTH_TOKEN_MAX_AGE_MS,
   buildAuthMessage,
   parseBearerToken,
+  parseOwnerAddresses,
   verifySignedMessage,
 } from "../src/auth-protocol";
 
 const VALID_ADDRESS = "0x1234567890abcdef1234567890abcdef12345678";
+const SECOND_OWNER = "0xfedcba9876543210fedcba9876543210fedcba98";
+const STRANGER = "0x000000000000000000000000000000000000dead";
 const VALID_SIGNATURE = "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab";
 
 function makeToken(payload: Record<string, unknown>): string {
@@ -316,5 +319,119 @@ describe("verifySignedMessage", () => {
       message,
       signature: VALID_SIGNATURE,
     });
+  });
+});
+
+/**
+ * Several wallets may hold owner rights (see OWNER_ETH_ADDRESS). These cases guard the widening
+ * itself: that the door is wider, not open.
+ */
+describe("verifySignedMessage with several allowed addresses", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockVerifyMessage.mockResolvedValue(true);
+  });
+
+  test("accepts an address listed after the first one", async () => {
+    const result = await verifySignedMessage(
+      SECOND_OWNER,
+      VALID_SIGNATURE,
+      `leaf-history:${freshTs()}`,
+      "leaf-history",
+      [VALID_ADDRESS, SECOND_OWNER]
+    );
+    expect(result).toBeNull();
+  });
+
+  test("still rejects an address that is not listed", async () => {
+    const result = await verifySignedMessage(
+      STRANGER,
+      VALID_SIGNATURE,
+      `leaf-history:${freshTs()}`,
+      "leaf-history",
+      [VALID_ADDRESS, SECOND_OWNER]
+    );
+    expect(result).toBe("Address mismatch");
+  });
+
+  // The expensive misreading would be "nothing configured, so allow everything".
+  test("authorises nobody when the list is empty", async () => {
+    const result = await verifySignedMessage(
+      VALID_ADDRESS,
+      VALID_SIGNATURE,
+      `leaf-history:${freshTs()}`,
+      "leaf-history",
+      []
+    );
+    expect(result).toBe("Address mismatch");
+  });
+
+  test("still accepts a single address passed as a plain string", async () => {
+    const result = await verifySignedMessage(
+      VALID_ADDRESS,
+      VALID_SIGNATURE,
+      `leaf-history:${freshTs()}`,
+      "leaf-history",
+      VALID_ADDRESS
+    );
+    expect(result).toBeNull();
+  });
+
+  test("matches case-insensitively in both directions", async () => {
+    const result = await verifySignedMessage(
+      SECOND_OWNER.toUpperCase().replace("0X", "0x"),
+      VALID_SIGNATURE,
+      `leaf-history:${freshTs()}`,
+      "leaf-history",
+      [VALID_ADDRESS.toUpperCase().replace("0X", "0x"), SECOND_OWNER]
+    );
+    expect(result).toBeNull();
+  });
+
+  // Being on the list is permission to be checked, not permission to skip the check.
+  test("rejects a listed address whose signature does not verify", async () => {
+    mockVerifyMessage.mockResolvedValue(false);
+    const result = await verifySignedMessage(
+      SECOND_OWNER,
+      VALID_SIGNATURE,
+      `leaf-history:${freshTs()}`,
+      "leaf-history",
+      [VALID_ADDRESS, SECOND_OWNER]
+    );
+    expect(result).toBe("Invalid signature");
+  });
+});
+
+describe("parseOwnerAddresses", () => {
+  test("returns a single address unchanged", () => {
+    expect(parseOwnerAddresses(VALID_ADDRESS)).toEqual([VALID_ADDRESS]);
+  });
+
+  test("splits a comma-separated list", () => {
+    expect(parseOwnerAddresses(`${VALID_ADDRESS},${SECOND_OWNER}`)).toEqual([
+      VALID_ADDRESS,
+      SECOND_OWNER,
+    ]);
+  });
+
+  // A stray space would otherwise lock the owner out with a 401 that looks like a wallet fault.
+  test("tolerates whitespace around the separators", () => {
+    expect(parseOwnerAddresses(`  ${VALID_ADDRESS} , ${SECOND_OWNER}  `)).toEqual([
+      VALID_ADDRESS,
+      SECOND_OWNER,
+    ]);
+  });
+
+  test("drops empty entries from a trailing or doubled comma", () => {
+    expect(parseOwnerAddresses(`${VALID_ADDRESS},,${SECOND_OWNER},`)).toEqual([
+      VALID_ADDRESS,
+      SECOND_OWNER,
+    ]);
+  });
+
+  test("returns an empty list for an empty string or undefined", () => {
+    expect(parseOwnerAddresses("")).toEqual([]);
+    expect(parseOwnerAddresses(undefined)).toEqual([]);
+    expect(parseOwnerAddresses("   ")).toEqual([]);
   });
 });

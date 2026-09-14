@@ -14,7 +14,7 @@ import {
 } from "../../hooks/useGrowthApi";
 import { CHANNEL_CHAR_LIMITS, type Draft, type PostMetrics } from "../../types/growth";
 import InsightsSection from "../../components/InsightsSection";
-import { OWNER_ADDRESS } from "../../utils/getChain";
+import { isOwnerAddress } from "../../utils/getChain";
 import { normalizePageUrl } from "../../utils/urlUtils";
 import { useWalletConnection } from "../../hooks/useWalletConnection";
 
@@ -492,7 +492,7 @@ export default function Page() {
 
   // isConnected is reconnect-aware (status === "connected") + hydration-safe, so the
   // owner check never trusts `address` before wagmi's reconnect completes.
-  const isOwner = isConnected && address?.toLowerCase() === OWNER_ADDRESS.toLowerCase();
+  const isOwner = isConnected && isOwnerAddress(address);
 
   const { data: queue, isPending: loadingDrafts, error: draftsError } = useGrowthDrafts(isOwner);
   const { data: insights } = useGrowthInsights(isOwner);

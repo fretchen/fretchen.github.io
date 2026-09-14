@@ -159,6 +159,7 @@ export {
   AUTH_TOKEN_MAX_AGE_MS,
   buildAuthMessage,
   parseBearerToken,
+  parseOwnerAddresses,
   verifySignedMessage,
   type BearerPayload,
 } from "./auth-protocol";

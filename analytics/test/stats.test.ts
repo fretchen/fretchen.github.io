@@ -331,6 +331,29 @@ describe("stats handler", () => {
     expect(JSON.parse(res.body).error).toBe("Owner address not configured");
   });
 
+  // OWNER_ETH_ADDRESS carries a comma-separated list so a second wallet — the one holding the
+  // USDC the assistant pays with — can read the same data. These two cases are the widening and
+  // its limit.
+  it("serves a second address listed in OWNER_ETH_ADDRESS", async () => {
+    process.env.OWNER_ETH_ADDRESS = `${owner.address},${other.address}`;
+    const res = await handleStats(makeEvent({ headers: { authorization: await bearer(other) } }), {});
+    expect(res.statusCode).toBe(200);
+  });
+
+  it("still refuses an address that is on neither entry of the list", async () => {
+    const stranger = privateKeyToAccount("0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a");
+    process.env.OWNER_ETH_ADDRESS = `${owner.address},${other.address}`;
+    const res = await handleStats(makeEvent({ headers: { authorization: await bearer(stranger) } }), {});
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("treats a blank OWNER_ETH_ADDRESS as authorising nobody, not everybody", async () => {
+    process.env.OWNER_ETH_ADDRESS = "  ,  ";
+    const res = await handleStats(makeEvent({ headers: { authorization: await bearer(owner) } }), {});
+    expect(res.statusCode).toBe(401);
+    expect(JSON.parse(res.body).error).toBe("Owner address not configured");
+  });
+
   it("serves the owner a year-wide envelope", async () => {
     const res = await handleStats(makeEvent({ headers: { authorization: await bearer(owner) } }), {});
 

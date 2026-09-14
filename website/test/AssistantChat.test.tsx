@@ -106,7 +106,10 @@ import { useWalletConnection } from "../hooks/useWalletConnection";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
 import sitzungenFixture from "./fixtures/bundestakt/sitzungen.json";
 import claimsFixture from "./fixtures/bundestakt/claims.json";
-import { OWNER_ADDRESS } from "../utils/getChain";
+import { OWNER_ADDRESSES } from "../utils/getChain";
+
+/** The first configured owner; OWNER_ADDRESSES may hold more. */
+const OWNER_ADDRESS = OWNER_ADDRESSES[0];
 
 /** A tool-call turn, as sc_llm_x402 returns it: content: null, finish_reason: "tool_calls". */
 function toolCallResponse(name: string, args: Record<string, unknown>) {

@@ -2,7 +2,10 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup, within } from "@testing-library/react";
 import { useAccount, useConnect } from "wagmi";
-import { OWNER_ADDRESS } from "../utils/getChain";
+import { OWNER_ADDRESSES } from "../utils/getChain";
+
+/** The first configured owner; OWNER_ADDRESSES may hold more. */
+const OWNER_ADDRESS = OWNER_ADDRESSES[0];
 import { buildAccountData, buildConnectData } from "./setup";
 import type { Stats } from "../types/analytics";
 
@@ -78,6 +81,20 @@ describe("Analytics Page", () => {
     connectAs("0x1111111111111111111111111111111111111111");
     render(<Page />);
     expect(mockUseAnalyticsStats).toHaveBeenCalledWith(false);
+  });
+
+  // OWNER_ADDRESSES holds more than one wallet; every entry has to reach the dashboard, not just
+  // the first. The counterpart to the server-side list check in chain-utils.
+  it.each(OWNER_ADDRESSES)("requests stats for owner wallet %s", (owner) => {
+    connectAs(owner);
+    render(<Page />);
+    expect(mockUseAnalyticsStats).toHaveBeenCalledWith(true);
+  });
+
+  it("accepts an owner address in a different letter case", () => {
+    connectAs(OWNER_ADDRESSES[0].toLowerCase());
+    render(<Page />);
+    expect(mockUseAnalyticsStats).toHaveBeenCalledWith(true);
   });
 
   it("offers the three granularities and no 7-day view", () => {

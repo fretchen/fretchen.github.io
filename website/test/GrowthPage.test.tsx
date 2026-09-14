@@ -2,7 +2,10 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import { useAccount, useConnect } from "wagmi";
-import { OWNER_ADDRESS } from "../utils/getChain";
+import { OWNER_ADDRESSES } from "../utils/getChain";
+
+/** The first configured owner; OWNER_ADDRESSES may hold more. */
+const OWNER_ADDRESS = OWNER_ADDRESSES[0];
 import { buildAccountData, buildConnectData } from "./setup";
 
 // Mock the new TQ-based growth hooks

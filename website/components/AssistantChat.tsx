@@ -40,7 +40,7 @@ import {
   type AnalyticsResult,
 } from "../tools/analytics";
 import { useWalletAuth } from "../hooks/useWalletAuth";
-import { OWNER_ADDRESS } from "../utils/getChain";
+import { isOwnerAddress } from "../utils/getChain";
 import type { X402ChatMessage, X402ToolCall } from "../types/x402";
 import { useQueryClient } from "@tanstack/react-query";
 import { getViemChain, toCAIP2, fromCAIP2, getGenAiNFTMainnetNetworks } from "@fretchen/chain-utils";
@@ -244,7 +244,7 @@ export function AssistantChat() {
 
   // Same check as pages/analytics and pages/growth: isConnected is reconnect-aware and
   // hydration-safe, so the owner test never trusts `address` before wagmi has reconnected.
-  const isOwner = isConnected && address?.toLowerCase() === OWNER_ADDRESS.toLowerCase();
+  const isOwner = isConnected && isOwnerAddress(address);
 
   // The user's explicit network choice, if they made one.
   const preferredNetwork = useSyncExternalStore(subscribeToStoredNetwork, readStoredNetwork, () => null);

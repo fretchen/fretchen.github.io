@@ -13,7 +13,7 @@ import { config } from "../wagmi.config";
 import { layout, navActive } from "./LayoutDefault.styles";
 import { useWalletConnection } from "../hooks/useWalletConnection";
 import { territoryFor } from "../utils/territory";
-import { OWNER_ADDRESS } from "../utils/getChain";
+import { isOwnerAddress } from "../utils/getChain";
 import { installPreloadErrorHandler } from "../utils/preloadErrorHandler";
 
 export default function LayoutDefault({ children }: { children: React.ReactNode }) {
@@ -122,7 +122,7 @@ function Content({ children }: { children: React.ReactNode }) {
  */
 function OwnerNavLinks() {
   const { address, isConnected } = useWalletConnection();
-  const isOwner = isConnected && address?.toLowerCase() === OWNER_ADDRESS.toLowerCase();
+  const isOwner = isConnected && isOwnerAddress(address);
   if (!isOwner) return null;
   return (
     <>

@@ -44,8 +44,28 @@ export const DEFAULT_SUPPORT_CHAIN = USE_TESTNET ? optimismSepolia : optimism;
 // This is the general-purpose dev wallet that receives ETH from SupportV2.donate().
 export const SUPPORT_RECIPIENT_ADDRESS = "0x073f26F0C3FC100e7b075C3DC3cDE0A777497D20" as const;
 
-/** Owner wallet for admin pages (growth agent, etc.) */
-export const OWNER_ADDRESS = "0xA37729CF2201c01C74bC868834c7cf8dC13CAE19" as const;
+/**
+ * Wallets that may use the admin pages (analytics, growth agent) and the owner-only chat tools.
+ *
+ * **Must mirror `OWNER_ETH_ADDRESS` on the analytics and scw_js functions**, which holds the same
+ * list comma-separated. A mismatch is an annoyance rather than a hole, and it fails in a readable
+ * direction either way: an address listed only here gets the UI and then a 401 from the API, one
+ * listed only there loses the UI but keeps API access. The server-side check is the one that
+ * decides — this list only governs what the browser bothers to offer.
+ */
+export const OWNER_ADDRESSES = [
+  "0xA37729CF2201c01C74bC868834c7cf8dC13CAE19",
+  // The general-purpose dev wallet, also SUPPORT_RECIPIENT_ADDRESS above — it holds the USDC the
+  // assistant pays with, so the chat's owner-only tools need it to pass as well.
+  "0x073f26F0C3FC100e7b075C3DC3cDE0A777497D20",
+] as const;
+
+/** Case-insensitive membership in `OWNER_ADDRESSES`; false for an undefined address. */
+export function isOwnerAddress(address?: string): boolean {
+  if (!address) return false;
+  const candidate = address.toLowerCase();
+  return OWNER_ADDRESSES.some((owner) => owner.toLowerCase() === candidate);
+}
 
 /**
  * Get SupportV2 contract config for a specific chain

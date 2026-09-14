@@ -123,6 +123,14 @@ describe("selectAnalytics", () => {
     expect(selectAnalytics({ site: "x", to: "2026-09-14" }, "30d")).toEqual({ status: "invalid_response" });
   });
 
+  // The guard promises `raw is Stats`, so every required field of that interface has to be
+  // checked — `from` is not read by sliceStats today, which is exactly why omitting it slipped by.
+  it("rejects a payload missing `from`", () => {
+    const withoutFrom: Record<string, unknown> = { ...buildStats() };
+    delete withoutFrom.from;
+    expect(selectAnalytics(withoutFrom, "30d")).toEqual({ status: "invalid_response" });
+  });
+
   it("stays within the per-hop payload budget", () => {
     const result = selectAnalytics(buildStats(), "1y");
     expect(Buffer.byteLength(JSON.stringify(result), "utf8")).toBeLessThan(4000);

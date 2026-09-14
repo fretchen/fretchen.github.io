@@ -492,7 +492,7 @@ export default function Page() {
 
   // isConnected is reconnect-aware (status === "connected") + hydration-safe, so the
   // owner check never trusts `address` before wagmi's reconnect completes.
-  const isOwner = isConnected && isOwnerAddress(address);
+  const isOwner = isConnected && isOwnerAddress(address, "growth");
 
   const { data: queue, isPending: loadingDrafts, error: draftsError } = useGrowthDrafts(isOwner);
   const { data: insights } = useGrowthInsights(isOwner);

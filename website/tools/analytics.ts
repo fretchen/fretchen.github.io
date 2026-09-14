@@ -1,7 +1,7 @@
 import type { X402Tool } from "../types/x402";
 import type { Stats } from "../types/analytics";
 import { ANALYTICS_URL } from "../utils/analyticsApi";
-import { RANGES, sliceStats, type Range } from "../utils/analyticsBuckets";
+import { RANGES, sliceStats } from "../utils/analyticsBuckets";
 
 /**
  * The site's own traffic figures as a tool for the chat model, read from the `analytics`
@@ -19,13 +19,6 @@ import { RANGES, sliceStats, type Range } from "../utils/analyticsBuckets";
 /** Top pages the dashboard would show is 50; that is far too much to carry on every later hop. */
 const MAX_TOP_PAGES = 10;
 
-/** Maps the tool's `range` argument onto `RANGES`, which the dashboard's selector also uses. */
-const RANGE_BY_KEY: Record<string, Range> = {
-  "30d": RANGES[0],
-  "90d": RANGES[1],
-  "1y": RANGES[2],
-};
-
 export const getAnalyticsTool: X402Tool = {
   type: "function",
   function: {
@@ -41,7 +34,7 @@ export const getAnalyticsTool: X402Tool = {
       properties: {
         range: {
           type: "string",
-          enum: ["30d", "90d", "1y"],
+          enum: RANGES.map((r) => r.key),
           description: "Window to report on. Defaults to 30d.",
         },
       },
@@ -88,6 +81,7 @@ function isStats(raw: unknown): raw is Stats {
   return (
     !!candidate &&
     typeof candidate === "object" &&
+    typeof candidate.from === "string" &&
     typeof candidate.to === "string" &&
     !!candidate.days &&
     typeof candidate.days === "object"
@@ -98,7 +92,7 @@ export function selectAnalytics(raw: unknown, range: string | undefined): Analyt
   if (!isStats(raw)) {
     return { status: "invalid_response" };
   }
-  const window = RANGE_BY_KEY[range ?? "30d"] ?? RANGES[0];
+  const window = RANGES.find((r) => r.key === range) ?? RANGES[0];
   const { buckets, from, to, totalHits, pages, hasHistoric } = sliceStats(raw, window);
 
   return {

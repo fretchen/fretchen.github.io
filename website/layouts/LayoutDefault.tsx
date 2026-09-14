@@ -114,7 +114,8 @@ function Content({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Nav entries only the site owner sees — one gate for all of them, not one per link.
+ * Nav entries only the site owner sees — one gate per link, because the two pages are gated on
+ * different scopes and a wallet may hold one without the other.
  *
  * Cosmetic only: both pages check ownership themselves, and `GET /stats` verifies a wallet
  * signature server-side. `isConnected` is reconnect-aware, so these never flash in before
@@ -122,12 +123,10 @@ function Content({ children }: { children: React.ReactNode }) {
  */
 function OwnerNavLinks() {
   const { address, isConnected } = useWalletConnection();
-  const isOwner = isConnected && isOwnerAddress(address);
-  if (!isOwner) return null;
   return (
     <>
-      <NavItem href="/growth">Growth</NavItem>
-      <NavItem href="/analytics">Analytics</NavItem>
+      {isConnected && isOwnerAddress(address, "growth") && <NavItem href="/growth">Growth</NavItem>}
+      {isConnected && isOwnerAddress(address, "analytics") && <NavItem href="/analytics">Analytics</NavItem>}
     </>
   );
 }

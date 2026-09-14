@@ -44,27 +44,41 @@ export const DEFAULT_SUPPORT_CHAIN = USE_TESTNET ? optimismSepolia : optimism;
 // This is the general-purpose dev wallet that receives ETH from SupportV2.donate().
 export const SUPPORT_RECIPIENT_ADDRESS = "0x073f26F0C3FC100e7b075C3DC3cDE0A777497D20" as const;
 
-/**
- * Wallets that may use the admin pages (analytics, growth agent) and the owner-only chat tools.
- *
- * **Must mirror `OWNER_ETH_ADDRESS` on the analytics and scw_js functions**, which holds the same
- * list comma-separated. A mismatch is an annoyance rather than a hole, and it fails in a readable
- * direction either way: an address listed only here gets the UI and then a 401 from the API, one
- * listed only there loses the UI but keeps API access. The server-side check is the one that
- * decides — this list only governs what the browser bothers to offer.
- */
-export const OWNER_ADDRESSES = [
-  "0xA37729CF2201c01C74bC868834c7cf8dC13CAE19",
-  // The general-purpose dev wallet, also SUPPORT_RECIPIENT_ADDRESS above — it holds the USDC the
-  // assistant pays with, so the chat's owner-only tools need it to pass as well.
-  "0x073f26F0C3FC100e7b075C3DC3cDE0A777497D20",
-] as const;
+/** The site owner's admin wallet — the only one trusted with every scope. */
+export const ADMIN_WALLET = "0xA37729CF2201c01C74bC868834c7cf8dC13CAE19" as const;
 
-/** Case-insensitive membership in `OWNER_ADDRESSES`; false for an undefined address. */
-export function isOwnerAddress(address?: string): boolean {
+/**
+ * Wallets that may use each admin capability, kept apart because the capabilities are not
+ * interchangeable: reading traffic figures is harmless, approving a growth draft queues a post to
+ * Mastodon and Bluesky.
+ *
+ * **Each scope mirrors the `OWNER_ETH_ADDRESS` of a different deploy** — `analytics` mirrors the
+ * analytics function's, `growth` the scw_js one's. The two are independent values that happen to
+ * share a variable name; they are not meant to be identical, and copying one into the other
+ * re-grants exactly what this split removes. The server-side check is the one that decides — these
+ * lists only govern what the browser bothers to offer. A mismatch is an annoyance rather than a
+ * hole, and fails in a readable direction either way: an address listed only here gets the UI and
+ * then a 401 from the API, one listed only there loses the UI but keeps API access.
+ */
+export const OWNER_SCOPES = {
+  /** Read-only traffic figures: the dashboard and the assistant's `get_analytics` tool. */
+  analytics: [ADMIN_WALLET, SUPPORT_RECIPIENT_ADDRESS],
+  /** Approving a draft queues it for Mastodon/Bluesky — admin wallet only. */
+  growth: [ADMIN_WALLET],
+} as const;
+
+export type OwnerScope = keyof typeof OWNER_SCOPES;
+
+/**
+ * Case-insensitive membership in one scope's list; false for an undefined address.
+ *
+ * `scope` is required on purpose: a default would let a new call site silently inherit the widest
+ * list, which is the conflation this record exists to prevent.
+ */
+export function isOwnerAddress(address: string | undefined, scope: OwnerScope): boolean {
   if (!address) return false;
   const candidate = address.toLowerCase();
-  return OWNER_ADDRESSES.some((owner) => owner.toLowerCase() === candidate);
+  return OWNER_SCOPES[scope].some((owner) => owner.toLowerCase() === candidate);
 }
 
 /**

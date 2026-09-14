@@ -116,7 +116,7 @@ export default function Page() {
 
   // isConnected is reconnect-aware + hydration-safe, so the owner check never
   // trusts `address` before wagmi's reconnect completes.
-  const isOwner = isConnected && isOwnerAddress(address);
+  const isOwner = isConnected && isOwnerAddress(address, "analytics");
 
   // One query for the whole year; the range selector only re-slices it, so
   // switching is instant and never refetches.

@@ -40,8 +40,8 @@ import {
   type AnalyticsResult,
 } from "../tools/analytics";
 import { useWalletAuth } from "../hooks/useWalletAuth";
-import { isOwnerAddress } from "../utils/getChain";
-import type { X402ChatMessage, X402ToolCall } from "../types/x402";
+import { isOwnerAddress, type OwnerScope } from "../utils/getChain";
+import type { X402ChatMessage, X402Tool, X402ToolCall } from "../types/x402";
 import { useQueryClient } from "@tanstack/react-query";
 import { getViemChain, toCAIP2, fromCAIP2, getGenAiNFTMainnetNetworks } from "@fretchen/chain-utils";
 import { useChainId } from "wagmi";
@@ -57,30 +57,39 @@ import { PageHeader } from "./PageHeader";
 // so a combined question (find the session, read it, then check a claim) needs one more.
 const MAX_HOPS = 4;
 
-// Everything offered to the model. Hoisted for a stable identity across renders; the loop
-// filters this down as tools fail, which is why the array itself stays constant.
-const TOOLS = [generateImageTool, getSitzungenTool, searchClaimsTool, getAnalyticsTool];
-
-// Tools only the site owner can use: the analytics endpoint answers 401 to anyone else, so
-// offering it to a visitor would burn a hop on a guaranteed failure — and would put the tool's
-// description in front of the upstream model for people it can never serve.
-const OWNER_ONLY_TOOLS = new Set([getAnalyticsTool.function.name]);
-
 /**
  * Which tools oblige the answer to name where it got its facts. Bundestakt is a CC BY licence
  * requirement; analytics is about honesty — a figure about this site should say it was looked up
  * rather than read as something the model knew.
  */
 type ToolSource = "bundestakt" | "analytics";
-const TOOL_SOURCES: Record<string, ToolSource> = {
-  [getSitzungenTool.function.name]: "bundestakt",
-  [searchClaimsTool.function.name]: "bundestakt",
-  [getAnalyticsTool.function.name]: "analytics",
-};
-const SOURCE_HREFS: Record<ToolSource, string> = {
-  bundestakt: "https://www.bundestakt.de",
-  analytics: "/analytics",
-};
+
+/**
+ * Everything offered to the model, with the two things the chat loop needs to know about a tool
+ * besides its schema: which owner scope may be offered it, and whether its answer must cite a
+ * source. `ownerScope: null` means anyone; an owner scope means the endpoint answers 401 to
+ * everyone else, so offering it to a visitor would burn a hop on a guaranteed failure and put the
+ * tool's description in front of the upstream model for people it can never serve.
+ *
+ * Both fields are required, so adding a tool and forgetting its gate is a type error rather than a
+ * silently ungated tool. The metadata sits beside the tool rather than on it because these objects
+ * go on the wire as `tools:` — extra keys would be sent upstream.
+ *
+ * Hoisted for a stable identity across renders; the loop filters it as tools fail, which is why
+ * the array itself stays constant.
+ */
+const TOOL_REGISTRY = [
+  { tool: generateImageTool, ownerScope: null, source: null },
+  { tool: getSitzungenTool, ownerScope: null, source: "bundestakt" },
+  { tool: searchClaimsTool, ownerScope: null, source: "bundestakt" },
+  { tool: getAnalyticsTool, ownerScope: "analytics", source: "analytics" },
+] as const satisfies readonly {
+  tool: X402Tool;
+  ownerScope: OwnerScope | null;
+  source: ToolSource | null;
+}[];
+
+const TOOL_META = new Map(TOOL_REGISTRY.map((entry) => [entry.tool.function.name, entry]));
 
 // Hoisted so the array identity is stable across renders. Mainnet-only on purpose — see the
 // useAutoNetwork call in the component for why a testnet entry here would be a real hazard.
@@ -214,6 +223,11 @@ export function AssistantChat() {
   const imageReadyMessage = useLocale({ label: "assistent.imageReady" });
   const bundestaktSourceLabel = useLocale({ label: "assistent.bundestaktSource" });
   const analyticsSourceLabel = useLocale({ label: "assistent.analyticsSource" });
+  // Here rather than at module scope because the labels are translated per render.
+  const sourceLinks: Record<ToolSource, { href: string; label: string }> = {
+    bundestakt: { href: "https://www.bundestakt.de", label: bundestaktSourceLabel },
+    analytics: { href: "/analytics", label: analyticsSourceLabel },
+  };
   const errorPrefixMessage = useLocale({ label: "assistent.errorPrefix" });
   const connectWalletMessageLabel = useLocale({ label: "assistent.connectWalletMessage" });
   const loadingLabel = useLocale({ label: "assistent.loading" });
@@ -244,7 +258,7 @@ export function AssistantChat() {
 
   // Same check as pages/analytics and pages/growth: isConnected is reconnect-aware and
   // hydration-safe, so the owner test never trusts `address` before wagmi has reconnected.
-  const isOwner = isConnected && isOwnerAddress(address);
+  const hasOwnerScope = (scope: OwnerScope) => isConnected && isOwnerAddress(address, scope);
 
   // The user's explicit network choice, if they made one.
   const preferredNetwork = useSyncExternalStore(subscribeToStoredNetwork, readStoredNetwork, () => null);
@@ -552,9 +566,11 @@ export function AssistantChat() {
         // a real conversation burned all three hops re-requesting an image that kept failing, so
         // the user approved three wallet prompts, paid for three attempts, and got the generic
         // "no response" fallback because no hop ever produced text.
-        const offered = TOOLS.filter(
-          (t) => !failedTools.has(t.function.name) && (isOwner || !OWNER_ONLY_TOOLS.has(t.function.name)),
-        );
+        const offered = TOOL_REGISTRY.filter(
+          (entry) =>
+            !failedTools.has(entry.tool.function.name) &&
+            (entry.ownerScope === null || hasOwnerScope(entry.ownerScope)),
+        ).map((entry) => entry.tool);
         const data = await payAndSend(convo, {
           // `[]` is truthy, and useX402Chat spreads `tools` in on truthiness — an empty array
           // would be sent as `tools: []`. `undefined` drops the key (and tool_choice with it),
@@ -583,10 +599,9 @@ export function AssistantChat() {
           // `not_found` (an unrecognized slug) is a normal, recoverable outcome — the whole point
           // of the list-then-detail pattern in the system prompt is that the model can retry with
           // a corrected slug. Only a real failure withdraws the tool for the rest of the turn.
+          const source = TOOL_META.get(call.function.name)?.source;
           if (result.status !== "ok" && result.status !== "not_found") failedTools.add(call.function.name);
-          else if (result.status === "ok" && TOOL_SOURCES[call.function.name]) {
-            usedSources.add(TOOL_SOURCES[call.function.name]);
-          }
+          else if (result.status === "ok" && source) usedSources.add(source);
           convo.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
         }
       }
@@ -778,8 +793,8 @@ export function AssistantChat() {
                       )}
                       {message.sources?.map((source) => (
                         <div key={source} className={chat.messageSource}>
-                          <a href={SOURCE_HREFS[source]} target="_blank" rel="noopener noreferrer">
-                            {source === "bundestakt" ? bundestaktSourceLabel : analyticsSourceLabel}
+                          <a href={sourceLinks[source].href} target="_blank" rel="noopener noreferrer">
+                            {sourceLinks[source].label}
                           </a>
                         </div>
                       ))}

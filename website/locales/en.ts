@@ -102,10 +102,14 @@ export default {
       "for the details. That data comes from bundestakt.de, an AI-assisted analysis of official " +
       "transcripts and not an official record itself. Always link the `url` from the tool " +
       "result in your answer. If something is not in the result, say so plainly rather than " +
-      "guessing from training knowledge.",
+      "guessing from training knowledge. For questions about how this site or one of its posts " +
+      "is doing — visitors, most-read pages, trends — use get_analytics. When its result sets " +
+      "hasHistoric, the window reaches into figures backfilled from a different tool that " +
+      "counted differently; say so instead of comparing the two eras as one number.",
     noResponse: "No response received",
     imageReady: "Here's your image.",
     bundestaktSource: "Source: Bundestakt",
+    analyticsSource: "Source: Analytics",
     errorPrefix: "Error:",
     unknownError: "Unknown error",
     loading: "Loading...",

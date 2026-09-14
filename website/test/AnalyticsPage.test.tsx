@@ -2,7 +2,11 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup, within } from "@testing-library/react";
 import { useAccount, useConnect } from "wagmi";
-import { OWNER_ADDRESS } from "../utils/getChain";
+import { OWNER_SCOPES } from "../utils/getChain";
+
+/** The first wallet with analytics scope; that list may hold more. */
+const ANALYTICS_OWNERS: readonly string[] = OWNER_SCOPES.analytics;
+const OWNER_ADDRESS = ANALYTICS_OWNERS[0];
 import { buildAccountData, buildConnectData } from "./setup";
 import type { Stats } from "../types/analytics";
 
@@ -78,6 +82,20 @@ describe("Analytics Page", () => {
     connectAs("0x1111111111111111111111111111111111111111");
     render(<Page />);
     expect(mockUseAnalyticsStats).toHaveBeenCalledWith(false);
+  });
+
+  // The analytics scope holds more than one wallet; every entry has to reach the dashboard, not
+  // just the first. The counterpart to the server-side list check in chain-utils.
+  it.each(ANALYTICS_OWNERS)("requests stats for owner wallet %s", (owner) => {
+    connectAs(owner);
+    render(<Page />);
+    expect(mockUseAnalyticsStats).toHaveBeenCalledWith(true);
+  });
+
+  it("accepts an owner address in a different letter case", () => {
+    connectAs(OWNER_ADDRESS.toLowerCase());
+    render(<Page />);
+    expect(mockUseAnalyticsStats).toHaveBeenCalledWith(true);
   });
 
   it("offers the three granularities and no 7-day view", () => {

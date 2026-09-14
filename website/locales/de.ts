@@ -102,10 +102,15 @@ export default {
       "und dann mit deren slug für die Details. Die Daten stammen von bundestakt.de, einer " +
       "KI-gestützten Analyse amtlicher Protokolle — nicht amtlich selbst. Verlinke in deiner " +
       "Antwort immer die `url` aus dem Tool-Ergebnis. Wenn etwas nicht im Ergebnis auftaucht, " +
-      "sage das offen, statt aus Trainingswissen zu raten.",
+      "sage das offen, statt aus Trainingswissen zu raten. Für Fragen dazu, wie diese Seite oder " +
+      "einer ihrer Beiträge läuft — Besucher, meistgelesene Seiten, Trends — nutze get_analytics. " +
+      "Wenn dessen Ergebnis hasHistoric setzt, reicht das Fenster in Zahlen zurück, die aus einem " +
+      "anderen Werkzeug übernommen wurden und anders gezählt haben; sage das, statt beide Epochen " +
+      "als eine Zahl zu vergleichen.",
     noResponse: "Keine Antwort erhalten",
     imageReady: "Hier ist dein Bild.",
     bundestaktSource: "Quelle: Bundestakt",
+    analyticsSource: "Quelle: Analytics",
     errorPrefix: "Fehler:",
     unknownError: "Unbekannter Fehler",
     loading: "Lädt...",

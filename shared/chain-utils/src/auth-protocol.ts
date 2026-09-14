@@ -77,18 +77,39 @@ export function parseBearerToken(authHeader: string | undefined): BearerPayload 
 }
 
 /**
- * Verifies a parsed wallet signature payload against an expected message prefix and address.
- * Returns null on success, or an error string describing the failure.
+ * Splits the `OWNER_ETH_ADDRESS` environment value into the addresses it authorises.
+ *
+ * The variable keeps its singular name and accepts either one address or a comma-separated list,
+ * so an existing single-address deployment stays valid and code can be rolled out before the
+ * configuration is touched.
+ *
+ * Shared rather than duplicated in each consumer because a stray space around a comma locks the
+ * owner *out* silently — there is no error to notice, only a 401 that looks like a wallet problem.
+ */
+export function parseOwnerAddresses(raw: string | undefined): string[] {
+  return (raw ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+}
+
+/**
+ * Verifies a parsed wallet signature payload against an expected message prefix and the addresses
+ * allowed to pass it. Returns null on success, or an error string describing the failure.
  *
  * Checks (in order): message format, timestamp freshness, address match, signature validity.
  * The timestamp check is what stops a captured token being replayed indefinitely.
+ *
+ * `expectedAddresses` accepts a single address or a list. **An empty list authorises nobody** —
+ * the opposite reading ("no restriction configured, so allow everything") is the expensive
+ * mistake here, so callers can pass an unvalidated `parseOwnerAddresses(...)` result safely.
  */
 export async function verifySignedMessage(
   address: string,
   signature: string,
   message: string,
   expectedPrefix: string,
-  expectedAddress: string
+  expectedAddresses: string | readonly string[]
 ): Promise<string | null> {
   const match = message.match(new RegExp(`^${expectedPrefix}:(\\d+)$`));
   if (!match) {
@@ -103,7 +124,9 @@ export async function verifySignedMessage(
     return "Token expired";
   }
 
-  if (address.toLowerCase() !== expectedAddress.toLowerCase()) {
+  const allowed = typeof expectedAddresses === "string" ? [expectedAddresses] : expectedAddresses;
+  const signer = address.toLowerCase();
+  if (!allowed.some((candidate) => candidate.toLowerCase() === signer)) {
     return "Address mismatch";
   }
 

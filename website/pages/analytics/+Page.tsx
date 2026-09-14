@@ -5,7 +5,7 @@ import { button } from "../../styled-system/recipes";
 import { Tab } from "../../components/Tab";
 import { useAnalyticsStats, prewarmAnalyticsApi } from "../../hooks/useAnalyticsStats";
 import { useWalletConnection } from "../../hooks/useWalletConnection";
-import { OWNER_ADDRESS } from "../../utils/getChain";
+import { isOwnerAddress } from "../../utils/getChain";
 import { SITE_CONFIG } from "../../utils/siteConfig";
 import { RANGES, sliceStats, type Bucket } from "../../utils/analyticsBuckets";
 
@@ -116,7 +116,7 @@ export default function Page() {
 
   // isConnected is reconnect-aware + hydration-safe, so the owner check never
   // trusts `address` before wagmi's reconnect completes.
-  const isOwner = isConnected && address?.toLowerCase() === OWNER_ADDRESS.toLowerCase();
+  const isOwner = isConnected && isOwnerAddress(address, "analytics");
 
   // One query for the whole year; the range selector only re-slices it, so
   // switching is instant and never refetches.

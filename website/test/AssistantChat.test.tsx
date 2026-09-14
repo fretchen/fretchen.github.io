@@ -160,6 +160,9 @@ function sendUserMessage(text: string) {
 describe("AssistantChat", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // The component reads two preferences from localStorage (network, disabled tools). Without
+    // this, a case that sets one leaks into every case after it.
+    window.localStorage.clear();
     mockSwitchIfNeeded.mockResolvedValue(true);
     mockSwitchImageIfNeeded.mockResolvedValue(true);
     mockFetchSitzungen.mockResolvedValue(sitzungenFixture);
@@ -648,6 +651,82 @@ describe("AssistantChat", () => {
 
       await waitFor(() => expect(screen.getByText("I could not reach Bundestakt.")).toBeInTheDocument());
       expect(screen.queryByText("assistent.bundestaktSource")).not.toBeInTheDocument();
+    });
+
+    // The ToolSelector persists the *disabled* names, so a tool added later is on by default and
+    // an existing user notices nothing. These cases check that the stored set actually reaches the
+    // request the loop builds.
+    it("offers every tool when nothing has been switched off", async () => {
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("Hi");
+
+      await waitFor(() => expect(mockSendMessage).toHaveBeenCalledOnce());
+      const offered = (mockSendMessage.mock.calls[0][1] as { tools: { function: { name: string } }[] }).tools;
+      expect(offered.map((t) => t.function.name)).toEqual(
+        expect.arrayContaining(["generate_image", "get_sitzungen", "search_claims"]),
+      );
+    });
+
+    it("withholds a tool the user switched off, and keeps the rest", async () => {
+      window.localStorage.setItem("x402-chat-disabled-tools", "generate_image");
+
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("Hi");
+
+      await waitFor(() => expect(mockSendMessage).toHaveBeenCalledOnce());
+      const names = (mockSendMessage.mock.calls[0][1] as { tools: { function: { name: string } }[] }).tools.map(
+        (t) => t.function.name,
+      );
+      expect(names).not.toContain("generate_image");
+      expect(names).toEqual(expect.arrayContaining(["get_sitzungen", "search_claims"]));
+    });
+
+    // `[]` is truthy and useX402Chat spreads `tools` in on truthiness — the same trap the owner
+    // gate has. "Nothing selected" has to mean the key is absent.
+    it("omits the tools key entirely when the user switched everything off", async () => {
+      window.localStorage.setItem(
+        "x402-chat-disabled-tools",
+        "generate_image,get_sitzungen,search_claims,get_analytics",
+      );
+
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("Hi");
+
+      await waitFor(() => expect(mockSendMessage).toHaveBeenCalledOnce());
+      expect((mockSendMessage.mock.calls[0][1] as { tools?: unknown[] }).tools).toBeUndefined();
+    });
+
+    it("ignores a stored name that is no longer a tool", async () => {
+      window.localStorage.setItem("x402-chat-disabled-tools", "a_tool_we_removed");
+
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("Hi");
+
+      await waitFor(() => expect(mockSendMessage).toHaveBeenCalledOnce());
+      const offered = (mockSendMessage.mock.calls[0][1] as { tools: { function: { name: string } }[] }).tools;
+      expect(offered.map((t) => t.function.name)).toEqual(
+        expect.arrayContaining(["generate_image", "get_sitzungen", "search_claims"]),
+      );
+    });
+
+    it("switching a tool off in the panel persists and reaches the next request", async () => {
+      renderWithQuery(<AssistantChat />);
+
+      fireEvent.click(screen.getAllByLabelText("Bundestag sessions")[0]);
+      expect(window.localStorage.getItem("x402-chat-disabled-tools")).toBe("get_sitzungen");
+
+      sendUserMessage("Hi");
+      await waitFor(() => expect(mockSendMessage).toHaveBeenCalledOnce());
+      const names = (mockSendMessage.mock.calls[0][1] as { tools: { function: { name: string } }[] }).tools.map(
+        (t) => t.function.name,
+      );
+      expect(names).not.toContain("get_sitzungen");
+    });
+
+    it("does not list an owner-only tool in the panel for a visitor", () => {
+      renderWithQuery(<AssistantChat />);
+      expect(screen.queryByLabelText("Site analytics")).not.toBeInTheDocument();
+      expect(screen.getAllByLabelText("Image generation").length).toBeGreaterThan(0);
     });
 
     it("does not offer the analytics tool to a visitor who is not the owner", async () => {

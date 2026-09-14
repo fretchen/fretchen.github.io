@@ -11,6 +11,7 @@ import remarkGfm from "remark-gfm";
 import { BaseError, UserRejectedRequestError } from "viem";
 import { AgentInfoPanel } from "./AgentInfoPanel";
 import { AgentSelector } from "./AgentSelector";
+import { ToolSelector } from "./ToolSelector";
 import { ToolConfirmCard, type ToolSize } from "./ToolConfirmCard";
 import * as chat from "./AssistantChat.styles";
 import { useLocale } from "../hooks/useLocale";
@@ -79,12 +80,14 @@ type ToolSource = "bundestakt" | "analytics";
  * the array itself stays constant.
  */
 const TOOL_REGISTRY = [
-  { tool: generateImageTool, ownerScope: null, source: null },
-  { tool: getSitzungenTool, ownerScope: null, source: "bundestakt" },
-  { tool: searchClaimsTool, ownerScope: null, source: "bundestakt" },
-  { tool: getAnalyticsTool, ownerScope: "analytics", source: "analytics" },
+  { tool: generateImageTool, label: "Image generation", ownerScope: null, source: null },
+  { tool: getSitzungenTool, label: "Bundestag sessions", ownerScope: null, source: "bundestakt" },
+  { tool: searchClaimsTool, label: "Fact-checks", ownerScope: null, source: "bundestakt" },
+  { tool: getAnalyticsTool, label: "Site analytics", ownerScope: "analytics", source: "analytics" },
 ] as const satisfies readonly {
   tool: X402Tool;
+  /** Shown in the ToolSelector. Required, so a new tool cannot arrive without a readable name. */
+  label: string;
   ownerScope: OwnerScope | null;
   source: ToolSource | null;
 }[];
@@ -198,6 +201,40 @@ function storeNetwork(network: string): void {
   networkListeners.forEach((listener) => listener());
 }
 
+/**
+ * The tools the user has switched *off*, as an external store mirroring the network preference
+ * above.
+ *
+ * Storing the disabled names rather than the enabled ones is what makes a newly added tool
+ * available by default instead of invisible until someone discovers the panel — and it means an
+ * existing user notices nothing when one lands.
+ *
+ * The snapshot stays the raw string on purpose. `useSyncExternalStore` compares snapshots with
+ * `Object.is`, so returning a freshly built `Set` here would re-render forever; the component
+ * parses the string once in a `useMemo` instead.
+ */
+const DISABLED_TOOLS_KEY = "x402-chat-disabled-tools";
+
+const disabledToolListeners = new Set<() => void>();
+
+function readStoredDisabledTools(): string {
+  return window.localStorage.getItem(DISABLED_TOOLS_KEY) ?? "";
+}
+
+function subscribeToStoredDisabledTools(onChange: () => void): () => void {
+  disabledToolListeners.add(onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    disabledToolListeners.delete(onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+function storeDisabledTools(names: ReadonlySet<string>): void {
+  window.localStorage.setItem(DISABLED_TOOLS_KEY, [...names].join(","));
+  disabledToolListeners.forEach((listener) => listener());
+}
+
 /** Build a block-explorer tx link for the given CAIP-2 network via its viem chain config. */
 function explorerTxUrl(network: string, txHash: string): string | null {
   if (!txHash) return null;
@@ -262,6 +299,28 @@ export function AssistantChat() {
 
   // The user's explicit network choice, if they made one.
   const preferredNetwork = useSyncExternalStore(subscribeToStoredNetwork, readStoredNetwork, () => null);
+
+  // The raw string is the snapshot (see readStoredDisabledTools); parsed once here so the Set
+  // keeps a stable identity between renders.
+  const disabledToolsRaw = useSyncExternalStore(subscribeToStoredDisabledTools, readStoredDisabledTools, () => "");
+  const disabledTools = useMemo(
+    () => new Set(disabledToolsRaw.split(",").filter((name) => name.length > 0)),
+    [disabledToolsRaw],
+  );
+
+  /** The tools this visitor may use at all — the selector never offers what the gate would refuse. */
+  const availableTools = useMemo(
+    () => TOOL_REGISTRY.filter((entry) => entry.ownerScope === null || hasOwnerScope(entry.ownerScope)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hasOwnerScope is derived from these two
+    [isConnected, address],
+  );
+
+  const toggleTool = (name: string, enabled: boolean) => {
+    const next = new Set(disabledTools);
+    if (enabled) next.delete(name);
+    else next.add(name);
+    storeDisabledTools(next);
+  };
 
   // Precedence: explicit choice → the wallet's own chain if we support it → Optimism.
   const walletNetwork = toCAIP2(useChainId());
@@ -566,11 +625,11 @@ export function AssistantChat() {
         // a real conversation burned all three hops re-requesting an image that kept failing, so
         // the user approved three wallet prompts, paid for three attempts, and got the generic
         // "no response" fallback because no hop ever produced text.
-        const offered = TOOL_REGISTRY.filter(
-          (entry) =>
-            !failedTools.has(entry.tool.function.name) &&
-            (entry.ownerScope === null || hasOwnerScope(entry.ownerScope)),
-        ).map((entry) => entry.tool);
+        // `availableTools` already applies the owner gate; what is left is what failed this turn
+        // and what the user switched off in the ToolSelector.
+        const offered = availableTools
+          .filter((entry) => !failedTools.has(entry.tool.function.name) && !disabledTools.has(entry.tool.function.name))
+          .map((entry) => entry.tool);
         const data = await payAndSend(convo, {
           // `[]` is truthy, and useX402Chat spreads `tools` in on truthiness — an empty array
           // would be sent as `tools: []`. `undefined` drops the key (and tool_choice with it),
@@ -721,6 +780,11 @@ export function AssistantChat() {
                 onTryCustomAgent={() => void tryCustomAgent()}
                 onUseDefaultAgent={useDefaultAgent}
               />
+              <ToolSelector
+                options={availableTools.map((entry) => ({ name: entry.tool.function.name, label: entry.label }))}
+                disabled={disabledTools}
+                onToggle={toggleTool}
+              />
             </div>
           </div>
         )}
@@ -869,6 +933,11 @@ export function AssistantChat() {
                 checkError={checkError}
                 onTryCustomAgent={() => void tryCustomAgent()}
                 onUseDefaultAgent={useDefaultAgent}
+              />
+              <ToolSelector
+                options={availableTools.map((entry) => ({ name: entry.tool.function.name, label: entry.label }))}
+                disabled={disabledTools}
+                onToggle={toggleTool}
               />
             </>
           )}

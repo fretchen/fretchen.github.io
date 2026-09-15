@@ -19,6 +19,19 @@ interface MermaidDiagramProps {
   config?: Record<string, unknown>;
 }
 
+/**
+ * @deprecated Use `components/blog/SequenceDiagram.tsx` for new diagrams.
+ *
+ * That one is the reference implementation for the figure rules in README.md → Figures: a
+ * hand-rolled SVG with typed participants and steps, the three-tier ink ranking, and the
+ * territory hue. This component renders a mermaid source string, so it can follow none of
+ * them, ships a rendering library to the client, and still paints the tinted `codeBg`
+ * container the design system is migrating away from (README.md → Migration list).
+ *
+ * Kept for what already embeds mermaid sources — `merkle_ai_batching`,
+ * `merkle_ai_batching_fundamentals`, `x402_llm_open_agent`, `x402_facilitator_imagegen`, and
+ * `/agent-onboarding`. Each drops it the next time it is touched.
+ */
 const MermaidDiagram: React.FC<MermaidDiagramProps> = ({ definition, title, className, config }) => {
   const mermaidRef = useRef<HTMLDivElement>(null);
 

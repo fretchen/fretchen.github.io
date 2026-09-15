@@ -3,7 +3,7 @@ title: "My static site got a tool loop — and maybe an agent"
 publishing_date: "2026-09-15"
 category: "ai"
 secondaryCategory: "webdev"
-description: "A chat model never calls a tool — it asks for one, and your code answers by putting the result back into the same message array. Here is that loop, running in the browser of a statically built site."
+description: "I wanted my chat assistant to answer a question about a real Bundestag session. Here is everything that has to happen between the question and the answer — and why all of it runs in your browser."
 ---
 
 import { SequenceDiagram } from "../components/blog/SequenceDiagram";
@@ -15,12 +15,12 @@ export const turnParticipants = [
 ];
 
 export const turnSteps = [
-  { kind: "message", from: "browser", to: "endpoint", label: "messages + tools" },
-  { kind: "message", from: "endpoint", to: "browser", label: "tool_calls: get_sitzungen", style: "dashed" },
+  { kind: "message", from: "browser", to: "endpoint", label: "1. messages + tools" },
+  { kind: "message", from: "endpoint", to: "browser", label: "2. tool_calls: get_sitzungen", style: "dashed" },
   { kind: "note", from: "browser", to: "browser", label: "Nothing has happened yet" },
-  { kind: "message", from: "browser", to: "bundestakt", label: "GET /api/v1/sitzungen" },
+  { kind: "message", from: "browser", to: "bundestakt", label: "3. GET /api/v1/sitzungen" },
   { kind: "message", from: "bundestakt", to: "browser", label: "21 sessions, 74 KB", style: "dashed" },
-  { kind: "message", from: "browser", to: "endpoint", label: 'same array + role:"tool" result' },
+  { kind: "message", from: "browser", to: "endpoint", label: "4. same array + tool result" },
   { kind: "message", from: "endpoint", to: "browser", label: "the answer, in prose", style: "dashed" },
 ];
 
@@ -31,65 +31,53 @@ My [chat assistant](/assistent) could talk, and that was all it could do. Two th
 
 Both are the same problem: the model has to reach something outside itself, in the middle of writing an answer.
 
-What I was unsure about was where that reaching happens. I had only ever met tool calling from inside LangChain and LangGraph, in Python. There a tool call and a model call look like the same kind of thing — nodes in one graph, running in one process — and I had quietly assumed they have to be. 
-This site has no process to put them in: it is built to static files with [Vike](https://vike.dev) with a handful of serverless functions next to it. The paid LLM endpoint those functions expose will not help either. It forwards a `tools` array to Mistral and hands the model's request straight back, without ever executing one. 
+What I was unsure about was where that reaching happens. I had only ever met tool calling from inside LangChain and LangGraph, in Python. There a tool call and a model call look like the same kind of thing — nodes in one graph, running in one process — and I had quietly assumed they have to be.
 
-So the loop runs in the browser . That turned out to be fine. AUTHOR: Mention again that this is one of the amazing things of modern websites. They are well functional apps as a matter of fact.
+This site has no process to put them in. It is built once, ahead of time, into plain files with [Vike](https://vike.dev): when you visit, no program of mine is running anywhere. Next to those files sit a handful of serverless functions — small pieces of code that wake up when something calls them and shut down again afterwards. One of them is the paid endpoint that talks to Mistral for me, and it will not help either: it passes my list of tools along to the model and hands the model's reply straight back, without ever running anything itself.
+
+So the loop runs in the browser. Which, it turns out, is not a workaround at all. This is one of the quietly amazing things about the modern web: a site built to static files is still a fully functional application. It can fetch from anywhere, keep state, wait for a human to click something, and run a loop for as long as it likes. The one thing it genuinely cannot do is keep a secret — and that, as far as I can tell, is the only reason any of this ever needs a server.
 
 ## One turn, payload by payload
 
-We will walk through the architecture with the folloowing concrete example. I wanted to ask my model the question _"What did the Bundestag debate on 9 September?"_ and get the answer based on Bundestakt. Here is the whole turn that we will walk through in detail through the remainder of the post.
+I wanted to ask my model _"What did the Bundestag debate on 9 September?"_ and have the answer come from Bundestakt. Here is the whole turn, and the rest of the post walks through it step by step.
 
-AUTHOR: Can you number the steps as the steps below ?
 <SequenceDiagram
   participants={turnParticipants}
   steps={turnSteps}
-  caption="One turn. The browser is the only thing that ever calls Bundestakt; the model only asks it to."
+  caption="One turn. The browser is the only thing that ever calls Bundestakt; the model just asks it to."
 />
 
 ### 1. Send the usual request, plus `tools`
 
-A tool definition is a name, a description, and a JSON Schema for its arguments. It rides along with the messages you were already sending:
+When you chat with a model, you send it a list of messages — who said what, in order. Tool calling adds a second list next to that one. Think of it as a menu: here are the things I can do for you, here is what each one is good for, and here is what you would have to fill in to order it.
 
-AUTHOR: Do not consider everyone to directly understand the json. People need to understand that this is the usual thing. You send a message, but not only the message but also other context 
-information, i.e. relevant tools. So maybe it is ok to describe the sent request ELI5 and then the request ? Could it be shortened to "snippet style" for readibility instead of executability ?
-What is fitting here ?
+The model cannot cook anything on that menu. It can only read it and tell me what it would like. Which means the `description` field is doing more work than it looks like it is doing: it is the only thing the model ever learns about a tool. Not my code, not Bundestakt's documentation — just that sentence. So rules about _how_ to use the thing get written there, in plain language, for a reader: "call without a slug first to find the session, then call again with its slug for the detail."
 
 ```bash
-curl https://llm-agent.fretchen.eu \
-  -H "content-type: application/json" \
-  -d '{
-    "messages": [
-      { "role": "user", "content": "What did the Bundestag debate on 9 September 2026?" }
-    ],
-    "tools": [
-      {
-        "type": "function",
-        "function": {
-          "name": "get_sitzungen",
-          "description": "List Bundestag plenary sessions (Bundestakt), or fetch one session's full detail by slug. Call without a slug first to find the right session, then call again with its slug for details (speaking time per party, vote counts, summaries).",
-          "parameters": {
-            "type": "object",
-            "properties": {
-              "slug": { "type": "string", "description": "A session slug from a previous call, e.g. 21-92-2026-09-09." },
-              "von": { "type": "string", "description": "ISO date; only sessions on or after this day." },
-              "bis": { "type": "string", "description": "ISO date; only sessions on or before this day." }
-            }
-          }
-        }
-      }
-    ]
-  }'
+curl https://llm-agent.fretchen.eu -d '{
+  "messages": [
+    { "role": "user", "content": "What did the Bundestag debate on 9 September 2026?" }
+  ],
+  "tools": [{
+    "type": "function",
+    "function": {
+      "name": "get_sitzungen",
+      "description": "List Bundestag plenary sessions (Bundestakt), or fetch one session's full detail by slug. Call without a slug first to find the right session, then call again with its slug for details.",
+      "parameters": { /* slug, plus von / bis as ISO dates to narrow the range */ }
+    }
+  }]
+}'
 ```
 
-(A real call needs an `X-PAYMENT` header too — this endpoint charges a fraction of a cent per message. That part is [a different story](/blog/32/) and changes nothing below.)
-
-The description is the part I underestimated. It is prompt text. The model reads it and nothing else about the tool — not my code, not the API docs — so anything about _how_ to use the thing has to go in there. "Call without a slug first, then again with its slug" is a sentence written for a reader, in a field that looks like documentation.
-AUTHOR: See above. The explanation is again too late and you have too much "cliff hangers".
+(A real call also carries an `X-PAYMENT` header, because this endpoint charges a fraction of a cent per message. That is [a different story](/blog/32/) and changes nothing here.)
 
 ### 2. The model asks
-AUTHOR: Explain that this is bascially the answer of the model. Not some text but a json which contains the choices field and instead of a message it contains the tool calls. Again explain before the code to guide the reader.
 
+What comes back is the model's answer — it is just not made of words.
+
+Replies always arrive in the same box: a `choices` list, with a `message` inside it. Normally that message has `content`, the text you would read on screen. This time `content` is empty and a `tool_calls` list has taken its place. And `finish_reason`, the label saying why the model stopped talking, says `"tool_calls"` instead of the usual `"stop"`.
+
+Nothing has run at this point. Nothing has been fetched. The model does not even know whether `get_sitzungen` works. It has read the menu and placed an order, and it has attached an `id` to that order like a ticket number, so the answer can later be handed back against the right request.
 
 ```json
 {
@@ -115,12 +103,17 @@ AUTHOR: Explain that this is bascially the answer of the model. Not some text bu
 }
 ```
 
-Two things about this. It is a **request** — nothing has happened, nothing has been fetched, and the model has no idea whether `get_sitzungen` even works. And `arguments` is a **JSON string**, not an object, which can also be malformed; mine parses it in a `try` that falls back to `{}` rather than throwing, because a model that garbles its own arguments should not take the whole chat message down with it.
+One thing here regularly trips people up: `arguments` is not an object, it is a string. The model wrote data out as text, and that text has to be unpacked before it is of any use — and it can arrive broken. Mine unpacks it inside a `try` that falls back to an empty object, because a model that garbles its own order should not take the whole chat message down with it.
+
+Worth saying plainly here, because everything below depends on it: **the model has no memory**. Every request is the first time it has ever seen this conversation. It is not sitting somewhere between my messages, holding the thread. The only reason it appears to remember anything is that I send the entire conversation again, from the beginning, every single time.
 
 ### 3. My code runs it
-AUTHOR: Explain that this is call from the static site and one of the beauties of react. (I think). Again the code has to be introduced it is not self-explaining. 
 
-This is the step with no model in it at all. Dispatch by name, then do the work:
+This is the part that surprised me, and it is where the static site stops feeling like a limitation.
+
+The page just calls Bundestakt itself. An ordinary `fetch`, the same one any React component makes to load anything — from your browser, straight to `bundestakt.de`, with nothing of mine in between. Browsers normally refuse to let a page read another site's data unless that site explicitly says it is fine; Bundestakt says it is fine, and asks for no key, so there is nothing in the way. A tool that needed a password would be the one case that has to detour through a serverless function, because the browser is the one place a secret cannot live.
+
+The code comes in two halves. One fetches and can fail; the other is a **pure function** — same input, same output, no surprises, which is why it is the easy half to test. Its job is to throw almost everything away:
 
 ```typescript
 // tools/bundestakt.ts — no React in here, just a fetch and a pure projection.
@@ -154,11 +147,11 @@ export function selectSitzungen(raw: unknown, args: { slug?: string; von?: strin
 }
 ```
 
-The `fetch` goes straight from the browser to `bundestakt.de` — open CORS, no key, nothing to hide. That is the whole reason a browser-side loop works here at all; a tool needing a secret would have to be a serverless function with the secret in it, and the browser would call that instead.
-
-The `select` half matters more than it looks. The raw list is 74 KB across 21 sessions, most of it five-paragraph summaries of debates nobody asked about. Projected down to slug, date, topic and headlines it is 7.3 KB. That is not tidiness: the result goes back into the message array and is re-sent on **every** later request of the same turn, so a fat tool result is a bill you pay repeatedly.
+That throwing-away is the whole point of the second half. Bundestakt's list is 74 KB across 21 sessions, most of it five-paragraph summaries of debates nobody asked about. Keeping only slug, date, topic and headlines brings it to 7.3 KB. Since the model has no memory, this result does not get read once — it goes into the conversation and is sent again, in full, with every later message of the same turn. A fat tool result is a bill you pay over and over.
 
 ### 4. Send the same array again, grown
+
+Now the same list of messages goes back to the same endpoint, with two things added to the end: the model's own order, handed back word for word, and the answer to it, tagged with that ticket number. That answer is a third kind of message — not from the person, not from the model, but `role: "tool"`.
 
 ```json
 {
@@ -179,11 +172,11 @@ The `select` half matters more than it looks. The raw list is 74 KB across 21 se
 }
 ```
 
-Two messages were appended: the assistant's own turn, pushed back exactly as it arrived, and one `role: "tool"` message per call, carrying the result as a string. Same endpoint, same shape as move 1. This time the model writes prose, `finish_reason` comes back as `"stop"`, and the turn is over. If it had wanted the full record it would have asked again with `slug`, and the array would have grown by two more.
+Same endpoint, same shape as step 1. This time the model writes prose, `finish_reason` comes back as `"stop"`, and the turn is over. If it had wanted the full record it would have ordered again, with `slug` this time, and the list would have grown by two more messages.
 
-That is the bit I had wrong for a long time. There is no callback, no webhook, no socket held open, nothing registered with anyone. The entire connection between Mistral and my React code is that **an array grows and gets sent again**, and `tool_call_id` is the only thread tying a result back to the request it answers.
+That is the bit I had wrong for a long time. There is no callback, no webhook, no connection held open, nothing registered with anyone. The entire link between Mistral and my React code is that **a list grows and gets sent again**, and the ticket number is the only thread tying an answer back to the request it answers.
 
-Which means the loop is a `for` loop with a `break`:
+Which means the loop is a `for` loop with a `break` in it. Two things to watch: the list being pushed to at the bottom, and the `break` that fires the moment the model finally writes words instead of ordering something.
 
 ```typescript
 for (let hop = 0; hop < MAX_HOPS; hop++) {
@@ -213,38 +206,38 @@ for (let hop = 0; hop < MAX_HOPS; hop++) {
 }
 ```
 
-That is [the real one](https://github.com/fretchen/fretchen.github.io/blob/main/website/utils/toolLoop.ts), minus its comments. `MAX_HOPS` is 4, because each pass through the loop is a separately paid completion and a model that never stops asking would otherwise bill me in a circle. Four is not a principle; it is the smallest number that fits the longest flow I have, which is list → detail → answer with one hop spare.
+That is [the real one](https://github.com/fretchen/fretchen.github.io/blob/main/website/utils/toolLoop.ts), minus its comments. One trip round that loop is a **hop** — one journey to the model and back, paid for separately from the last. `MAX_HOPS` is 4, because a model that never stops ordering would otherwise bill me in a circle. Four is not a principle; it is the smallest number that fits the longest flow I have, which is list → detail → answer with one hop spare.
 
-Two things in there were bought with a bad afternoon. `failedTools` exists because image generation once kept failing and the model kept asking for it again — entirely reasonably, since nothing told it the failure was permanent. Three wallet prompts, three payments, no answer, because no hop ever got as far as writing a sentence. Now a tool that fails is simply not offered on the next hop. The exception is a failure that is really an answer — a mistyped session slug _should_ be retried with a corrected one — so a tool can mark its own result as worth another go.
+Two things in there were bought with a bad afternoon. `failedTools` exists because image generation once kept failing and the model kept ordering it again — entirely reasonably, since nothing told it the failure was permanent. Three wallet prompts, three payments, no answer, because no hop ever got as far as writing a sentence. Now a tool that fails is simply off the menu for the rest of the turn. The exception is a failure that is really an answer — a mistyped session slug _should_ be retried with a corrected one — so a tool can mark its own result as worth another go.
 
-And `offered.length > 0 ? offered : undefined` is there because `[]` is truthy: an empty array ships as `tools: []`, which is a different thing from not sending the key at all.
+And `offered.length > 0 ? offered : undefined` is there because an empty menu is not the same as no menu. Handing over `tools: []` still says "here is a list of what I can do", and it happens to be empty; leaving the word out entirely says nothing about tools at all. Once every tool has failed, the second one is what I mean, so the code drops the key rather than sending an empty list.
 
 ## Four tools, two shapes
 
 There are four tools on offer now — `get_sitzungen`, `search_claims`, `get_analytics`, `generate_image` — and they come in two shapes.
 
-**Read something and shrink it.** A fetch, then a pure function that projects the response down to what an answer needs. Bundestakt and the site's own traffic stats. Boring in the good way: the interesting half is a pure function over parsed JSON, which is about as easy to test as code gets.
+**Read something and shrink it.** A fetch, then a pure function that cuts the response down to what an answer needs. Bundestakt and the site's own traffic figures. Boring in the good way.
 
-**Ask the user first, then act.** `generate_image` spends seven cents of real money, so the model asking for it does not make it happen. The runner puts a confirmation card on screen — the prompt, the size, the price — and the turn just waits there, mid-`await`, until the user confirms, edits the prompt, or cancels. Whatever they decide comes back to the model as a status like `user_declined`, and the model writes the sentence explaining it.
+**Ask the user first, then act.** `generate_image` spends seven cents of real money, so the model ordering it does not make it happen. The code puts a confirmation card on screen — the prompt, the size, the price — and then the loop simply stops at that line and waits, the way a half-finished function waits for whatever it asked for. It can wait indefinitely. Whatever the person decides — confirm, rewrite the prompt, cancel — comes back to the model as a status like `user_declined`, and the model writes the sentence explaining it.
 
-That second shape is the one worth knowing about. A tool call is a request, not a commitment, and the gap between the request and the doing is a natural place to put a human. The model does not even need to be told the user was asked — the tool description says the app handles approval, so it stops trying to run its own confirmation dialogue in chat.
+A tool call is a request, not a commitment. Which makes the gap between the asking and the doing a natural place to put a human, and that gap costs nothing to open: the loop is already just code, sitting in a browser, on a page with a user in front of it.
 
-The modules themselves have no React in them. Partly taste, partly so that the fetch-and-project half of each tool can be imported by something that is not this page.
+The tool files themselves have no React in them. Partly taste, partly so that the fetch-and-shrink half of each one can be imported by something that is not this page.
 
 ## Is this an agent? Do I need MCP?
 
-It picks whether to act, which tool to use, and with what arguments. It reads a result and decides what comes next. It chains: find the session, fetch its detail, then answer. By most working definitions that is an agent.
+It picks whether to act, which tool to use, and what to fill in. It reads the result and decides what comes next. It chains: find the session, fetch its detail, then answer. By most working definitions that is an agent.
 
-It also forgets everything the moment the turn ends — the tool messages live in an array local to one `sendMessage` call and are thrown away, so the model's own closing sentence is its entire memory of having generated an image. It follows no plan that my code owns. It stops after four hops. And the whole thing is about forty lines.
+It also forgets everything the moment the turn ends. Those tool messages live in a list that exists only while one message is being answered, and then it is thrown away — so the model's own closing sentence is its entire memory of having generated an image. It follows no plan that my code owns. It stops after four hops. And the whole thing is about forty lines.
 
-Which is the uncomfortable part. The vocabulary around this — agents, orchestration, MCP — sounds like it describes something considerably larger than what I wrote. MCP in particular: it standardises how a tool describes itself and how it is reached, so that the person writing the tool and the person writing the client can be strangers. It does not change the exchange above at all; the model still asks, something else still runs it, the result still goes back as a `role: "tool"` message. For four tools I wrote myself, against one client I also wrote, it would have bought me nothing yet. That may well change the first time I want someone else's tool in here.
+Which is the uncomfortable part. The vocabulary around this — agents, orchestration, MCP — sounds like it describes something considerably larger than what I wrote. MCP is worth a sentence in plain terms: it is an agreed format for describing tools and reaching them, so that a tool written by one person can plug into a chat program written by another, without the two ever having met. It does not change the exchange above at all. The model still orders, something else still runs it, the result still goes back as a `role: "tool"` message. For four tools I wrote myself, against one chat page I also wrote, it would have bought me nothing yet. That changes the first time I want somebody else's tool in here.
 
-Where the real line sits, I am honestly not sure. The [growth agent](/blog/29/) on this same site is the other shape entirely — LangGraph, a cron container, state in S3, a queue of drafts I approve by hand — because it needs to remember things between runs and take minutes rather than seconds. Between "forty lines in a browser" and that, I have a resource boundary (hops, money, latency, whether anything must survive a page reload) and not a conceptual one. Possibly there is no conceptual one, and that is why "agent" has stopped carrying much information.
+Where the real line sits, I am honestly not sure. The [growth agent](/blog/29/) on this same site is the other shape entirely: a scripted pipeline that runs on a timer, keeps its notes in a file store so it remembers things between runs, and leaves me a queue of drafts to approve by hand. It needs minutes, and it needs a memory. Between "forty lines in a browser" and that, I have a practical boundary — how many hops, how much money, how long, whether anything has to survive closing the tab — and not a conceptual one. Possibly there is no conceptual one, and that is why "agent" has stopped carrying much information.
 
 ## What it cost
 
-One loop file, four small tool modules, and a confirmation card. The thing I would do differently is write the loop first: every decision that turned out to matter — how many hops, what happens when a tool fails, what a tool is allowed to return — lives in it, and I found all of them by getting them wrong there.
+One loop file, four small tool modules, and a confirmation card. The thing I would do differently is write the loop first: every decision that turned out to matter — how many hops, what happens when a tool fails, what a tool is allowed to hand back — lives in it, and I found all of them by getting them wrong there.
 
-It runs on [the assistant page](/assistent) if you want to watch an array grow.
+It runs on [the assistant page](/assistent) if you want to watch a list grow.
 
 _Session data from [Bundestakt](https://www.bundestakt.de), CC BY 4.0._

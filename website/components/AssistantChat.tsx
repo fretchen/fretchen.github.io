@@ -44,6 +44,7 @@ import { isOwnerAddress, type OwnerScope } from "../utils/getChain";
 import type { X402ChatMessage, X402Tool, X402ToolCall } from "../types/x402";
 import { runToolLoop, type ToolRunResult } from "../utils/toolLoop";
 import { formatDateContext } from "../utils/dateContext";
+import { createLocalStorageStore } from "../utils/localStorageStore";
 import { useQueryClient } from "@tanstack/react-query";
 import { getViemChain, toCAIP2, fromCAIP2, getGenAiNFTMainnetNetworks } from "@fretchen/chain-utils";
 import { useChainId } from "wagmi";
@@ -151,33 +152,19 @@ const CHAT_NETWORKS = ["eip155:10", "eip155:8453"] as const;
 const NETWORK_PREFERENCE_KEY = "x402-chat-network";
 
 /**
- * The preference as an external store, read via `useSyncExternalStore`. localStorage is
- * client-only, so a plain `useState` initialiser would disagree with the server-rendered
- * markup; the explicit server snapshot below (always null → the Optimism default) makes
- * that impossible. Subscribing to `storage` also keeps two open tabs in agreement.
+ * The preference as an external store (see utils/localStorageStore.ts for why that shape). The
+ * explicit server snapshot at the call site — always null → the Optimism default — is what keeps
+ * the server-rendered markup and the first client render in agreement.
  */
-const networkListeners = new Set<() => void>();
+const networkStore = createLocalStorageStore(NETWORK_PREFERENCE_KEY);
 
 function readStoredNetwork(): string | null {
-  const stored = window.localStorage.getItem(NETWORK_PREFERENCE_KEY);
+  const stored = networkStore.read();
   // Ignore a network the site no longer pays on (an old testnet, a dropped chain).
   return stored && (CHAT_NETWORKS as readonly string[]).includes(stored) ? stored : null;
 }
 
-function subscribeToStoredNetwork(onChange: () => void): () => void {
-  networkListeners.add(onChange);
-  window.addEventListener("storage", onChange);
-  return () => {
-    networkListeners.delete(onChange);
-    window.removeEventListener("storage", onChange);
-  };
-}
-
-function storeNetwork(network: string): void {
-  window.localStorage.setItem(NETWORK_PREFERENCE_KEY, network);
-  // `storage` only fires in *other* tabs, so notify this one explicitly.
-  networkListeners.forEach((listener) => listener());
-}
+const storeNetwork = (network: string): void => networkStore.write(network);
 
 /**
  * The tools the user has switched *off*, as an external store mirroring the network preference
@@ -193,25 +180,11 @@ function storeNetwork(network: string): void {
  */
 const DISABLED_TOOLS_KEY = "x402-chat-disabled-tools";
 
-const disabledToolListeners = new Set<() => void>();
+const disabledToolsStore = createLocalStorageStore(DISABLED_TOOLS_KEY);
 
-function readStoredDisabledTools(): string {
-  return window.localStorage.getItem(DISABLED_TOOLS_KEY) ?? "";
-}
+const readStoredDisabledTools = (): string => disabledToolsStore.read() ?? "";
 
-function subscribeToStoredDisabledTools(onChange: () => void): () => void {
-  disabledToolListeners.add(onChange);
-  window.addEventListener("storage", onChange);
-  return () => {
-    disabledToolListeners.delete(onChange);
-    window.removeEventListener("storage", onChange);
-  };
-}
-
-function storeDisabledTools(names: ReadonlySet<string>): void {
-  window.localStorage.setItem(DISABLED_TOOLS_KEY, [...names].join(","));
-  disabledToolListeners.forEach((listener) => listener());
-}
+const storeDisabledTools = (names: ReadonlySet<string>): void => disabledToolsStore.write([...names].join(","));
 
 /** Build a block-explorer tx link for the given CAIP-2 network via its viem chain config. */
 function explorerTxUrl(network: string, txHash: string): string | null {
@@ -276,22 +249,47 @@ export function AssistantChat() {
   const hasOwnerScope = (scope: OwnerScope) => isConnected && isOwnerAddress(address, scope);
 
   // The user's explicit network choice, if they made one.
-  const preferredNetwork = useSyncExternalStore(subscribeToStoredNetwork, readStoredNetwork, () => null);
+  const preferredNetwork = useSyncExternalStore(networkStore.subscribe, readStoredNetwork, () => null);
 
   // The raw string is the snapshot (see readStoredDisabledTools); parsed once here so the Set
   // keeps a stable identity between renders.
-  const disabledToolsRaw = useSyncExternalStore(subscribeToStoredDisabledTools, readStoredDisabledTools, () => "");
+  const disabledToolsRaw = useSyncExternalStore(disabledToolsStore.subscribe, readStoredDisabledTools, () => "");
   const disabledTools = useMemo(
     () => new Set(disabledToolsRaw.split(",").filter((name) => name.length > 0)),
     [disabledToolsRaw],
   );
 
-  /** The tools this visitor may use at all — the selector never offers what the gate would refuse. */
+  // A custom agent, once one has been pre-checked and accepted. Null = the default agent.
+  // Declared above `availableTools` because the owner-scope gate below reads it.
+  const [customUrl, setCustomUrl] = useState<string | null>(null);
+  const [customCard, setCustomCard] = useState<AgentCard | null>(null);
+  const [customUrlInput, setCustomUrlInput] = useState("");
+  const [checkState, setCheckState] = useState<"idle" | "checking" | "error">("idle");
+  const [checkError, setCheckError] = useState<string | null>(null);
+
+  /**
+   * The tools this visitor may use at all — the selector never offers what the gate would refuse.
+   *
+   * Two independent conditions, because "who may call this tool" and "who may read its answer" are
+   * different questions. A tool result is JSON-serialised into `convo` and sent to whichever agent
+   * is selected on the next hop, so an owner-scoped tool offered while a custom agent is in use
+   * would hand that stranger the very data the scope exists to keep private — and the *agent*, not
+   * the user, decides when to call it. `ownerScope !== null` already means "this output is
+   * private", so the default agent is the only one it may reach. Switching agents stays free; an
+   * owner-scoped tool simply is not on the menu while a third party is being paid.
+   */
   const availableTools = useMemo(
-    () => TOOL_REGISTRY.filter((entry) => entry.ownerScope === null || hasOwnerScope(entry.ownerScope)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- hasOwnerScope is derived from these two
-    [isConnected, address],
+    () =>
+      TOOL_REGISTRY.filter(
+        (entry) => entry.ownerScope === null || (customUrl === null && hasOwnerScope(entry.ownerScope)),
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hasOwnerScope is derived from the first two
+    [isConnected, address, customUrl],
   );
+
+  /** Rendered in two places (sidebar and mobile footer) with identical props — computed once so
+   *  the two can't quietly drift. */
+  const toolSelectorOptions = availableTools.map((entry) => ({ name: entry.tool.function.name, label: entry.label }));
 
   const toggleTool = (name: string, enabled: boolean) => {
     const next = new Set(disabledTools);
@@ -306,13 +304,6 @@ export function AssistantChat() {
     preferredNetwork ??
     ((CHAT_NETWORKS as readonly string[]).includes(walletNetwork) ? walletNetwork : CHAT_NETWORKS[0]);
 
-  // A custom agent, once one has been pre-checked and accepted. Null = the default agent.
-  const [customUrl, setCustomUrl] = useState<string | null>(null);
-  const [customCard, setCustomCard] = useState<AgentCard | null>(null);
-  const [customUrlInput, setCustomUrlInput] = useState("");
-  const [checkState, setCheckState] = useState<"idle" | "checking" | "error">("idle");
-  const [checkError, setCheckError] = useState<string | null>(null);
-
   const agentUrl = customUrl ?? DEFAULT_LLM_AGENT_URL;
   // The hook may negotiate away from `desiredNetwork` when the agent doesn't offer it (e.g. a
   // Base-only third-party agent while the user prefers Optimism), so the wallet must be
@@ -323,7 +314,7 @@ export function AssistantChat() {
     paymentNetwork,
     status: chatStatus,
   } = useX402Chat(desiredNetwork, agentUrl);
-  const { network, switchIfNeeded, switchError } = useAutoNetwork([paymentNetwork]);
+  const { network, switchIfNeeded, getSwitchError } = useAutoNetwork([paymentNetwork]);
 
   // The image tool pays on a different network/scheme (exact, genimg's own wallet signature)
   // than chat's batch-settlement channel — see useX402ImageGeneration.ts. It does not switch
@@ -339,7 +330,7 @@ export function AssistantChat() {
   const {
     network: imageNetwork,
     switchIfNeeded: switchImageIfNeeded,
-    switchError: switchImageError,
+    getSwitchError: getImageSwitchError,
   } = useAutoNetwork(IMAGE_TOOL_NETWORKS);
   const { generateImage } = useX402ImageGeneration();
   // Bundestakt's caching lives here rather than in tools/bundestakt.ts — see loadBundestakt().
@@ -435,7 +426,7 @@ export function AssistantChat() {
     try {
       return await runImageTool(args, {
         confirm: waitForConfirmation,
-        ensureNetwork: async () => ((await switchImageIfNeeded()) ? null : (switchImageError ?? "")),
+        ensureNetwork: async () => ((await switchImageIfNeeded()) ? null : (getImageSwitchError() ?? "")),
         generate: async (prompt, size) => {
           const image = await generateImage({
             prompt,
@@ -459,10 +450,7 @@ export function AssistantChat() {
    * 912 KB), and the intended flow calls `/sitzungen` twice in one turn — once to list, once
    * for the chosen slug — so a per-turn cache is the difference between one download and two.
    */
-  async function loadBundestakt(
-    kind: "sitzungen" | "claims",
-    args: Record<string, unknown>,
-  ): Promise<BundestaktResult> {
+  async function loadBundestakt(kind: "sitzungen" | "claims", args: Record<string, unknown>): Promise<ToolRunResult> {
     try {
       const raw = await queryClient.fetchQuery({
         queryKey: ["bundestakt", kind],
@@ -470,10 +458,14 @@ export function AssistantChat() {
         staleTime: 5 * 60_000,
         retry: 0,
       });
-      return kind === "sitzungen" ? selectSitzungen(raw, args) : selectClaims(raw, args);
+      const result: BundestaktResult = kind === "sitzungen" ? selectSitzungen(raw, args) : selectClaims(raw, args);
+      // An unrecognized slug is an answer, not a malfunction: the list-then-detail flow in the
+      // system prompt depends on the model being able to retry with a corrected one, so the tool
+      // has to stay on offer for the rest of the turn.
+      return { result, recoverable: result.status === "not_found" };
     } catch (err) {
       // fetchQuery rethrows the fetcher's error; the module owns the wire-level failure shape.
-      return fetchFailed(err);
+      return { result: fetchFailed(err) };
     }
   }
 
@@ -513,8 +505,8 @@ export function AssistantChat() {
   // like "constructor" would resolve to a truthy, callable value and bypass dispatch entirely.
   const toolRunners: Record<string, ToolRunner> = Object.create(null) as Record<string, ToolRunner>;
   toolRunners[generateImageTool.function.name] = runImageToolHere;
-  toolRunners[getSitzungenTool.function.name] = async (args) => ({ result: await loadBundestakt("sitzungen", args) });
-  toolRunners[searchClaimsTool.function.name] = async (args) => ({ result: await loadBundestakt("claims", args) });
+  toolRunners[getSitzungenTool.function.name] = (args) => loadBundestakt("sitzungen", args);
+  toolRunners[searchClaimsTool.function.name] = (args) => loadBundestakt("claims", args);
   toolRunners[getAnalyticsTool.function.name] = async (args) => ({ result: await loadAnalytics(args) });
 
   /** Dispatches one tool call by name, or tells the model it invented one. */
@@ -576,7 +568,7 @@ export function AssistantChat() {
         ensureReady: async () => {
           const switched = await switchIfNeeded();
           if (!switched) {
-            throw new Error(switchError ?? `Please switch your wallet to ${getViemChain(network).name}`);
+            throw new Error(getSwitchError() ?? `Please switch your wallet to ${getViemChain(network).name}`);
           }
         },
         payAndSend,
@@ -698,11 +690,7 @@ export function AssistantChat() {
                 onTryCustomAgent={() => void tryCustomAgent()}
                 onUseDefaultAgent={useDefaultAgent}
               />
-              <ToolSelector
-                options={availableTools.map((entry) => ({ name: entry.tool.function.name, label: entry.label }))}
-                disabled={disabledTools}
-                onToggle={toggleTool}
-              />
+              <ToolSelector options={toolSelectorOptions} disabled={disabledTools} onToggle={toggleTool} />
             </div>
           </div>
         )}
@@ -852,11 +840,7 @@ export function AssistantChat() {
                 onTryCustomAgent={() => void tryCustomAgent()}
                 onUseDefaultAgent={useDefaultAgent}
               />
-              <ToolSelector
-                options={availableTools.map((entry) => ({ name: entry.tool.function.name, label: entry.label }))}
-                disabled={disabledTools}
-                onToggle={toggleTool}
-              />
+              <ToolSelector options={toolSelectorOptions} disabled={disabledTools} onToggle={toggleTool} />
             </>
           )}
         </div>

@@ -70,9 +70,10 @@ export type ImageToolResult =
  * the user type one before approving.
  */
 export function parseImageArgs(args: Record<string, unknown>): { prompt: string; size: ImageSize } {
+  const size = IMAGE_SIZES.find((s) => s === args.size);
   return {
     prompt: typeof args.prompt === "string" ? args.prompt : "",
-    size: args.size === "1792x1024" ? "1792x1024" : "1024x1024",
+    size: size ?? IMAGE_SIZES[0],
   };
 }
 

@@ -17,9 +17,18 @@ import type { X402ChatMessage, X402ChatResponse, X402Tool, X402ToolCall } from "
  *  a combined question (find the session, read it, then check a claim) needs one more. */
 export const MAX_HOPS = 4;
 
-/** What running one tool produces: the compact `{status}` object the model gets back, plus — for
- *  `generate_image` — the URL the chat renders locally. `imageUrl` never reaches the model. */
-export type ToolRunResult = { result: { status: string; [key: string]: unknown }; imageUrl?: string };
+/** What running one tool produces: the compact `{status}` object the model gets back, plus two
+ *  fields the loop reads and the model never sees — the image URL the chat renders locally, and
+ *  whether a non-`ok` result still leaves the tool worth offering. */
+export type ToolRunResult = {
+  result: { status: string; [key: string]: unknown };
+  /** Set by `generate_image`. Display only; never serialized into the conversation. */
+  imageUrl?: string;
+  /** Set when a non-`ok` result means the tool itself is healthy and the model can usefully retry
+   *  with corrected arguments — a runner's own judgement, because only it knows which of its
+   *  statuses are answers rather than malfunctions. Loop-only, like `imageUrl`. */
+  recoverable?: boolean;
+};
 
 /** A tool on offer for this turn, with the citation it obliges. Owner scope and the user's own
  *  selection are applied by the caller — what arrives here is already what may be offered. */
@@ -104,14 +113,17 @@ export async function runToolLoop<S extends string>(
 
     convo.push(choice.message); // the assistant turn, content: null, tool_calls intact
 
+    // TODO: several calls in one hop run one after another. `failedTools`/`usedSources` have no
+    // ordering dependency within a hop, so `Promise.all` would be safe and would overlap the
+    // round-trips. Left serial for now because the model reliably asks for one tool per hop —
+    // list -> detail -> answer is three hops, not three calls in one.
     for (const call of toolCalls) {
-      const { result, imageUrl } = await runToolCall(call);
+      const { result, imageUrl, recoverable } = await runToolCall(call);
       if (imageUrl) finalImageUrl = imageUrl;
-      // `not_found` (an unrecognized slug) is a normal, recoverable outcome — the whole point of
-      // the list-then-detail pattern in the system prompt is that the model can retry with a
-      // corrected slug. Only a real failure withdraws the tool for the rest of the turn.
+      // Only a real failure withdraws the tool for the rest of the turn. Which non-`ok` statuses
+      // are merely answers is the runner's call, not this file's — see `recoverable`.
       const source = sourceOf.get(call.function.name);
-      if (result.status !== "ok" && result.status !== "not_found") {
+      if (result.status !== "ok" && !recoverable) {
         failedTools.add(call.function.name);
       } else if (result.status === "ok" && source) {
         usedSources.add(source);

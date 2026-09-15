@@ -73,8 +73,18 @@ const isImageNetworkCall = (supportedNetworks: readonly string[]) => supportedNe
 vi.mock("../hooks/useAutoNetwork", () => ({
   useAutoNetwork: vi.fn((supportedNetworks: readonly string[]) =>
     supportedNetworks.length > 1
-      ? { network: "eip155:10", isOnCorrectNetwork: true, switchIfNeeded: mockSwitchImageIfNeeded, switchError: null }
-      : { network: "eip155:8453", isOnCorrectNetwork: true, switchIfNeeded: mockSwitchIfNeeded, switchError: null },
+      ? {
+          network: "eip155:10",
+          isOnCorrectNetwork: true,
+          switchIfNeeded: mockSwitchImageIfNeeded,
+          getSwitchError: () => null,
+        }
+      : {
+          network: "eip155:8453",
+          isOnCorrectNetwork: true,
+          switchIfNeeded: mockSwitchIfNeeded,
+          getSwitchError: () => null,
+        },
   ),
 }));
 
@@ -293,16 +303,28 @@ describe("AssistantChat", () => {
     expect(mockSendMessage).toHaveBeenCalled();
   });
 
+  // The reason is set *by the failing call*, not before the render — which is what the real hook
+  // does. A version that reads a render-time value sees null here and falls back to the generic
+  // message, because the failure has not re-rendered anything yet.
   it("shows an error bubble with the real switch-failure reason instead of a generic message", async () => {
-    mockSwitchIfNeeded.mockResolvedValue(false);
+    let reason: string | null = null;
+    mockSwitchIfNeeded.mockImplementation(async () => {
+      reason = "Unrecognized chain ID, please add it in your wallet first";
+      return false;
+    });
     vi.mocked(useAutoNetwork).mockImplementation((supportedNetworks: readonly string[]) =>
       isImageNetworkCall(supportedNetworks)
-        ? { network: "eip155:10", isOnCorrectNetwork: true, switchIfNeeded: mockSwitchImageIfNeeded, switchError: null }
+        ? {
+            network: "eip155:10",
+            isOnCorrectNetwork: true,
+            switchIfNeeded: mockSwitchImageIfNeeded,
+            getSwitchError: () => null,
+          }
         : {
             network: "eip155:8453",
             isOnCorrectNetwork: false,
             switchIfNeeded: mockSwitchIfNeeded,
-            switchError: "Unrecognized chain ID, please add it in your wallet first",
+            getSwitchError: () => reason,
           },
     );
 
@@ -1057,6 +1079,64 @@ describe("AssistantChat", () => {
       fireEvent.click(back);
 
       await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:10", "https://llm-agent.fretchen.eu"));
+    });
+
+    /**
+     * The owner gate answers "may this user call the tool"; it does not answer "may this agent read
+     * the answer". A tool result is serialised into the conversation and sent to whichever agent is
+     * being paid on the next hop, so an owner-scoped tool offered while a third-party agent is
+     * selected would hand that stranger the private data the scope exists to protect — and the
+     * agent, not the user, chooses when to call it.
+     */
+    describe("owner-scoped tools and third-party agents", () => {
+      it("withdraws the owner-scoped tool once a custom agent is selected", async () => {
+        connectAsOwner();
+        vi.mocked(precheckLlmV1Agent).mockResolvedValue({ ok: true, card: CUSTOM_CARD });
+
+        renderWithQuery(<AssistantChat />);
+        // The owner sees it on the default agent...
+        expect(screen.getAllByLabelText("Site analytics").length).toBeGreaterThan(0);
+
+        pasteAndTry(CUSTOM_URL);
+        await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:10", CUSTOM_URL));
+
+        // ...and no longer once a stranger is being paid.
+        expect(screen.queryByLabelText("Site analytics")).not.toBeInTheDocument();
+        // The ungated tools are untouched — switching agents stays free.
+        expect(screen.getAllByLabelText("Image generation").length).toBeGreaterThan(0);
+      });
+
+      it("never puts the owner-scoped tool on the wire to a custom agent", async () => {
+        connectAsOwner();
+        vi.mocked(precheckLlmV1Agent).mockResolvedValue({ ok: true, card: CUSTOM_CARD });
+        mockSendMessage.mockResolvedValue(textResponse("I cannot look that up here."));
+
+        renderWithQuery(<AssistantChat />);
+        pasteAndTry(CUSTOM_URL);
+        await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:10", CUSTOM_URL));
+
+        sendUserMessage("How is the site doing?");
+
+        await waitFor(() => expect(mockSendMessage).toHaveBeenCalledOnce());
+        const offered = (mockSendMessage.mock.calls[0][1] as { tools: { function: { name: string } }[] }).tools;
+        expect(offered.map((t) => t.function.name)).not.toContain("get_analytics");
+        expect(offered.map((t) => t.function.name)).toEqual(
+          expect.arrayContaining(["generate_image", "get_sitzungen", "search_claims"]),
+        );
+      });
+
+      it("restores the owner-scoped tool on returning to the default agent", async () => {
+        connectAsOwner();
+        vi.mocked(precheckLlmV1Agent).mockResolvedValue({ ok: true, card: CUSTOM_CARD });
+
+        renderWithQuery(<AssistantChat />);
+        pasteAndTry(CUSTOM_URL);
+
+        const back = await screen.findByRole("button", { name: "Back to default agent" });
+        fireEvent.click(back);
+
+        await waitFor(() => expect(screen.getAllByLabelText("Site analytics").length).toBeGreaterThan(0));
+      });
     });
   });
 });

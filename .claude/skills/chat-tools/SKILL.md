@@ -76,6 +76,14 @@ Shared failure handling lives in `tools/failure.ts`: `describeFailure` (single-l
 Return a result, never throw: every tool function resolves to a `{ status }` object so the loop
 keeps running and the model can explain the failure, instead of the whole chat message crashing.
 
+**A failing tool is withdrawn for the rest of the turn** — left on offer, a model just retries it
+until the hops run out, which really happened: three wallet prompts, three payments, no answer. So
+if one of your non-`ok` statuses is an _answer_ rather than a malfunction (bundestakt's `not_found`
+for an unrecognized slug, where the list-then-detail flow depends on retrying with a corrected
+one), the runner must say so: `return { result, recoverable: true }`. Like `imageUrl`, `recoverable`
+sits beside the result and never reaches the model. The loop knows no tool's status vocabulary —
+if you don't set it, any non-`ok` status withdraws the tool.
+
 ## Three constraints that bite silently
 
 **Two backend caps**, both in `scw_js/llm_schemas.ts`: `MAX_TOOLS` (8) and `MAX_TOOLS_BYTES` (8192).

@@ -112,15 +112,37 @@ describe("runToolLoop", () => {
     expect(offeredOn(payAndSend, 1)).toEqual(expect.arrayContaining(["beta_tool", "plain_tool"]));
   });
 
-  // `not_found` is a normal outcome of the list-then-detail pattern, not a broken tool — the model
-  // has to be able to retry with a corrected argument.
-  it("keeps a tool on offer after not_found", async () => {
+  // A runner marks its own recoverable outcomes — e.g. bundestakt's `not_found`, where the tool
+  // worked and the model just asked for a slug that doesn't exist. The loop must not know any
+  // tool's status vocabulary, only whether the runner called this one survivable.
+  it("keeps a tool on offer when the runner marks the result recoverable", async () => {
+    const payAndSend = vi.fn().mockResolvedValueOnce(toolCallTurn("alpha_tool")).mockResolvedValueOnce(textTurn("ok"));
+    const runToolCall = vi.fn().mockResolvedValue({ result: { status: "not_found" }, recoverable: true });
+
+    await runToolLoop<Source>(convo(), OFFERED, deps(payAndSend, runToolCall));
+
+    expect(offeredOn(payAndSend, 1)).toContain("alpha_tool");
+  });
+
+  // The same status without the flag is just a failure — nothing about the string itself is
+  // special to the loop.
+  it("withdraws a tool on the same status when it is not marked recoverable", async () => {
     const payAndSend = vi.fn().mockResolvedValueOnce(toolCallTurn("alpha_tool")).mockResolvedValueOnce(textTurn("ok"));
     const runToolCall = vi.fn().mockResolvedValue({ result: { status: "not_found" } });
 
     await runToolLoop<Source>(convo(), OFFERED, deps(payAndSend, runToolCall));
 
-    expect(offeredOn(payAndSend, 1)).toContain("alpha_tool");
+    expect(offeredOn(payAndSend, 1)).not.toContain("alpha_tool");
+  });
+
+  // Recoverable is about staying on offer, not about having contributed anything to cite.
+  it("credits no source for a recoverable non-ok result", async () => {
+    const payAndSend = vi.fn().mockResolvedValueOnce(toolCallTurn("alpha_tool")).mockResolvedValueOnce(textTurn("ok"));
+    const runToolCall = vi.fn().mockResolvedValue({ result: { status: "not_found" }, recoverable: true });
+
+    const result = await runToolLoop<Source>(convo(), OFFERED, deps(payAndSend, runToolCall));
+
+    expect(result.sources).toEqual([]);
   });
 
   // `[]` is truthy and would be sent as an empty tools array; "nothing left" has to omit the key.

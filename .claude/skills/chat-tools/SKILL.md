@@ -33,8 +33,8 @@ The metadata sits **beside** the tool object rather than on it: these objects go
 
 ### 2. Execution — a runner in `toolRunners`, same file
 
-A runner is `(args) => Promise<{ result, imageUrl? }>`, a **closure over exactly what its own tool
-needs** — because those needs differ sharply:
+A runner is `(args) => Promise<{ result, imageUrl?, recoverable? }>`, a **closure over exactly what
+its own tool needs** — because those needs differ sharply:
 
 | Tool shape               | Closes over                          | Example          |
 | ------------------------ | ------------------------------------ | ---------------- |

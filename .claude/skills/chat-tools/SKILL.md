@@ -38,9 +38,10 @@ needs** — because those needs differ sharply:
 
 | Tool shape               | Closes over                          | Example          |
 | ------------------------ | ------------------------------------ | ---------------- |
-| Pure/local               | nothing                              | a date tool      |
 | Networked, authenticated | auth callback, query cache           | `get_analytics`  |
 | Confirmation-gated       | wallet, network switch, confirm card | `generate_image` |
+
+(There is no purely local row on purpose — see _When a tool is the wrong shape_ below.)
 
 There is deliberately **no shared `ctx` object**. It would have to carry the union of every tool's
 needs and grow with each new one; a closure carries only its own.
@@ -50,13 +51,27 @@ dispatch, so a tool added without a runner fails the suite rather than at runtim
 
 ## Tool modules stay React-free
 
-`website/tools/*.ts` hold a definition plus **pure pieces** — typically `fetchX` (thin, may throw)
-and `selectX` (pure, operates on already-parsed JSON). No hooks, no React imports. That is what
-keeps them importable from a non-browser caller (a future MCP server, a script), and it is why the
-runners live in the component instead.
+`website/tools/*.ts` hold a definition plus the logic. No hooks, no React imports — that is what
+keeps them importable from a non-browser caller (a future MCP server, a script). Two shapes so far,
+and a tool is one or the other:
 
-`tools/generateImage.ts` is definition-only on purpose: its runner is inescapably wallet- and
-UI-bound, and pressing it into a module would mean threading wallet dependencies back in.
+**Fetch-then-project** (`bundestakt.ts`, `analytics.ts`): `fetchX` (thin, may throw) plus `selectX`
+(pure, operates on already-parsed JSON).
+
+**Confirm-then-act** (`generateImage.ts`, and `social_media_publication` when it lands): the module
+owns the whole sequence and takes what only exists in React as **named effects** —
+`runImageTool(args, { confirm, ensureNetwork, generate, onPhase })`. This is not the shared `ctx`
+rejected above: the effects are cut for one tool and named after what they do, and another
+confirm-gated tool will want different ones. What this buys is that the sequence — cancel, network
+refusal, classification, ordering — is testable with `vi.fn()`s instead of a render plus a card
+click.
+
+The component keeps only the wiring, and clears the confirm card once in a `finally` rather than in
+every branch.
+
+Shared failure handling lives in `tools/failure.ts`: `describeFailure` (single-line, truncated at
+200 chars) and `fetchFailed`. Use them rather than `err.message` — a tool result is input tokens on
+**every** later hop, so an unbounded wallet error is a recurring charge.
 
 Return a result, never throw: every tool function resolves to a `{ status }` object so the loop
 keeps running and the model can explain the failure, instead of the whole chat message crashing.
@@ -89,6 +104,13 @@ entirely. This has been got wrong once and is covered by a test.
   names, so a tool added later is on by default.
 
 ## When a tool is the wrong shape
+
+**What the client already knows belongs in the system prompt, not in a tool.** The current date is
+the worked example (`website/utils/dateContext.ts`): a `get_date` tool would only fire if the model
+knew that it did not know the date — it does not, it believes its training cutoff is today, which
+is the whole failure. The date is also needed _before_ the first tool call, since it ends up inside
+tool arguments (`get_sitzungen` filters on ISO `von`/`bis`, and a guessed year returns an empty list
+rather than an error). In the prompt it costs no hop and no tool budget.
 
 The loop is reactive and bounded by `MAX_HOPS` (4), and every hop is a separately paid completion.
 Work that needs durable state across runs, minutes of runtime, or a plan the code controls rather

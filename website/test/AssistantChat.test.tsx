@@ -198,8 +198,25 @@ describe("AssistantChat", () => {
     await waitFor(() => expect(mockSendMessage).toHaveBeenCalledOnce());
 
     const prompt = mockSendMessage.mock.calls[0][0] as { role: string; content: string }[];
-    expect(prompt[0]).toEqual({ role: "system", content: "assistent.systemPrompt" });
+    expect(prompt[0].role).toBe("system");
+    expect(prompt[0].content).toContain("assistent.systemPrompt");
     expect(prompt[prompt.length - 1]).toEqual({ role: "user", content: "What is the capital of France?" });
+  });
+
+  // Without this the model answers "today" from its training cutoff — and, worse, guesses a year
+  // for the ISO von/bis arguments of get_sitzungen, which filters everything out silently.
+  it("appends today's real date to the system prompt", async () => {
+    renderWithQuery(<AssistantChat />);
+
+    sendUserMessage("What is today?");
+
+    await waitFor(() => expect(mockSendMessage).toHaveBeenCalledOnce());
+
+    const prompt = mockSendMessage.mock.calls[0][0] as { role: string; content: string }[];
+    const today = new Date().toLocaleDateString("en-CA", {
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
+    expect(prompt[0].content).toContain(today);
   });
 
   it("renders the assistant's reply as a message bubble", async () => {

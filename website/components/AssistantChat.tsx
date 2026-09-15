@@ -43,6 +43,7 @@ import { useWalletAuth } from "../hooks/useWalletAuth";
 import { isOwnerAddress, type OwnerScope } from "../utils/getChain";
 import type { X402ChatMessage, X402Tool, X402ToolCall } from "../types/x402";
 import { runToolLoop, type ToolRunResult } from "../utils/toolLoop";
+import { formatDateContext } from "../utils/dateContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { getViemChain, toCAIP2, fromCAIP2, getGenAiNFTMainnetNetworks } from "@fretchen/chain-utils";
 import { useChainId } from "wagmi";
@@ -552,7 +553,13 @@ export function AssistantChat() {
       // state, so a previous tool call is never replayed to the model on a later message. Its
       // own final text turn is the model's whole memory of having made an image.
       const convo: X402ChatMessage[] = [
-        { role: "system", content: systemPromptMessage },
+        {
+          role: "system",
+          // Read at send time, not at render time: `sendMessage` is an event handler, so there is
+          // no server/client clock mismatch to hydrate, and a session left open over midnight
+          // picks up the new date by itself on the next message.
+          content: `${systemPromptMessage}\n\n${formatDateContext(new Date(), Intl.DateTimeFormat().resolvedOptions().timeZone)}`,
+        },
         ...messages.map((msg) => ({ role: msg.role, content: msg.content })),
         { role: "user", content: userMessage.trim() },
       ];

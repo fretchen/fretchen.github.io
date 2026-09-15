@@ -509,12 +509,13 @@ export function AssistantChat() {
    * handler. Memoising it would need a dependency list covering every closure above, and a wrong
    * one is worse than none.
    */
-  const toolRunners: Record<string, ToolRunner> = {
-    [generateImageTool.function.name]: runImageToolHere,
-    [getSitzungenTool.function.name]: async (args) => ({ result: await loadBundestakt("sitzungen", args) }),
-    [searchClaimsTool.function.name]: async (args) => ({ result: await loadBundestakt("claims", args) }),
-    [getAnalyticsTool.function.name]: async (args) => ({ result: await loadAnalytics(args) }),
-  };
+  // Object.create(null): a plain object literal inherits Object.prototype, so a forged tool name
+  // like "constructor" would resolve to a truthy, callable value and bypass dispatch entirely.
+  const toolRunners: Record<string, ToolRunner> = Object.create(null) as Record<string, ToolRunner>;
+  toolRunners[generateImageTool.function.name] = runImageToolHere;
+  toolRunners[getSitzungenTool.function.name] = async (args) => ({ result: await loadBundestakt("sitzungen", args) });
+  toolRunners[searchClaimsTool.function.name] = async (args) => ({ result: await loadBundestakt("claims", args) });
+  toolRunners[getAnalyticsTool.function.name] = async (args) => ({ result: await loadAnalytics(args) });
 
   /** Dispatches one tool call by name, or tells the model it invented one. */
   async function runToolCall(call: X402ToolCall): Promise<ToolRunResult> {

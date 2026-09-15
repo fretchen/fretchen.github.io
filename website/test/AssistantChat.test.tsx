@@ -671,6 +671,20 @@ describe("AssistantChat", () => {
       expect((JSON.parse(toolResult!.content) as { status: string }).status).not.toBe("unknown_tool");
     });
 
+    it("treats an inherited Object.prototype name as unknown_tool, not as a runner", async () => {
+      mockSendMessage
+        .mockResolvedValueOnce(toolCallResponse("constructor", { anything: "here" }))
+        .mockResolvedValueOnce(textResponse("done"));
+
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("go");
+
+      await waitFor(() => expect(mockSendMessage).toHaveBeenCalledTimes(2));
+      const secondConvo = mockSendMessage.mock.calls[1][0] as { role: string; content: string }[];
+      const toolResult = secondConvo.find((m) => m.role === "tool");
+      expect(JSON.parse(toolResult!.content)).toEqual({ status: "unknown_tool" });
+    });
+
     it("answers unknown_tool for a name the model invented, without crashing the turn", async () => {
       mockSendMessage
         .mockResolvedValueOnce(toolCallResponse("get_weather", { city: "Berlin" }))

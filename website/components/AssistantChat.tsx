@@ -79,7 +79,7 @@ type ToolSource = "bundestakt" | "analytics";
  * Hoisted for a stable identity across renders; the loop filters it as tools fail, which is why
  * the array itself stays constant.
  */
-const TOOL_REGISTRY = [
+export const TOOL_REGISTRY = [
   { tool: generateImageTool, label: "Image generation", ownerScope: null, source: null },
   { tool: getSitzungenTool, label: "Bundestag sessions", ownerScope: null, source: "bundestakt" },
   { tool: searchClaimsTool, label: "Fact-checks", ownerScope: null, source: "bundestakt" },
@@ -126,6 +126,29 @@ function describeToolFailure(err: unknown): string {
   const singleLine = message.replace(/\s+/g, " ").trim();
   return singleLine.length > 200 ? `${singleLine.slice(0, 200)}…` : singleLine;
 }
+
+/**
+ * What running one tool produces: the compact `{status}` object the model gets back, plus — for
+ * `generate_image` — the URL the chat renders locally. `imageUrl` is display-only and never
+ * reaches the model.
+ */
+type ToolRunResult = { result: { status: string; [key: string]: unknown }; imageUrl?: string };
+
+/**
+ * The execution half of the tool contract. `TOOL_REGISTRY` above says what exists and who may use
+ * it; a runner says how to do it.
+ *
+ * Runners are built in the component rather than exported from the tool modules, because what a
+ * tool needs differs per tool and some of it only exists inside React: `get_analytics` closes over
+ * the auth callback and the query cache, `generate_image` over the wallet, the network switch and
+ * the confirm card. A shared `ctx` object would have to carry the union of every tool's needs and
+ * grow with each new one; a closure carries exactly what its own tool uses — and a future `date`
+ * tool closes over nothing at all.
+ *
+ * The tool *modules* stay React-free (`fetchX` + `selectX`), which is what keeps them importable
+ * from a non-browser caller. The runners are the wiring, not the subject matter.
+ */
+type ToolRunner = (args: Record<string, unknown>) => Promise<ToolRunResult>;
 
 /** Tool arguments arrive as a JSON *string*. Malformed ones become `{}` rather than an error:
  *  the selectors treat every field as optional, so an argument-less call still returns data. */
@@ -454,16 +477,9 @@ export function AssistantChat() {
    * the image URL for local rendering. Never throws — every failure path resolves to a status
    * the model can react to.
    */
-  async function runImageTool(
-    call: X402ToolCall,
-  ): Promise<{ result: { status: string; network?: string; reason?: string }; imageUrl?: string }> {
-    let args: { prompt?: string; size?: string } = {};
-    try {
-      args = JSON.parse(call.function.arguments) as typeof args;
-    } catch {
-      // The model sent malformed JSON arguments — fall through with an empty prompt; the
-      // confirm card still lets the user type one before approving.
-    }
+  async function runImageTool(args: Record<string, unknown>): Promise<ToolRunResult> {
+    // `parseToolArgs` has already turned malformed JSON into `{}`; an empty prompt is fine here
+    // because the confirm card lets the user type one before approving.
     const initialPrompt = typeof args.prompt === "string" ? args.prompt : "";
     const initialSize: ToolSize = args.size === "1792x1024" ? "1792x1024" : "1024x1024";
 
@@ -552,26 +568,30 @@ export function AssistantChat() {
   }
 
   /**
-   * Dispatches one tool call by name. Only `generate_image` is confirmation-gated and costs
-   * money; the Bundestakt and analytics lookups are free and read-only, so they run silently.
+   * How to run each tool, keyed by wire name. Only `generate_image` is confirmation-gated and
+   * costs money; the Bundestakt and analytics lookups are free and read-only, so they run
+   * silently.
+   *
+   * Rebuilt each render, which is harmless: it is only ever read inside `sendMessage`, an event
+   * handler. Memoising it would need a dependency list covering every closure above, and a wrong
+   * one is worse than none.
    */
-  async function runToolCall(
-    call: X402ToolCall,
-  ): Promise<{ result: { status: string; [key: string]: unknown }; imageUrl?: string }> {
-    switch (call.function.name) {
-      case generateImageTool.function.name:
-        return runImageTool(call);
-      case getSitzungenTool.function.name:
-        return { result: await loadBundestakt("sitzungen", parseToolArgs(call)) };
-      case searchClaimsTool.function.name:
-        return { result: await loadBundestakt("claims", parseToolArgs(call)) };
-      case getAnalyticsTool.function.name:
-        return { result: await loadAnalytics(parseToolArgs(call)) };
-      default:
-        // A model that invents a tool name gets told so and can correct itself, rather than
-        // the whole message failing.
-        return { result: { status: "unknown_tool" } };
+  const toolRunners: Record<string, ToolRunner> = {
+    [generateImageTool.function.name]: runImageTool,
+    [getSitzungenTool.function.name]: async (args) => ({ result: await loadBundestakt("sitzungen", args) }),
+    [searchClaimsTool.function.name]: async (args) => ({ result: await loadBundestakt("claims", args) }),
+    [getAnalyticsTool.function.name]: async (args) => ({ result: await loadAnalytics(args) }),
+  };
+
+  /** Dispatches one tool call by name, or tells the model it invented one. */
+  async function runToolCall(call: X402ToolCall): Promise<ToolRunResult> {
+    const run = toolRunners[call.function.name];
+    if (!run) {
+      // A model that invents a tool name gets told so and can correct itself, rather than the
+      // whole message failing.
+      return { result: { status: "unknown_tool" } };
     }
+    return run(parseToolArgs(call));
   }
 
   const sendMessage = async (userMessage: string) => {

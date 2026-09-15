@@ -99,7 +99,7 @@ vi.mock("../tools/analytics", async (importOriginal) => {
   return { ...actual, fetchStats: mockFetchStats };
 });
 
-import { AssistantChat } from "../components/AssistantChat";
+import { AssistantChat, TOOL_REGISTRY } from "../components/AssistantChat";
 import { precheckLlmV1Agent } from "../hooks/x402Discovery";
 import { useX402Chat } from "../hooks/useX402Chat";
 import { useWalletConnection } from "../hooks/useWalletConnection";
@@ -609,6 +609,30 @@ describe("AssistantChat", () => {
       const secondCallOptions = mockSendMessage.mock.calls[1][1] as Record<string, unknown>;
       expect(secondCallOptions.tools).toBeUndefined();
       expect("tools" in secondCallOptions && secondCallOptions.tools !== undefined).toBe(false);
+    });
+
+    // The guard on the execution half of the contract: TOOL_REGISTRY says a tool exists, and a
+    // runner must exist for it. Driven through the real dispatch rather than by inspecting a data
+    // structure, and iterated over the registry so a tool added later is covered without edits —
+    // a missing runner would come back as `unknown_tool`.
+    it.each(TOOL_REGISTRY.map((entry) => entry.tool.function.name))("dispatches %s to a runner", async (name) => {
+      connectAsOwner();
+      mockSendMessage.mockResolvedValueOnce(toolCallResponse(name, {})).mockResolvedValueOnce(textResponse("done"));
+
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("go");
+
+      // A confirmation-gated tool parks on its card; cancelling is enough to prove it reached a
+      // runner at all, which is what this test is about.
+      const cancel = await screen
+        .findByRole("button", { name: "assistent.cancel" }, { timeout: 250 })
+        .catch(() => null);
+      if (cancel) fireEvent.click(cancel);
+
+      await waitFor(() => expect(mockSendMessage).toHaveBeenCalledTimes(2));
+      const convo = mockSendMessage.mock.calls[1][0] as { role: string; content: string }[];
+      const toolResult = convo.find((m) => m.role === "tool");
+      expect((JSON.parse(toolResult!.content) as { status: string }).status).not.toBe("unknown_tool");
     });
 
     it("answers unknown_tool for a name the model invented, without crashing the turn", async () => {

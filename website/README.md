@@ -176,7 +176,11 @@ territory rule, and it is the same hue the page header already shows, so it read
 rather than as a second colour system. Pass it explicitly — `<SequenceDiagram territory="explore">`
 matching the page's `<PageHeader territory="explore">`; omitted, a figure is entirely grey.
 
-Reference implementation: `components/blog/SequenceDiagram.tsx`.
+Reference implementation: `components/blog/SequenceDiagram.tsx`. **New diagrams use it.**
+`components/MermaidDiagram.tsx` is deprecated: it renders a mermaid source string, so it can
+follow none of the rules above, and it ships a rendering library to the client. It stays only
+for the posts and pages that already embed mermaid sources, each of which drops it the next
+time it is touched.
 
 ## One button
 

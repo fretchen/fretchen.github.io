@@ -3,8 +3,11 @@ import * as styles from "./ToolConfirmCard.styles";
 import { ChainBadge } from "./ChainBadge";
 import { useLocale } from "../hooks/useLocale";
 import { button } from "../styled-system/recipes";
+import { IMAGE_SIZES, type ImageSize } from "../tools/generateImage";
 
-export type ToolSize = "1024x1024" | "1792x1024";
+/** The size vocabulary belongs to the tool, not to the card that displays it. Kept as an alias so
+ *  existing call sites read the same. */
+export type ToolSize = ImageSize;
 
 interface ToolConfirmCardProps {
   /** The model-written prompt, pre-filled and editable — the model sometimes embellishes. */
@@ -17,7 +20,7 @@ interface ToolConfirmCardProps {
   onCancel: () => void;
 }
 
-const SIZE_OPTIONS: ToolSize[] = ["1024x1024", "1792x1024"];
+const SIZE_OPTIONS: readonly ToolSize[] = IMAGE_SIZES;
 
 /**
  * Pauses the chat's tool-call loop for explicit approval before a paid, chain-writing action.

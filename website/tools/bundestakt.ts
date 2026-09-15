@@ -134,9 +134,7 @@ export type BundestaktResult =
   | { status: "fetch_failed"; reason: string };
 
 /** Turns a fetch-time error (thrown by `fetchSitzungen`/`fetchClaims`) into a result. */
-export function fetchFailed(err: unknown): BundestaktResult {
-  return { status: "fetch_failed", reason: err instanceof Error ? err.message : String(err) };
-}
+export { fetchFailed } from "./failure";
 
 // --- Fetchers: plain fetch, no cache, throw on failure ---------------------------------------
 

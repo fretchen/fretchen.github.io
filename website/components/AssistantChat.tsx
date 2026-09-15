@@ -8,9 +8,9 @@
 import React, { useState, useMemo, useEffect, useRef, useSyncExternalStore } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { BaseError, UserRejectedRequestError } from "viem";
 import { AgentInfoPanel } from "./AgentInfoPanel";
 import { AgentSelector } from "./AgentSelector";
+import { ToolSelector } from "./ToolSelector";
 import { ToolConfirmCard, type ToolSize } from "./ToolConfirmCard";
 import * as chat from "./AssistantChat.styles";
 import { useLocale } from "../hooks/useLocale";
@@ -21,7 +21,7 @@ import { useAutoNetwork } from "../hooks/useAutoNetwork";
 import { useX402Chat, DEFAULT_LLM_AGENT_URL } from "../hooks/useX402Chat";
 import { useX402ImageGeneration } from "../hooks/useX402ImageGeneration";
 import { fetchAgentCard, precheckLlmV1Agent, type AgentCard } from "../hooks/x402Discovery";
-import { generateImageTool } from "../tools/generateImage";
+import { generateImageTool, runImageTool } from "../tools/generateImage";
 import {
   getSitzungenTool,
   searchClaimsTool,
@@ -42,20 +42,15 @@ import {
 import { useWalletAuth } from "../hooks/useWalletAuth";
 import { isOwnerAddress, type OwnerScope } from "../utils/getChain";
 import type { X402ChatMessage, X402Tool, X402ToolCall } from "../types/x402";
+import { runToolLoop, type ToolRunResult } from "../utils/toolLoop";
+import { formatDateContext } from "../utils/dateContext";
+import { createLocalStorageStore } from "../utils/localStorageStore";
 import { useQueryClient } from "@tanstack/react-query";
 import { getViemChain, toCAIP2, fromCAIP2, getGenAiNFTMainnetNetworks } from "@fretchen/chain-utils";
 import { useChainId } from "wagmi";
 import { ChainBadge, getChainName } from "./ChainBadge";
 import { button } from "../styled-system/recipes";
 import { PageHeader } from "./PageHeader";
-
-// Hops in one sendMessage() call before giving up and showing the fallback message — the
-// circuit breaker on a model that keeps requesting tools instead of answering. Each hop is a
-// separately metered chat message, so this also bounds worst-case cost per user turn.
-//
-// 4 rather than 3: the Bundestakt flow is list -> detail -> answer, which already fills three,
-// so a combined question (find the session, read it, then check a claim) needs one more.
-const MAX_HOPS = 4;
 
 /**
  * Which tools oblige the answer to name where it got its facts. Bundestakt is a CC BY licence
@@ -78,51 +73,38 @@ type ToolSource = "bundestakt" | "analytics";
  * Hoisted for a stable identity across renders; the loop filters it as tools fail, which is why
  * the array itself stays constant.
  */
-const TOOL_REGISTRY = [
-  { tool: generateImageTool, ownerScope: null, source: null },
-  { tool: getSitzungenTool, ownerScope: null, source: "bundestakt" },
-  { tool: searchClaimsTool, ownerScope: null, source: "bundestakt" },
-  { tool: getAnalyticsTool, ownerScope: "analytics", source: "analytics" },
+export const TOOL_REGISTRY = [
+  { tool: generateImageTool, label: "Image generation", ownerScope: null, source: null },
+  { tool: getSitzungenTool, label: "Bundestag sessions", ownerScope: null, source: "bundestakt" },
+  { tool: searchClaimsTool, label: "Fact-checks", ownerScope: null, source: "bundestakt" },
+  { tool: getAnalyticsTool, label: "Site analytics", ownerScope: "analytics", source: "analytics" },
 ] as const satisfies readonly {
   tool: X402Tool;
+  /** Shown in the ToolSelector. Required, so a new tool cannot arrive without a readable name. */
+  label: string;
   ownerScope: OwnerScope | null;
   source: ToolSource | null;
 }[];
-
-const TOOL_META = new Map(TOOL_REGISTRY.map((entry) => [entry.tool.function.name, entry]));
 
 // Hoisted so the array identity is stable across renders. Mainnet-only on purpose — see the
 // useAutoNetwork call in the component for why a testnet entry here would be a real hazard.
 const IMAGE_TOOL_NETWORKS = getGenAiNFTMainnetNetworks();
 
 /**
- * Classify a thrown `generateImage` error into what the model needs to react sensibly, without
- * string-matching upstream/provider error text. Two cases are reliably detectable: a rejected
- * wallet signature (a typed viem error, found via `.walk()` since wagmi commonly wraps it) and
- * this file's own `validatingFetch` network-mismatch message (ours, not upstream, so matching it
- * is not brittle). Everything else — insufficient balance, API failures, timeouts — folds into
- * `generation_failed`; there is no reliable, non-string-matched way to split those further.
+ * The execution half of the tool contract. `TOOL_REGISTRY` above says what exists and who may use
+ * it; a runner says how to do it.
+ *
+ * Runners are built in the component rather than exported from the tool modules, because what a
+ * tool needs differs per tool and some of it only exists inside React: `get_analytics` closes over
+ * the auth callback and the query cache, `generate_image` over the wallet, the network switch and
+ * the confirm card. A shared `ctx` object would have to carry the union of every tool's needs and
+ * grow with each new one; a closure carries exactly what its own tool uses — and a future `date`
+ * tool closes over nothing at all.
+ *
+ * The tool *modules* stay React-free (`fetchX` + `selectX`), which is what keeps them importable
+ * from a non-browser caller. The runners are the wiring, not the subject matter.
  */
-function classifyImageError(err: unknown): "user_declined" | "wrong_network" | "generation_failed" {
-  if (err instanceof BaseError && err.walk((e) => e instanceof UserRejectedRequestError)) {
-    return "user_declined";
-  }
-  const message = err instanceof Error ? err.message : String(err);
-  if (message.startsWith("Network mismatch!")) return "wrong_network";
-  return "generation_failed";
-}
-
-/**
- * A short, single-line version of a tool failure to hand back to the model, so it can tell the
- * user what actually went wrong instead of "I'm having trouble". Truncated and newline-stripped
- * because this goes into the conversation as a tool result and is billed as input tokens on
- * every subsequent hop — wallet and SDK errors are routinely multi-line and very long.
- */
-function describeToolFailure(err: unknown): string {
-  const message = err instanceof Error ? err.message : String(err);
-  const singleLine = message.replace(/\s+/g, " ").trim();
-  return singleLine.length > 200 ? `${singleLine.slice(0, 200)}…` : singleLine;
-}
+type ToolRunner = (args: Record<string, unknown>) => Promise<ToolRunResult>;
 
 /** Tool arguments arrive as a JSON *string*. Malformed ones become `{}` rather than an error:
  *  the selectors treat every field as optional, so an argument-less call still returns data. */
@@ -170,33 +152,39 @@ const CHAT_NETWORKS = ["eip155:10", "eip155:8453"] as const;
 const NETWORK_PREFERENCE_KEY = "x402-chat-network";
 
 /**
- * The preference as an external store, read via `useSyncExternalStore`. localStorage is
- * client-only, so a plain `useState` initialiser would disagree with the server-rendered
- * markup; the explicit server snapshot below (always null → the Optimism default) makes
- * that impossible. Subscribing to `storage` also keeps two open tabs in agreement.
+ * The preference as an external store (see utils/localStorageStore.ts for why that shape). The
+ * explicit server snapshot at the call site — always null → the Optimism default — is what keeps
+ * the server-rendered markup and the first client render in agreement.
  */
-const networkListeners = new Set<() => void>();
+const networkStore = createLocalStorageStore(NETWORK_PREFERENCE_KEY);
 
 function readStoredNetwork(): string | null {
-  const stored = window.localStorage.getItem(NETWORK_PREFERENCE_KEY);
+  const stored = networkStore.read();
   // Ignore a network the site no longer pays on (an old testnet, a dropped chain).
   return stored && (CHAT_NETWORKS as readonly string[]).includes(stored) ? stored : null;
 }
 
-function subscribeToStoredNetwork(onChange: () => void): () => void {
-  networkListeners.add(onChange);
-  window.addEventListener("storage", onChange);
-  return () => {
-    networkListeners.delete(onChange);
-    window.removeEventListener("storage", onChange);
-  };
-}
+const storeNetwork = (network: string): void => networkStore.write(network);
 
-function storeNetwork(network: string): void {
-  window.localStorage.setItem(NETWORK_PREFERENCE_KEY, network);
-  // `storage` only fires in *other* tabs, so notify this one explicitly.
-  networkListeners.forEach((listener) => listener());
-}
+/**
+ * The tools the user has switched *off*, as an external store mirroring the network preference
+ * above.
+ *
+ * Storing the disabled names rather than the enabled ones is what makes a newly added tool
+ * available by default instead of invisible until someone discovers the panel — and it means an
+ * existing user notices nothing when one lands.
+ *
+ * The snapshot stays the raw string on purpose. `useSyncExternalStore` compares snapshots with
+ * `Object.is`, so returning a freshly built `Set` here would re-render forever; the component
+ * parses the string once in a `useMemo` instead.
+ */
+const DISABLED_TOOLS_KEY = "x402-chat-disabled-tools";
+
+const disabledToolsStore = createLocalStorageStore(DISABLED_TOOLS_KEY);
+
+const readStoredDisabledTools = (): string => disabledToolsStore.read() ?? "";
+
+const storeDisabledTools = (names: ReadonlySet<string>): void => disabledToolsStore.write([...names].join(","));
 
 /** Build a block-explorer tx link for the given CAIP-2 network via its viem chain config. */
 function explorerTxUrl(network: string, txHash: string): string | null {
@@ -261,20 +249,60 @@ export function AssistantChat() {
   const hasOwnerScope = (scope: OwnerScope) => isConnected && isOwnerAddress(address, scope);
 
   // The user's explicit network choice, if they made one.
-  const preferredNetwork = useSyncExternalStore(subscribeToStoredNetwork, readStoredNetwork, () => null);
+  const preferredNetwork = useSyncExternalStore(networkStore.subscribe, readStoredNetwork, () => null);
+
+  // The raw string is the snapshot (see readStoredDisabledTools); parsed once here so the Set
+  // keeps a stable identity between renders.
+  const disabledToolsRaw = useSyncExternalStore(disabledToolsStore.subscribe, readStoredDisabledTools, () => "");
+  const disabledTools = useMemo(
+    () => new Set(disabledToolsRaw.split(",").filter((name) => name.length > 0)),
+    [disabledToolsRaw],
+  );
+
+  // A custom agent, once one has been pre-checked and accepted. Null = the default agent.
+  // Declared above `availableTools` because the owner-scope gate below reads it.
+  const [customUrl, setCustomUrl] = useState<string | null>(null);
+  const [customCard, setCustomCard] = useState<AgentCard | null>(null);
+  const [customUrlInput, setCustomUrlInput] = useState("");
+  const [checkState, setCheckState] = useState<"idle" | "checking" | "error">("idle");
+  const [checkError, setCheckError] = useState<string | null>(null);
+
+  /**
+   * The tools this visitor may use at all — the selector never offers what the gate would refuse.
+   *
+   * Two independent conditions, because "who may call this tool" and "who may read its answer" are
+   * different questions. A tool result is JSON-serialised into `convo` and sent to whichever agent
+   * is selected on the next hop, so an owner-scoped tool offered while a custom agent is in use
+   * would hand that stranger the very data the scope exists to keep private — and the *agent*, not
+   * the user, decides when to call it. `ownerScope !== null` already means "this output is
+   * private", so the default agent is the only one it may reach. Switching agents stays free; an
+   * owner-scoped tool simply is not on the menu while a third party is being paid.
+   */
+  const availableTools = useMemo(
+    () =>
+      TOOL_REGISTRY.filter(
+        (entry) => entry.ownerScope === null || (customUrl === null && hasOwnerScope(entry.ownerScope)),
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hasOwnerScope is derived from the first two
+    [isConnected, address, customUrl],
+  );
+
+  /** Rendered in two places (sidebar and mobile footer) with identical props — computed once so
+   *  the two can't quietly drift. */
+  const toolSelectorOptions = availableTools.map((entry) => ({ name: entry.tool.function.name, label: entry.label }));
+
+  const toggleTool = (name: string, enabled: boolean) => {
+    const next = new Set(disabledTools);
+    if (enabled) next.delete(name);
+    else next.add(name);
+    storeDisabledTools(next);
+  };
 
   // Precedence: explicit choice → the wallet's own chain if we support it → Optimism.
   const walletNetwork = toCAIP2(useChainId());
   const desiredNetwork =
     preferredNetwork ??
     ((CHAT_NETWORKS as readonly string[]).includes(walletNetwork) ? walletNetwork : CHAT_NETWORKS[0]);
-
-  // A custom agent, once one has been pre-checked and accepted. Null = the default agent.
-  const [customUrl, setCustomUrl] = useState<string | null>(null);
-  const [customCard, setCustomCard] = useState<AgentCard | null>(null);
-  const [customUrlInput, setCustomUrlInput] = useState("");
-  const [checkState, setCheckState] = useState<"idle" | "checking" | "error">("idle");
-  const [checkError, setCheckError] = useState<string | null>(null);
 
   const agentUrl = customUrl ?? DEFAULT_LLM_AGENT_URL;
   // The hook may negotiate away from `desiredNetwork` when the agent doesn't offer it (e.g. a
@@ -286,7 +314,7 @@ export function AssistantChat() {
     paymentNetwork,
     status: chatStatus,
   } = useX402Chat(desiredNetwork, agentUrl);
-  const { network, switchIfNeeded, switchError } = useAutoNetwork([paymentNetwork]);
+  const { network, switchIfNeeded, getSwitchError } = useAutoNetwork([paymentNetwork]);
 
   // The image tool pays on a different network/scheme (exact, genimg's own wallet signature)
   // than chat's batch-settlement channel — see useX402ImageGeneration.ts. It does not switch
@@ -302,7 +330,7 @@ export function AssistantChat() {
   const {
     network: imageNetwork,
     switchIfNeeded: switchImageIfNeeded,
-    switchError: switchImageError,
+    getSwitchError: getImageSwitchError,
   } = useAutoNetwork(IMAGE_TOOL_NETWORKS);
   const { generateImage } = useX402ImageGeneration();
   // Bundestakt's caching lives here rather than in tools/bundestakt.ts — see loadBundestakt().
@@ -390,58 +418,29 @@ export function AssistantChat() {
   }
 
   /**
-   * Runs the image tool end to end: pause for the user's confirmation, generate the image on
-   * its own network/scheme, and return the compact `{status}` result the model gets back plus
-   * the image URL for local rendering. Never throws — every failure path resolves to a status
-   * the model can react to.
+   * Wires `runImageTool` to what only exists in here. The sequence itself, its statuses and its
+   * error classification live in `tools/generateImage.ts`; this supplies the card, the network
+   * switch and the paid call, and clears the card once in a `finally` rather than in every branch.
    */
-  async function runImageTool(
-    call: X402ToolCall,
-  ): Promise<{ result: { status: string; network?: string; reason?: string }; imageUrl?: string }> {
-    let args: { prompt?: string; size?: string } = {};
+  async function runImageToolHere(args: Record<string, unknown>): Promise<ToolRunResult> {
     try {
-      args = JSON.parse(call.function.arguments) as typeof args;
-    } catch {
-      // The model sent malformed JSON arguments — fall through with an empty prompt; the
-      // confirm card still lets the user type one before approving.
-    }
-    const initialPrompt = typeof args.prompt === "string" ? args.prompt : "";
-    const initialSize: ToolSize = args.size === "1792x1024" ? "1792x1024" : "1024x1024";
-
-    const resolution = await waitForConfirmation(initialPrompt, initialSize);
-    if (resolution.action === "cancel") {
-      setToolCard(null);
-      return { result: { status: "user_declined" } };
-    }
-
-    setToolCard({ phase: "generating", prompt: resolution.prompt, size: resolution.size });
-
-    const switchedToImageNetwork = await switchImageIfNeeded();
-    if (!switchedToImageNetwork) {
-      setToolCard(null);
-      return {
-        result: { status: "wrong_network", reason: switchImageError ?? undefined },
-      };
-    }
-
-    try {
-      const image = await generateImage({
-        prompt: resolution.prompt,
-        size: resolution.size,
-        network: imageNetwork,
-        expectedChainId: fromCAIP2(imageNetwork),
-        isListed: false, // never a chat-time decision — see the confirm card's mint notice instead
+      return await runImageTool(args, {
+        confirm: waitForConfirmation,
+        ensureNetwork: async () => ((await switchImageIfNeeded()) ? null : (getImageSwitchError() ?? "")),
+        generate: async (prompt, size) => {
+          const image = await generateImage({
+            prompt,
+            size,
+            network: imageNetwork,
+            expectedChainId: fromCAIP2(imageNetwork),
+            isListed: false, // never a chat-time decision — see the confirm card's mint notice instead
+          });
+          return { imageUrl: image.imageUrl, network: imageNetwork };
+        },
+        onPhase: setToolCard,
       });
+    } finally {
       setToolCard(null);
-      return { result: { status: "ok", network: imageNetwork }, imageUrl: image.imageUrl };
-    } catch (err) {
-      setToolCard(null);
-      // Both of these exist because the first version of this catch classified the error into a
-      // one-word status and dropped the error itself. A real failure then produced no console
-      // output at all and told the model only "generation_failed", so the user got "I'm having
-      // trouble generating the image" with no way — for them or for us — to find out why.
-      console.error("generate_image tool call failed:", err);
-      return { result: { status: classifyImageError(err), reason: describeToolFailure(err) } };
     }
   }
 
@@ -451,10 +450,7 @@ export function AssistantChat() {
    * 912 KB), and the intended flow calls `/sitzungen` twice in one turn — once to list, once
    * for the chosen slug — so a per-turn cache is the difference between one download and two.
    */
-  async function loadBundestakt(
-    kind: "sitzungen" | "claims",
-    args: Record<string, unknown>,
-  ): Promise<BundestaktResult> {
+  async function loadBundestakt(kind: "sitzungen" | "claims", args: Record<string, unknown>): Promise<ToolRunResult> {
     try {
       const raw = await queryClient.fetchQuery({
         queryKey: ["bundestakt", kind],
@@ -462,10 +458,14 @@ export function AssistantChat() {
         staleTime: 5 * 60_000,
         retry: 0,
       });
-      return kind === "sitzungen" ? selectSitzungen(raw, args) : selectClaims(raw, args);
+      const result: BundestaktResult = kind === "sitzungen" ? selectSitzungen(raw, args) : selectClaims(raw, args);
+      // An unrecognized slug is an answer, not a malfunction: the list-then-detail flow in the
+      // system prompt depends on the model being able to retry with a corrected one, so the tool
+      // has to stay on offer for the rest of the turn.
+      return { result, recoverable: result.status === "not_found" };
     } catch (err) {
       // fetchQuery rethrows the fetcher's error; the module owns the wire-level failure shape.
-      return fetchFailed(err);
+      return { result: fetchFailed(err) };
     }
   }
 
@@ -493,26 +493,31 @@ export function AssistantChat() {
   }
 
   /**
-   * Dispatches one tool call by name. Only `generate_image` is confirmation-gated and costs
-   * money; the Bundestakt and analytics lookups are free and read-only, so they run silently.
+   * How to run each tool, keyed by wire name. Only `generate_image` is confirmation-gated and
+   * costs money; the Bundestakt and analytics lookups are free and read-only, so they run
+   * silently.
+   *
+   * Rebuilt each render, which is harmless: it is only ever read inside `sendMessage`, an event
+   * handler. Memoising it would need a dependency list covering every closure above, and a wrong
+   * one is worse than none.
    */
-  async function runToolCall(
-    call: X402ToolCall,
-  ): Promise<{ result: { status: string; [key: string]: unknown }; imageUrl?: string }> {
-    switch (call.function.name) {
-      case generateImageTool.function.name:
-        return runImageTool(call);
-      case getSitzungenTool.function.name:
-        return { result: await loadBundestakt("sitzungen", parseToolArgs(call)) };
-      case searchClaimsTool.function.name:
-        return { result: await loadBundestakt("claims", parseToolArgs(call)) };
-      case getAnalyticsTool.function.name:
-        return { result: await loadAnalytics(parseToolArgs(call)) };
-      default:
-        // A model that invents a tool name gets told so and can correct itself, rather than
-        // the whole message failing.
-        return { result: { status: "unknown_tool" } };
+  // Object.create(null): a plain object literal inherits Object.prototype, so a forged tool name
+  // like "constructor" would resolve to a truthy, callable value and bypass dispatch entirely.
+  const toolRunners: Record<string, ToolRunner> = Object.create(null) as Record<string, ToolRunner>;
+  toolRunners[generateImageTool.function.name] = runImageToolHere;
+  toolRunners[getSitzungenTool.function.name] = (args) => loadBundestakt("sitzungen", args);
+  toolRunners[searchClaimsTool.function.name] = (args) => loadBundestakt("claims", args);
+  toolRunners[getAnalyticsTool.function.name] = async (args) => ({ result: await loadAnalytics(args) });
+
+  /** Dispatches one tool call by name, or tells the model it invented one. */
+  async function runToolCall(call: X402ToolCall): Promise<ToolRunResult> {
+    const run = toolRunners[call.function.name];
+    if (!run) {
+      // A model that invents a tool name gets told so and can correct itself, rather than the
+      // whole message failing.
+      return { result: { status: "unknown_tool" } };
     }
+    return run(parseToolArgs(call));
   }
 
   const sendMessage = async (userMessage: string) => {
@@ -541,70 +546,34 @@ export function AssistantChat() {
       // state, so a previous tool call is never replayed to the model on a later message. Its
       // own final text turn is the model's whole memory of having made an image.
       const convo: X402ChatMessage[] = [
-        { role: "system", content: systemPromptMessage },
+        {
+          role: "system",
+          // Read at send time, not at render time: `sendMessage` is an event handler, so there is
+          // no server/client clock mismatch to hydrate, and a session left open over midnight
+          // picks up the new date by itself on the next message.
+          content: `${systemPromptMessage}\n\n${formatDateContext(new Date(), Intl.DateTimeFormat().resolvedOptions().timeZone)}`,
+        },
         ...messages.map((msg) => ({ role: msg.role, content: msg.content })),
         { role: "user", content: userMessage.trim() },
       ];
 
-      let finalContent: string | null = null;
-      let finalImageUrl: string | undefined;
-      const usedSources = new Set<ToolSource>();
-      // Per tool, not global: a failed Bundestakt lookup must not also disable generate_image
-      // for the rest of the turn. A failed tool is simply no longer offered on later hops.
-      const failedTools = new Set<string>();
+      // The loop itself lives in utils/toolLoop.ts — this component keeps state and rendering.
+      // `availableTools` already applies the owner gate; what is left to subtract here is what the
+      // user switched off in the ToolSelector. Failures within the turn are the loop's business.
+      const offeredTools = availableTools
+        .filter((entry) => !disabledTools.has(entry.tool.function.name))
+        .map((entry) => ({ tool: entry.tool, source: entry.source }));
 
-      for (let hop = 0; hop < MAX_HOPS; hop++) {
-        // Cheap no-op once the wallet is already on the right chain — re-checked every hop
-        // because a mid-loop deposit/top-up could in principle need it, not just the first send.
-        const switched = await switchIfNeeded();
-        if (!switched) {
-          throw new Error(switchError ?? `Please switch your wallet to ${getViemChain(network).name}`);
-        }
-
-        // After a failed tool call the model is told what went wrong and given one turn to say so
-        // — but NOT another chance to call the same failing tool. Left on offer it just retries:
-        // a real conversation burned all three hops re-requesting an image that kept failing, so
-        // the user approved three wallet prompts, paid for three attempts, and got the generic
-        // "no response" fallback because no hop ever produced text.
-        const offered = TOOL_REGISTRY.filter(
-          (entry) =>
-            !failedTools.has(entry.tool.function.name) &&
-            (entry.ownerScope === null || hasOwnerScope(entry.ownerScope)),
-        ).map((entry) => entry.tool);
-        const data = await payAndSend(convo, {
-          // `[]` is truthy, and useX402Chat spreads `tools` in on truthiness — an empty array
-          // would be sent as `tools: []`. `undefined` drops the key (and tool_choice with it),
-          // which is what "nothing left to offer" means on the wire. tool_choice is otherwise
-          // left to the hook's own "auto" default: withholding a tool now expresses what
-          // tool_choice: "none" used to, and more precisely.
-          tools: offered.length > 0 ? offered : undefined,
-        });
-        const choice = data.choices?.[0];
-        const toolCalls = choice?.message.tool_calls;
-
-        if (choice?.finish_reason !== "tool_calls" || !toolCalls?.length) {
-          // `??` alone doesn't catch this: Mistral can return content: "" (or whitespace) with
-          // finish_reason: "stop" — a real, empty-but-not-nullish completion — which used to
-          // render as a literally blank bubble instead of falling back to noResponseMessage.
-          const content = choice?.message.content;
-          finalContent = content && content.trim().length > 0 ? content : noResponseMessage;
-          break;
-        }
-
-        convo.push(choice.message); // the assistant turn, content: null, tool_calls intact
-
-        for (const call of toolCalls) {
-          const { result, imageUrl } = await runToolCall(call);
-          if (imageUrl) finalImageUrl = imageUrl;
-          // `not_found` (an unrecognized slug) is a normal, recoverable outcome — the whole point
-          // of the list-then-detail pattern in the system prompt is that the model can retry with
-          // a corrected slug. Only a real failure withdraws the tool for the rest of the turn.
-          const source = TOOL_META.get(call.function.name)?.source;
-          if (result.status !== "ok" && result.status !== "not_found") failedTools.add(call.function.name);
-          else if (result.status === "ok" && source) usedSources.add(source);
-          convo.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
-        }
-      }
+      const { finalContent, finalImageUrl, sources } = await runToolLoop<ToolSource>(convo, offeredTools, {
+        ensureReady: async () => {
+          const switched = await switchIfNeeded();
+          if (!switched) {
+            throw new Error(getSwitchError() ?? `Please switch your wallet to ${getViemChain(network).name}`);
+          }
+        },
+        payAndSend,
+        runToolCall,
+      });
 
       const assistantMsg: ChatMessage = {
         role: "assistant",
@@ -613,7 +582,7 @@ export function AssistantChat() {
         content: finalContent ?? (finalImageUrl ? imageReadyMessage : noResponseMessage),
         timestamp: Date.now(),
         imageUrl: finalImageUrl,
-        sources: usedSources.size > 0 ? [...usedSources] : undefined,
+        sources: sources.length > 0 ? sources : undefined,
       };
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (error) {
@@ -721,6 +690,7 @@ export function AssistantChat() {
                 onTryCustomAgent={() => void tryCustomAgent()}
                 onUseDefaultAgent={useDefaultAgent}
               />
+              <ToolSelector options={toolSelectorOptions} disabled={disabledTools} onToggle={toggleTool} />
             </div>
           </div>
         )}
@@ -870,6 +840,7 @@ export function AssistantChat() {
                 onTryCustomAgent={() => void tryCustomAgent()}
                 onUseDefaultAgent={useDefaultAgent}
               />
+              <ToolSelector options={toolSelectorOptions} disabled={disabledTools} onToggle={toggleTool} />
             </>
           )}
         </div>

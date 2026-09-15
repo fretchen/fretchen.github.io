@@ -106,7 +106,9 @@ export default {
       "einer ihrer Beiträge läuft — Besucher, meistgelesene Seiten, Trends — nutze get_analytics. " +
       "Wenn dessen Ergebnis hasHistoric setzt, reicht das Fenster in Zahlen zurück, die aus einem " +
       "anderen Werkzeug übernommen wurden und anders gezählt haben; sage das, statt beide Epochen " +
-      "als eine Zahl zu vergleichen.",
+      "als eine Zahl zu vergleichen. Wenn eine Frage zeitlich relativ ist, rechne sie gegen das " +
+      "heutige Datum aus, bevor du ein Tool aufrufst, und übergib das Ergebnis als von/bis — rate " +
+      "kein Jahr.",
     noResponse: "Keine Antwort erhalten",
     imageReady: "Hier ist dein Bild.",
     bundestaktSource: "Quelle: Bundestakt",

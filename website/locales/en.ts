@@ -105,7 +105,9 @@ export default {
       "guessing from training knowledge. For questions about how this site or one of its posts " +
       "is doing — visitors, most-read pages, trends — use get_analytics. When its result sets " +
       "hasHistoric, the window reaches into figures backfilled from a different tool that " +
-      "counted differently; say so instead of comparing the two eras as one number.",
+      "counted differently; say so instead of comparing the two eras as one number. When a " +
+      "question is relative in time, work it out against today's date before calling a tool and " +
+      "pass the result as the von/bis arguments, rather than guessing a year.",
     noResponse: "No response received",
     imageReady: "Here's your image.",
     bundestaktSource: "Source: Bundestakt",

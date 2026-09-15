@@ -1,0 +1,240 @@
+---
+title: "My static site got a tool loop — and maybe an agent"
+publishing_date: "2026-09-15"
+category: "ai"
+secondaryCategory: "webdev"
+description: "A chat model never calls a tool — it asks for one, and your code answers by putting the result back into the same message array. Here is that loop, running in the browser of a statically built site."
+---
+
+import { SequenceDiagram } from "../components/blog/SequenceDiagram";
+
+export const turnParticipants = [
+  { id: "browser", labelLines: ["Browser", "(the chat page)"] },
+  { id: "endpoint", labelLines: ["LLM endpoint", "→ Mistral"] },
+  { id: "bundestakt", label: "Bundestakt" },
+];
+
+export const turnSteps = [
+  { kind: "message", from: "browser", to: "endpoint", label: "messages + tools" },
+  { kind: "message", from: "endpoint", to: "browser", label: "tool_calls: get_sitzungen", style: "dashed" },
+  { kind: "note", from: "browser", to: "browser", label: "Nothing has happened yet" },
+  { kind: "message", from: "browser", to: "bundestakt", label: "GET /api/v1/sitzungen" },
+  { kind: "message", from: "bundestakt", to: "browser", label: "21 sessions, 74 KB", style: "dashed" },
+  { kind: "message", from: "browser", to: "endpoint", label: 'same array + role:"tool" result' },
+  { kind: "message", from: "endpoint", to: "browser", label: "the answer, in prose", style: "dashed" },
+];
+
+My [chat assistant](/assistent) could talk, and that was all it could do. Two things I wanted from it:
+
+- **Talk to [Bundestakt](https://www.bundestakt.de)**, a free API with summaries of Bundestag plenary sessions and fact-checks of what was claimed in the debates. Asking what happened in the session on 9 September should get an answer from the actual record, not from whatever the model half-remembers.
+- **Make an image without leaving the chat.** The image generator already had its own page. Describing a picture mid-conversation and then being sent somewhere else to get it is a silly way to run a website.
+
+Both are the same problem: the model has to reach something outside itself, in the middle of writing an answer.
+
+What I was unsure about was where that reaching happens. I had only ever met tool calling from inside LangChain and LangGraph, in Python. There a tool call and a model call look like the same kind of thing — nodes in one graph, running in one process — and I had quietly assumed they have to be. This site has no process to put them in: it is built to static files with [Vike](https://vike.dev), served from GitHub Pages, with a handful of serverless functions next to it. The paid LLM endpoint those functions expose will not help either, on purpose. It forwards a `tools` array to Mistral and hands the model's request straight back, without ever executing one. That is written into [its published OpenAPI description](/agent-onboarding), because a paid public endpoint that fetches URLs on behalf of anonymous callers is a different and much riskier thing to be running.
+
+So the loop runs in the browser. That turned out to be fine.
+
+## One turn, payload by payload
+
+Take the question _"What did the Bundestag debate on 9 September?"_. Here is the whole turn.
+
+<SequenceDiagram
+  participants={turnParticipants}
+  steps={turnSteps}
+  caption="One turn. The browser is the only thing that ever calls Bundestakt; the model only asks it to."
+/>
+
+### 1. Send the usual request, plus `tools`
+
+A tool definition is a name, a description, and a JSON Schema for its arguments. It rides along with the messages you were already sending:
+
+```bash
+curl https://llm-agent.fretchen.eu \
+  -H "content-type: application/json" \
+  -d '{
+    "messages": [
+      { "role": "user", "content": "What did the Bundestag debate on 9 September 2026?" }
+    ],
+    "tools": [
+      {
+        "type": "function",
+        "function": {
+          "name": "get_sitzungen",
+          "description": "List Bundestag plenary sessions (Bundestakt), or fetch one session's full detail by slug. Call without a slug first to find the right session, then call again with its slug for details (speaking time per party, vote counts, summaries).",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "slug": { "type": "string", "description": "A session slug from a previous call, e.g. 21-92-2026-09-09." },
+              "von": { "type": "string", "description": "ISO date; only sessions on or after this day." },
+              "bis": { "type": "string", "description": "ISO date; only sessions on or before this day." }
+            }
+          }
+        }
+      }
+    ]
+  }'
+```
+
+(A real call needs an `X-PAYMENT` header too — this endpoint charges a fraction of a cent per message. That part is [a different story](/blog/32/) and changes nothing below.)
+
+The description is the part I underestimated. It is prompt text. The model reads it and nothing else about the tool — not my code, not the API docs — so anything about _how_ to use the thing has to go in there. "Call without a slug first, then again with its slug" is a sentence written for a reader, in a field that looks like documentation.
+
+### 2. The model asks
+
+```json
+{
+  "choices": [
+    {
+      "finish_reason": "tool_calls",
+      "message": {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "call_a1b2c3d4",
+            "type": "function",
+            "function": {
+              "name": "get_sitzungen",
+              "arguments": "{\"von\": \"2026-09-09\", \"bis\": \"2026-09-09\"}"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
+Two things about this. It is a **request** — nothing has happened, nothing has been fetched, and the model has no idea whether `get_sitzungen` even works. And `arguments` is a **JSON string**, not an object, which can also be malformed; mine parses it in a `try` that falls back to `{}` rather than throwing, because a model that garbles its own arguments should not take the whole chat message down with it.
+
+### 3. My code runs it
+
+This is the step with no model in it at all. Dispatch by name, then do the work:
+
+```typescript
+// tools/bundestakt.ts — no React in here, just a fetch and a pure projection.
+export async function fetchSitzungen(): Promise<unknown> {
+  const res = await fetch("https://www.bundestakt.de/api/v1/sitzungen");
+  if (!res.ok) throw new Error(`Bundestakt request failed: HTTP ${res.status}`);
+  return res.json();
+}
+
+export function selectSitzungen(raw: unknown, args: { slug?: string; von?: string; bis?: string }) {
+  const sitzungen = (raw as RawSitzungenResponse | null)?.sitzungen ?? [];
+
+  if (args.slug) {
+    const found = sitzungen.find((s) => s.slug === args.slug);
+    if (!found) return { status: "not_found" };
+    const { protokollPdf, ...rest } = found;
+    return { status: "ok", sitzung: rest };
+  }
+
+  const filtered = sitzungen.filter((s) => (!args.von || s.datum >= args.von) && (!args.bis || s.datum <= args.bis));
+  return {
+    status: "ok",
+    sitzungen: filtered.map((s) => ({
+      slug: s.slug,
+      datum: s.datum,
+      kernthema: s.kernthema,
+      schlagzeilen: (s.in30Sekunden ?? []).map((p) => p.titel),
+      url: s.url,
+    })),
+  };
+}
+```
+
+The `fetch` goes straight from the browser to `bundestakt.de` — open CORS, no key, nothing to hide. That is the whole reason a browser-side loop works here at all; a tool needing a secret would have to be a serverless function with the secret in it, and the browser would call that instead.
+
+The `select` half matters more than it looks. The raw list is 74 KB across 21 sessions, most of it five-paragraph summaries of debates nobody asked about. Projected down to slug, date, topic and headlines it is 7.3 KB. That is not tidiness: the result goes back into the message array and is re-sent on **every** later request of the same turn, so a fat tool result is a bill you pay repeatedly.
+
+### 4. Send the same array again, grown
+
+```json
+{
+  "messages": [
+    { "role": "user", "content": "What did the Bundestag debate on 9 September 2026?" },
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [{ "id": "call_a1b2c3d4", "type": "function", "function": { "name": "get_sitzungen", "arguments": "{\"von\": \"2026-09-09\", \"bis\": \"2026-09-09\"}" } }]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_a1b2c3d4",
+      "content": "{\"status\":\"ok\",\"sitzungen\":[{\"slug\":\"21-92-2026-09-09\",\"datum\":\"2026-09-09\",\"kernthema\":\"Haushalt 2027 und der Schock von Sachsen-Anhalt\",\"schlagzeilen\":[\"Weidel greift an, Merz kontert\",\"140 Milliarden fuer Verteidigung\",\"Gekuerzt wird bei den Familien\"],\"url\":\"https://www.bundestakt.de/sitzung/21-92-2026-09-09\"}]}"
+    }
+  ],
+  "tools": [ ... same as before ... ]
+}
+```
+
+Two messages were appended: the assistant's own turn, pushed back exactly as it arrived, and one `role: "tool"` message per call, carrying the result as a string. Same endpoint, same shape as move 1. This time the model writes prose, `finish_reason` comes back as `"stop"`, and the turn is over. If it had wanted the full record it would have asked again with `slug`, and the array would have grown by two more.
+
+That is the bit I had wrong for a long time. There is no callback, no webhook, no socket held open, nothing registered with anyone. The entire connection between Mistral and my React code is that **an array grows and gets sent again**, and `tool_call_id` is the only thread tying a result back to the request it answers.
+
+Which means the loop is a `for` loop with a `break`:
+
+```typescript
+for (let hop = 0; hop < MAX_HOPS; hop++) {
+  const offered = offeredTools.filter((t) => !failedTools.has(t.function.name));
+
+  const data = await payAndSend(convo, {
+    tools: offered.length > 0 ? offered : undefined,
+  });
+
+  const choice = data.choices?.[0];
+  const toolCalls = choice?.message.tool_calls;
+
+  if (choice?.finish_reason !== "tool_calls" || !toolCalls?.length) {
+    finalContent = choice?.message.content ?? null;
+    break;
+  }
+
+  convo.push(choice.message); // the assistant turn: content null, tool_calls intact
+
+  for (const call of toolCalls) {
+    const { result, recoverable } = await runToolCall(call);
+    if (result.status !== "ok" && !recoverable) {
+      failedTools.add(call.function.name);
+    }
+    convo.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
+  }
+}
+```
+
+That is [the real one](https://github.com/fretchen/fretchen.github.io/blob/main/website/utils/toolLoop.ts), minus its comments. `MAX_HOPS` is 4, because each pass through the loop is a separately paid completion and a model that never stops asking would otherwise bill me in a circle. Four is not a principle; it is the smallest number that fits the longest flow I have, which is list → detail → answer with one hop spare.
+
+Two things in there were bought with a bad afternoon. `failedTools` exists because image generation once kept failing and the model kept asking for it again — entirely reasonably, since nothing told it the failure was permanent. Three wallet prompts, three payments, no answer, because no hop ever got as far as writing a sentence. Now a tool that fails is simply not offered on the next hop. The exception is a failure that is really an answer — a mistyped session slug _should_ be retried with a corrected one — so a tool can mark its own result as worth another go.
+
+And `offered.length > 0 ? offered : undefined` is there because `[]` is truthy: an empty array ships as `tools: []`, which is a different thing from not sending the key at all.
+
+## Four tools, two shapes
+
+There are four tools on offer now — `get_sitzungen`, `search_claims`, `get_analytics`, `generate_image` — and they come in two shapes.
+
+**Read something and shrink it.** A fetch, then a pure function that projects the response down to what an answer needs. Bundestakt and the site's own traffic stats. Boring in the good way: the interesting half is a pure function over parsed JSON, which is about as easy to test as code gets.
+
+**Ask the user first, then act.** `generate_image` spends seven cents of real money, so the model asking for it does not make it happen. The runner puts a confirmation card on screen — the prompt, the size, the price — and the turn just waits there, mid-`await`, until the user confirms, edits the prompt, or cancels. Whatever they decide comes back to the model as a status like `user_declined`, and the model writes the sentence explaining it.
+
+That second shape is the one worth knowing about. A tool call is a request, not a commitment, and the gap between the request and the doing is a natural place to put a human. The model does not even need to be told the user was asked — the tool description says the app handles approval, so it stops trying to run its own confirmation dialogue in chat.
+
+The modules themselves have no React in them. Partly taste, partly so that the fetch-and-project half of each tool can be imported by something that is not this page.
+
+## Is this an agent? Do I need MCP?
+
+It picks whether to act, which tool to use, and with what arguments. It reads a result and decides what comes next. It chains: find the session, fetch its detail, then answer. By most working definitions that is an agent.
+
+It also forgets everything the moment the turn ends — the tool messages live in an array local to one `sendMessage` call and are thrown away, so the model's own closing sentence is its entire memory of having generated an image. It follows no plan that my code owns. It stops after four hops. And the whole thing is about forty lines.
+
+Which is the uncomfortable part. The vocabulary around this — agents, orchestration, MCP — sounds like it describes something considerably larger than what I wrote. MCP in particular: it standardises how a tool describes itself and how it is reached, so that the person writing the tool and the person writing the client can be strangers. It does not change the exchange above at all; the model still asks, something else still runs it, the result still goes back as a `role: "tool"` message. For four tools I wrote myself, against one client I also wrote, it would have bought me nothing yet. That may well change the first time I want someone else's tool in here.
+
+Where the real line sits, I am honestly not sure. The [growth agent](/blog/29/) on this same site is the other shape entirely — LangGraph, a cron container, state in S3, a queue of drafts I approve by hand — because it needs to remember things between runs and take minutes rather than seconds. Between "forty lines in a browser" and that, I have a resource boundary (hops, money, latency, whether anything must survive a page reload) and not a conceptual one. Possibly there is no conceptual one, and that is why "agent" has stopped carrying much information.
+
+## What it cost
+
+One loop file, four small tool modules, and a confirmation card. The thing I would do differently is write the loop first: every decision that turned out to matter — how many hops, what happens when a tool fails, what a tool is allowed to return — lives in it, and I found all of them by getting them wrong there.
+
+It runs on [the assistant page](/assistent) if you want to watch an array grow.
+
+_Session data from [Bundestakt](https://www.bundestakt.de), CC BY 4.0._

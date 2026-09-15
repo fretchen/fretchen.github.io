@@ -100,42 +100,6 @@ Note that Panda escapes `.`, `(`, `)` **and commas** in class names
 (`.bg-c_rgba\(123\,_63\,_160\,_0\.04\)`), so a naive `grep -F` for an unescaped class reports
 false misses.
 
-## Chat tools (`/assistent`)
-
-The assistant's tool loop runs **in the browser** — `sc_llm_x402.ts` forwards `tools` to the model
-and hands back `tool_calls`, and its published contract says it never calls a tool itself. Adding a
-tool means two things, deliberately kept apart.
-
-**1. Metadata — `TOOL_REGISTRY` in `components/AssistantChat.tsx`.** What exists, its `label` for
-the ToolSelector, its `ownerScope` (`null` = anyone), and whether its answers must name a `source`.
-Every field is required, so a tool cannot arrive ungated or unlabelled without a type error. These
-objects go on the wire as `tools:`, which is why the metadata sits _beside_ the tool rather than on
-it — extra keys would be sent upstream.
-
-**2. Execution — a runner in `toolRunners`, same file.** A runner is a closure over exactly what
-its tool needs, because those needs differ: `get_analytics` closes over the auth callback and the
-query cache, `generate_image` over the wallet, network switch and confirm card, a date tool over
-nothing. There is deliberately **no shared `ctx` object** — it would have to carry the union of
-every tool's needs and grow with each new one.
-
-**Tool modules (`tools/*.ts`) stay React-free**: a definition plus pure pieces (`fetchX` + `selectX`).
-That is what keeps them importable from a non-browser caller, and it is why the runners live in the
-component instead. `tools/generateImage.ts` is definition-only on purpose — its runner is
-inescapably wallet- and UI-bound.
-
-Three constraints that bite:
-
-- **Two backend caps**, both in `scw_js/llm_schemas.ts`: `MAX_TOOLS` (8) and `MAX_TOOLS_BYTES`
-  (8192). They are _ours_, not the model's — cost guards, because tool definitions are input tokens
-  charged on **every hop**. Exceeding either is a clean 400, not a silent failure.
-- **Project tool results hard.** They are input tokens on every later hop too, and the per-message
-  charge is capped (`USDC_MAX_PRICE_PER_MESSAGE`) with the operator absorbing the excess.
-- **`tools: []` is not "no tools".** `[]` is truthy and `useX402Chat` spreads it in; pass
-  `undefined` so the key is absent.
-
-`test/AssistantChat.test.tsx` iterates `TOOL_REGISTRY` and asserts each entry reaches a runner, so a
-tool added without one fails the suite rather than at runtime.
-
 ## Other conventions
 
 - Run `npm run prepare` (Panda codegen) after config changes to regenerate `styled-system/` —
@@ -143,5 +107,8 @@ tool added without one fails the suite rather than at runtime.
 - Client-only components need `{ ssr: false }` in their import.
 - **Wagmi v2 + TanStack Query** for blockchain state. Wagmi hooks are auto-generated from
   `wagmi.config.ts` — not manually written.
+- Use the **`chat-tools`** skill before adding or changing an assistant tool — it carries the
+  two-part contract (`TOOL_REGISTRY` + a runner), why `tools/*.ts` stay React-free, and the
+  backend caps that turn an over-budget `tools` array into a 400.
 - **ABIs** come from `eth/abi/contracts/*.ts` (TypeScript `as const` exports). After contract
   changes, regenerate them in `eth/` first, then update the imports here.

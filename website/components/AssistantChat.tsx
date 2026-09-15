@@ -8,7 +8,6 @@
 import React, { useState, useMemo, useEffect, useRef, useSyncExternalStore } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { BaseError, UserRejectedRequestError } from "viem";
 import { AgentInfoPanel } from "./AgentInfoPanel";
 import { AgentSelector } from "./AgentSelector";
 import { ToolSelector } from "./ToolSelector";
@@ -22,7 +21,7 @@ import { useAutoNetwork } from "../hooks/useAutoNetwork";
 import { useX402Chat, DEFAULT_LLM_AGENT_URL } from "../hooks/useX402Chat";
 import { useX402ImageGeneration } from "../hooks/useX402ImageGeneration";
 import { fetchAgentCard, precheckLlmV1Agent, type AgentCard } from "../hooks/x402Discovery";
-import { generateImageTool } from "../tools/generateImage";
+import { generateImageTool, runImageTool } from "../tools/generateImage";
 import {
   getSitzungenTool,
   searchClaimsTool,
@@ -43,20 +42,13 @@ import {
 import { useWalletAuth } from "../hooks/useWalletAuth";
 import { isOwnerAddress, type OwnerScope } from "../utils/getChain";
 import type { X402ChatMessage, X402Tool, X402ToolCall } from "../types/x402";
+import { runToolLoop, type ToolRunResult } from "../utils/toolLoop";
 import { useQueryClient } from "@tanstack/react-query";
 import { getViemChain, toCAIP2, fromCAIP2, getGenAiNFTMainnetNetworks } from "@fretchen/chain-utils";
 import { useChainId } from "wagmi";
 import { ChainBadge, getChainName } from "./ChainBadge";
 import { button } from "../styled-system/recipes";
 import { PageHeader } from "./PageHeader";
-
-// Hops in one sendMessage() call before giving up and showing the fallback message — the
-// circuit breaker on a model that keeps requesting tools instead of answering. Each hop is a
-// separately metered chat message, so this also bounds worst-case cost per user turn.
-//
-// 4 rather than 3: the Bundestakt flow is list -> detail -> answer, which already fills three,
-// so a combined question (find the session, read it, then check a claim) needs one more.
-const MAX_HOPS = 4;
 
 /**
  * Which tools oblige the answer to name where it got its facts. Bundestakt is a CC BY licence
@@ -92,47 +84,9 @@ export const TOOL_REGISTRY = [
   source: ToolSource | null;
 }[];
 
-const TOOL_META = new Map(TOOL_REGISTRY.map((entry) => [entry.tool.function.name, entry]));
-
 // Hoisted so the array identity is stable across renders. Mainnet-only on purpose — see the
 // useAutoNetwork call in the component for why a testnet entry here would be a real hazard.
 const IMAGE_TOOL_NETWORKS = getGenAiNFTMainnetNetworks();
-
-/**
- * Classify a thrown `generateImage` error into what the model needs to react sensibly, without
- * string-matching upstream/provider error text. Two cases are reliably detectable: a rejected
- * wallet signature (a typed viem error, found via `.walk()` since wagmi commonly wraps it) and
- * this file's own `validatingFetch` network-mismatch message (ours, not upstream, so matching it
- * is not brittle). Everything else — insufficient balance, API failures, timeouts — folds into
- * `generation_failed`; there is no reliable, non-string-matched way to split those further.
- */
-function classifyImageError(err: unknown): "user_declined" | "wrong_network" | "generation_failed" {
-  if (err instanceof BaseError && err.walk((e) => e instanceof UserRejectedRequestError)) {
-    return "user_declined";
-  }
-  const message = err instanceof Error ? err.message : String(err);
-  if (message.startsWith("Network mismatch!")) return "wrong_network";
-  return "generation_failed";
-}
-
-/**
- * A short, single-line version of a tool failure to hand back to the model, so it can tell the
- * user what actually went wrong instead of "I'm having trouble". Truncated and newline-stripped
- * because this goes into the conversation as a tool result and is billed as input tokens on
- * every subsequent hop — wallet and SDK errors are routinely multi-line and very long.
- */
-function describeToolFailure(err: unknown): string {
-  const message = err instanceof Error ? err.message : String(err);
-  const singleLine = message.replace(/\s+/g, " ").trim();
-  return singleLine.length > 200 ? `${singleLine.slice(0, 200)}…` : singleLine;
-}
-
-/**
- * What running one tool produces: the compact `{status}` object the model gets back, plus — for
- * `generate_image` — the URL the chat renders locally. `imageUrl` is display-only and never
- * reaches the model.
- */
-type ToolRunResult = { result: { status: string; [key: string]: unknown }; imageUrl?: string };
 
 /**
  * The execution half of the tool contract. `TOOL_REGISTRY` above says what exists and who may use
@@ -472,51 +426,29 @@ export function AssistantChat() {
   }
 
   /**
-   * Runs the image tool end to end: pause for the user's confirmation, generate the image on
-   * its own network/scheme, and return the compact `{status}` result the model gets back plus
-   * the image URL for local rendering. Never throws — every failure path resolves to a status
-   * the model can react to.
+   * Wires `runImageTool` to what only exists in here. The sequence itself, its statuses and its
+   * error classification live in `tools/generateImage.ts`; this supplies the card, the network
+   * switch and the paid call, and clears the card once in a `finally` rather than in every branch.
    */
-  async function runImageTool(args: Record<string, unknown>): Promise<ToolRunResult> {
-    // `parseToolArgs` has already turned malformed JSON into `{}`; an empty prompt is fine here
-    // because the confirm card lets the user type one before approving.
-    const initialPrompt = typeof args.prompt === "string" ? args.prompt : "";
-    const initialSize: ToolSize = args.size === "1792x1024" ? "1792x1024" : "1024x1024";
-
-    const resolution = await waitForConfirmation(initialPrompt, initialSize);
-    if (resolution.action === "cancel") {
-      setToolCard(null);
-      return { result: { status: "user_declined" } };
-    }
-
-    setToolCard({ phase: "generating", prompt: resolution.prompt, size: resolution.size });
-
-    const switchedToImageNetwork = await switchImageIfNeeded();
-    if (!switchedToImageNetwork) {
-      setToolCard(null);
-      return {
-        result: { status: "wrong_network", reason: switchImageError ?? undefined },
-      };
-    }
-
+  async function runImageToolHere(args: Record<string, unknown>): Promise<ToolRunResult> {
     try {
-      const image = await generateImage({
-        prompt: resolution.prompt,
-        size: resolution.size,
-        network: imageNetwork,
-        expectedChainId: fromCAIP2(imageNetwork),
-        isListed: false, // never a chat-time decision — see the confirm card's mint notice instead
+      return await runImageTool(args, {
+        confirm: waitForConfirmation,
+        ensureNetwork: async () => ((await switchImageIfNeeded()) ? null : (switchImageError ?? "")),
+        generate: async (prompt, size) => {
+          const image = await generateImage({
+            prompt,
+            size,
+            network: imageNetwork,
+            expectedChainId: fromCAIP2(imageNetwork),
+            isListed: false, // never a chat-time decision — see the confirm card's mint notice instead
+          });
+          return { imageUrl: image.imageUrl, network: imageNetwork };
+        },
+        onPhase: setToolCard,
       });
+    } finally {
       setToolCard(null);
-      return { result: { status: "ok", network: imageNetwork }, imageUrl: image.imageUrl };
-    } catch (err) {
-      setToolCard(null);
-      // Both of these exist because the first version of this catch classified the error into a
-      // one-word status and dropped the error itself. A real failure then produced no console
-      // output at all and told the model only "generation_failed", so the user got "I'm having
-      // trouble generating the image" with no way — for them or for us — to find out why.
-      console.error("generate_image tool call failed:", err);
-      return { result: { status: classifyImageError(err), reason: describeToolFailure(err) } };
     }
   }
 
@@ -577,7 +509,7 @@ export function AssistantChat() {
    * one is worse than none.
    */
   const toolRunners: Record<string, ToolRunner> = {
-    [generateImageTool.function.name]: runImageTool,
+    [generateImageTool.function.name]: runImageToolHere,
     [getSitzungenTool.function.name]: async (args) => ({ result: await loadBundestakt("sitzungen", args) }),
     [searchClaimsTool.function.name]: async (args) => ({ result: await loadBundestakt("claims", args) }),
     [getAnalyticsTool.function.name]: async (args) => ({ result: await loadAnalytics(args) }),
@@ -625,65 +557,23 @@ export function AssistantChat() {
         { role: "user", content: userMessage.trim() },
       ];
 
-      let finalContent: string | null = null;
-      let finalImageUrl: string | undefined;
-      const usedSources = new Set<ToolSource>();
-      // Per tool, not global: a failed Bundestakt lookup must not also disable generate_image
-      // for the rest of the turn. A failed tool is simply no longer offered on later hops.
-      const failedTools = new Set<string>();
+      // The loop itself lives in utils/toolLoop.ts — this component keeps state and rendering.
+      // `availableTools` already applies the owner gate; what is left to subtract here is what the
+      // user switched off in the ToolSelector. Failures within the turn are the loop's business.
+      const offeredTools = availableTools
+        .filter((entry) => !disabledTools.has(entry.tool.function.name))
+        .map((entry) => ({ tool: entry.tool, source: entry.source }));
 
-      for (let hop = 0; hop < MAX_HOPS; hop++) {
-        // Cheap no-op once the wallet is already on the right chain — re-checked every hop
-        // because a mid-loop deposit/top-up could in principle need it, not just the first send.
-        const switched = await switchIfNeeded();
-        if (!switched) {
-          throw new Error(switchError ?? `Please switch your wallet to ${getViemChain(network).name}`);
-        }
-
-        // After a failed tool call the model is told what went wrong and given one turn to say so
-        // — but NOT another chance to call the same failing tool. Left on offer it just retries:
-        // a real conversation burned all three hops re-requesting an image that kept failing, so
-        // the user approved three wallet prompts, paid for three attempts, and got the generic
-        // "no response" fallback because no hop ever produced text.
-        // `availableTools` already applies the owner gate; what is left is what failed this turn
-        // and what the user switched off in the ToolSelector.
-        const offered = availableTools
-          .filter((entry) => !failedTools.has(entry.tool.function.name) && !disabledTools.has(entry.tool.function.name))
-          .map((entry) => entry.tool);
-        const data = await payAndSend(convo, {
-          // `[]` is truthy, and useX402Chat spreads `tools` in on truthiness — an empty array
-          // would be sent as `tools: []`. `undefined` drops the key (and tool_choice with it),
-          // which is what "nothing left to offer" means on the wire. tool_choice is otherwise
-          // left to the hook's own "auto" default: withholding a tool now expresses what
-          // tool_choice: "none" used to, and more precisely.
-          tools: offered.length > 0 ? offered : undefined,
-        });
-        const choice = data.choices?.[0];
-        const toolCalls = choice?.message.tool_calls;
-
-        if (choice?.finish_reason !== "tool_calls" || !toolCalls?.length) {
-          // `??` alone doesn't catch this: Mistral can return content: "" (or whitespace) with
-          // finish_reason: "stop" — a real, empty-but-not-nullish completion — which used to
-          // render as a literally blank bubble instead of falling back to noResponseMessage.
-          const content = choice?.message.content;
-          finalContent = content && content.trim().length > 0 ? content : noResponseMessage;
-          break;
-        }
-
-        convo.push(choice.message); // the assistant turn, content: null, tool_calls intact
-
-        for (const call of toolCalls) {
-          const { result, imageUrl } = await runToolCall(call);
-          if (imageUrl) finalImageUrl = imageUrl;
-          // `not_found` (an unrecognized slug) is a normal, recoverable outcome — the whole point
-          // of the list-then-detail pattern in the system prompt is that the model can retry with
-          // a corrected slug. Only a real failure withdraws the tool for the rest of the turn.
-          const source = TOOL_META.get(call.function.name)?.source;
-          if (result.status !== "ok" && result.status !== "not_found") failedTools.add(call.function.name);
-          else if (result.status === "ok" && source) usedSources.add(source);
-          convo.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
-        }
-      }
+      const { finalContent, finalImageUrl, sources } = await runToolLoop<ToolSource>(convo, offeredTools, {
+        ensureReady: async () => {
+          const switched = await switchIfNeeded();
+          if (!switched) {
+            throw new Error(switchError ?? `Please switch your wallet to ${getViemChain(network).name}`);
+          }
+        },
+        payAndSend,
+        runToolCall,
+      });
 
       const assistantMsg: ChatMessage = {
         role: "assistant",
@@ -692,7 +582,7 @@ export function AssistantChat() {
         content: finalContent ?? (finalImageUrl ? imageReadyMessage : noResponseMessage),
         timestamp: Date.now(),
         imageUrl: finalImageUrl,
-        sources: usedSources.size > 0 ? [...usedSources] : undefined,
+        sources: sources.length > 0 ? sources : undefined,
       };
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (error) {

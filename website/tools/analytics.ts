@@ -53,9 +53,7 @@ export type AnalyticsResult =
   | { status: "fetch_failed"; reason: string };
 
 /** Turns a fetch-time error (thrown by `fetchStats`) into a result. */
-export function fetchFailed(err: unknown): AnalyticsResult {
-  return { status: "fetch_failed", reason: err instanceof Error ? err.message : String(err) };
-}
+export { fetchFailed } from "./failure";
 
 // --- Fetcher: plain fetch, no cache, throws on failure -----------------------------------------
 

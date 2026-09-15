@@ -225,6 +225,25 @@ describe("AssistantChat", () => {
     });
   });
 
+  // Behaviour change from lifting the loop out: it now reports "no usable text" as null and lets
+  // this component pick the wording, so an empty completion *after* a successful generation gets
+  // the image caption instead of "no response". Same principle the MAX_HOPS case already applied —
+  // the image is on screen and was paid for, so "no response" would be wrong.
+  it("captions the image when the model falls silent after generating one", async () => {
+    mockSendMessage
+      .mockResolvedValueOnce(toolCallResponse("generate_image", { prompt: "a cat", size: "1024x1024" }))
+      .mockResolvedValueOnce(textResponse(""));
+    mockGenerateImage.mockResolvedValue({ imageUrl: "https://example.com/cat.png" });
+
+    renderWithQuery(<AssistantChat />);
+    sendUserMessage("Draw a cat");
+
+    fireEvent.click(await screen.findByRole("button", { name: /assistent\.toolConfirmGenerate/ }));
+
+    await waitFor(() => expect(screen.getByText("assistent.imageReady")).toBeInTheDocument());
+    expect(screen.queryByText("assistent.noResponse")).not.toBeInTheDocument();
+  });
+
   it("says it is topping up rather than typing while the channel refills", async () => {
     // A drained channel self-heals mid-send (useX402Chat), which costs a wallet signature. Saying
     // so is what keeps that prompt from arriving unexplained.
@@ -868,29 +887,8 @@ describe("AssistantChat", () => {
       consoleError.mockRestore();
     });
 
-    it("truncates a very long failure reason before sending it to the model", async () => {
-      // Tool results are billed as input tokens on every later hop, and wallet/SDK errors are
-      // routinely multi-line and enormous.
-      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-      mockSendMessage
-        .mockResolvedValueOnce(toolCallResponse("generate_image", { prompt: "a cat", size: "1024x1024" }))
-        .mockResolvedValueOnce(textResponse("Sorry."));
-      mockGenerateImage.mockRejectedValue(new Error("x".repeat(500)));
-
-      renderWithQuery(<AssistantChat />);
-      sendUserMessage("Draw a cat");
-
-      await screen.findByDisplayValue("a cat");
-      fireEvent.click(screen.getByRole("button", { name: /assistent\.toolConfirmGenerate/ }));
-
-      await waitFor(() => expect(mockSendMessage).toHaveBeenCalledTimes(2));
-
-      const secondConvo = mockSendMessage.mock.calls[1][0] as { role: string; content: string }[];
-      const parsed = JSON.parse(secondConvo.find((m) => m.role === "tool")!.content) as { reason?: string };
-      expect(parsed.reason!.length).toBeLessThanOrEqual(201); // 200 chars + the ellipsis
-
-      consoleError.mockRestore();
-    });
+    // Truncation itself is `describeFailure`'s job and is tested in test/generateImage.test.ts —
+    // reaching it through a render and a card click cost 22 lines to assert a string length.
 
     it("disables the send button and input while the confirm card is open", async () => {
       mockSendMessage.mockResolvedValueOnce(toolCallResponse("generate_image", { prompt: "x", size: "1024x1024" }));

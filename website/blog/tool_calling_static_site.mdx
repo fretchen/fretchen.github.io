@@ -31,14 +31,16 @@ My [chat assistant](/assistent) could talk, and that was all it could do. Two th
 
 Both are the same problem: the model has to reach something outside itself, in the middle of writing an answer.
 
-What I was unsure about was where that reaching happens. I had only ever met tool calling from inside LangChain and LangGraph, in Python. There a tool call and a model call look like the same kind of thing — nodes in one graph, running in one process — and I had quietly assumed they have to be. This site has no process to put them in: it is built to static files with [Vike](https://vike.dev), served from GitHub Pages, with a handful of serverless functions next to it. The paid LLM endpoint those functions expose will not help either, on purpose. It forwards a `tools` array to Mistral and hands the model's request straight back, without ever executing one. That is written into [its published OpenAPI description](/agent-onboarding), because a paid public endpoint that fetches URLs on behalf of anonymous callers is a different and much riskier thing to be running.
+What I was unsure about was where that reaching happens. I had only ever met tool calling from inside LangChain and LangGraph, in Python. There a tool call and a model call look like the same kind of thing — nodes in one graph, running in one process — and I had quietly assumed they have to be. 
+This site has no process to put them in: it is built to static files with [Vike](https://vike.dev) with a handful of serverless functions next to it. The paid LLM endpoint those functions expose will not help either. It forwards a `tools` array to Mistral and hands the model's request straight back, without ever executing one. 
 
-So the loop runs in the browser. That turned out to be fine.
+So the loop runs in the browser . That turned out to be fine. AUTHOR: Mention again that this is one of the amazing things of modern websites. They are well functional apps as a matter of fact.
 
 ## One turn, payload by payload
 
-Take the question _"What did the Bundestag debate on 9 September?"_. Here is the whole turn.
+We will walk through the architecture with the folloowing concrete example. I wanted to ask my model the question _"What did the Bundestag debate on 9 September?"_ and get the answer based on Bundestakt. Here is the whole turn that we will walk through in detail through the remainder of the post.
 
+AUTHOR: Can you number the steps as the steps below ?
 <SequenceDiagram
   participants={turnParticipants}
   steps={turnSteps}
@@ -48,6 +50,10 @@ Take the question _"What did the Bundestag debate on 9 September?"_. Here is the
 ### 1. Send the usual request, plus `tools`
 
 A tool definition is a name, a description, and a JSON Schema for its arguments. It rides along with the messages you were already sending:
+
+AUTHOR: Do not consider everyone to directly understand the json. People need to understand that this is the usual thing. You send a message, but not only the message but also other context 
+information, i.e. relevant tools. So maybe it is ok to describe the sent request ELI5 and then the request ? Could it be shortened to "snippet style" for readibility instead of executability ?
+What is fitting here ?
 
 ```bash
 curl https://llm-agent.fretchen.eu \
@@ -79,8 +85,11 @@ curl https://llm-agent.fretchen.eu \
 (A real call needs an `X-PAYMENT` header too — this endpoint charges a fraction of a cent per message. That part is [a different story](/blog/32/) and changes nothing below.)
 
 The description is the part I underestimated. It is prompt text. The model reads it and nothing else about the tool — not my code, not the API docs — so anything about _how_ to use the thing has to go in there. "Call without a slug first, then again with its slug" is a sentence written for a reader, in a field that looks like documentation.
+AUTHOR: See above. The explanation is again too late and you have too much "cliff hangers".
 
 ### 2. The model asks
+AUTHOR: Explain that this is bascially the answer of the model. Not some text but a json which contains the choices field and instead of a message it contains the tool calls. Again explain before the code to guide the reader.
+
 
 ```json
 {
@@ -109,6 +118,7 @@ The description is the part I underestimated. It is prompt text. The model reads
 Two things about this. It is a **request** — nothing has happened, nothing has been fetched, and the model has no idea whether `get_sitzungen` even works. And `arguments` is a **JSON string**, not an object, which can also be malformed; mine parses it in a `try` that falls back to `{}` rather than throwing, because a model that garbles its own arguments should not take the whole chat message down with it.
 
 ### 3. My code runs it
+AUTHOR: Explain that this is call from the static site and one of the beauties of react. (I think). Again the code has to be introduced it is not self-explaining. 
 
 This is the step with no model in it at all. Dispatch by name, then do the work:
 

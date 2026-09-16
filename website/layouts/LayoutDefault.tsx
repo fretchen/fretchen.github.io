@@ -70,9 +70,12 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
             </div>
           </div>
         </Appbar>
-        <div className={layout.main}>
+        {/* Landmarks, not decoration: `header`/`main`/`footer` are how a screen reader skips the
+            navigation, and how /assistent's get_page tool tells a page's prose from its chrome on
+            the pages that are components rather than MDX and so have no `article` of their own. */}
+        <main className={layout.main}>
           <Content>{children}</Content>
-        </div>
+        </main>
         <Footer />
       </WagmiProvider>
     </div>
@@ -97,9 +100,9 @@ function NavItem({ href, children }: { href: string; children: React.ReactNode }
 
 function Appbar({ children }: { children: React.ReactNode }) {
   return (
-    <div id="Appbar" className={layout.appbar}>
+    <header id="Appbar" className={layout.appbar}>
       {children}
-    </div>
+    </header>
   );
 }
 

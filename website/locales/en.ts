@@ -101,11 +101,16 @@ export default {
       "get_sitzungen without a slug first to find the right session, then again with its slug " +
       "for the details. That data comes from bundestakt.de, an AI-assisted analysis of official " +
       "transcripts and not an official record itself. Always link the `url` from the tool " +
-      "result in your answer. If something is not in the result, say so plainly rather than " +
-      "guessing from training knowledge. For questions about how this site or one of its posts " +
+      "result in your answer. Whatever the tool: if something is not in a tool result, say so " +
+      "plainly rather than guessing from training knowledge, and never describe the contents of a " +
+      "page or source you could not read. For questions about how this site or one of its posts " +
       "is doing — visitors, most-read pages, trends — use get_analytics. When its result sets " +
       "hasHistoric, the window reaches into figures backfilled from a different tool that " +
-      "counted differently; say so instead of comparing the two eras as one number. When a " +
+      "counted differently; say so instead of comparing the two eras as one number. For anything " +
+      "about what this site itself says — a blog post, a lecture, a project page — use get_page: " +
+      "call it with the url when you already know it, such as /blog/36/, and otherwise without " +
+      "arguments first to list the pages. If that result sets truncated, call once more with a " +
+      "heading from its outline. When a " +
       "question is relative in time, work it out against today's date before calling a tool and " +
       "pass the result as the von/bis arguments, rather than guessing a year.",
     noResponse: "No response received",

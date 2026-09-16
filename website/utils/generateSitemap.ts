@@ -184,10 +184,14 @@ function extractLastmod(filePath: string): string | undefined {
 function extractTitle(filePath: string): string | undefined {
   const match = /<title[^>]*>([^<]*)<\/title>/i.exec(fs.readFileSync(filePath, "utf-8"));
   if (!match) return undefined;
-  // Every +title.ts appends " | fretchen.eu" as a literal; derive the suffix from the configured
-  // host rather than repeating it, so a domain change does not silently stop stripping.
-  const suffix = new URL(SITE_URL).hostname.replace(/^www\./, "");
-  return match[1].replace(new RegExp(`\\s*\\|\\s*${suffix.replace(/\./g, "\\.")}\\s*$`), "").trim() || undefined;
+  // Every +title.ts appends " | fretchen.eu" as a literal; the suffix is derived from the
+  // configured host rather than repeated here, so a domain change cannot silently stop it
+  // stripping. Matched with endsWith rather than a RegExp built from that host: escaping a string
+  // into a pattern is easy to get half-right (CodeQL flagged an earlier version of this line for
+  // escaping `.` but not `\`), and a literal comparison needs no escaping at all.
+  const suffix = ` | ${new URL(SITE_URL).hostname.replace(/^www\./, "")}`;
+  const title = match[1];
+  return (title.endsWith(suffix) ? title.slice(0, -suffix.length) : title).trim() || undefined;
 }
 
 /**

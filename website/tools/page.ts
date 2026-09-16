@@ -1,4 +1,5 @@
 import type { X402Tool } from "../types/x402";
+import { SITE_CONFIG } from "../utils/siteConfig";
 
 /**
  * This site's own pages as a tool for the chat model: a list of every English page, and the text
@@ -109,20 +110,44 @@ export function indexUnavailable(): PageResult {
 /**
  * Normalises a model-supplied url to a path on this origin, or null if it is not one.
  *
- * The fetch this guards runs in the visitor's browser, so an unchecked url would let the model
- * point it at any origin it liked. Only absolute same-origin paths pass: a scheme, a protocol-
- * relative `//host`, or a `..` traversal is rejected outright rather than resolved.
+ * The fetch this guards runs in the visitor's browser, so an unchecked url would let the model —
+ * or anything that has talked the model into it — point that browser at any origin it liked, and
+ * the response would land in the conversation as a tool result. Cross-origin fetches carry no
+ * cookies and CORS usually blocks reading the body, but an attacker-controlled endpoint simply
+ * sets `Access-Control-Allow-Origin: *`, so this check is the boundary.
+ *
+ * It resolves the url with the same parser `fetch` will use rather than pattern-matching the
+ * string, because the two disagree in ways that are invisible to string checks: the WHATWG URL
+ * parser folds `\` into `/` for http(s) and strips tab, CR and LF outright. An earlier version of
+ * this function tested `startsWith("/")` and `startsWith("//")`, and `"/\evil.example/"`,
+ * `"/<TAB>/evil.example/"` and `"/<LF>/evil.example/"` all passed it and fetched
+ * `https://evil.example/`. Comparing resolved origins closes the class rather than those three
+ * spellings of it.
+ *
+ * Consequences of resolving rather than rejecting: an absolute same-origin url is accepted and
+ * reduced to its path, which is what models tend to produce, and `..` is normalised away by the
+ * parser instead of being refused — it cannot leave the origin, so the worst case is a 404 here.
  *
  * The trailing slash is required, not cosmetic — the prerendered pages are `<path>/index.html`,
  * and a request without it is a redirect at best.
+ *
+ * `origin` is a parameter so the module stays usable outside a browser; `SITE_CONFIG` lives in
+ * `utils/siteConfig.ts` precisely for callers that cannot process image imports.
  */
-export function pagePath(raw: unknown): string | null {
-  if (typeof raw !== "string") return null;
-  const trimmed = raw.trim();
-  if (!trimmed.startsWith("/") || trimmed.startsWith("//")) return null;
-  const path = trimmed.split(/[?#]/)[0];
-  if (path.split("/").includes("..")) return null;
-  return path.endsWith("/") ? path : `${path}/`;
+export function pagePath(raw: unknown, origin: string = globalThis.location?.origin ?? SITE_CONFIG.url): string | null {
+  if (typeof raw !== "string" || !raw.trim()) return null;
+
+  let url: URL;
+  let base: URL;
+  try {
+    base = new URL(origin);
+    url = new URL(raw, base);
+  } catch {
+    return null;
+  }
+  if (url.origin !== base.origin) return null;
+
+  return url.pathname.endsWith("/") ? url.pathname : `${url.pathname}/`;
 }
 
 // --- Fetchers: plain fetch, no cache, throw on failure -----------------------------------------
@@ -157,23 +182,33 @@ const BLOCK_SELECTOR = "p, h1, h2, h3, h4, h5, h6, li, pre, blockquote, tr, figc
 /**
  * Turns a prerendered page into plain text, its title, and its heading outline.
  *
- * Two details carry their weight:
+ * Three details carry their weight:
  *
  * - KaTeX renders each formula three times over — MathML glyphs, the TeX source in an
  *   `<annotation>`, and the visual HTML glyph spans — so naive text extraction prints every
  *   equation three times as unreadable glyph soup. One quantum lecture measured 18.8 KB of that.
  *   Keeping the annotation and dropping the two glyph trees is what makes the maths readable.
- * - The root is `article ?? main ?? body`, because pages built from components rather than MDX
- *   (/x402, /imagegen) have neither landmark; the chrome is stripped explicitly instead.
+ * - The root is the page's *only* `article` when it has one, and `main` otherwise. Preferring any
+ *   `article` meant taking the first of many on every listing page: /blog renders one per entry,
+ *   so the tool returned a single 258-character teaser for a 9019-character page, and
+ *   /quantum/amo returned a 54-character one that read as an empty page. A lone article is still
+ *   worth preferring on a post, where it excludes the table of contents, comments, support button
+ *   and webmentions that surround it inside `main`.
+ * - Only the site chrome is stripped, named explicitly. Removing every `header` also removed each
+ *   post's own — it sits inside the article (components/ArticleShell.tsx) and carries the H1 and
+ *   the publication date — so posts came back opening mid-sentence, with no title and no date.
  */
 export function extractPageText(html: string): ExtractedPage {
   const doc = new DOMParser().parseFromString(html, "text/html");
   const title = doc.title.replace(/\s*\|\s*[^|]*$/, "").trim();
 
-  const root = doc.querySelector("article") ?? doc.querySelector("main") ?? doc.body;
+  const articles = doc.querySelectorAll("article");
+  const root = (articles.length === 1 ? articles[0] : null) ?? doc.querySelector("main") ?? doc.body;
   if (!root) return { title, outline: [], text: "" };
 
-  root.querySelectorAll("script, style, noscript, nav, header, footer").forEach((el) => el.remove());
+  // `#Appbar` and the page footer live outside `main`, so they are only reachable via the `body`
+  // fallback; naming them keeps that case clean without touching an article's own header.
+  root.querySelectorAll("script, style, noscript, nav, footer, #Appbar").forEach((el) => el.remove());
 
   // Anything not rendered to a reader is not page content. On this site that is mostly the
   // microformats layer every post carries — a hidden h-card, u-url, p-summary and p-category, plus
@@ -185,8 +220,13 @@ export function extractPageText(html: string): ExtractedPage {
     el.replaceWith(doc.createTextNode(tex ? ` $${tex}$ ` : " "));
   });
 
+  // Collapsed exactly as `text` is below, because `sliceSection` locates a section by searching the
+  // text for its heading. The KaTeX replacement above pads with spaces, so a heading containing
+  // maths — six of them on this site — ends up with a double space here and a single space there,
+  // and the search misses every time: the model asks for a section it was just offered and is told
+  // it does not exist, then asks again until the hops run out.
   const outline = Array.from(root.querySelectorAll("h2, h3"))
-    .map((h) => h.textContent?.trim() ?? "")
+    .map((h) => (h.textContent ?? "").replace(/[^\S\n]+/g, " ").trim())
     .filter(Boolean);
 
   root.querySelectorAll(BLOCK_SELECTOR).forEach((el) => el.append(doc.createTextNode("\n")));
@@ -238,9 +278,10 @@ export function selectIndex(raw: unknown): PageResult {
 }
 
 export function selectPage(page: ExtractedPage, url: string, section: unknown): PageResult {
-  // Six of the 86 pages are listings — /blog, /quantum/amo, /analytics — whose entries are built
-  // in the browser from data, so their prerendered HTML holds no prose at all. Saying so beats
-  // returning an empty string the model would read as "this page says nothing".
+  // Two of the 86 pages — /analytics and /growth — are dashboards built entirely in the browser,
+  // and prerender ~20 characters between them. Saying so beats returning an empty string the model
+  // would read as "this page says nothing". (The listing pages used to land here too, but that was
+  // the first-`article` bug above hiding their entries, not an absence of content.)
   if (page.text.length < MIN_PROSE_CHARS) {
     return {
       status: "no_prose",

@@ -64,6 +64,41 @@ describe("extractPageText", () => {
     expect(result.text).not.toContain("Welcome");
   });
 
+  /**
+   * Listing pages render one `<article class="h-entry">` per entry — 37 on /blog, 20 on
+   * /quantum/amo, 3 on the home page. Preferring any article took the first, so /blog came back as
+   * a 258-character teaser of one post where the page holds 9019 characters, and /quantum/amo came
+   * back as 54 characters that read as an empty page.
+   */
+  it("takes the whole page when it has many articles, not the first entry", () => {
+    const entries = ["<article><p>First entry.</p></article>", "<article><p>Second entry.</p></article>"].join("");
+    const { text } = extractPageText(page(`<main>${entries}</main>`));
+
+    expect(text).toContain("First entry.");
+    expect(text).toContain("Second entry.");
+  });
+
+  it("still narrows to the article when the page has exactly one", () => {
+    // On a post, `main` also holds the table of contents, comments and webmentions.
+    const html = page("<main><article><p>The post.</p></article><div><p>Comments go here.</p></div></main>");
+
+    expect(extractPageText(html).text).toBe("The post.");
+  });
+
+  it("keeps the post's own header, which carries its title and date", () => {
+    // components/ArticleShell.tsx puts it inside the article; only the site chrome should go.
+    const html = page(
+      "<main><article><header><h1>A Post</h1><span>15 September 2026</span></header>" +
+        "<p>The body.</p></article></main>",
+    );
+
+    const { text } = extractPageText(html);
+
+    expect(text).toContain("A Post");
+    expect(text).toContain("15 September 2026");
+    expect(text).not.toContain("Welcome");
+  });
+
   it("strips the site-name suffix from the title", () => {
     expect(extractPageText(page("<article><p>x</p></article>")).title).toBe("A Post");
   });
@@ -131,6 +166,25 @@ describe("sliceSection", () => {
   it("returns null for a heading the page does not have", () => {
     expect(sliceSection(extracted, "Troubleshooting")).toBeNull();
   });
+
+  /**
+   * Six real headings contain maths (/quantum/amo/2, /quantum/hardware/0). The KaTeX replacement
+   * pads with spaces, so before the outline was collapsed the same way as the text, the heading
+   * held a double space and the text a single one — `indexOf` missed, and the model was told the
+   * section it had just been offered did not exist, over and over until the hops ran out.
+   */
+  it("finds a section whose heading contains maths", () => {
+    const withMath = extractPageText(
+      page(
+        `<article><h2>Case of no perturbation ${katex("\\Omega = 0", "Ω = 0")}</h2>` +
+          "<p>The state does not evolve.</p></article>",
+      ),
+    );
+
+    const heading = withMath.outline[0];
+    expect(heading).toBe("Case of no perturbation $\\Omega = 0$");
+    expect(sliceSection(withMath, heading)).toContain("The state does not evolve.");
+  });
 });
 
 describe("selectPage", () => {
@@ -192,18 +246,35 @@ describe("pagePath", () => {
     ["/blog/36/", "/blog/36/"],
     ["  /x402/  ", "/x402/"],
     ["/blog/36/?utm=x#top", "/blog/36/"],
+    // Models produce absolute urls constantly; same-origin ones reduce to their path.
+    ["https://www.fretchen.eu/blog/36/", "/blog/36/"],
+    // `..` cannot leave the origin, so the parser normalises it rather than it being refused.
+    ["/blog/../x402/", "/x402/"],
   ])("normalises %s", (input, expected) => {
-    expect(pagePath(input)).toBe(expected);
+    expect(pagePath(input, "https://www.fretchen.eu")).toBe(expected);
   });
 
+  /**
+   * The three spellings below all passed the original string-matching guard and fetched
+   * `https://evil.example/`: the WHATWG URL parser folds `\` into `/` for http(s) and strips tab,
+   * CR and LF outright, so `startsWith("//")` never saw them. Resolving with the same parser the
+   * fetch uses is what closes the class rather than these three cases.
+   */
   it.each([
     ["an absolute url", "https://evil.example/"],
     ["a protocol-relative url", "//evil.example/"],
-    ["a traversal", "/blog/../../etc/passwd"],
-    ["a relative path", "../foo"],
+    ["a backslash standing in for a slash", "/\\evil.example/"],
+    ["an embedded tab", "/\t/evil.example/"],
+    ["an embedded newline", "/\n/evil.example/"],
+    ["an embedded carriage return", "/\r/evil.example/"],
     ["a non-string", 36],
+    ["an empty string", "   "],
   ])("refuses %s, because the fetch runs in the visitor's browser", (_label, input) => {
-    expect(pagePath(input)).toBeNull();
+    expect(pagePath(input, "https://www.fretchen.eu")).toBeNull();
+  });
+
+  it("resolves a relative path against the origin rather than escaping it", () => {
+    expect(pagePath("../foo", "https://www.fretchen.eu")).toBe("/foo/");
   });
 });
 

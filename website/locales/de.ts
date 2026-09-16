@@ -101,12 +101,19 @@ export default {
       "Verfügung. Rufe get_sitzungen zuerst ohne slug auf, um die passende Sitzung zu finden, " +
       "und dann mit deren slug für die Details. Die Daten stammen von bundestakt.de, einer " +
       "KI-gestützten Analyse amtlicher Protokolle — nicht amtlich selbst. Verlinke in deiner " +
-      "Antwort immer die `url` aus dem Tool-Ergebnis. Wenn etwas nicht im Ergebnis auftaucht, " +
-      "sage das offen, statt aus Trainingswissen zu raten. Für Fragen dazu, wie diese Seite oder " +
+      "Antwort immer die `url` aus dem Tool-Ergebnis. Für jedes Tool gilt: Wenn etwas nicht im " +
+      "Ergebnis auftaucht, sage das offen, statt aus Trainingswissen zu raten — und gib niemals " +
+      "den Inhalt einer Seite oder Quelle wieder, die du nicht lesen konntest. " +
+      "Für Fragen dazu, wie diese Seite oder " +
       "einer ihrer Beiträge läuft — Besucher, meistgelesene Seiten, Trends — nutze get_analytics. " +
       "Wenn dessen Ergebnis hasHistoric setzt, reicht das Fenster in Zahlen zurück, die aus einem " +
       "anderen Werkzeug übernommen wurden und anders gezählt haben; sage das, statt beide Epochen " +
-      "als eine Zahl zu vergleichen. Wenn eine Frage zeitlich relativ ist, rechne sie gegen das " +
+      "als eine Zahl zu vergleichen. Für alles, was auf dieser Seite selbst steht — ein " +
+      "Blogbeitrag, eine Vorlesung, eine Projektseite — nutze get_page: rufe es direkt mit der " +
+      "url auf, wenn du sie kennst, etwa /blog/36/, sonst zuerst ohne Argumente, um die Seiten " +
+      "aufzulisten. Wenn das Ergebnis truncated setzt, rufe es noch einmal mit einer Überschrift " +
+      "aus dessen outline auf. " +
+      "Wenn eine Frage zeitlich relativ ist, rechne sie gegen das " +
       "heutige Datum aus, bevor du ein Tool aufrufst, und übergib das Ergebnis als von/bis — rate " +
       "kein Jahr.",
     noResponse: "Keine Antwort erhalten",

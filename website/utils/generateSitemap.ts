@@ -1,6 +1,11 @@
 /**
  * Sitemap Generator for Vike Pre-rendered Static Site
  *
+ * Also emits build/content-index.json — the `{url, title}` list of English pages that
+ * /assistent's `get_page` tool reads to find a page before fetching it. It lives here rather
+ * than in a script of its own because this one already walks every built HTML file and already
+ * pulls metadata out of each; a second walk would be the same work twice.
+ *
  * Generates sitemap.xml after build by:
  * 1. Scanning all generated HTML files in build directory
  * 2. Adding reciprocal hreflang alternates for the pages that are really translated
@@ -24,6 +29,25 @@ const SITE_URL = SITE_CONFIG.url;
 
 const BUILD_DIR = "./build";
 const SITEMAP_PATH = path.join(BUILD_DIR, "sitemap.xml");
+const CONTENT_INDEX_PATH = path.join(BUILD_DIR, "content-index.json");
+/**
+ * A second copy, for `vike dev`.
+ *
+ * The index can only be built from built HTML, so under the dev server it would otherwise 404 and
+ * /assistent's get_page tool would lose its page list — exactly where you try the tool out. Vite
+ * serves `public/` at the site root in dev, so dropping a copy there makes the previous build's
+ * index available while developing. The deployed copy is always the fresh one: `vike build` copies
+ * `public/` into `build/` first, and this script then overwrites `build/content-index.json` above.
+ *
+ * Gitignored — it is a build output that happens to live in an input directory.
+ */
+const CONTENT_INDEX_DEV_PATH = path.join("./public", "content-index.json");
+
+/** One entry of build/content-index.json — the page list /assistent's get_page tool reads. */
+interface ContentIndexEntry {
+  url: string;
+  title: string;
+}
 
 interface SitemapUrl {
   loc: string;
@@ -149,6 +173,24 @@ function extractLastmod(filePath: string): string | undefined {
 }
 
 /**
+ * Read a page's own `<title>`, without the site-name suffix.
+ *
+ * This is what /assistent's `get_page` tool lists so the model can pick a page to read. Titles
+ * only, deliberately: the meta descriptions average 178 characters, which would take the whole
+ * index from ~6 KB to ~22 KB — and a tool result is charged as input tokens on every later hop of
+ * the turn, so the whole 86-entry index has to stay small enough to hand over at once. Handing it
+ * over whole is what lets the tool skip a query parameter, a result cap, and a no-matches path.
+ */
+function extractTitle(filePath: string): string | undefined {
+  const match = /<title[^>]*>([^<]*)<\/title>/i.exec(fs.readFileSync(filePath, "utf-8"));
+  if (!match) return undefined;
+  // Every +title.ts appends " | fretchen.eu" as a literal; derive the suffix from the configured
+  // host rather than repeating it, so a domain change does not silently stop stripping.
+  const suffix = new URL(SITE_URL).hostname.replace(/^www\./, "");
+  return match[1].replace(new RegExp(`\\s*\\|\\s*${suffix.replace(/\./g, "\\.")}\\s*$`), "").trim() || undefined;
+}
+
+/**
  * Determine priority based on URL depth and type
  */
 function getPriority(urlPath: string): number {
@@ -215,10 +257,19 @@ function generateSitemap(): void {
 
   // Group URLs by canonical path to avoid duplicates
   const urlMap = new Map<string, SitemapUrl>();
+  const contentIndex: ContentIndexEntry[] = [];
 
   for (const filePath of htmlFiles) {
     const urlPath = filePathToUrlPath(filePath);
     const { canonicalPath, locale, alternates } = getLocaleInfo(urlPath);
+
+    // The content index lists English URLs only. A /de/ page renders German chrome around the
+    // same English prose, so including both would double the index with duplicates the model
+    // would have to tell apart.
+    if (locale === defaultLocale) {
+      const title = extractTitle(filePath);
+      if (title) contentIndex.push({ url: urlPath, title });
+    }
 
     // A non-default-locale URL earns its own entry only where the page is really translated.
     // Untranslated /de/ pages canonicalise to their English original, so listing them here
@@ -245,6 +296,13 @@ function generateSitemap(): void {
   // Write sitemap
   fs.writeFileSync(SITEMAP_PATH, sitemapXml, "utf-8");
   console.log(`[Sitemap] Sitemap written to ${SITEMAP_PATH}`);
+
+  // Write the content index consumed by /assistent's get_page tool.
+  contentIndex.sort((a, b) => a.url.localeCompare(b.url));
+  const contentIndexJson = JSON.stringify(contentIndex);
+  fs.writeFileSync(CONTENT_INDEX_PATH, contentIndexJson, "utf-8");
+  fs.writeFileSync(CONTENT_INDEX_DEV_PATH, contentIndexJson, "utf-8");
+  console.log(`[Sitemap] Content index written to ${CONTENT_INDEX_PATH} (${contentIndex.length} pages)`);
 
   // Note: robots.txt with Sitemap reference is maintained in public/robots.txt
   // and copied to build/ during the build process

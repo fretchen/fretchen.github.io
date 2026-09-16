@@ -19,11 +19,15 @@ const mockSwitchImageIfNeeded = vi.fn();
 const mockGenerateImage = vi.fn();
 // vi.hoisted because the vi.mock factory below spreads these in immediately, rather than
 // behind an inner closure like the hook mocks do — a plain const is still uninitialised then.
-const { mockFetchSitzungen, mockFetchClaims, mockFetchStats } = vi.hoisted(() => ({
-  mockFetchSitzungen: vi.fn(),
-  mockFetchClaims: vi.fn(),
-  mockFetchStats: vi.fn(),
-}));
+const { mockFetchSitzungen, mockFetchClaims, mockFetchStats, mockFetchContentIndex, mockFetchPageHtml } = vi.hoisted(
+  () => ({
+    mockFetchSitzungen: vi.fn(),
+    mockFetchClaims: vi.fn(),
+    mockFetchStats: vi.fn(),
+    mockFetchContentIndex: vi.fn(),
+    mockFetchPageHtml: vi.fn(),
+  }),
+);
 
 vi.mock("../hooks/useX402Chat", () => ({
   useX402Chat: vi.fn(() => ({
@@ -109,6 +113,12 @@ vi.mock("../tools/analytics", async (importOriginal) => {
   return { ...actual, fetchStats: mockFetchStats };
 });
 
+// And for site content: real extraction and selectors, stubbed fetchers.
+vi.mock("../tools/page", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../tools/page")>();
+  return { ...actual, fetchContentIndex: mockFetchContentIndex, fetchPageHtml: mockFetchPageHtml };
+});
+
 import { AssistantChat, TOOL_REGISTRY } from "../components/AssistantChat";
 import { precheckLlmV1Agent } from "../hooks/x402Discovery";
 import { useX402Chat } from "../hooks/useX402Chat";
@@ -178,6 +188,15 @@ describe("AssistantChat", () => {
     mockFetchSitzungen.mockResolvedValue(sitzungenFixture);
     mockFetchClaims.mockResolvedValue(claimsFixture);
     mockFetchStats.mockResolvedValue(statsFixture());
+    mockFetchContentIndex.mockResolvedValue([{ url: "/blog/36/", title: "My static site got a tool loop" }]);
+    // Long enough to clear the tool's prose floor, below which a page reads as a client-rendered
+    // listing rather than an article.
+    mockFetchPageHtml.mockResolvedValue(
+      "<html><head><title>My static site got a tool loop | fretchen.eu</title></head>" +
+        "<body><article><h2>The loop</h2><p>Four hops, each one paid. " +
+        "I wanted my chat assistant to answer a question about a real Bundestag session, and this ".repeat(3) +
+        "</p></article></body></html>",
+    );
     mockSendMessage.mockResolvedValue({
       choices: [{ message: { role: "assistant", content: "Paris is the capital of France." } }],
     });
@@ -637,6 +656,10 @@ describe("AssistantChat", () => {
       // be sent as `tools: []`. "Nothing left to offer" has to mean the key is absent.
       mockFetchSitzungen.mockRejectedValue(new Error("down"));
       mockFetchClaims.mockRejectedValue(new Error("down"));
+      // get_page is switched off rather than failed: every one of its failures is recoverable by
+      // design — a different url, a different section — so it is never withdrawn, and "everything
+      // on offer has failed" can only be reached with it off the table to begin with.
+      window.localStorage.setItem("x402-chat-disabled-tools", "get_page");
 
       // All three in one hop: the two lookups fail on their own, the image tool via a cancel.
       mockSendMessage.mockResolvedValue({
@@ -691,6 +714,48 @@ describe("AssistantChat", () => {
       const convo = mockSendMessage.mock.calls[1][0] as { role: string; content: string }[];
       const toolResult = convo.find((m) => m.role === "tool");
       expect((JSON.parse(toolResult!.content) as { status: string }).status).not.toBe("unknown_tool");
+    });
+
+    /**
+     * A failing page list must not take the page reader down with it.
+     *
+     * The loop withdraws a failed tool per tool name, and get_page is two capabilities behind one
+     * name — listing, which needs the generated index, and reading, which does not. When a missing
+     * index withdrew the whole tool, a request naming /blog/36 outright could no longer be served:
+     * the model listed first because the prompt says to, lost the tool to the 404, and answered
+     * from nothing at all.
+     */
+    it("keeps reading pages after the page list fails to load", async () => {
+      mockFetchContentIndex.mockRejectedValue(new Error("404"));
+      mockSendMessage
+        .mockResolvedValueOnce(toolCallResponse("get_page", {}))
+        .mockResolvedValueOnce(toolCallResponse("get_page", { url: "/blog/36/" }))
+        .mockResolvedValueOnce(textResponse("The post is about a tool loop."));
+
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("Read /blog/36 for me");
+
+      await waitFor(() => expect(mockSendMessage).toHaveBeenCalledTimes(3));
+
+      // Still offered on the hop after the index failed — otherwise the second call is impossible.
+      const secondHopTools = (mockSendMessage.mock.calls[1][1] as { tools?: { function: { name: string } }[] }).tools;
+      expect(secondHopTools?.map((t) => t.function.name)).toContain("get_page");
+
+      // And the failed listing told the model where to go next rather than just failing.
+      const firstResult = (mockSendMessage.mock.calls[1][0] as { role: string; content: string }[]).find(
+        (m) => m.role === "tool",
+      );
+      const parsed = JSON.parse(firstResult!.content) as { status: string; hint: string };
+      expect(parsed.status).toBe("index_unavailable");
+      expect(parsed.hint).toContain("/blog/36/");
+
+      // The read went through: the model got the page's actual text.
+      const lastResult = (mockSendMessage.mock.calls[2][0] as { role: string; content: string }[])
+        .filter((m) => m.role === "tool")
+        .at(-1);
+      const page = JSON.parse(lastResult!.content) as { status: string; content: string };
+      expect(page.status).toBe("ok");
+      expect(page.content).toContain("Four hops, each one paid.");
     });
 
     it("treats an inherited Object.prototype name as unknown_tool, not as a runner", async () => {
@@ -780,9 +845,11 @@ describe("AssistantChat", () => {
     // `[]` is truthy and useX402Chat spreads `tools` in on truthiness — the same trap the owner
     // gate has. "Nothing selected" has to mean the key is absent.
     it("omits the tools key entirely when the user switched everything off", async () => {
+      // Derived rather than spelled out: a hand-written list silently stops meaning "everything"
+      // the moment a tool is added, and this test then passes for the wrong reason.
       window.localStorage.setItem(
         "x402-chat-disabled-tools",
-        "generate_image,get_sitzungen,search_claims,get_analytics",
+        TOOL_REGISTRY.map((entry) => entry.tool.function.name).join(","),
       );
 
       renderWithQuery(<AssistantChat />);

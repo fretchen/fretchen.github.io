@@ -39,6 +39,18 @@ import {
   fetchFailed as analyticsFetchFailed,
   type AnalyticsResult,
 } from "../tools/analytics";
+import {
+  getPageTool,
+  fetchContentIndex,
+  fetchPageHtml,
+  extractPageText,
+  selectIndex,
+  selectPage,
+  pagePath,
+  indexUnavailable,
+  fetchFailed as pageFetchFailed,
+  type PageResult,
+} from "../tools/page";
 import { useWalletAuth } from "../hooks/useWalletAuth";
 import { isOwnerAddress, type OwnerScope } from "../utils/getChain";
 import type { X402ChatMessage, X402Tool, X402ToolCall } from "../types/x402";
@@ -77,6 +89,7 @@ export const TOOL_REGISTRY = [
   { tool: generateImageTool, label: "Image generation", ownerScope: null, source: null },
   { tool: getSitzungenTool, label: "Bundestag sessions", ownerScope: null, source: "bundestakt" },
   { tool: searchClaimsTool, label: "Fact-checks", ownerScope: null, source: "bundestakt" },
+  { tool: getPageTool, label: "Site content", ownerScope: null, source: null },
   { tool: getAnalyticsTool, label: "Site analytics", ownerScope: "analytics", source: "analytics" },
 ] as const satisfies readonly {
   tool: X402Tool;
@@ -493,9 +506,62 @@ export function AssistantChat() {
   }
 
   /**
+   * Reads this site's own pages: no `url` lists them, a `url` returns that page's text.
+   *
+   * Cached per turn like Bundestakt, and for the same reason doubled: the intended flow calls this
+   * twice or three times in one turn — list, read, then often one section of the same page — and
+   * the page HTML behind those last two calls is the identical 50 KB document. Content is static
+   * between deploys, so the stale time is generous.
+   *
+   * Every failure here leaves the tool on offer, and the page list is the reason why.
+   *
+   * The loop withdraws a failed tool per *tool*, not per call (utils/toolLoop.ts), and this one
+   * has two independent halves behind a single name: listing the pages, and reading one. Reading
+   * never touches the index. So marking a failed index fetch unrecoverable — which it is, in the
+   * sense that retrying it changes nothing — withdrew the half that still worked, and a request
+   * naming a url outright could no longer be served. That happened: asked to read /blog/36, the
+   * model listed first because it was told to, lost the tool to a 404 on the index, and answered
+   * from nothing. The index result carries a hint pointing at the url form instead, which costs
+   * one hop rather than the whole turn.
+   */
+  async function loadPage(args: Record<string, unknown>): Promise<ToolRunResult> {
+    const wantsIndex = args.url === undefined || args.url === null || args.url === "";
+
+    try {
+      if (wantsIndex) {
+        const raw = await queryClient.fetchQuery({
+          queryKey: ["content-index"],
+          queryFn: fetchContentIndex,
+          staleTime: 60 * 60_000,
+          retry: 0,
+        });
+        return { result: selectIndex(raw), recoverable: true };
+      }
+
+      const path = pagePath(args.url);
+      if (!path) {
+        return { result: { status: "invalid_url", url: String(args.url) } as PageResult, recoverable: true };
+      }
+
+      const html = await queryClient.fetchQuery({
+        queryKey: ["page", path],
+        queryFn: () => fetchPageHtml(path),
+        staleTime: 60 * 60_000,
+        retry: 0,
+      });
+      return { result: selectPage(extractPageText(html), path, args.section), recoverable: true };
+    } catch (err) {
+      // fetchQuery rethrows the fetcher's error; the module owns the wire-level failure shape.
+      // A missing index is reported as such, with the way around it, rather than as a bare
+      // network error the model can only give up on.
+      return { result: wantsIndex ? indexUnavailable() : pageFetchFailed(err), recoverable: true };
+    }
+  }
+
+  /**
    * How to run each tool, keyed by wire name. Only `generate_image` is confirmation-gated and
-   * costs money; the Bundestakt and analytics lookups are free and read-only, so they run
-   * silently.
+   * costs money; the Bundestakt, site-content and analytics lookups are free and read-only, so
+   * they run silently.
    *
    * Rebuilt each render, which is harmless: it is only ever read inside `sendMessage`, an event
    * handler. Memoising it would need a dependency list covering every closure above, and a wrong
@@ -507,6 +573,7 @@ export function AssistantChat() {
   toolRunners[generateImageTool.function.name] = runImageToolHere;
   toolRunners[getSitzungenTool.function.name] = (args) => loadBundestakt("sitzungen", args);
   toolRunners[searchClaimsTool.function.name] = (args) => loadBundestakt("claims", args);
+  toolRunners[getPageTool.function.name] = loadPage;
   toolRunners[getAnalyticsTool.function.name] = async (args) => ({ result: await loadAnalytics(args) });
 
   /** Dispatches one tool call by name, or tells the model it invented one. */

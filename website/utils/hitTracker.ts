@@ -1,21 +1,27 @@
 import { ANALYTICS_URL } from "./analyticsApi";
 
+const DWELL_MS = 3000;
+
+let pending: ReturnType<typeof setTimeout> | undefined;
+
 /**
- * `navigator.webdriver` is set by unmodified automation frameworks
- * (Selenium/Playwright/Puppeteer defaults) — a free, zero-data-sent signal to
- * skip the beacon entirely. It won't catch a crawler that deliberately hides
- * this property, but it costs nothing to check and sends nothing new either way.
+ * An *engaged* view, not a raw pageview: a JS-executing crawler that loads,
+ * snapshots and leaves never outlasts DWELL_MS, and its User-Agent is
+ * unrecoverable by design (`analytics/hit.ts` discards it), so a blocklist was
+ * not an option. Navigating away cancels the pending hit. No `pagehide` flush —
+ * that would hand those hits straight back.
  *
- * `isLanding` distinguishes a fresh page load (`+onHydrationEnd.ts`) from an
- * in-app navigation (`+onPageTransitionEnd.ts`) — not PII, since it's a fact
- * about this one isolated hit, never linked to any other hit or to a person.
- * "Landings ÷ hits" is a close proxy for how many pages a visit covers, the
- * signal that separated real browsing from crawler sweeps in
- * analytics/notebooks/05_traffic_bursts.ipynb.
+ * `isLanding` separates a fresh load (`+onHydrationEnd.ts`) from an in-app
+ * navigation (`+onPageTransitionEnd.ts`) — not PII, it describes this one hit
+ * and is never linked to another. `navigator.webdriver` catches unmodified
+ * automation frameworks for free.
  */
 export function trackHit(path: string, isLanding: boolean) {
   if (navigator.webdriver) {
     return;
   }
-  navigator.sendBeacon(`${ANALYTICS_URL}/hit`, JSON.stringify({ site: "fretchen.eu", path, landing: isLanding }));
+  clearTimeout(pending);
+  pending = setTimeout(() => {
+    navigator.sendBeacon(`${ANALYTICS_URL}/hit`, JSON.stringify({ site: "fretchen.eu", path, landing: isLanding }));
+  }, DWELL_MS);
 }

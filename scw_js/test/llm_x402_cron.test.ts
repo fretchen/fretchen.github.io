@@ -270,7 +270,10 @@ describe("llm_x402_cron", () => {
     expect(mockUseEnhancedRefundRequirements).toHaveBeenCalledWith(
       expect.anything(),
       expect.anything(),
-      expect.objectContaining({ network: "eip155:10", asset: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85" }),
+      expect.objectContaining({
+        network: "eip155:10",
+        asset: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+      }),
     );
   });
 

@@ -85,7 +85,9 @@ export async function resyncChannelBalances(
       corrected,
     });
 
-    if (!corrected || dryRun) {continue;}
+    if (!corrected || dryRun) {
+      continue;
+    }
 
     await storage.updateChannel(channel.channelId, (current) =>
       current

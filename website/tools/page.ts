@@ -277,17 +277,28 @@ export function selectIndex(raw: unknown): PageResult {
   return { status: "ok", pages: raw };
 }
 
-export function selectPage(page: ExtractedPage, url: string, section: unknown): PageResult {
+/** Why one of *our* pages has no prose. `tools/webFetch.ts` passes its own, because a stranger's
+ *  page is empty for entirely different reasons. */
+const SITE_NO_PROSE_HINT =
+  "This is an index page whose entries are rendered from data, not text. The pages it links to are in the list this tool returns when called without a url.";
+
+/**
+ * `noProseHint` is a parameter rather than a constant because this function serves two tools now.
+ * The reason a page yields no text differs by origin — one of ours is a client-rendered dashboard,
+ * a fetched one is usually a JavaScript shell or a paywall — and the model acts on that wording.
+ */
+export function selectPage(
+  page: ExtractedPage,
+  url: string,
+  section: unknown,
+  noProseHint: string = SITE_NO_PROSE_HINT,
+): PageResult {
   // Two of the 86 pages — /analytics and /growth — are dashboards built entirely in the browser,
   // and prerender ~20 characters between them. Saying so beats returning an empty string the model
   // would read as "this page says nothing". (The listing pages used to land here too, but that was
   // the first-`article` bug above hiding their entries, not an absence of content.)
   if (page.text.length < MIN_PROSE_CHARS) {
-    return {
-      status: "no_prose",
-      url,
-      hint: "This is an index page whose entries are rendered from data, not text. The pages it links to are in the list this tool returns when called without a url.",
-    };
+    return { status: "no_prose", url, hint: noProseHint };
   }
 
   const body = typeof section === "string" && section.trim() ? sliceSection(page, section) : page.text;

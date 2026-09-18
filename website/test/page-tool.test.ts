@@ -211,9 +211,26 @@ describe("selectPage", () => {
 
   it("says so when a page is a client-rendered listing rather than returning empty prose", () => {
     // /blog, /quantum/amo and /analytics build their entries from data in the browser.
-    const result = selectPage({ title: "Blog", outline: [], text: "Loading." }, "/blog/", undefined);
+    const result = selectPage({ title: "Blog", outline: [], text: "Loading." }, "/blog/", undefined) as Record<
+      string,
+      unknown
+    >;
 
     expect(result.status).toBe("no_prose");
+    expect(result.hint).toMatch(/index page/i);
+  });
+
+  /** `tools/webFetch.ts` reuses this function for a stranger's page, where "no prose" means
+   *  something else entirely — a JS shell or a paywall, not one of our listing pages. */
+  it("uses a caller-supplied no-prose hint when given one", () => {
+    const result = selectPage(
+      { title: "Shell", outline: [], text: "Loading." },
+      "https://example.com/",
+      undefined,
+      "Rendered by JavaScript, most likely.",
+    ) as Record<string, unknown>;
+
+    expect(result.hint).toBe("Rendered by JavaScript, most likely.");
   });
 
   it("answers a missing section with the headings that do exist, so the model can retry", () => {

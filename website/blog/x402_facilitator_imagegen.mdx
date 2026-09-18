@@ -7,34 +7,52 @@ description: "I implemented the x402 payment standard for AI agents to autonomou
 tokenID: 176
 ---
 
-import MermaidDiagram from "../components/MermaidDiagram";
+import { SequenceDiagram } from "../components/blog/SequenceDiagram";
 
-export const x402FlowDiagram = `
-sequenceDiagram
-    participant Buyer as fretchen.eu/imagegen<br/>(Buyer)
-    participant Seller as imagegen-agent.fretchen.eu<br/>(Seller)
-    participant Facilitator as facilitator.fretchen.eu<br/>(Facilitator)
-    participant Blockchain as Optimism L2<br/>(USDC)
+export const x402FlowParticipants = [
+  { id: "buyer", labelLines: ["fretchen.eu/imagegen", "(Buyer)"] },
+  { id: "seller", labelLines: ["imagegen-agent.fretchen.eu", "(Seller)"] },
+  { id: "facilitator", labelLines: ["facilitator.fretchen.eu", "(Facilitator)"] },
+  { id: "blockchain", labelLines: ["Optimism L2", "(USDC)"] },
+];
 
-    Buyer->>Seller: 1. POST /genimg (no payment)
-    Seller-->>Buyer: 2. 402 Payment Required<br/>+ PAYMENT-REQUIRED header
-
-    Note over Buyer: 3. User signs EIP-3009<br/>payment authorization
-
-    Buyer->>Seller: 4. POST /genimg<br/>+ PAYMENT-SIGNATURE header
-    Seller->>Facilitator: 5. POST /verify
-    Facilitator-->>Seller: 6. Payment valid ✓
-
-    Note over Seller: 7. Generate image<br/>+ Mint NFT
-
-    Seller->>Facilitator: 8. POST /settle
-    Facilitator->>Blockchain: 9. transferWithAuthorization
-    Blockchain-->>Facilitator: 10. Transaction confirmed
-    Facilitator-->>Seller: 11. Settlement complete
-
-    Seller-->>Buyer: 12. 200 OK + Image URL + NFT
-
-`;
+export const x402FlowSteps = [
+  { kind: "message", from: "buyer", to: "seller", label: "1. POST /genimg (no payment)" },
+  {
+    kind: "message",
+    from: "seller",
+    to: "buyer",
+    label: "2. 402 Payment Required + PAYMENT-REQUIRED header",
+    style: "dashed",
+  },
+  { kind: "note", from: "buyer", to: "buyer", label: "3. User signs EIP-3009 payment authorization" },
+  {
+    kind: "message",
+    from: "buyer",
+    to: "seller",
+    label: "4. POST /genimg + PAYMENT-SIGNATURE header",
+  },
+  { kind: "message", from: "seller", to: "facilitator", label: "5. POST /verify" },
+  { kind: "message", from: "facilitator", to: "seller", label: "6. Payment valid ✓", style: "dashed" },
+  { kind: "note", from: "seller", to: "seller", label: "7. Generate image + Mint NFT" },
+  { kind: "message", from: "seller", to: "facilitator", label: "8. POST /settle" },
+  { kind: "message", from: "facilitator", to: "blockchain", label: "9. transferWithAuthorization" },
+  {
+    kind: "message",
+    from: "blockchain",
+    to: "facilitator",
+    label: "10. Transaction confirmed",
+    style: "dashed",
+  },
+  {
+    kind: "message",
+    from: "facilitator",
+    to: "seller",
+    label: "11. Settlement complete",
+    style: "dashed",
+  },
+  { kind: "message", from: "seller", to: "buyer", label: "12. 200 OK + Image URL + NFT", style: "dashed" },
+];
 
 ## Introduction
 
@@ -73,7 +91,7 @@ In the implementation, there are three main actors:
 
 Here's how they interact:
 
-<MermaidDiagram definition={x402FlowDiagram} title="x402 Payment Flow" />
+<SequenceDiagram participants={x402FlowParticipants} steps={x402FlowSteps} caption="x402 Payment Flow" />
 
 Buyer and seller were already present in my previous set-up, however, now their interaction is more standardized via x402. Here's a real example – if you send a request without payment:
 

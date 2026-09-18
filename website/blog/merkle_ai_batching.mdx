@@ -7,32 +7,38 @@ secondaryCategory: "ai"
 description: "I build an AI assistant that accepts Ethereum payments instead of subscriptions. Discover how Merkle batching enables efficient prepaid AI with instant responses."
 ---
 
-import MermaidDiagram from "../components/MermaidDiagram";
+import { SequenceDiagram } from "../components/blog/SequenceDiagram";
 
-export const updatedLlmWorkflowDiagram = `sequenceDiagram
-    Actor Alice as Alice
-    participant Contract as Smart Contract
-    participant AIService as AI Service
-    participant BatchCoord as Batch Coordinator
-    participant Settlement as Settlement Layer
+export const updatedLlmWorkflowParticipants = [
+  { id: "alice", label: "Alice" },
+  { id: "contract", label: "Smart Contract" },
+  { id: "aiService", label: "AI Service" },
+  { id: "batchCoord", label: "Batch Coordinator" },
+  { id: "settlement", label: "Settlement Layer" },
+];
 
-    Note over Alice,Contract: Phase 1: Setup - Prepaid Deposit
-    Alice->>Contract: Deposit ETH for AI usage
-    Contract->>Contract: Update user balance
-
-    Note over Alice,Settlement: Phase 2: Usage - Instant AI Interactions
-    Alice->>AIService: Request: "Analyze sentiment"
-    AIService->>Contract: Validate sufficient balance
-    AIService->>AIService: Process with LLM API
-    AIService-->>Alice: Instant AI response
-    AIService->>BatchCoord: Queue request for batching
-
-    Note over BatchCoord,Settlement: Phase 3: Settlement - Efficient Batch Processing
-    BatchCoord->>BatchCoord: Build Merkle tree from queued requests
-    BatchCoord->>Contract: Process batch settlement
-    Contract->>Contract: Verify proofs and deduct costs
-    Contract->>Settlement: Single efficient transaction
-    Settlement-->>Alice: Settlement confirmation`;
+export const updatedLlmWorkflowSteps = [
+  { kind: "note", from: "alice", to: "contract", label: "Phase 1: Setup - Prepaid Deposit" },
+  { kind: "message", from: "alice", to: "contract", label: "Deposit ETH for AI usage" },
+  { kind: "note", from: "contract", to: "contract", label: "Update user balance" },
+  { kind: "note", from: "alice", to: "settlement", label: "Phase 2: Usage - Instant AI Interactions" },
+  { kind: "message", from: "alice", to: "aiService", label: 'Request: "Analyze sentiment"' },
+  { kind: "message", from: "aiService", to: "contract", label: "Validate sufficient balance" },
+  { kind: "note", from: "aiService", to: "aiService", label: "Process with LLM API" },
+  { kind: "message", from: "aiService", to: "alice", label: "Instant AI response", style: "dashed" },
+  { kind: "message", from: "aiService", to: "batchCoord", label: "Queue request for batching" },
+  {
+    kind: "note",
+    from: "batchCoord",
+    to: "settlement",
+    label: "Phase 3: Settlement - Efficient Batch Processing",
+  },
+  { kind: "note", from: "batchCoord", to: "batchCoord", label: "Build Merkle tree from queued requests" },
+  { kind: "message", from: "batchCoord", to: "contract", label: "Process batch settlement" },
+  { kind: "note", from: "contract", to: "contract", label: "Verify proofs and deduct costs" },
+  { kind: "message", from: "contract", to: "settlement", label: "Single efficient transaction" },
+  { kind: "message", from: "settlement", to: "alice", label: "Settlement confirmation", style: "dashed" },
+];
 
 While working on some DeFi projects, something felt strange: I kept paying Copilot with my credit card while having ETH sitting in my wallet. I could instantly swap tokens without an creepy KYC, but AI services still require an email verification and monthly subscriptions. So I started wondering - what would an AI that accepts crypto payments actually look like?
 
@@ -63,19 +69,10 @@ The core architectural change is switching from immediate settlement to a prepai
 
 This prepaid model fundamentally changes the user experience compared to traditional per-transaction payments. The workflow below demonstrates how Alice interacts with the system, showing each phase where these benefits become tangible:
 
-<MermaidDiagram
-  definition={updatedLlmWorkflowDiagram}
-  title="Simplified User Journey: Prepaid AI with Batch Settlement"
-  config={{
-    sequence: {
-      diagramMarginX: 50,
-      diagramMarginY: 10,
-      boxTextMargin: 5,
-      noteMargin: 10,
-      messageMargin: 35,
-      mirrorActors: false,
-    },
-  }}
+<SequenceDiagram
+  participants={updatedLlmWorkflowParticipants}
+  steps={updatedLlmWorkflowSteps}
+  caption="Simplified User Journey: Prepaid AI with Batch Settlement"
 />
 
 ### System Data Flow

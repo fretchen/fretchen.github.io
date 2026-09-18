@@ -72,37 +72,71 @@ export class WebStorageClientChannelStorage implements ClientChannelStorage {
     return Promise.resolve();
   }
   /**
-   * Make the SDK deposit on the next attempt, by zeroing the `balance` it decides from.
+   * Re-read every cached channel's true state from the chain.
    *
-   * `BatchSettlementEvmScheme.createPaymentPayload` reads `balance` from THIS record, never from
-   * the chain, so `balance: "0"` flips its `needsInitialDeposit` branch on and the next payload
-   * carries a real deposit (sized by `depositStrategy` below).
+   * This replaces a `forceDeposit()` that set `balance: "0"` to make the SDK deposit again.
+   * That was a one-way door. `BatchSettlementEvmScheme.createPaymentPayload` decides from
+   * `balance` on THIS record and never from the chain, and the SDK's only writer for it,
+   * `updateChannelFromSettle`, is **additive** — `balance = previous.balance + depositAmount`.
+   * The server's settle response carries a cumulative charge, never an absolute balance, so
+   * nothing could ever restore a zeroed figure. Meanwhile `maxClaimableAmount` stayed
+   * lifetime-absolute, so the zeroed record kept losing the comparison and every message
+   * signed a fresh $0.50 deposit. That locked ~$7.40 of escrow across 15 deposits against
+   * ~$0.10 of real usage.
    *
-   * **`chargedCumulativeAmount` is deliberately kept.** It is the one value the chain cannot
-   * restore: settlement here is batched by `scw_js/llm_x402_cron.ts`, so the on-chain
-   * `totalClaimed` lags the server's cumulative, and the SDK's `recoverChannel` sets
-   * `chargedCumulativeAmount` to exactly that lagging figure. Deleting the record — which this
-   * used to do — therefore made the client sign a voucher below the server's state and get
-   * `cumulative_amount_mismatch` instead of the deposit it needed.
+   * Reading the chain puts `balance` back in the same coordinate system as
+   * `maxClaimableAmount`, which is the whole bug.
    *
-   * Deliberately blunt across all records rather than deriving the one `channelId` at fault:
-   * that would mean `buildChannelConfig` + `computeChannelId` + parsing `accepts[]` out of a 402
-   * body, and since `depositStrategy` floors every deposit at the same amount anyway, it would
-   * buy nothing. A record zeroed unnecessarily costs one extra top-up, never funds.
+   * `chargedCumulativeAmount` keeps the local value when it is ahead. This deliberately
+   * differs from the SDK's `recoverChannel`, which resets it to the on-chain `totalClaimed`:
+   * settlement here is batched by `scw_js/llm_x402_cron.ts`, so `totalClaimed` legitimately
+   * lags the server's cumulative, and adopting the lagging figure makes the client sign a
+   * voucher below the server's state and collect `cumulative_amount_mismatch`. Floor it at
+   * the chain's `totalClaimed` regardless, since a cumulative below that is never valid.
    */
-  forceDeposit(): void {
+  async resyncFromChain(read: (channelId: `0x${string}`) => Promise<readonly [bigint, bigint]>): Promise<void> {
     for (let i = 0; i < this.backend.length; i++) {
       const key = this.backend.key(i);
       if (!key?.startsWith(this.prefix)) continue;
       const raw = this.backend.getItem(key);
       if (!raw) continue;
+
+      let context: BatchSettlementClientContext;
       try {
-        const context = JSON.parse(raw) as BatchSettlementClientContext;
-        this.backend.setItem(key, JSON.stringify({ ...context, balance: "0" }));
+        context = JSON.parse(raw) as BatchSettlementClientContext;
       } catch {
-        // Unparseable record: leave it alone. The SDK treats it as absent and recovers, which is
-        // no worse than what we would write over it.
+        // Unparseable record: leave it alone. The SDK treats it as absent and recovers, which
+        // is no worse than what we would write over it.
+        continue;
       }
+
+      const channelId = key.slice(this.prefix.length) as `0x${string}`;
+      let chainBalance: bigint;
+      let chainTotalClaimed: bigint;
+      try {
+        [chainBalance, chainTotalClaimed] = await read(channelId);
+      } catch {
+        // An RPC failure must not corrupt a good record — that was the old behaviour's sin.
+        continue;
+      }
+
+      // Zero balance means this channel does not exist on the chain we are currently reading.
+      // Every network's records share one localStorage namespace, so this is the normal case
+      // for a channel opened on another chain — and overwriting it would strand that escrow.
+      if (chainBalance === 0n) continue;
+
+      const localCumulative = BigInt(context.chargedCumulativeAmount ?? "0");
+      const cumulative = localCumulative > chainTotalClaimed ? localCumulative : chainTotalClaimed;
+
+      this.backend.setItem(
+        key,
+        JSON.stringify({
+          ...context,
+          balance: chainBalance.toString(),
+          totalClaimed: chainTotalClaimed.toString(),
+          chargedCumulativeAmount: cumulative.toString(),
+        }),
+      );
     }
   }
 }
@@ -306,7 +340,9 @@ export function useX402Chat(network: string, agentUrl: string = DEFAULT_LLM_AGEN
         // === Dynamic imports (browser-only, like the notebook) ===
         const { x402Client, wrapFetchWithPayment, x402HTTPClient } = await import("@x402/fetch");
         const { toClientEvmSigner } = await import("@x402/evm");
-        const { BatchSettlementEvmScheme } = await import("@x402/evm/batch-settlement/client");
+        const { BatchSettlementEvmScheme, readChannelBalanceAndTotalClaimed } = await import(
+          "@x402/evm/batch-settlement/client"
+        );
 
         // === Signer: wagmi WalletClient adapter wrapped so readContract exists ===
         const signerInput = {
@@ -363,13 +399,15 @@ export function useX402Chat(network: string, agentUrl: string = DEFAULT_LLM_AGEN
 
           if (isDrainedChannel(errorText)) {
             // The SDK would have topped up on its own, but decides from the `balance` on our
-            // cached record, which had drifted from the chain. Zeroing that balance — while
-            // keeping the cumulative, see forceDeposit() — makes the retry carry a real deposit:
-            // one wallet signature, exactly like opening the channel did.
+            // cached record, which had drifted from the chain. Re-read the truth and let the
+            // SDK decide: if the channel really is short, its own `needsTopUp` fires and the
+            // retry carries a deposit; if it is not, no deposit is signed and the retry fails
+            // honestly. The predecessor zeroed `balance` instead, which forced a $0.50 deposit
+            // whether one was needed or not — see resyncFromChain().
             //
-            // Once only: looping here would sign a fresh real deposit on every pass if the true
-            // problem were something else.
-            storage.forceDeposit();
+            // Once only: looping here would re-read on every pass if the true problem were
+            // something else.
+            await storage.resyncFromChain((id) => readChannelBalanceAndTotalClaimed(signer, id));
             setStatus("topping-up");
             response = await doPaidRequest();
             if (!response.ok) {

@@ -21,6 +21,11 @@ const mockRegister = vi.fn();
 const mockSetSpendControls = vi.fn();
 const mockGetPaymentSettleResponse = vi.fn();
 const mockBatchSettlementEvmScheme = vi.fn();
+// Chain read behind resyncFromChain: [balance, totalClaimed]. Default is a funded channel,
+// so a drained-channel retry re-reads the truth rather than blindly depositing.
+const mockReadChannelBalanceAndTotalClaimed = vi.fn(
+  async (_signer: unknown, _channelId: unknown): Promise<readonly [bigint, bigint]> => [1_000_000n, 0n],
+);
 const mockToClientEvmSigner = vi.fn((...args: unknown[]) => args[0]);
 
 vi.mock("../hooks/useConfiguredPublicClient", () => ({
@@ -48,6 +53,8 @@ vi.mock("@x402/evm", () => ({
 
 vi.mock("@x402/evm/batch-settlement/client", () => ({
   BatchSettlementEvmScheme: mockBatchSettlementEvmScheme,
+  readChannelBalanceAndTotalClaimed: (signer: unknown, channelId: unknown) =>
+    mockReadChannelBalanceAndTotalClaimed(signer, channelId),
 }));
 
 const NETWORK = "eip155:84532";
@@ -346,7 +353,7 @@ describe("useX402Chat", () => {
         { status: 402 },
       );
 
-    it("forces a deposit and retries once when the channel is drained", async () => {
+    it("re-syncs the cached balance from chain and retries once when the channel is drained", async () => {
       window.localStorage.setItem(
         "x402-channel:0xstalechannel",
         JSON.stringify({ balance: "500000", chargedCumulativeAmount: "7062" }),
@@ -378,14 +385,18 @@ describe("useX402Chat", () => {
         returned = await result.current.sendMessage([{ role: "user", content: "Hi" }]);
       });
 
-      // The record survives with a zeroed balance, which is what makes the SDK deposit. Deleting
-      // it instead would lose chargedCumulativeAmount and produce cumulative_amount_mismatch,
-      // because recoverChannel would refill that field from the (lagging) on-chain totalClaimed.
+      // The record survives, re-synced to the chain's real balance. It must NOT be zeroed:
+      // `updateChannelFromSettle` only ever does `balance += depositAmount`, so a zero is
+      // permanent, and the SDK then re-deposits $0.50 on every subsequent message.
+      // `chargedCumulativeAmount` keeps the local figure because it is ahead of the chain's
+      // lagging `totalClaimed` — adopting the lag yields cumulative_amount_mismatch.
       const record = JSON.parse(window.localStorage.getItem("x402-channel:0xstalechannel") ?? "{}") as {
         balance?: string;
         chargedCumulativeAmount?: string;
+        totalClaimed?: string;
       };
-      expect(record.balance).toBe("0");
+      expect(record.balance).toBe("1000000");
+      expect(record.totalClaimed).toBe("0");
       expect(record.chargedCumulativeAmount).toBe("7062");
       // And the message went through rather than dead-ending on the 402.
       expect(returned).toEqual({ content: "hi" });
@@ -427,7 +438,7 @@ describe("useX402Chat", () => {
       expect(thrown?.message).not.toMatch(/has USDC/i);
     });
 
-    it("zeroes every channel record without deleting any of them", async () => {
+    it("re-syncs every channel record from chain without deleting any of them", async () => {
       window.localStorage.setItem(
         "x402-channel:0xone",
         JSON.stringify({ balance: "500000", chargedCumulativeAmount: "10" }),
@@ -454,10 +465,60 @@ describe("useX402Chat", () => {
         const stored = window.localStorage.getItem(key);
         expect(stored).not.toBeNull();
         const record = JSON.parse(stored!) as { balance: string; chargedCumulativeAmount: string };
-        expect(record.balance).toBe("0");
+        expect(record.balance).toBe("1000000");
         expect(record.chargedCumulativeAmount).toBe(charged);
       }
       expect(window.localStorage.getItem("unrelated-key")).toBe("keep me");
+    });
+
+    it("leaves a record untouched when the chain read fails", async () => {
+      // An RPC hiccup must not corrupt a good record. The predecessor zeroed unconditionally,
+      // and a zeroed balance is unrecoverable — every later message then re-deposits $0.50.
+      const original = JSON.stringify({ balance: "500000", chargedCumulativeAmount: "7062" });
+      window.localStorage.setItem("x402-channel:0xone", original);
+      mockReadChannelBalanceAndTotalClaimed.mockRejectedValueOnce(new Error("RPC down"));
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockImplementation(() => Promise.resolve(drained402())),
+      );
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]).catch(() => {});
+      });
+
+      expect(window.localStorage.getItem("x402-channel:0xone")).toBe(original);
+    });
+
+    it("leaves another network's record untouched when its chain balance reads zero", async () => {
+      // Every network's channels share one localStorage namespace. A zero balance means the
+      // channel does not exist on the chain being read — overwriting it would strand that
+      // channel's escrow, which is exactly what the blunt zeroing used to do.
+      const foreign = JSON.stringify({ balance: "500000", chargedCumulativeAmount: "42" });
+      window.localStorage.setItem("x402-channel:0xforeign", foreign);
+      window.localStorage.setItem(
+        "x402-channel:0xlocal",
+        JSON.stringify({ balance: "500000", chargedCumulativeAmount: "10" }),
+      );
+      // Signature is (signer, channelId) — the channel is the SECOND argument.
+      mockReadChannelBalanceAndTotalClaimed.mockImplementation(async (_signer: unknown, channelId: unknown) =>
+        String(channelId).includes("foreign") ? ([0n, 0n] as const) : ([1_000_000n, 0n] as const),
+      );
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockImplementation(() => Promise.resolve(drained402())),
+      );
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]).catch(() => {});
+      });
+
+      expect(window.localStorage.getItem("x402-channel:0xforeign")).toBe(foreign);
+      const local = JSON.parse(window.localStorage.getItem("x402-channel:0xlocal")!) as {
+        balance: string;
+      };
+      expect(local.balance).toBe("1000000");
     });
 
     it("leaves an unparseable channel record alone instead of throwing", async () => {

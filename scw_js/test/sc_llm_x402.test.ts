@@ -219,6 +219,13 @@ describe("sc_llm_x402", () => {
       expect(res.headers["Access-Control-Allow-Methods"]).toContain("GET");
     });
 
+    it("exposes Payment-Response on the OPTIONS preflight", async () => {
+      // Without this the browser cannot read the settlement header, the client SDK's cached
+      // channel balance never advances, and every message signs a fresh $0.50 deposit.
+      const res = await handle(makeEvent({ httpMethod: "OPTIONS" }) as never, {});
+      expect(res.headers["Access-Control-Expose-Headers"]).toContain("Payment-Response");
+    });
+
     it("returns 400 for a non-POST method", async () => {
       const res = await handle(makeEvent({ httpMethod: "GET" }) as never, {});
       expect(res.statusCode).toBe(400);
@@ -1085,6 +1092,21 @@ describe("sc_llm_x402", () => {
   describe("settlement", () => {
     beforeEach(() => {
       mockExtractPaymentPayload.mockReturnValue(samplePaymentPayload);
+    });
+
+    /**
+     * The regression that cost ~$7.40 of locked escrow: the settled 200 sent
+     * `Payment-Response` but never exposed it, so cross-origin browsers read null, the
+     * client SDK's cached channel record never advanced, and each message re-deposited
+     * $0.50. Asserting only the OPTIONS preflight would have passed the whole time — the
+     * settled 200 builds its headers from CORS_HEADERS separately, and that is the path
+     * that was broken. Assert the header is BOTH present and readable.
+     */
+    it("exposes Payment-Response on the settled 200, not just sends it", async () => {
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(200);
+      expect(res.headers["Payment-Response"]).toBe("encoded");
+      expect(res.headers["Access-Control-Expose-Headers"]).toContain("Payment-Response");
     });
 
     it("returns 200 with the LLM response and settlement headers on success", async () => {

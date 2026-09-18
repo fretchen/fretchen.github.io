@@ -4,6 +4,7 @@ import { BatchSettlementEvmScheme } from "@x402/evm/batch-settlement/server";
 import { getUSDCConfig, loadPrivateKey } from "@fretchen/chain-utils";
 import { privateKeyToAccount } from "viem/accounts";
 import { S3ChannelStorage } from "./x402_channel_storage.js";
+import { EXPOSED_X402_HEADERS } from "./utils.js";
 
 const FACILITATOR_URL = process.env.FACILITATOR_URL ?? "https://facilitator.fretchen.eu";
 
@@ -130,35 +131,65 @@ export function createResourceServer(): x402ResourceServer {
 
 export interface LLMResourceServer {
   resourceServer: x402ResourceServer;
+  /**
+   * The scheme serving `network`, whose storage is scoped to that network's S3 prefix.
+   * Use this wherever channel storage is touched — settlement and the claim/settle cron.
+   */
+  schemeFor: (network: string) => BatchSettlementEvmScheme;
+  /**
+   * Convenience handle for storage-independent work only — building the 402 `accepts`
+   * array, where `enhancePaymentRequirements` just stamps on `receiverAuthorizer`,
+   * `withdrawDelay` and the EIP-712 domain. Anything that reads or writes channels must
+   * go through `schemeFor` instead, or it will reach the wrong network's prefix.
+   */
   scheme: BatchSettlementEvmScheme;
 }
 
 /**
- * Resource server for the LLM assistant's x402 batch-settlement channels. A single
- * `BatchSettlementEvmScheme` instance is shared across every supported network (the
- * scheme is receiver-bound, not network-bound — see B0 spike) and reused by the
- * claim/settle cron via `scheme.createChannelManager()`.
+ * Resource server for the LLM assistant's x402 batch-settlement channels.
+ *
+ * One `BatchSettlementEvmScheme` **per network**, each owning an `S3ChannelStorage` scoped to
+ * that network's prefix. The scheme itself is receiver-bound rather than network-bound (see B0
+ * spike), so a single shared instance used to serve every network — but its storage is not:
+ * `ChannelStorage.list()` takes no network argument, so one shared store handed Base channels
+ * to Optimism claim batches and every batch reverted. `x402ResourceServer` keys its registry by
+ * network (`Map<network, Map<scheme, server>>`), so registering a distinct instance per network
+ * routes settlement to the right store with no change at the call sites.
  */
 export function createLLMResourceServer(receiverAddress: `0x${string}`): LLMResourceServer {
   const resourceServer = new x402ResourceServer(createFacilitatorClient());
 
   const authorizerAccount = privateKeyToAccount(loadPrivateKey("RECEIVER_AUTHORIZER_PRIVATE_KEY"));
-  const scheme = new BatchSettlementEvmScheme(receiverAddress, {
-    storage: new S3ChannelStorage(),
-    receiverAuthorizerSigner: {
-      address: authorizerAccount.address,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      signTypedData: (params: any) => authorizerAccount.signTypedData(params),
-    },
-    onchainStateTtlMs: ONCHAIN_STATE_TTL_MS,
-    withdrawDelay: WITHDRAW_DELAY_SECONDS,
-  });
+  const receiverAuthorizerSigner = {
+    address: authorizerAccount.address,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    signTypedData: (params: any) => authorizerAccount.signTypedData(params),
+  };
 
+  const schemes = new Map<string, BatchSettlementEvmScheme>();
   for (const network of BATCH_SETTLEMENT_NETWORKS) {
+    const scheme = new BatchSettlementEvmScheme(receiverAddress, {
+      storage: new S3ChannelStorage(network),
+      receiverAuthorizerSigner,
+      onchainStateTtlMs: ONCHAIN_STATE_TTL_MS,
+      withdrawDelay: WITHDRAW_DELAY_SECONDS,
+    });
+    schemes.set(network, scheme);
     resourceServer.register(network as `${string}:${string}`, scheme);
   }
 
-  return { resourceServer, scheme };
+  const schemeFor = (network: string): BatchSettlementEvmScheme => {
+    const scheme = schemes.get(network);
+    if (!scheme) {
+      throw new Error(
+        `No batch-settlement scheme for network ${network} ` +
+          `(supported: ${BATCH_SETTLEMENT_NETWORKS.join(", ")})`,
+      );
+    }
+    return scheme;
+  };
+
+  return { resourceServer, schemeFor, scheme: schemeFor(BATCH_SETTLEMENT_NETWORKS[0]) };
 }
 
 export interface BatchSettlementPaymentRequirementsOptions {
@@ -298,7 +329,9 @@ export function create402Response(paymentRequirements: {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Headers": "*",
       "Access-Control-Allow-Methods": "*",
-      "Access-Control-Expose-Headers": "Payment-Required, X-Payment, PAYMENT-REQUIRED",
+      // Shared with CORS_HEADERS so the 402 and the settled 200 cannot drift apart —
+      // they did, and the 200 was the one missing Payment-Response.
+      "Access-Control-Expose-Headers": EXPOSED_X402_HEADERS,
       "Content-Type": "application/json",
       "Payment-Required": paymentRequiredHeader,
       "X-Payment": JSON.stringify(paymentRequirements),

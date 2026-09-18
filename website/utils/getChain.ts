@@ -65,6 +65,9 @@ export const OWNER_SCOPES = {
   analytics: [ADMIN_WALLET, SUPPORT_RECIPIENT_ADDRESS],
   /** Approving a draft queues it for Mastodon/Bluesky — admin wallet only. */
   growth: [ADMIN_WALLET],
+  /** The assistant's `search_web` tool. Same list as `analytics`, and for the same reason: the
+   *  wallet that pays for a chat turn has to be able to use the tools offered during it. */
+  search: [ADMIN_WALLET, SUPPORT_RECIPIENT_ADDRESS],
 } as const;
 
 export type OwnerScope = keyof typeof OWNER_SCOPES;

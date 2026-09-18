@@ -6,8 +6,10 @@ import {
   createFacilitatorClient,
   getBatchSettlementNetworks,
   getFacilitatorFeeConfig,
+  useEnhancedRefundRequirements,
   type FacilitatorFeeConfig,
 } from "./x402_server.js";
+import { resyncChannelBalances } from "./x402_channel_sync.js";
 import type { ScwEvent } from "./types.js";
 
 const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
@@ -37,10 +39,25 @@ function isHexAddress(addr: unknown): addr is `0x${string}` {
   return typeof addr === "string" && /^0x[a-fA-F0-9]{40}$/.test(addr);
 }
 
+/**
+ * How long a channel must sit untouched before the cooperative refund sweep returns its
+ * unspent escrow to the payer.
+ *
+ * Kept below WITHDRAW_DELAY_SECONDS (86400) on purpose: the buyers page promises escrow is
+ * "withdrawable after ~24 hours", and that unilateral exit should be the worst case, not the
+ * only way out. Sweeping at 6h means a channel that goes quiet is normally refunded long
+ * before anyone needs to wait out the delay themselves.
+ */
+const REFUND_IDLE_SECS = Number(process.env.LLM_REFUND_IDLE_SECONDS ?? "21600");
+
 interface NetworkResult {
   network: string;
   claims?: number;
   settled?: boolean;
+  /** Idle channels cooperatively refunded this run. */
+  refunds?: number;
+  /** Set when the refund sweep failed; never masks an otherwise successful claim. */
+  refundError?: string;
   /** How many more claims the current fee approval covers, when it could be read. */
   feeAllowanceClaimsLeft?: number;
   error?: string;
@@ -106,9 +123,9 @@ export async function handle(
     };
   }
 
-  let scheme: ReturnType<typeof createLLMResourceServer>["scheme"];
+  let schemeFor: ReturnType<typeof createLLMResourceServer>["schemeFor"];
   try {
-    ({ scheme } = createLLMResourceServer(receiverAddress));
+    ({ schemeFor } = createLLMResourceServer(receiverAddress));
   } catch (err) {
     logger.error({ err }, "Failed to configure batch-settlement resource server");
     return {
@@ -160,6 +177,9 @@ export async function handle(
     }
 
     try {
+      // Per-network scheme: its storage is scoped to this network's S3 prefix, so
+      // `list()` cannot hand another chain's channels to this chain's claim batch.
+      const scheme = schemeFor(network);
       const manager = scheme.createChannelManager(
         facilitatorClient,
         network as `${string}:${string}`,
@@ -167,10 +187,45 @@ export async function handle(
       );
       const { claims, settle } = await manager.claimAndSettle();
       logger.info({ network, claims, settle }, "claimAndSettle completed");
+
+      // Cooperative refund of channels that have gone quiet, after the claim so the two
+      // stay independent: refunding a channel with outstanding vouchers would otherwise be
+      // submitted as an enriched refund (multicall([claim, refund])) and tangle the fee
+      // accounting. `refundIdleChannels` calls `storage.list()` itself, which is safe only
+      // because the storage is network-scoped — on a shared store it would sweep every
+      // chain's channels into this chain's refunds. Its own try/catch, so a refund failure
+      // never hides a good claim.
+      let refunds: number | undefined;
+      let refundError: string | undefined;
+      try {
+        // The stored `balance` is a cache that drifts low (handleAfterVerify writes the
+        // facilitator's PRE-deposit reading and depends on handleAfterSettle to correct it).
+        // The SDK refunds `balance - chargedCumulativeAmount` from that cache and skips
+        // channels whose cached balance is 0, so without this a funded channel is either
+        // passed over or given a negative refund amount. Observed live: two Optimism
+        // channels holding 1.0 and 6.5 USDC both cached "0".
+        await resyncChannelBalances(scheme.getStorage(), network);
+        // The SDK builds refund requirements with `extra: {}`, which the facilitator rejects
+        // as receiver_authorizer_mismatch. Applied after the claim so claim/settle are
+        // untouched. See useEnhancedRefundRequirements.
+        await useEnhancedRefundRequirements(scheme, manager, {
+          network,
+          asset: usdcAddress,
+          payTo: receiverAddress,
+        });
+        refunds = (await manager.refundIdleChannels({ idleSecs: REFUND_IDLE_SECS })).length;
+        logger.info({ network, refunds }, "Refund sweep completed");
+      } catch (err) {
+        refundError = (err as Error).message;
+        logger.error({ err, network }, "Refund sweep failed");
+      }
+
       results.push({
         network,
         claims: claims.length,
         settled: settle !== undefined,
+        ...(refunds !== undefined && { refunds }),
+        ...(refundError !== undefined && { refundError }),
         ...(claimsLeft !== null && { feeAllowanceClaimsLeft: claimsLeft }),
       });
     } catch (err) {

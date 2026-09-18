@@ -110,13 +110,16 @@ export default {
       "about what this site itself says — a blog post, a lecture, a project page — use get_page: " +
       "call it with the url when you already know it, such as /blog/36/, and otherwise without " +
       "arguments first to list the pages. If that result sets truncated, call once more with a " +
-      "heading from its outline. When a " +
+      "heading from its outline. For anything current or off this site — news, other people's " +
+      "writing, documentation — use search_web, and link the url of every result you rely on. " +
+      "When a " +
       "question is relative in time, work it out against today's date before calling a tool and " +
       "pass the result as the von/bis arguments, rather than guessing a year.",
     noResponse: "No response received",
     imageReady: "Here's your image.",
     bundestaktSource: "Source: Bundestakt",
     analyticsSource: "Source: Analytics",
+    braveSource: "Source: Brave Search",
     errorPrefix: "Error:",
     unknownError: "Unknown error",
     loading: "Loading...",

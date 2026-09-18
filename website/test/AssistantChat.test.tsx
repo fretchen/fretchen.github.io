@@ -19,15 +19,21 @@ const mockSwitchImageIfNeeded = vi.fn();
 const mockGenerateImage = vi.fn();
 // vi.hoisted because the vi.mock factory below spreads these in immediately, rather than
 // behind an inner closure like the hook mocks do — a plain const is still uninitialised then.
-const { mockFetchSitzungen, mockFetchClaims, mockFetchStats, mockFetchContentIndex, mockFetchPageHtml } = vi.hoisted(
-  () => ({
-    mockFetchSitzungen: vi.fn(),
-    mockFetchClaims: vi.fn(),
-    mockFetchStats: vi.fn(),
-    mockFetchContentIndex: vi.fn(),
-    mockFetchPageHtml: vi.fn(),
-  }),
-);
+const {
+  mockFetchSitzungen,
+  mockFetchClaims,
+  mockFetchStats,
+  mockFetchContentIndex,
+  mockFetchPageHtml,
+  mockFetchSearch,
+} = vi.hoisted(() => ({
+  mockFetchSitzungen: vi.fn(),
+  mockFetchClaims: vi.fn(),
+  mockFetchStats: vi.fn(),
+  mockFetchContentIndex: vi.fn(),
+  mockFetchPageHtml: vi.fn(),
+  mockFetchSearch: vi.fn(),
+}));
 
 vi.mock("../hooks/useX402Chat", () => ({
   useX402Chat: vi.fn(() => ({
@@ -119,6 +125,12 @@ vi.mock("../tools/page", async (importOriginal) => {
   return { ...actual, fetchContentIndex: mockFetchContentIndex, fetchPageHtml: mockFetchPageHtml };
 });
 
+// Same for web search: real selector and query normalisation, stubbed fetcher.
+vi.mock("../tools/search", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../tools/search")>();
+  return { ...actual, fetchSearch: mockFetchSearch };
+});
+
 import { AssistantChat, TOOL_REGISTRY } from "../components/AssistantChat";
 import { precheckLlmV1Agent } from "../hooks/x402Discovery";
 import { useX402Chat } from "../hooks/useX402Chat";
@@ -189,6 +201,9 @@ describe("AssistantChat", () => {
     mockFetchClaims.mockResolvedValue(claimsFixture);
     mockFetchStats.mockResolvedValue(statsFixture());
     mockFetchContentIndex.mockResolvedValue([{ url: "/blog/36/", title: "My static site got a tool loop" }]);
+    mockFetchSearch.mockResolvedValue({
+      results: [{ url: "https://example.com/0", title: "Result 0", text: "Some extracted context." }],
+    });
     // Long enough to clear the tool's prose floor, below which a page reads as a client-rendered
     // listing rather than an article.
     mockFetchPageHtml.mockResolvedValue(

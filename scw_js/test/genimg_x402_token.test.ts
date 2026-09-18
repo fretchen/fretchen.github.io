@@ -1402,6 +1402,10 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       // generation they received and the Payment-Response header says so. /verify, the metadata
       // fetch and /settle — three calls, same as the fully successful flow.
       expect(response.headers["Payment-Response"]).toBeDefined();
+      // Sending the header is not enough — it is not CORS-safelisted, so a cross-origin
+      // browser reads null unless it is named in Expose-Headers. useX402ImageGeneration
+      // calls getPaymentSettleResponse on this response and silently got nothing.
+      expect(response.headers["Access-Control-Expose-Headers"]).toContain("Payment-Response");
       expect(global.fetch).toHaveBeenCalledTimes(3);
     });
 

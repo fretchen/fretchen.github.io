@@ -112,7 +112,9 @@ export default {
       "Blogbeitrag, eine Vorlesung, eine Projektseite — nutze get_page: rufe es direkt mit der " +
       "url auf, wenn du sie kennst, etwa /blog/36/, sonst zuerst ohne Argumente, um die Seiten " +
       "aufzulisten. Wenn das Ergebnis truncated setzt, rufe es noch einmal mit einer Überschrift " +
-      "aus dessen outline auf. " +
+      "aus dessen outline auf. Für alles Aktuelle oder außerhalb dieser Seite — Nachrichten, " +
+      "Texte anderer, Dokumentation — nutze search_web und verlinke die url jedes Ergebnisses, " +
+      "auf das du dich stützt. " +
       "Wenn eine Frage zeitlich relativ ist, rechne sie gegen das " +
       "heutige Datum aus, bevor du ein Tool aufrufst, und übergib das Ergebnis als von/bis — rate " +
       "kein Jahr.",
@@ -120,6 +122,7 @@ export default {
     imageReady: "Hier ist dein Bild.",
     bundestaktSource: "Quelle: Bundestakt",
     analyticsSource: "Quelle: Analytics",
+    braveSource: "Quelle: Brave Search",
     errorPrefix: "Fehler:",
     unknownError: "Unbekannter Fehler",
     loading: "Lädt...",

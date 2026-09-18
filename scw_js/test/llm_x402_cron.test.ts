@@ -9,6 +9,8 @@ const {
   mockGetFacilitatorFeeConfig,
   mockReadContract,
   mockLoggerWarn,
+  mockResyncChannelBalances,
+  mockUseEnhancedRefundRequirements,
 } = vi.hoisted(() => ({
   mockCreateLLMResourceServer: vi.fn(),
   mockCreateFacilitatorClient: vi.fn(),
@@ -16,6 +18,13 @@ const {
   mockGetFacilitatorFeeConfig: vi.fn(),
   mockReadContract: vi.fn(),
   mockLoggerWarn: vi.fn(),
+  mockResyncChannelBalances: vi.fn(),
+  mockUseEnhancedRefundRequirements: vi.fn(),
+}));
+
+// Hits a real RPC otherwise. Its own behaviour is covered in x402_channel_sync.test.ts.
+vi.mock("../x402_channel_sync.js", () => ({
+  resyncChannelBalances: mockResyncChannelBalances,
 }));
 
 vi.mock("../x402_server.js", () => ({
@@ -23,6 +32,7 @@ vi.mock("../x402_server.js", () => ({
   createFacilitatorClient: mockCreateFacilitatorClient,
   getBatchSettlementNetworks: mockGetBatchSettlementNetworks,
   getFacilitatorFeeConfig: mockGetFacilitatorFeeConfig,
+  useEnhancedRefundRequirements: mockUseEnhancedRefundRequirements,
 }));
 
 // The cron's logger is module-private; mock pino so its warnings are observable.
@@ -60,6 +70,8 @@ function makeEvent() {
 describe("llm_x402_cron", () => {
   let mockCreateChannelManager: ReturnType<typeof vi.fn>;
   let mockClaimAndSettle: ReturnType<typeof vi.fn>;
+  let mockRefundIdleChannels: ReturnType<typeof vi.fn>;
+  let mockSchemeFor: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -69,10 +81,22 @@ describe("llm_x402_cron", () => {
       claims: [{ vouchers: 2, transaction: "0xclaimtx" }],
       settle: { transaction: "0xsettletx" },
     });
-    mockCreateChannelManager = vi.fn().mockReturnValue({ claimAndSettle: mockClaimAndSettle });
+    mockRefundIdleChannels = vi.fn().mockResolvedValue([]);
+    mockCreateChannelManager = vi.fn().mockReturnValue({
+      claimAndSettle: mockClaimAndSettle,
+      refundIdleChannels: mockRefundIdleChannels,
+    });
 
+    // One scheme per network, each owning storage scoped to that network's S3 prefix.
+    mockSchemeFor = vi.fn().mockReturnValue({
+      createChannelManager: mockCreateChannelManager,
+      getStorage: vi.fn().mockReturnValue({}),
+    });
+    mockResyncChannelBalances.mockResolvedValue([]);
+    mockUseEnhancedRefundRequirements.mockResolvedValue(undefined);
     mockCreateLLMResourceServer.mockReturnValue({
       resourceServer: {},
+      schemeFor: mockSchemeFor,
       scheme: { createChannelManager: mockCreateChannelManager },
     });
     mockCreateFacilitatorClient.mockReturnValue({});
@@ -118,6 +142,7 @@ describe("llm_x402_cron", () => {
       network: "eip155:10",
       claims: 1,
       settled: true,
+      refunds: 0,
       feeAllowanceClaimsLeft: 100,
     });
   });
@@ -157,6 +182,7 @@ describe("llm_x402_cron", () => {
       network: "eip155:10",
       claims: 0,
       settled: false,
+      refunds: 0,
       feeAllowanceClaimsLeft: 100,
     });
   });
@@ -174,6 +200,96 @@ describe("llm_x402_cron", () => {
     const body = JSON.parse(res.body) as { results: Array<{ network: string; error?: string }> };
     expect(body.results[0].error).toBe("facilitator unreachable");
     expect(body.results[1].error).toBeUndefined();
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // Per-network scoping
+  //
+  // The outage this guards against: one `S3ChannelStorage` was shared by every network, so
+  // `list()` fed Base channels into Optimism claim batches. Every batch reverted with
+  // claim_simulation_failed — 3 failures per run, 14 runs, zero claims — while USDC kept
+  // accumulating in escrow. Each network must now get its own scheme, and therefore its own
+  // storage prefix.
+  // ═══════════════════════════════════════════════════════════
+
+  it("asks for a scheme scoped to each network, never reusing one across networks", async () => {
+    await handle(makeEvent() as never, {});
+
+    expect(mockSchemeFor).toHaveBeenCalledTimes(3);
+    expect(mockSchemeFor.mock.calls.map((c) => c[0])).toEqual([
+      "eip155:10",
+      "eip155:8453",
+      "eip155:84532",
+    ]);
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // Cooperative refund sweep
+  //
+  // Without this, unspent escrow only ever came back via the 24h unilateral withdrawDelay —
+  // a path the buyers page promises but no code ever exercised, and which no user completed.
+  // ═══════════════════════════════════════════════════════════
+
+  it("sweeps idle channels for refunds on each network, after the claim", async () => {
+    mockRefundIdleChannels.mockResolvedValue([{ transaction: "0xrefund1" }]);
+
+    const res = await handle(makeEvent() as never, {});
+
+    expect(mockRefundIdleChannels).toHaveBeenCalledTimes(3);
+    expect(mockRefundIdleChannels).toHaveBeenCalledWith({ idleSecs: 21600 });
+
+    const body = JSON.parse(res.body) as { results: Array<{ refunds?: number }> };
+    expect(body.results[0].refunds).toBe(1);
+  });
+
+  it("refunds only after claiming, so an outstanding voucher is never swept into an enriched refund", async () => {
+    const order: string[] = [];
+    mockClaimAndSettle.mockImplementation(async () => {
+      order.push("claim");
+      return { claims: [], settle: undefined };
+    });
+    mockRefundIdleChannels.mockImplementation(async () => {
+      order.push("refund");
+      return [];
+    });
+
+    await handle(makeEvent() as never, {});
+
+    expect(order.slice(0, 2)).toEqual(["claim", "refund"]);
+  });
+
+  it("enhances the refund requirements before sweeping, or every refund is rejected", async () => {
+    // The SDK's manager builds `extra: {}` and the facilitator fails closed on a missing
+    // receiverAuthorizer, so ordering here is load-bearing, not cosmetic.
+    await handle(makeEvent() as never, {});
+
+    expect(mockUseEnhancedRefundRequirements).toHaveBeenCalledTimes(3);
+    expect(mockUseEnhancedRefundRequirements.mock.invocationCallOrder[0]).toBeLessThan(
+      mockRefundIdleChannels.mock.invocationCallOrder[0],
+    );
+    expect(mockUseEnhancedRefundRequirements).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({
+        network: "eip155:10",
+        asset: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+      }),
+    );
+  });
+
+  it("a failing refund sweep never masks a successful claim", async () => {
+    mockRefundIdleChannels.mockRejectedValue(new Error("facilitator rejected refund"));
+
+    const res = await handle(makeEvent() as never, {});
+
+    // The claim succeeded, so the run is still a 200 and still reports its claims.
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body) as {
+      results: Array<{ claims?: number; refunds?: number; refundError?: string }>;
+    };
+    expect(body.results[0].claims).toBe(1);
+    expect(body.results[0].refundError).toBe("facilitator rejected refund");
+    expect(body.results[0].refunds).toBeUndefined();
   });
 
   // ═══════════════════════════════════════════════════════════

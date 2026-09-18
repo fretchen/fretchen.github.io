@@ -13,6 +13,9 @@ provider:
     BFL_API_TOKEN: ${env:BFL_API_TOKEN}
     # Used by sc_llm_x402.ts (llmx402 function) — see LLM_PROVIDERS in llm_service.ts.
     MISTRAL_API_KEY: ${env:MISTRAL_API_KEY}
+    # Brave LLM Context API, billed per query — see search_service.ts. Travels in an
+    # X-Subscription-Token header, so it can never be shipped to the browser.
+    BRAVE_API_KEY: ${env:BRAVE_API_KEY}
     NFT_WALLET_PRIVATE_KEY: ${env:NFT_WALLET_PRIVATE_KEY}
     NFT_WALLET_PUBLIC_KEY: ${env:NFT_WALLET_PUBLIC_KEY}
     USDC_PAYMENT_AMOUNT: ${env:USDC_PAYMENT_AMOUNT, "70000"}
@@ -68,5 +71,10 @@ functions:
   growthapi:
     handler: dist/growth_api.handle
     description: "Growth Agent API - draft approval with wallet auth"
+    minScale: 0
+    maxScale: 1
+  searchapi:
+    handler: dist/search_api.handle
+    description: "Brave LLM Context search proxy - owner-gated with wallet auth"
     minScale: 0
     maxScale: 1

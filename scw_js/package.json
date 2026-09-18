@@ -20,7 +20,8 @@
     "dev:x402": "NODE_ENV=test npx tsx genimg_x402_token.ts",
     "dev:llmx402": "NODE_ENV=test npx tsx sc_llm_x402.ts",
     "dev:llmx402cron": "NODE_ENV=test npx tsx llm_x402_cron.ts",
-    "dev:growth": "NODE_ENV=test npx tsx growth_api.ts"
+    "dev:growth": "NODE_ENV=test npx tsx growth_api.ts",
+    "dev:search": "NODE_ENV=test npx tsx search_api.ts"
   },
   "keywords": [],
   "author": "",

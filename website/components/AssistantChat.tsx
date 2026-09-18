@@ -51,6 +51,14 @@ import {
   fetchFailed as pageFetchFailed,
   type PageResult,
 } from "../tools/page";
+import {
+  searchWebTool,
+  fetchSearch,
+  selectSearch,
+  normalizeQuery,
+  fetchFailed as searchFetchFailed,
+  type SearchToolResult,
+} from "../tools/search";
 import { useWalletAuth } from "../hooks/useWalletAuth";
 import { isOwnerAddress, type OwnerScope } from "../utils/getChain";
 import type { X402ChatMessage, X402Tool, X402ToolCall } from "../types/x402";
@@ -69,7 +77,7 @@ import { PageHeader } from "./PageHeader";
  * requirement; analytics is about honesty — a figure about this site should say it was looked up
  * rather than read as something the model knew.
  */
-type ToolSource = "bundestakt" | "analytics";
+type ToolSource = "bundestakt" | "analytics" | "brave";
 
 /**
  * Everything offered to the model, with the two things the chat loop needs to know about a tool
@@ -90,6 +98,7 @@ export const TOOL_REGISTRY = [
   { tool: getSitzungenTool, label: "Bundestag sessions", ownerScope: null, source: "bundestakt" },
   { tool: searchClaimsTool, label: "Fact-checks", ownerScope: null, source: "bundestakt" },
   { tool: getPageTool, label: "Site content", ownerScope: null, source: null },
+  { tool: searchWebTool, label: "Web search", ownerScope: "search", source: "brave" },
   { tool: getAnalyticsTool, label: "Site analytics", ownerScope: "analytics", source: "analytics" },
 ] as const satisfies readonly {
   tool: X402Tool;
@@ -224,10 +233,12 @@ export function AssistantChat() {
   const imageReadyMessage = useLocale({ label: "assistent.imageReady" });
   const bundestaktSourceLabel = useLocale({ label: "assistent.bundestaktSource" });
   const analyticsSourceLabel = useLocale({ label: "assistent.analyticsSource" });
+  const braveSourceLabel = useLocale({ label: "assistent.braveSource" });
   // Here rather than at module scope because the labels are translated per render.
   const sourceLinks: Record<ToolSource, { href: string; label: string }> = {
     bundestakt: { href: "https://www.bundestakt.de", label: bundestaktSourceLabel },
     analytics: { href: "/analytics", label: analyticsSourceLabel },
+    brave: { href: "https://search.brave.com", label: braveSourceLabel },
   };
   const errorPrefixMessage = useLocale({ label: "assistent.errorPrefix" });
   const connectWalletMessageLabel = useLocale({ label: "assistent.connectWalletMessage" });
@@ -351,6 +362,11 @@ export function AssistantChat() {
   // Same auth prefix as useAnalyticsStats, so a visit to /analytics in the last 4 minutes leaves
   // the token cached and the tool call costs no signature at all.
   const getAnalyticsAuth = useWalletAuth("analytics-api");
+  // Its own prefix rather than reusing "analytics-api": useWalletAuth keys its token cache by
+  // `prefix:address` precisely so a token minted for one service cannot be spent on another, and
+  // search spends metered credit where analytics only reads. The cost is one extra signature
+  // prompt per session for an owner who uses both, which the 4-minute cache then covers.
+  const getSearchAuth = useWalletAuth("search-api");
 
   // The confirm card is transient UI state, never a chat message — it cannot be scrolled back
   // to or replayed. `confirmResolverRef` is how a linear async loop (sendMessage) pauses for a
@@ -506,6 +522,37 @@ export function AssistantChat() {
   }
 
   /**
+   * Searches the live web through the owner-gated Brave proxy.
+   *
+   * Cached per turn for the same reason as the other lookups, and here it also guards the bill: a
+   * model that asks the same question twice in one turn spends Brave credit twice otherwise.
+   *
+   * Every result is recoverable. An empty result set and a rejected query are both answered by
+   * rephrasing, and even a failed request is worth one retry with different words — this is a free,
+   * read-only lookup for the user, so the only cost of staying on offer is a hop, and MAX_HOPS
+   * bounds that.
+   */
+  async function loadSearch(args: Record<string, unknown>): Promise<ToolRunResult> {
+    const query = normalizeQuery(args.query);
+    if (!query) {
+      return { result: { status: "no_query" } as SearchToolResult, recoverable: true };
+    }
+
+    try {
+      const auth = await getSearchAuth();
+      const raw = await queryClient.fetchQuery({
+        queryKey: ["search", query],
+        queryFn: () => fetchSearch(query, auth),
+        staleTime: 5 * 60_000,
+        retry: 0,
+      });
+      return { result: selectSearch(raw, query), recoverable: true };
+    } catch (err) {
+      return { result: searchFetchFailed(err), recoverable: true };
+    }
+  }
+
+  /**
    * Reads this site's own pages: no `url` lists them, a `url` returns that page's text.
    *
    * Cached per turn like Bundestakt, and for the same reason doubled: the intended flow calls this
@@ -574,6 +621,7 @@ export function AssistantChat() {
   toolRunners[getSitzungenTool.function.name] = (args) => loadBundestakt("sitzungen", args);
   toolRunners[searchClaimsTool.function.name] = (args) => loadBundestakt("claims", args);
   toolRunners[getPageTool.function.name] = loadPage;
+  toolRunners[searchWebTool.function.name] = loadSearch;
   toolRunners[getAnalyticsTool.function.name] = async (args) => ({ result: await loadAnalytics(args) });
 
   /** Dispatches one tool call by name, or tells the model it invented one. */

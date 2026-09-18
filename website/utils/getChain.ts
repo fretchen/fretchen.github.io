@@ -65,6 +65,9 @@ export const OWNER_SCOPES = {
   analytics: [ADMIN_WALLET, SUPPORT_RECIPIENT_ADDRESS],
   /** Approving a draft queues it for Mastodon/Bluesky — admin wallet only. */
   growth: [ADMIN_WALLET],
+  /** Each `search_web` call spends metered Brave credit, so this is narrower than `analytics`,
+   *  where reading a figure costs nothing. Admin wallet only. */
+  search: [ADMIN_WALLET],
 } as const;
 
 export type OwnerScope = keyof typeof OWNER_SCOPES;

@@ -6,8 +6,10 @@ import {
   createFacilitatorClient,
   getBatchSettlementNetworks,
   getFacilitatorFeeConfig,
+  useEnhancedRefundRequirements,
   type FacilitatorFeeConfig,
 } from "./x402_server.js";
+import { resyncChannelBalances } from "./x402_channel_sync.js";
 import type { ScwEvent } from "./types.js";
 
 const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
@@ -196,6 +198,21 @@ export async function handle(
       let refunds: number | undefined;
       let refundError: string | undefined;
       try {
+        // The stored `balance` is a cache that drifts low (handleAfterVerify writes the
+        // facilitator's PRE-deposit reading and depends on handleAfterSettle to correct it).
+        // The SDK refunds `balance - chargedCumulativeAmount` from that cache and skips
+        // channels whose cached balance is 0, so without this a funded channel is either
+        // passed over or given a negative refund amount. Observed live: two Optimism
+        // channels holding 1.0 and 6.5 USDC both cached "0".
+        await resyncChannelBalances(scheme.getStorage(), network);
+        // The SDK builds refund requirements with `extra: {}`, which the facilitator rejects
+        // as receiver_authorizer_mismatch. Applied after the claim so claim/settle are
+        // untouched. See useEnhancedRefundRequirements.
+        await useEnhancedRefundRequirements(scheme, manager, {
+          network,
+          asset: usdcAddress,
+          payTo: receiverAddress,
+        });
         refunds = (await manager.refundIdleChannels({ idleSecs: REFUND_IDLE_SECS })).length;
         logger.info({ network, refunds }, "Refund sweep completed");
       } catch (err) {

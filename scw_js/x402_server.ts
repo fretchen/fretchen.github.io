@@ -192,6 +192,58 @@ export function createLLMResourceServer(receiverAddress: `0x${string}`): LLMReso
   return { resourceServer, schemeFor, scheme: schemeFor(BATCH_SETTLEMENT_NETWORKS[0]) };
 }
 
+/**
+ * Make a `BatchSettlementChannelManager` send ENHANCED payment requirements.
+ *
+ * Works around an SDK gap present in @x402/evm 2.25 and 2.26 alike: the manager's own
+ * `buildPaymentRequirements()` returns `extra: {}`, and the facilitator's
+ * `validateChannelConfig` rejects any refund whose requirements carry no
+ * `extra.receiverAuthorizer` — it treats "absent" as "mismatch" and fails closed:
+ *
+ *     const requiredReceiverAuthorizer = extra?.receiverAuthorizer;
+ *     if (!requiredReceiverAuthorizer || …) return ErrReceiverAuthorizerMismatch;
+ *
+ * So every cooperative refund fails with `receiver_authorizer_mismatch` regardless of which
+ * key signed it. This is the same trap already documented for the deposit path in
+ * `sc_llm_x402.ts` — the requirements the facilitator checks against must carry
+ * `receiverAuthorizer`/`withdrawDelay`, and only `enhancePaymentRequirements` adds them.
+ *
+ * Claims are unaffected: they are verified through `claimAuthorizerSignature`, not through
+ * `validateChannelConfig` against `accepted.extra`.
+ *
+ * Apply this AFTER claiming and before refunding, so the claim/settle calls keep using the
+ * requirements they already work with. Remove once the SDK enhances its own refund
+ * requirements.
+ */
+export async function useEnhancedRefundRequirements(
+  scheme: BatchSettlementEvmScheme,
+  manager: object,
+  opts: { network: string; asset: string; payTo: string },
+): Promise<void> {
+  const base = {
+    scheme: "batch-settlement",
+    network: opts.network,
+    asset: opts.asset,
+    amount: "0",
+    payTo: opts.payTo,
+    maxTimeoutSeconds: 0,
+    extra: {},
+  };
+  const enhanced = await scheme.enhancePaymentRequirements(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    base as any,
+    {
+      x402Version: 2,
+      scheme: "batch-settlement",
+      network: opts.network as `${string}:${string}`,
+      extra: {},
+    },
+    [],
+  );
+  (manager as { buildPaymentRequirements: () => unknown }).buildPaymentRequirements = () =>
+    enhanced;
+}
+
 export interface BatchSettlementPaymentRequirementsOptions {
   resourceUrl: string;
   description: string;

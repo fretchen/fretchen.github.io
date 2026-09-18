@@ -9,6 +9,8 @@ const {
   mockGetFacilitatorFeeConfig,
   mockReadContract,
   mockLoggerWarn,
+  mockResyncChannelBalances,
+  mockUseEnhancedRefundRequirements,
 } = vi.hoisted(() => ({
   mockCreateLLMResourceServer: vi.fn(),
   mockCreateFacilitatorClient: vi.fn(),
@@ -16,6 +18,13 @@ const {
   mockGetFacilitatorFeeConfig: vi.fn(),
   mockReadContract: vi.fn(),
   mockLoggerWarn: vi.fn(),
+  mockResyncChannelBalances: vi.fn(),
+  mockUseEnhancedRefundRequirements: vi.fn(),
+}));
+
+// Hits a real RPC otherwise. Its own behaviour is covered in x402_channel_sync.test.ts.
+vi.mock("../x402_channel_sync.js", () => ({
+  resyncChannelBalances: mockResyncChannelBalances,
 }));
 
 vi.mock("../x402_server.js", () => ({
@@ -23,6 +32,7 @@ vi.mock("../x402_server.js", () => ({
   createFacilitatorClient: mockCreateFacilitatorClient,
   getBatchSettlementNetworks: mockGetBatchSettlementNetworks,
   getFacilitatorFeeConfig: mockGetFacilitatorFeeConfig,
+  useEnhancedRefundRequirements: mockUseEnhancedRefundRequirements,
 }));
 
 // The cron's logger is module-private; mock pino so its warnings are observable.
@@ -78,7 +88,12 @@ describe("llm_x402_cron", () => {
     });
 
     // One scheme per network, each owning storage scoped to that network's S3 prefix.
-    mockSchemeFor = vi.fn().mockReturnValue({ createChannelManager: mockCreateChannelManager });
+    mockSchemeFor = vi.fn().mockReturnValue({
+      createChannelManager: mockCreateChannelManager,
+      getStorage: vi.fn().mockReturnValue({}),
+    });
+    mockResyncChannelBalances.mockResolvedValue([]);
+    mockUseEnhancedRefundRequirements.mockResolvedValue(undefined);
     mockCreateLLMResourceServer.mockReturnValue({
       resourceServer: {},
       schemeFor: mockSchemeFor,
@@ -241,6 +256,22 @@ describe("llm_x402_cron", () => {
     await handle(makeEvent() as never, {});
 
     expect(order.slice(0, 2)).toEqual(["claim", "refund"]);
+  });
+
+  it("enhances the refund requirements before sweeping, or every refund is rejected", async () => {
+    // The SDK's manager builds `extra: {}` and the facilitator fails closed on a missing
+    // receiverAuthorizer, so ordering here is load-bearing, not cosmetic.
+    await handle(makeEvent() as never, {});
+
+    expect(mockUseEnhancedRefundRequirements).toHaveBeenCalledTimes(3);
+    expect(mockUseEnhancedRefundRequirements.mock.invocationCallOrder[0]).toBeLessThan(
+      mockRefundIdleChannels.mock.invocationCallOrder[0],
+    );
+    expect(mockUseEnhancedRefundRequirements).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ network: "eip155:10", asset: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85" }),
+    );
   });
 
   it("a failing refund sweep never masks a successful claim", async () => {

@@ -13,6 +13,48 @@ import { privateKeyToAccount } from "viem/accounts";
 const mockLookup = vi.fn();
 vi.mock("node:dns/promises", () => ({ lookup: mockLookup }));
 
+// The x402 seller is mocked the way sc_llm_x402.test.ts mocks it: the SDK wants S3, a receiver
+// authorizer key and a chain, none of which belong in a unit test. `@fretchen/chain-utils` stays
+// REAL here — the signature checks above depend on it, and `getUSDCConfig` is a pure lookup.
+const {
+  mockCreateLLMResourceServer,
+  mockCreateBatchSettlementPaymentRequirements,
+  mockCreate402Response,
+  mockExtractPaymentPayload,
+  mockCreateSettlementHeaders,
+  mockVerifyPayment,
+  mockSettlePayment,
+  mockCreatePaymentRequiredResponse,
+  mockEnhancePaymentRequirements,
+} = vi.hoisted(() => ({
+  mockCreateLLMResourceServer: vi.fn(),
+  mockCreateBatchSettlementPaymentRequirements: vi.fn(),
+  mockCreate402Response: vi.fn(),
+  mockExtractPaymentPayload: vi.fn(),
+  mockCreateSettlementHeaders: vi.fn(),
+  mockVerifyPayment: vi.fn(),
+  mockSettlePayment: vi.fn(),
+  mockCreatePaymentRequiredResponse: vi.fn(),
+  mockEnhancePaymentRequirements: vi.fn(),
+}));
+
+vi.mock("../x402_server.js", () => ({
+  createLLMResourceServer: mockCreateLLMResourceServer,
+  createBatchSettlementPaymentRequirements: mockCreateBatchSettlementPaymentRequirements,
+  create402Response: mockCreate402Response,
+  extractPaymentPayload: mockExtractPaymentPayload,
+  createSettlementHeaders: mockCreateSettlementHeaders,
+}));
+
+/** The seller's own address — `NFT_WALLET_PUBLIC_KEY`, shared with the chat so both land on one
+ *  payment channel. Anvil account #2, standing in for it. */
+const RECEIVER = "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC";
+
+/** A payment payload, as the SDK would hand it over after decoding the header. */
+function payment(network = "eip155:10") {
+  return { accepted: { network }, payload: { voucher: "0xsigned" } };
+}
+
 // Anvil account #0 — a well-known test key, never used for anything real.
 const owner = privateKeyToAccount(
   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
@@ -80,6 +122,55 @@ beforeEach(async () => {
   validAuth = await makeAuthHeader();
   process.env.OWNER_ETH_ADDRESS = OWNER_ADDRESS;
   process.env.BRAVE_API_KEY = "test-token";
+  process.env.NFT_WALLET_PUBLIC_KEY = RECEIVER;
+
+  vi.clearAllMocks();
+  mockCreateLLMResourceServer.mockReturnValue({
+    resourceServer: {
+      verifyPayment: mockVerifyPayment,
+      settlePayment: mockSettlePayment,
+      createPaymentRequiredResponse: mockCreatePaymentRequiredResponse,
+    },
+    scheme: { enhancePaymentRequirements: mockEnhancePaymentRequirements },
+  });
+  // Echoes the options back, so a test can read what the handler advertised.
+  mockCreateBatchSettlementPaymentRequirements.mockImplementation(
+    (opts: {
+      resourceUrl: string;
+      amount: string;
+      payTo: string;
+      networks: string[];
+      maxTimeoutSeconds: number;
+    }) => ({
+      x402Version: 2,
+      resource: { url: opts.resourceUrl },
+      accepts: opts.networks.map((network) => ({
+        network,
+        amount: opts.amount,
+        payTo: opts.payTo,
+        maxTimeoutSeconds: opts.maxTimeoutSeconds,
+      })),
+    }),
+  );
+  mockCreate402Response.mockImplementation((requirements: unknown) => ({
+    statusCode: 402,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(requirements),
+  }));
+  // Stands in for the real enhancement, which stamps on receiverAuthorizer/withdrawDelay.
+  mockEnhancePaymentRequirements.mockImplementation((base: Record<string, unknown>) => ({
+    ...base,
+    extra: { ...(base.extra as object), receiverAuthorizer: "0xauthorizer" },
+  }));
+  mockExtractPaymentPayload.mockReturnValue(null);
+  mockVerifyPayment.mockResolvedValue({ isValid: true, payer: "0xpayer" });
+  mockSettlePayment.mockResolvedValue({ success: true, transaction: "", network: "eip155:10" });
+  mockCreatePaymentRequiredResponse.mockResolvedValue({
+    x402Version: 2,
+    error: "channel_busy",
+    accepts: [],
+  });
+  mockCreateSettlementHeaders.mockReturnValue({ "Payment-Response": "encoded" });
   vi.stubGlobal(
     "fetch",
     vi.fn().mockResolvedValue({ ok: true, json: async () => braveResponse() }),
@@ -91,26 +182,32 @@ afterEach(() => {
   vi.unstubAllGlobals();
   delete process.env.OWNER_ETH_ADDRESS;
   delete process.env.BRAVE_API_KEY;
+  delete process.env.NFT_WALLET_PUBLIC_KEY;
 });
 
-describe("authentication", () => {
-  test("rejects a request with no Authorization header", async () => {
+/**
+ * The owner signature is one of two ways in, not a gate. Everything that used to be a 401 is now a
+ * 402: a caller who cannot prove they are the owner has not been refused, they have been quoted a
+ * price. What must not happen is either of them being served for free.
+ */
+describe("the free owner path", () => {
+  test("quotes a price instead of refusing a request with no Authorization header", async () => {
     const res = await handle(makeEvent("GET", "search", { auth: null, query: { q: "x402" } }), {});
 
-    expect(res.statusCode).toBe(401);
-    expect(JSON.parse(res.body).error).toMatch(/missing/i);
+    expect(res.statusCode).toBe(402);
   });
 
-  test("rejects a signature from somebody who is not the owner", async () => {
+  test("quotes a price for a signature from somebody who is not the owner", async () => {
     const res = await handle(
       makeEvent("GET", "search", { auth: await makeAuthHeader(stranger), query: { q: "x402" } }),
       {},
     );
 
-    expect(res.statusCode).toBe(401);
+    expect(res.statusCode).toBe(402);
+    expect(fetch).not.toHaveBeenCalled();
   });
 
-  test("rejects an expired token", async () => {
+  test("quotes a price for an expired token", async () => {
     const stale = Math.floor(Date.now() / 1000) - 10 * 60;
     const res = await handle(
       makeEvent("GET", "search", {
@@ -120,8 +217,8 @@ describe("authentication", () => {
       {},
     );
 
-    expect(res.statusCode).toBe(401);
-    expect(JSON.parse(res.body).error).toMatch(/expired/i);
+    expect(res.statusCode).toBe(402);
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   /** The prefix is what stops a token minted for one service being spent on another. */
@@ -134,7 +231,7 @@ describe("authentication", () => {
       {},
     );
 
-    expect(res.statusCode).toBe(401);
+    expect(res.statusCode).toBe(402);
   });
 
   test("accepts a second owner from a comma-separated list", async () => {
@@ -166,7 +263,7 @@ describe("authentication", () => {
     expect(res.statusCode).toBe(500);
   });
 
-  test("never calls Brave when the caller is not authorised", async () => {
+  test("never calls Brave when the caller has neither signature nor payment", async () => {
     await handle(makeEvent("GET", "search", { auth: null, query: { q: "x402" } }), {});
 
     expect(fetch).not.toHaveBeenCalled();
@@ -174,12 +271,22 @@ describe("authentication", () => {
 });
 
 describe("OPTIONS preflight", () => {
-  test("returns 200 with CORS headers, without auth", async () => {
+  test("returns 200 without auth or payment", async () => {
     const res = await handle(makeEvent("OPTIONS", "search", { auth: null }), {});
 
     expect(res.statusCode).toBe(200);
     expect(res.headers["Access-Control-Allow-Origin"]).toBe("*");
-    expect(res.headers["Access-Control-Allow-Methods"]).toBe("*");
+    expect(res.headers["Access-Control-Allow-Methods"]).toContain("GET");
+  });
+
+  /** Both directions, and they are unrelated despite the similar names: the payment header must be
+   *  allowed on the request, and the settlement header must be readable on the response. Without
+   *  the second, a browser buyer's channel record goes stale and it re-deposits every call. */
+  test("allows the payment header and exposes the settlement header", async () => {
+    const res = await handle(makeEvent("OPTIONS", "search", { auth: null }), {});
+
+    expect(res.headers["Access-Control-Allow-Headers"]).toContain("PAYMENT-SIGNATURE");
+    expect(res.headers["Access-Control-Expose-Headers"]).toContain("Payment-Response");
   });
 });
 
@@ -244,14 +351,14 @@ describe("GET /search", () => {
 });
 
 describe("GET /fetch", () => {
-  /** The whole point of the shared function: one gate in front of both routes. */
-  test("requires the same wallet auth as /search", async () => {
+  /** The whole point of the shared function: the same two ways in front of both routes. */
+  test("takes the same signature or payment as /search", async () => {
     const res = await handle(
       makeEvent("GET", "fetch", { auth: null, query: { url: "https://example.com/" } }),
       {},
     );
 
-    expect(res.statusCode).toBe(401);
+    expect(res.statusCode).toBe(402);
   });
 
   test("returns the fetched envelope", async () => {
@@ -304,5 +411,187 @@ describe("routing", () => {
 
     expect(res.statusCode).toBe(404);
     expect(JSON.parse(res.body).error).toBe("Not found");
+  });
+
+  /** A resource that does not exist has no price — quoting one would advertise a route that
+   *  answers 404 the moment it is paid for. */
+  test("answers 404 for an unknown path without quoting a price", async () => {
+    const res = await handle(makeEvent("GET", "elsewhere", { auth: null }), {});
+
+    expect(res.statusCode).toBe(404);
+    expect(mockCreateBatchSettlementPaymentRequirements).not.toHaveBeenCalled();
+  });
+});
+
+describe("the 402 challenge", () => {
+  test.each([
+    ["search", "10000"],
+    ["fetch", "1000"],
+  ])("quotes %s at %s atomic units", async (route, amount) => {
+    const res = await handle(makeEvent("GET", route, { auth: null }), {});
+
+    const { accepts } = JSON.parse(res.body) as { accepts: { amount: string }[] };
+    expect(res.statusCode).toBe(402);
+    expect(accepts.every((entry) => entry.amount === amount)).toBe(true);
+  });
+
+  /**
+   * The seller identity that makes a tool call land on the channel the CHAT already funded.
+   * `computeChannelId` hashes payer, payerAuthorizer, receiver, receiverAuthorizer, token,
+   * withdrawDelay and salt — so sharing `createLLMResourceServer` and `NFT_WALLET_PUBLIC_KEY` with
+   * `sc_llm_x402.ts` is the whole mechanism. Pay to a different address here and every visitor is
+   * asked for a second on-chain deposit.
+   */
+  test("sells as the same receiver as the chat", async () => {
+    const res = await handle(makeEvent("GET", "search", { auth: null }), {});
+    const { accepts } = JSON.parse(res.body) as { accepts: { payTo: string }[] };
+
+    expect(mockCreateLLMResourceServer).toHaveBeenCalledWith(RECEIVER);
+    expect(accepts.every((entry) => entry.payTo === RECEIVER)).toBe(true);
+  });
+
+  /** Testnet USDC is free and both routes spend real money, so a testnet payment would buy
+   *  metered Brave queries for nothing. */
+  test("offers mainnet only", async () => {
+    const res = await handle(makeEvent("GET", "search", { auth: null }), {});
+
+    const { accepts } = JSON.parse(res.body) as { accepts: { network: string }[] };
+    expect(accepts.map((entry) => entry.network).sort()).toEqual(["eip155:10", "eip155:8453"]);
+  });
+
+  test("quotes the route, not the query string, as the resource", async () => {
+    const res = await handle(makeEvent("GET", "search", { auth: null, query: { q: "x402" } }), {});
+
+    const { resource } = JSON.parse(res.body) as { resource: { url: string } };
+    expect(resource.url).toMatch(/\/search$/);
+  });
+
+  /** An unpaid request is quoted whatever its query says: a client probing for terms must not be
+   *  told its query is malformed instead of being told the price. */
+  test("quotes a price even when the query is invalid", async () => {
+    const res = await handle(makeEvent("GET", "search", { auth: null, query: {} }), {});
+
+    expect(res.statusCode).toBe(402);
+  });
+});
+
+describe("the paid path", () => {
+  beforeEach(() => {
+    mockExtractPaymentPayload.mockReturnValue(payment());
+  });
+
+  test("serves and settles a valid payment", async () => {
+    const res = await handle(makeEvent("GET", "search", { auth: null, query: { q: "x402" } }), {});
+
+    expect(res.statusCode).toBe(200);
+    expect(mockSettlePayment).toHaveBeenCalled();
+    expect(res.headers["Payment-Response"]).toBe("encoded");
+    expect(JSON.parse(res.body).results).toHaveLength(1);
+  });
+
+  /**
+   * The lock TTL must be the same number in the quote and in the verification — the SDK treats it
+   * as immutable across the pair, and a mismatch rejects the payment. It is NOT part of
+   * `channelConfig`, which is why it may be shorter here than the chat's 120s.
+   */
+  test("verifies against the same maxTimeoutSeconds it advertised", async () => {
+    mockExtractPaymentPayload.mockReturnValueOnce(null);
+    const quote = await handle(makeEvent("GET", "search", { auth: null }), {});
+    const { accepts } = JSON.parse(quote.body) as { accepts: { maxTimeoutSeconds: number }[] };
+
+    await handle(makeEvent("GET", "search", { auth: null, query: { q: "x402" } }), {});
+
+    const verified = mockVerifyPayment.mock.calls[0][1] as { maxTimeoutSeconds: number };
+    expect(verified.maxTimeoutSeconds).toBe(accepts[0].maxTimeoutSeconds);
+  });
+
+  /** The enhanced requirements carry receiverAuthorizer; the raw ones do not, and the facilitator
+   *  reads a missing one as a mismatch rather than as "not required". */
+  test("verifies against enhanced requirements", async () => {
+    await handle(makeEvent("GET", "search", { auth: null, query: { q: "x402" } }), {});
+
+    const verified = mockVerifyPayment.mock.calls[0][1] as { extra: Record<string, unknown> };
+    expect(verified.extra.receiverAuthorizer).toBe("0xauthorizer");
+  });
+
+  test("settles the same amount it verified", async () => {
+    await handle(makeEvent("GET", "search", { auth: null, query: { q: "x402" } }), {});
+
+    expect(mockSettlePayment.mock.calls[0][1]).toEqual(mockVerifyPayment.mock.calls[0][1]);
+  });
+
+  /** An upstream failure is not something to charge for. */
+  test("does not settle when Brave fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: false, status: 502, statusText: "Bad Gateway" }),
+    );
+
+    const res = await handle(makeEvent("GET", "search", { auth: null, query: { q: "x402" } }), {});
+
+    expect(res.statusCode).toBe(500);
+    expect(mockSettlePayment).not.toHaveBeenCalled();
+  });
+
+  /** Nor is a request we refused to attempt — and it is refused before the channel is touched. */
+  test("does not verify a paid request whose query is invalid", async () => {
+    const res = await handle(makeEvent("GET", "search", { auth: null, query: {} }), {});
+
+    expect(res.statusCode).toBe(400);
+    expect(mockVerifyPayment).not.toHaveBeenCalled();
+  });
+
+  test("does not settle a paid request for a private address", async () => {
+    const res = await handle(
+      makeEvent("GET", "fetch", { auth: null, query: { url: "https://169.254.169.254/" } }),
+      {},
+    );
+
+    expect(res.statusCode).toBe(400);
+    expect(mockSettlePayment).not.toHaveBeenCalled();
+  });
+
+  test("refuses a payment on a network it does not sell on", async () => {
+    mockExtractPaymentPayload.mockReturnValue(payment("eip155:84532"));
+
+    const res = await handle(makeEvent("GET", "search", { auth: null, query: { q: "x402" } }), {});
+
+    expect(res.statusCode).toBe(402);
+    expect(mockVerifyPayment).not.toHaveBeenCalled();
+  });
+
+  /** Through the SDK, so its corrective enrichment runs and the client can resync by itself. */
+  test("answers a failed verification with the SDK's corrective 402", async () => {
+    mockVerifyPayment.mockResolvedValue({ isValid: false, invalidReason: "channel_busy" });
+
+    const res = await handle(makeEvent("GET", "search", { auth: null, query: { q: "x402" } }), {});
+
+    expect(res.statusCode).toBe(402);
+    expect(mockCreatePaymentRequiredResponse).toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  test("answers 402 when settlement fails", async () => {
+    mockSettlePayment.mockResolvedValue({
+      success: false,
+      errorReason: "cumulative_exceeds_balance",
+    });
+
+    const res = await handle(makeEvent("GET", "search", { auth: null, query: { q: "x402" } }), {});
+
+    expect(res.statusCode).toBe(402);
+    expect(JSON.parse(res.body).error).toMatch(/cumulative_exceeds_balance/);
+  });
+
+  /** The owner path must stay free — a signature must never be charged for. */
+  test("does not charge the owner", async () => {
+    const res = await handle(
+      makeEvent("GET", "search", { auth: validAuth, query: { q: "x402" } }),
+      {},
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(mockVerifyPayment).not.toHaveBeenCalled();
+    expect(mockSettlePayment).not.toHaveBeenCalled();
   });
 });

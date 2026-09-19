@@ -252,6 +252,13 @@ export interface BatchSettlementPaymentRequirementsOptions {
   payTo: string;
   scheme: BatchSettlementEvmScheme;
   networks?: readonly string[];
+  /**
+   * Lock TTL to advertise, defaulting to the LLM's. `search_api.ts` passes a shorter one: it is
+   * not part of `channelConfig` (see `computeChannelId` — payer, payerAuthorizer, receiver,
+   * receiverAuthorizer, token, withdrawDelay, salt), so routes sharing one channel may differ
+   * here. Whatever a route advertises it must also pass at verify time.
+   */
+  maxTimeoutSeconds?: number;
 }
 
 /**
@@ -268,6 +275,7 @@ export async function createBatchSettlementPaymentRequirements({
   payTo,
   scheme,
   networks = BATCH_SETTLEMENT_NETWORKS,
+  maxTimeoutSeconds = LLM_MAX_TIMEOUT_SECONDS,
 }: BatchSettlementPaymentRequirementsOptions): Promise<{
   x402Version: number;
   resource: { url: string; description: string; mimeType: string };
@@ -282,7 +290,7 @@ export async function createBatchSettlementPaymentRequirements({
         amount,
         asset: config.address,
         payTo,
-        maxTimeoutSeconds: LLM_MAX_TIMEOUT_SECONDS,
+        maxTimeoutSeconds,
         extra: { name: config.usdcName, version: config.usdcVersion },
       };
       return scheme.enhancePaymentRequirements(

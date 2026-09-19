@@ -17,12 +17,11 @@ describe("owner scopes", () => {
   // could call get_analytics, and thereby also became a growth admin. It is the SEPOLIA_PRIVATE_KEY
   // script-signing wallet, so publishing rights are well beyond what it needs.
   //
-  // Search sits with analytics rather than with growth: both are tools the assistant offers during
-  // a chat turn, so the wallet that pays for the turn has to be able to use them. Reading is the
-  // shared property — neither publishes anything.
-  it("gives the support wallet the assistant's read tools but not growth", () => {
+  // There used to be a third scope, `search`, for the assistant's web tools. It went when those
+  // tools started paying per call instead of proving an identity — an allowlist has nothing to say
+  // about a visitor who simply pays.
+  it("gives the support wallet the assistant's read tool but not growth", () => {
     expect(isOwnerAddress(SUPPORT_RECIPIENT_ADDRESS, "analytics")).toBe(true);
-    expect(isOwnerAddress(SUPPORT_RECIPIENT_ADDRESS, "search")).toBe(true);
     expect(isOwnerAddress(SUPPORT_RECIPIENT_ADDRESS, "growth")).toBe(false);
   });
 

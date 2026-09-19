@@ -119,42 +119,39 @@ describe("selectFetched", () => {
 });
 
 describe("fetchViaProxy", () => {
-  it("url-encodes the target and sends the wallet token", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => envelope(article(LONG)) });
-    vi.stubGlobal("fetch", fetchMock);
+  it("pays for the request and url-encodes the target", async () => {
+    const paidFetch = vi.fn().mockResolvedValue({ ok: true, json: async () => envelope(article(LONG)) });
 
-    await fetchViaProxy("https://example.com/a?b=c&d=e", "Bearer token");
+    await fetchViaProxy("https://example.com/a?b=c&d=e", paidFetch);
 
-    expect(String(fetchMock.mock.calls[0][0])).toContain("/fetch?url=https%3A%2F%2Fexample.com%2Fa%3Fb%3Dc%26d%3De");
-    expect(fetchMock.mock.calls[0][1]).toMatchObject({ headers: { Authorization: "Bearer token" } });
+    expect(String(paidFetch.mock.calls[0][0])).toContain("/fetch?url=https%3A%2F%2Fexample.com%2Fa%3Fb%3Dc%26d%3De");
   });
 
-  /** A 400 says precisely why a url was refused, and the model can act on that. */
+  /** A 400 says precisely why a url was refused, and the model can act on that. Note the request
+   *  was paid for and then refused — the server settles nothing in that case, so it is free. */
   it("surfaces the proxy's reason for refusing a url", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: false,
-        status: 400,
-        json: async () => ({ error: "example.com resolves to a non-public address" }),
-      }),
-    );
+    const paidFetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: "example.com resolves to a non-public address" }),
+    });
 
-    await expect(fetchViaProxy("https://example.com/", "Bearer t")).rejects.toThrow(/non-public address/);
+    await expect(fetchViaProxy("https://example.com/", paidFetch)).rejects.toThrow(/non-public address/);
   });
 
   it("stays generic on any other status", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 401 }));
+    const paidFetch = vi.fn().mockResolvedValue({ ok: false, status: 500 });
 
-    await expect(fetchViaProxy("https://example.com/", "Bearer t")).rejects.toThrow("HTTP 401");
+    await expect(fetchViaProxy("https://example.com/", paidFetch)).rejects.toThrow("HTTP 500");
   });
 });
 
 describe("registry", () => {
-  it("gates fetch_url behind the same scope as search", () => {
+  it("puts fetch_url on the same terms as search", () => {
     const entry = TOOL_REGISTRY.find((t) => t.tool.function.name === fetchUrlTool.function.name);
 
-    expect(entry?.ownerScope).toBe("search");
+    expect(entry?.ownerScope).toBeNull();
+    expect(entry?.defaultAgentOnly).toBe(true);
     // The citation is the url itself, carried in the result — no source line to render.
     expect(entry?.source).toBeNull();
   });

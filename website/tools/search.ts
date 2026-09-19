@@ -1,14 +1,16 @@
 import type { X402Tool } from "../types/x402";
 import { SEARCH_URL } from "../utils/searchApi";
+import type { PaidFetch } from "../utils/x402PaidFetch";
+import type { PaymentFailure } from "./failure";
 
 /**
- * Web search as a tool for the chat model, read from the owner-gated `searchapi` function
+ * Web search as a tool for the chat model, bought from the `searchapi` function
  * (`scw_js/search_api.ts`), which proxies Brave's LLM Context API.
  *
- * Owner-gated because Brave bills per query: the endpoint answers 401 to everyone else, so
- * `TOOL_REGISTRY` withholds it from visitors entirely rather than burning a hop on a guaranteed
- * failure. The `Authorization` header arrives as a parameter rather than from `useWalletAuth`,
- * like `tools/analytics.ts`, so this module stays React-free and testable without a wallet.
+ * Paid rather than gated, since PR 2: Brave bills per query, and x402 is how a visitor covers that
+ * without an allowlist. $0.01 a call, settled as a voucher on the channel the chat already opened,
+ * so it costs no wallet prompt. The paid fetch arrives as a parameter rather than from a hook, like
+ * the auth token it replaced, so this module stays React-free and testable without a wallet.
  *
  * The server already projects Brave's payload down. This module caps it again — not from distrust
  * of our own endpoint, but because the size of a tool result is this module's promise to the chat
@@ -61,17 +63,23 @@ export type SearchToolResult =
   | { status: "no_query" }
   | { status: "no_results"; query: string }
   | { status: "invalid_response" }
-  | { status: "fetch_failed"; reason: string };
+  | { status: "fetch_failed"; reason: string }
+  | PaymentFailure;
 
 /** Turns a fetch-time error (thrown by `fetchSearch`) into a result. */
 export { fetchFailed } from "./failure";
+export type { PaymentFailure } from "./failure";
 
-// --- Fetcher: plain fetch, no cache, throws on failure -----------------------------------------
+// --- Fetcher: paid fetch, no cache, throws on failure ------------------------------------------
 
-export async function fetchSearch(query: string, auth: string): Promise<unknown> {
-  const res = await fetch(`${SEARCH_URL}/search?q=${encodeURIComponent(query)}`, {
-    headers: { Authorization: auth },
-  });
+/**
+ * `paidFetch` rather than a bearer token: the endpoint sells this route for $0.01 in USDC, billed
+ * onto the channel the chat already opened (`utils/x402PaidFetch.ts`). A payment that fails throws
+ * `PaymentError`, which the runner reports to the model as its own status; a non-OK response here
+ * is the resource's own failure, and stays a plain error.
+ */
+export async function fetchSearch(query: string, paidFetch: PaidFetch): Promise<unknown> {
+  const res = await paidFetch(`${SEARCH_URL}/search?q=${encodeURIComponent(query)}`);
   if (!res.ok) {
     throw new Error(`Search request failed: HTTP ${res.status}`);
   }

@@ -27,6 +27,7 @@ const {
   mockFetchPageHtml,
   mockFetchSearch,
   mockFetchViaProxy,
+  mockPaidFetch,
 } = vi.hoisted(() => ({
   mockFetchSitzungen: vi.fn(),
   mockFetchClaims: vi.fn(),
@@ -35,11 +36,15 @@ const {
   mockFetchPageHtml: vi.fn(),
   mockFetchSearch: vi.fn(),
   mockFetchViaProxy: vi.fn(),
+  // The paid fetch the search/fetch tools now spend with. The tools themselves are mocked
+  // above, so this only has to exist and be passed through.
+  mockPaidFetch: vi.fn(),
 }));
 
 vi.mock("../hooks/useX402Chat", () => ({
   useX402Chat: vi.fn(() => ({
     sendMessage: mockSendMessage,
+    paidFetch: mockPaidFetch,
     status: "idle",
     error: null,
     paymentReceipt: null,
@@ -234,6 +239,7 @@ describe("AssistantChat", () => {
     });
     vi.mocked(useX402Chat).mockReturnValue({
       sendMessage: mockSendMessage,
+      paidFetch: mockPaidFetch,
       status: "idle",
       error: null,
       paymentReceipt: null,
@@ -327,6 +333,7 @@ describe("AssistantChat", () => {
     // so is what keeps that prompt from arriving unexplained.
     vi.mocked(useX402Chat).mockReturnValue({
       sendMessage: mockSendMessage,
+      paidFetch: mockPaidFetch,
       status: "topping-up",
       error: null,
       paymentReceipt: null,
@@ -409,6 +416,7 @@ describe("AssistantChat", () => {
   it("renders a network-aware payment receipt link after a successful message", async () => {
     vi.mocked(useX402Chat).mockReturnValue({
       sendMessage: mockSendMessage,
+      paidFetch: mockPaidFetch,
       status: "success",
       error: null,
       paymentReceipt: { transaction: "0xdeposit", network: "eip155:8453" },
@@ -688,10 +696,11 @@ describe("AssistantChat", () => {
       // be sent as `tools: []`. "Nothing left to offer" has to mean the key is absent.
       mockFetchSitzungen.mockRejectedValue(new Error("down"));
       mockFetchClaims.mockRejectedValue(new Error("down"));
-      // get_page is switched off rather than failed: every one of its failures is recoverable by
-      // design — a different url, a different section — so it is never withdrawn, and "everything
-      // on offer has failed" can only be reached with it off the table to begin with.
-      window.localStorage.setItem("x402-chat-disabled-tools", "get_page");
+      // get_page, search_web and fetch_url are switched off rather than failed: every one of their
+      // failures is recoverable by design — a different url, a different query, a different section
+      // — so they are never withdrawn, and "everything on offer has failed" can only be reached
+      // with them off the table to begin with.
+      window.localStorage.setItem("x402-chat-disabled-tools", "get_page,search_web,fetch_url");
 
       // All three in one hop: the two lookups fail on their own, the image tool via a cancel.
       mockSendMessage.mockResolvedValue({
@@ -939,6 +948,17 @@ describe("AssistantChat", () => {
       );
     });
 
+    /** The point of PR 2: the web tools stopped proving an identity and started charging, so a
+     *  visitor who is not the owner gets them. */
+    it("offers the paid web tools to a visitor who is not the owner", async () => {
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("What is x402?");
+
+      await waitFor(() => expect(mockSendMessage).toHaveBeenCalledOnce());
+      const offered = (mockSendMessage.mock.calls[0][1] as { tools: { function: { name: string } }[] }).tools;
+      expect(offered.map((t) => t.function.name)).toEqual(expect.arrayContaining(["search_web", "fetch_url"]));
+    });
+
     it("offers the analytics tool to the owner and credits the source", async () => {
       connectAsOwner();
       mockSendMessage
@@ -1097,6 +1117,7 @@ describe("AssistantChat", () => {
       // paying on a chain they didn't pick, so the UI has to say so.
       vi.mocked(useX402Chat).mockReturnValue({
         sendMessage: mockSendMessage,
+        paidFetch: mockPaidFetch,
         status: "idle",
         error: null,
         paymentReceipt: null,
@@ -1222,6 +1243,30 @@ describe("AssistantChat", () => {
         expect(offered.map((t) => t.function.name)).toEqual(
           expect.arrayContaining(["generate_image", "get_sitzungen", "search_claims"]),
         );
+      });
+
+      /**
+       * The paid twin of the case above, and the reason `defaultAgentOnly` is a separate flag:
+       * these tools are open to everyone, so `ownerScope` no longer withholds them — but a
+       * third-party agent choosing when to call them is spending the visitor's own escrow, and
+       * driving our fetcher at whatever url it likes.
+       */
+      it("never offers the paid web tools to a custom agent", async () => {
+        vi.mocked(precheckLlmV1Agent).mockResolvedValue({ ok: true, card: CUSTOM_CARD });
+        mockSendMessage.mockResolvedValue(textResponse("I cannot look that up here."));
+
+        renderWithQuery(<AssistantChat />);
+        pasteAndTry(CUSTOM_URL);
+        await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:10", CUSTOM_URL));
+
+        sendUserMessage("What is x402?");
+
+        await waitFor(() => expect(mockSendMessage).toHaveBeenCalledOnce());
+        const offered = (mockSendMessage.mock.calls[0][1] as { tools: { function: { name: string } }[] }).tools;
+        const names = offered.map((t) => t.function.name);
+        expect(names).not.toContain("search_web");
+        expect(names).not.toContain("fetch_url");
+        expect(names).toContain("get_page");
       });
 
       it("restores the owner-scoped tool on returning to the default agent", async () => {

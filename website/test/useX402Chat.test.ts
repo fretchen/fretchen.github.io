@@ -11,7 +11,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useWalletClient, useAccount } from "wagmi";
-import { useX402Chat, WebStorageClientChannelStorage } from "../hooks/useX402Chat";
+import { useX402Chat } from "../hooks/useX402Chat";
+import { WebStorageClientChannelStorage } from "../utils/x402PaidFetch";
 import { buildUsdcAllowedAssets } from "../hooks/x402SpendControls";
 import { resetAcceptsCache } from "../hooks/x402Discovery";
 import type { X402ChatMessage } from "../types/x402";

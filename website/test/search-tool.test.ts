@@ -13,6 +13,7 @@ import {
   type SearchToolResult,
 } from "../tools/search";
 import { TOOL_REGISTRY } from "../components/AssistantChat";
+import { PaymentError } from "../utils/x402PaidFetch";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -97,29 +98,39 @@ describe("selectSearch", () => {
 });
 
 describe("fetchSearch", () => {
-  it("sends the wallet token and url-encodes the query", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => payload(1) });
-    vi.stubGlobal("fetch", fetchMock);
+  /** The paid fetch, not the global one: this route costs $0.01 and the payment is the SDK's job.
+   *  What this module still owns is the url it asks for. */
+  it("pays for the request and url-encodes the query", async () => {
+    const paidFetch = vi.fn().mockResolvedValue({ ok: true, json: async () => payload(1) });
 
-    await fetchSearch("x402 & payments", "Bearer token");
+    await fetchSearch("x402 & payments", paidFetch);
 
-    expect(String(fetchMock.mock.calls[0][0])).toContain("/search?q=x402%20%26%20payments");
-    expect(fetchMock.mock.calls[0][1]).toMatchObject({ headers: { Authorization: "Bearer token" } });
+    expect(String(paidFetch.mock.calls[0][0])).toContain("/search?q=x402%20%26%20payments");
   });
 
   it("throws on a non-ok response so the runner can report it", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 401 }));
+    const paidFetch = vi.fn().mockResolvedValue({ ok: false, status: 500 });
 
-    await expect(fetchSearch("x402", "Bearer token")).rejects.toThrow("HTTP 401");
+    await expect(fetchSearch("x402", paidFetch)).rejects.toThrow("HTTP 500");
+  });
+
+  /** A payment failure is the paid fetch's to throw, and it must travel unchanged — the runner
+   *  maps it to a status of its own, and wrapping it here would lose that. */
+  it("lets a PaymentError through untouched", async () => {
+    const paidFetch = vi.fn().mockRejectedValue(new PaymentError(402, '{"error":"channel_busy"}'));
+
+    await expect(fetchSearch("x402", paidFetch)).rejects.toBeInstanceOf(PaymentError);
   });
 });
 
 describe("registry", () => {
-  /** Withheld from visitors entirely: the endpoint 401s them, and every call spends Brave credit. */
-  it("offers search_web only within the search owner scope", () => {
+  /** Offered to everyone — a visitor pays for their own searches — but never to a stranger's
+   *  agent, which would be spending that visitor's escrow on prompts of its own. */
+  it("offers search_web to any visitor, and only on the default agent", () => {
     const entry = TOOL_REGISTRY.find((t) => t.tool.function.name === searchWebTool.function.name);
 
-    expect(entry?.ownerScope).toBe("search");
+    expect(entry?.ownerScope).toBeNull();
+    expect(entry?.defaultAgentOnly).toBe(true);
     expect(entry?.source).toBe("brave");
   });
 });

@@ -48,20 +48,33 @@ package:
     - "dist/**"
     - "!dist/**/*.map"
 
+# `httpOption: redirected` on every function: Scaleway otherwise serves the same handler over
+# plain HTTP as well (the default is `enabled`), and every one of these carries a credential —
+# an owner bearer token, or an x402 payment header. There is no third option that refuses HTTP
+# outright, so the redirect does not protect a client that has already sent its header in the
+# first request; it upgrades the ones that follow redirects and states the intent. Nothing here
+# is called over HTTP today: the website, the notebooks and the agents all use https.
+#
+# custom_domains is a DIFF, not an addition — the plugin deletes any domain on the function that
+# is not listed here (deploy/lib/createFunctions.js, applyDomainsFunc). A domain added in the
+# Scaleway console and left out of this file is removed on the next deploy.
 functions:
   genimgx402token:
     handler: dist/genimg_x402_token.handle
     description: "x402 v2 Token Payment - Paid image generation with USDC"
+    httpOption: redirected
     custom_domains:
       - imagegen-agent.fretchen.eu
   llmx402:
     handler: dist/sc_llm_x402.handle
     description: "x402 batch-settlement LLM chat (USDC payment channels)"
+    httpOption: redirected
     custom_domains:
       - llm-agent.fretchen.eu
   llmx402cron:
     handler: dist/llm_x402_cron.handle
     description: "Claims and settles accumulated x402 batch-settlement channels every 12h"
+    httpOption: redirected
     events:
       - schedule:
           # Scaleway's cron validator (serverless-scaleway-functions/shared/validate.js)
@@ -71,10 +84,14 @@ functions:
   growthapi:
     handler: dist/growth_api.handle
     description: "Growth Agent API - draft approval with wallet auth"
+    httpOption: redirected
     minScale: 0
     maxScale: 1
   searchapi:
     handler: dist/search_api.handle
-    description: "Brave LLM Context search proxy - owner-gated with wallet auth"
+    description: "x402 web access - Brave search and page fetch (or owner wallet auth)"
+    httpOption: redirected
+    custom_domains:
+      - web-agent.fretchen.eu
     minScale: 0
     maxScale: 1

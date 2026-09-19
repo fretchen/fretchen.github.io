@@ -127,6 +127,8 @@ LLM chat paid via x402 batch-settlement USDC payment channels — no bearer toke
 
 The assistant's two web tools, sold per call. `search_service.ts` proxies Brave's LLM Context API; `web_fetch_service.ts` retrieves one arbitrary page.
 
+**Endpoint:** GET to `web-agent.fretchen.eu` — named for what it does rather than for `searchapi`, which is only half of it, and carrying the `-agent` suffix that marks the paid sellers. The generated Scaleway hostname still answers; this is the identity the 402 advertises and the one discovery lists.
+
 | Method | Path      | Price       | Atomic units |
 | ------ | --------- | ----------- | ------------ |
 | GET    | `/search` | $0.01 USDC  | `10000`      |

@@ -95,12 +95,11 @@ const MAINNET_NETWORKS = ["eip155:10", "eip155:8453"];
  */
 const MAX_TIMEOUT_SECONDS = 30;
 
-/** Base for the advertised `resource.url`. Scaleway generates the hostname, so it is discovered
- *  with `npm run info` after the first deploy — the same fallback the website carries in
- *  `utils/searchApi.ts`. */
-const SERVICE_URL =
-  process.env.SEARCH_SERVICE_URL ??
-  "https://mypersonaljscloudivnad9dy-searchapi.functions.fnc.fr-par.scw.cloud";
+/** Base for the advertised `resource.url` — the custom domain, matching `imagegen-agent` and
+ *  `llm-agent`. It is declared in `serverless.yml`, which is what keeps it: the plugin deletes any
+ *  domain on the function that the file does not list. The generated Scaleway hostname still
+ *  answers, but this is the identity x402scan lists, so it is the one advertised. */
+const SERVICE_URL = process.env.SEARCH_SERVICE_URL ?? "https://web-agent.fretchen.eu";
 
 function jsonResponse(statusCode: number, body: unknown) {
   return {

@@ -39,8 +39,29 @@ const CONTENT_INDEX_URL = "/content-index.json";
 const MAX_CONTENT_CHARS = 10000;
 
 /** Below this a page has no prose worth returning — see the listing pages in `selectPage`. The
- *  shortest real page on the site is /imagegen at ~850 characters, so this clears it comfortably. */
+ *  shortest real page on the site is /imagegen at ~850 characters, so this clears it comfortably.
+ *  Calibrated against *this site*: `tools/webFetch.ts` passes its own, because a stranger's short
+ *  page is short, not broken. */
 const MIN_PROSE_CHARS = 200;
+
+/**
+ * Ceilings on the two fields that are not `content` but are still page text.
+ *
+ * `content` has been capped since this tool existed; `outline` and `title` were not, which is
+ * harmless for our own pages and not for a fetched one — an outline is an unbounded array of
+ * foreign strings, re-billed on every later hop exactly like `content`. Generous for this site
+ * (the longest page has ~30 headings), a ceiling for a stranger's. `tools/search.ts` caps Brave's
+ * fields for the same reason.
+ */
+const MAX_OUTLINE_ENTRIES = 50;
+const MAX_HEADING_CHARS = 120;
+const MAX_TITLE_CHARS = 200;
+
+const clip = (text: string, max: number) => (text.length > max ? `${text.slice(0, max)}…` : text);
+
+/** Only what the model is shown. `sliceSection` reads the uncapped outline, so a section named
+ *  from a heading past the cap still resolves. */
+const capOutline = (outline: string[]) => outline.slice(0, MAX_OUTLINE_ENTRIES).map((h) => clip(h, MAX_HEADING_CHARS));
 
 export const getPageTool: X402Tool = {
   type: "function",
@@ -180,6 +201,21 @@ export interface ExtractedPage {
 const BLOCK_SELECTOR = "p, h1, h2, h3, h4, h5, h6, li, pre, blockquote, tr, figcaption";
 
 /**
+ * Runs of space to one space, runs of blank line to one blank line, no trailing indentation.
+ *
+ * Exported because `tools/webFetch.ts` needs it for a `text/plain` response, which never goes
+ * through the DOM walk below: a second copy would drift, and the two must agree, since
+ * `sliceSection` finds a heading by searching text normalised exactly this way.
+ */
+export function collapseText(raw: string): string {
+  return raw
+    .replace(/[^\S\n]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/^[ \t]+|[ \t]+$/gm, "")
+    .trim();
+}
+
+/**
  * Turns a prerendered page into plain text, its title, and its heading outline.
  *
  * Three details carry their weight:
@@ -231,13 +267,7 @@ export function extractPageText(html: string): ExtractedPage {
 
   root.querySelectorAll(BLOCK_SELECTOR).forEach((el) => el.append(doc.createTextNode("\n")));
 
-  const text = (root.textContent ?? "")
-    .replace(/[^\S\n]+/g, " ")
-    .replace(/\n{3,}/g, "\n\n")
-    .replace(/^[ \t]+|[ \t]+$/gm, "")
-    .trim();
-
-  return { title, outline, text };
+  return { title, outline, text: collapseText(root.textContent ?? "") };
 }
 
 /**
@@ -283,21 +313,31 @@ const SITE_NO_PROSE_HINT =
   "This is an index page whose entries are rendered from data, not text. The pages it links to are in the list this tool returns when called without a url.";
 
 /**
- * `noProseHint` is a parameter rather than a constant because this function serves two tools now.
+ * What differs between the two tools this function serves, both about an empty page.
+ *
  * The reason a page yields no text differs by origin — one of ours is a client-rendered dashboard,
- * a fetched one is usually a JavaScript shell or a paywall — and the model acts on that wording.
+ * a fetched one is usually a JavaScript shell or a paywall — and so does the length at which that
+ * becomes true: `MIN_PROSE_CHARS` is measured against this site's own pages, and applying it to a
+ * stranger's discards short documents that were fetched perfectly well.
  */
+export interface PageSelectOptions {
+  noProseHint?: string;
+  minProseChars?: number;
+}
+
 export function selectPage(
   page: ExtractedPage,
   url: string,
   section: unknown,
-  noProseHint: string = SITE_NO_PROSE_HINT,
+  options: PageSelectOptions = {},
 ): PageResult {
+  const { noProseHint = SITE_NO_PROSE_HINT, minProseChars = MIN_PROSE_CHARS } = options;
+
   // Two of the 86 pages — /analytics and /growth — are dashboards built entirely in the browser,
   // and prerender ~20 characters between them. Saying so beats returning an empty string the model
   // would read as "this page says nothing". (The listing pages used to land here too, but that was
   // the first-`article` bug above hiding their entries, not an absence of content.)
-  if (page.text.length < MIN_PROSE_CHARS) {
+  if (page.text.length < minProseChars) {
     return { status: "no_prose", url, hint: noProseHint };
   }
 
@@ -307,7 +347,7 @@ export function selectPage(
     return {
       status: "not_found",
       url,
-      hint: `No such section. This page's headings are: ${page.outline.join(" | ")}`,
+      hint: `No such section. This page's headings are: ${capOutline(page.outline).join(" | ")}`,
     };
   }
 
@@ -315,8 +355,8 @@ export function selectPage(
   return {
     status: "ok",
     url,
-    title: page.title,
-    outline: page.outline,
+    title: clip(page.title, MAX_TITLE_CHARS),
+    outline: capOutline(page.outline),
     content: truncated ? body.slice(0, MAX_CONTENT_CHARS) : body,
     truncated,
     // Only present when it means something, so an untruncated result stays as small as it reads.

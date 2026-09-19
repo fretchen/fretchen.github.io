@@ -223,12 +223,9 @@ describe("selectPage", () => {
   /** `tools/webFetch.ts` reuses this function for a stranger's page, where "no prose" means
    *  something else entirely — a JS shell or a paywall, not one of our listing pages. */
   it("uses a caller-supplied no-prose hint when given one", () => {
-    const result = selectPage(
-      { title: "Shell", outline: [], text: "Loading." },
-      "https://example.com/",
-      undefined,
-      "Rendered by JavaScript, most likely.",
-    ) as Record<string, unknown>;
+    const result = selectPage({ title: "Shell", outline: [], text: "Loading." }, "https://example.com/", undefined, {
+      noProseHint: "Rendered by JavaScript, most likely.",
+    }) as Record<string, unknown>;
 
     expect(result.hint).toBe("Rendered by JavaScript, most likely.");
   });
@@ -238,6 +235,59 @@ describe("selectPage", () => {
 
     expect(result.status).toBe("not_found");
     expect(result.hint).toContain("A | B");
+  });
+
+  /** `content` was always capped; `outline` and `title` were not, which only stops mattering once
+   *  a *fetched* page can supply them. All three are re-billed on every later hop. */
+  describe("bounds the fields that are not content", () => {
+    const many = {
+      title: "T".repeat(500),
+      outline: Array.from({ length: 60 }, (_, i) => `Heading ${i}`),
+      text: "x".repeat(1000),
+    };
+
+    it("caps the number of headings and the length of each", () => {
+      const wordy = { ...many, outline: ["H".repeat(300), ...many.outline] };
+      const result = selectPage(wordy, "https://example.com/", undefined) as Record<string, unknown>;
+
+      const outline = result.outline as string[];
+      expect(outline).toHaveLength(50);
+      expect(outline[0]).toHaveLength(121); // 120 characters plus the ellipsis
+      expect(outline[0].endsWith("…")).toBe(true);
+    });
+
+    it("caps the title", () => {
+      const result = selectPage(many, "https://example.com/", undefined) as Record<string, unknown>;
+
+      expect(result.title).toHaveLength(201);
+    });
+
+    it("still slices a section whose heading is past the cap", () => {
+      // The cap is only what the model is shown — `sliceSection` reads the whole outline, so a
+      // model that saw a heading before a page grew is not told its own section does not exist.
+      const page = {
+        title: "T",
+        outline: many.outline,
+        text: many.outline.map((h) => `${h}\nSome prose about ${h}.`).join("\n"),
+      };
+
+      const result = selectPage(page, "https://example.com/", "Heading 55") as Record<string, unknown>;
+
+      expect(result.status).toBe("ok");
+      expect(result.content).toContain("Some prose about Heading 55.");
+    });
+  });
+
+  /** A stranger's page is short, not broken — see FETCH_MIN_PROSE_CHARS in tools/webFetch.ts. */
+  it("honours a caller-supplied prose floor", () => {
+    const short = { title: "Answer", outline: [], text: "42." };
+
+    const result = selectPage(short, "https://example.com/", undefined, {
+      minProseChars: 1,
+    }) as Record<string, unknown>;
+
+    expect(result.status).toBe("ok");
+    expect(result.content).toBe("42.");
   });
 });
 

@@ -267,6 +267,9 @@ describe("fetchExternalHtml", () => {
       vi.fn().mockResolvedValue({ ...htmlResponse("nope"), status: 403, ok: false }),
     );
 
+    // A FetchUrlError, so search_api answers 400 with the status rather than logging a 500 and
+    // telling the model "Internal server error" about someone else's 403.
+    await expect(fetchExternalHtml("https://example.com/")).rejects.toThrow(FetchUrlError);
     await expect(fetchExternalHtml("https://example.com/")).rejects.toThrow(/403/);
   });
 

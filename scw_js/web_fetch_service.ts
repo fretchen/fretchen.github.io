@@ -41,7 +41,11 @@ const REQUEST_TIMEOUT_MS = 8_000;
 /** Types `extractPageText` can do something with. Anything else is refused before the body. */
 const ALLOWED_CONTENT_TYPES = ["text/html", "application/xhtml+xml", "text/plain"];
 
-/** A caller error — bad url, wrong type, too big — as distinct from an upstream failure. */
+/**
+ * A refusal the caller can act on — bad url, wrong type, too big, or an upstream status like 404
+ * or 403 — as distinct from this function actually malfunctioning. `search_api.ts` answers 400
+ * with the message; anything else is a logged 500 and a generic body.
+ */
 export class FetchUrlError extends Error {
   constructor(message: string) {
     super(message);
@@ -212,7 +216,13 @@ export async function fetchExternalHtml(raw: string): Promise<FetchedPage> {
     }
 
     if (!response.ok) {
-      throw new Error(`Could not reach ${url.hostname}: ${response.status} ${response.statusText}`);
+      // The remote's 404 or 403 is not our failure, and a model told "HTTP 500" retries the same
+      // url forever. Told the real status it picks another source — 403 in particular is the
+      // expected answer for a bot with an honest User-Agent. The hostname here is the caller's
+      // own, so saying it leaks nothing internal.
+      throw new FetchUrlError(
+        `Could not reach ${url.hostname}: ${response.status} ${response.statusText}`,
+      );
     }
 
     const contentType = response.headers.get("content-type") ?? "";

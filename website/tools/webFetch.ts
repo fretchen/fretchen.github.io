@@ -1,6 +1,6 @@
 import type { X402Tool } from "../types/x402";
 import { SEARCH_URL } from "../utils/searchApi";
-import { extractPageText, selectPage, type PageResult } from "./page";
+import { collapseText, extractPageText, selectPage, type ExtractedPage, type PageResult } from "./page";
 
 /**
  * Reading one arbitrary web page, for the chat model.
@@ -13,7 +13,10 @@ import { extractPageText, selectPage, type PageResult } from "./page";
  *
  * So `get_page` and `fetch_url` differ only in where the HTML comes from. Everything after that —
  * the outline, the 10 000-character cap, the `truncated` flag, `section` — is literally the same
- * function, which is also why the two tools answer in the same shape.
+ * function, which is also why the two tools answer in the same shape. Three things are this
+ * module's own, and all three are the same observation: a stranger's page is not one of ours. It
+ * may be plain text rather than HTML, it may legitimately be short, and it is empty for different
+ * reasons.
  *
  * Kept React-free like the other tool modules; the wallet token arrives as a parameter.
  */
@@ -31,6 +34,16 @@ const ALLOWED_PROTOCOL = "https:";
  */
 const FETCH_NO_PROSE_HINT =
   "This page returned no readable text. It is most likely rendered by JavaScript, behind a paywall, or a consent screen. Try a different source rather than guessing at its contents.";
+
+/**
+ * A fetched page counts as empty only when it really is.
+ *
+ * `page.ts` uses 200 characters, measured against this site — our shortest real page is ~850, and
+ * anything under the floor is one of the two client-rendered dashboards. A stranger's page has no
+ * such floor: a 40-character answer, a `robots.txt`, a stub is short and perfectly readable, and
+ * reporting it as a paywall throws away content that was fetched fine.
+ */
+const FETCH_MIN_PROSE_CHARS = 1;
 
 export const fetchUrlTool: X402Tool = {
   type: "function",
@@ -108,13 +121,29 @@ export async function fetchViaProxy(url: string, auth: string): Promise<unknown>
 /** Is this actually the proxy's envelope? An error object served with a 200, or a response from a
  *  differently-versioned deploy, would otherwise be summarised as if it were page content. */
 function isFetchedPage(raw: unknown): raw is { finalUrl: string; html: string; contentType: string } {
-  const candidate = raw as { finalUrl?: unknown; html?: unknown } | null;
+  const candidate = raw as { finalUrl?: unknown; html?: unknown; contentType?: unknown } | null;
   return (
     !!candidate &&
     typeof candidate === "object" &&
     typeof candidate.finalUrl === "string" &&
-    typeof candidate.html === "string"
+    typeof candidate.html === "string" &&
+    // Required, not optional: the branch below decides how to read `html` from it, and a missing
+    // one would silently parse plain text as markup.
+    typeof candidate.contentType === "string"
   );
+}
+
+/**
+ * The server allows `text/plain` — `llms.txt`, a raw README, an API's text answer — and running
+ * that through `DOMParser` quietly holes it: `if (a<b)` and `Foo<T>` are swallowed as tags, and
+ * anything after a literal `<script` disappears. Plain text has no title and no headings, so the
+ * shape is the same and the two fields are simply empty.
+ */
+function readBody(raw: { html: string; contentType: string }): ExtractedPage {
+  if (raw.contentType === "text/plain") {
+    return { title: "", outline: [], text: collapseText(raw.html) };
+  }
+  return extractPageText(raw.html);
 }
 
 export function selectFetched(raw: unknown, section: unknown): FetchToolResult {
@@ -122,5 +151,8 @@ export function selectFetched(raw: unknown, section: unknown): FetchToolResult {
     return { status: "invalid_response" };
   }
   // `finalUrl`, not the requested one: after redirects they differ, and this is what gets cited.
-  return selectPage(extractPageText(raw.html), raw.finalUrl, section, FETCH_NO_PROSE_HINT);
+  return selectPage(readBody(raw), raw.finalUrl, section, {
+    noProseHint: FETCH_NO_PROSE_HINT,
+    minProseChars: FETCH_MIN_PROSE_CHARS,
+  });
 }

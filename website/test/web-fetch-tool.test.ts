@@ -77,16 +77,40 @@ describe("selectFetched", () => {
   /** The reason `selectPage` grew a hint parameter: a stranger's empty page is empty for
    *  different reasons than one of ours, and the model's next move follows from the wording. */
   it("explains an empty page in fetch terms, not in this site's terms", () => {
-    const result = selectFetched(envelope(article("<p>Loading…</p>")), undefined) as Record<string, unknown>;
+    const result = selectFetched(envelope(article("<p></p>")), undefined) as Record<string, unknown>;
 
     expect(result.status).toBe("no_prose");
     expect(result.hint).toMatch(/javascript|paywall|consent/i);
     expect(result.hint).not.toMatch(/index page|this tool returns/i);
   });
 
+  /** This site's 200-character floor is measured against this site. A stranger's short page was
+   *  fetched perfectly well, and reporting it as a paywall discards it. */
+  it("returns a short foreign page instead of calling it empty", () => {
+    const result = selectFetched(envelope(article("<p>Yes, since 2021.</p>")), undefined) as Record<string, unknown>;
+
+    expect(result.status).toBe("ok");
+    expect(result.content).toBe("Yes, since 2021.");
+  });
+
+  /** text/plain is allowed by the server, and DOMParser would eat half of it. */
+  it("reads plain text as text rather than parsing it as markup", () => {
+    const source = "if (a<b) { run(); }\n<script> is just a word here.";
+
+    const result = selectFetched(
+      { finalUrl: "https://example.com/llms.txt", html: source, contentType: "text/plain" },
+      undefined,
+    ) as Record<string, unknown>;
+
+    expect(result.content).toBe(source);
+    expect(result.outline).toEqual([]);
+  });
+
   it.each([
     ["an error object served with a 200", { error: "Internal server error" }],
     ["a missing html field", { finalUrl: "https://example.com/" }],
+    // Without it the branch above cannot tell markup from text, so it is required, not optional.
+    ["a missing contentType", { finalUrl: "https://example.com/", html: "<p>Hi</p>" }],
     ["an html page instead of the envelope", "<!doctype html>"],
     ["null", null],
   ])("refuses %s rather than treating it as content", (_label, raw) => {

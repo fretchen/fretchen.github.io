@@ -15,6 +15,11 @@ import pino from "pino";
  * page it has just read. A server that fetches attacker-chosen urls from inside a cloud network is
  * the classic route to a metadata endpoint.
  *
+ * **A payment does not widen any of this.** `/fetch` is sold per call, and the obvious reading of
+ * "paid resource" — the customer gets what they asked for — is wrong here: what is bought is *a
+ * fetch*, never *a fetch of `169.254.169.254`*. Every check below runs identically for a paid
+ * request and an owner's, and a refusal after payment is simply not settled (see `search_api.ts`).
+ *
  * Known residual risk, accepted: **DNS rebinding.** The address is validated at resolve time, then
  * `fetch` resolves the name again for the connection, so a name that answers differently between
  * the two wins. Closing it means pinning the resolved IP into the connection through a custom
@@ -111,12 +116,18 @@ export function isPrivateAddress(ip: string): boolean {
 }
 
 /**
- * Parse a caller-supplied url and prove it points somewhere public, or throw.
+ * The local half of `assertPublicUrl`: trim, parse, scheme. No I/O.
  *
  * `https:` only. That is not just tidiness: it removes `file:`, `gopher:`, `javascript:` and
  * credentials-in-url in one rule, at the cost of the handful of sites still http-only.
+ *
+ * Separate from the DNS half so `search_api.ts` can refuse a malformed url **before** verifying a
+ * payment. Verification takes the channel's `pendingRequest` lock, and a request rejected after
+ * that point never settles, so the lock is orphaned — on a channel the chat shares, which means a
+ * junk url would stall the user's next chat message. The DNS half stays inside the paid path:
+ * resolving a stranger's hostname is work, and an unpaid caller does not get to ask for it.
  */
-export async function assertPublicUrl(raw: string): Promise<URL> {
+export function parseHttpsUrl(raw: string): URL {
   const trimmed = raw.trim();
   if (!trimmed) {
     throw new FetchUrlError("Missing required query parameter 'url'");
@@ -132,6 +143,18 @@ export async function assertPublicUrl(raw: string): Promise<URL> {
   if (url.protocol !== "https:") {
     throw new FetchUrlError(`Only https urls can be fetched, got ${url.protocol}`);
   }
+
+  return url;
+}
+
+/**
+ * Parse a caller-supplied url and prove it points somewhere public, or throw.
+ *
+ * Unchanged in behaviour — `parseHttpsUrl` above is the first half of what this always did, lifted
+ * out so it can also run on its own.
+ */
+export async function assertPublicUrl(raw: string): Promise<URL> {
+  const url = parseHttpsUrl(raw);
 
   let addresses: { address: string }[];
   try {

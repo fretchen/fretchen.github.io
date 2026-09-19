@@ -15,6 +15,7 @@ Serverless functions for AI image generation and LLM services with blockchain in
 | LLM Chat         | `llmx402`         | x402 batch-settlement LLM chat (USDC payment channels) |
 | LLM Claim/Settle | `llmx402cron`     | Claims and settles accumulated LLM channels every 12h  |
 | Growth API       | `growthapi`       | Draft approval API for Growth Agent (wallet auth)      |
+| Web access       | `searchapi`       | Brave search + web fetch (x402, or owner wallet auth)  |
 
 ## Functions
 
@@ -121,6 +122,27 @@ LLM chat paid via x402 batch-settlement USDC payment channels — no bearer toke
 **Fee allowance.** The facilitator charges a flat fee on `claim`/`settle`, same as the `exact` scheme — one standing USDC `approve()` for the facilitator's wallet covers both, so no separate approval is needed for batch-settlement. Because `claim`/`settle` skip `/verify` (see `x402_facilitator/README.md` → _Recipient gating_), there is no built-in early warning the way `exact` gets `remainingSettlements`; `llmx402cron` reads the allowance itself before each claim and logs a warning once it is close to running out.
 
 **`llm/v1` contract.** [`openapi.llm.json`](./openapi.llm.json) declares `x-service-type: "llm/v1"` — the interchangeable-agent contract. It is defined entirely by that document: the request/response body is the **OpenAI chat-completions shape** (`{ model, messages }` in → an OpenAI `chat.completion` object out — `LLMChatRequest`/`LLMChatResponse`), plus the `x-interop-floor` (a compatible agent must advertise ≥1 `accepts[]` entry with USDC on Optimism `eip155:10` or Base `eip155:8453`, scheme `batch-settlement`). Payment stays x402 batch-settlement, so the OpenAI shape is for **body legibility, not drop-in OpenAI-SDK use** — a stock SDK sends `Authorization: Bearer` and can't satisfy the 402. Streaming is not supported. `model` is validated against the advertised id(s) (`mistral-large-latest`; more can be added later).
+
+### `search_api.ts` - Web Access for /assistent (x402)
+
+The assistant's two web tools, sold per call. `search_service.ts` proxies Brave's LLM Context API; `web_fetch_service.ts` retrieves one arbitrary page.
+
+**Endpoint:** GET to `web-agent.fretchen.eu` — named for what it does rather than for `searchapi`, which is only half of it, and carrying the `-agent` suffix that marks the paid sellers. The generated Scaleway hostname still answers; this is the identity the 402 advertises and the one discovery lists.
+
+| Method | Path      | Price       | Atomic units |
+| ------ | --------- | ----------- | ------------ |
+| GET    | `/search` | $0.01 USDC  | `10000`      |
+| GET    | `/fetch`  | $0.001 USDC | `1000`       |
+
+**Two ways in, and they are alternatives.** A valid owner signature over `search-api:<timestamp>` serves for free — that is what lets server-side callers and notebooks work without a funded wallet. Everything else pays. A bearer that does not verify is not an error; it simply is not the owner, and gets the 402.
+
+**Payment is x402 batch-settlement on the chat's channel.** `createLLMResourceServer` is shared with `sc_llm_x402.ts`, giving both the same receiver, receiver authorizer, token and withdraw delay — the tuple `computeChannelId` hashes. A tool call from `/assistent` therefore bills onto the channel the chat already funded, with no second deposit, and `llmx402cron` claims it unchanged. The exact scheme could not be used at these prices: the facilitator's flat 0.01 USDC per settlement is the entire price of a search.
+
+**Mainnet only** (`eip155:10`, `eip155:8453`), unlike the chat. Testnet USDC is free and both routes spend real money — Brave bills per query, `/fetch` is egress — so a testnet offer would hand out a metered API for nothing.
+
+**Settlement follows success.** Verify → run → settle, so an upstream failure or a refused URL costs the caller nothing. The advertised `maxTimeoutSeconds` is 30 rather than the chat's 120, because a lock orphaned that way sits on the shared channel and would block the user's next chat message.
+
+**The SSRF defence is unchanged by payment.** A payment authorises a fetch, not a fetch of `169.254.169.254`. See the header comment of [`web_fetch_service.ts`](./web_fetch_service.ts).
 
 ### `growth_api.ts` - Growth Agent Draft Approval
 

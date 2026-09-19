@@ -1,16 +1,22 @@
 import pino from "pino";
 import { parseBearerToken, parseOwnerAddresses, verifySignedMessage } from "@fretchen/chain-utils";
 import { searchWeb, QueryError } from "./search_service.js";
+import { fetchExternalHtml, FetchUrlError } from "./web_fetch_service.js";
 
 /**
- * Owner-gated web search for /assistent, proxying Brave's LLM Context API.
+ * Owner-gated web access for /assistent: `GET /search` proxies Brave's LLM Context API,
+ * `GET /fetch` retrieves one arbitrary page (see `web_fetch_service.ts`).
+ *
+ * The function is still deployed as `searchapi` — renaming it would change its URL, which the
+ * website hard-codes — so the name is now narrower than what it does.
  *
  * Shaped after `growth_api.ts`, which is this package's template for a wallet-authenticated
  * function that is not an x402 seller: wildcard CORS, preflight answered before auth, path
  * routing, `{ error }` bodies. No `/openapi.json` and no generated spec — those exist only for the
  * two published x402 endpoints, and this one is not a product anybody else can call.
  *
- * Gated because Brave bills per query. The gate is a wallet signature over `search-api:<timestamp>`
+ * Gated because Brave bills per query, and because an ungated `/fetch` is an open proxy anyone
+ * could point at anything. The gate is a wallet signature over `search-api:<timestamp>`
  * checked against `OWNER_ETH_ADDRESS`; the prefix must match `useWalletAuth("search-api")` in the
  * browser or every request 401s on message format.
  */
@@ -83,11 +89,17 @@ export async function handle(
       return jsonResponse(200, results);
     }
 
+    if (method === "GET" && path === "fetch") {
+      const page = await fetchExternalHtml(queryParams.url ?? "");
+      return jsonResponse(200, page);
+    }
+
     return jsonResponse(404, { error: "Not found" });
   } catch (err) {
-    // A missing or oversized query is the caller's fault and worth saying precisely; everything
-    // else is ours or Brave's, and stays generic.
-    if (err instanceof QueryError) {
+    // A bad query or an unfetchable url is the caller's fault and worth saying precisely — the
+    // model corrects itself from these. Everything else is ours or the upstream's, and stays
+    // generic so an internal hostname or path cannot leak through an error string.
+    if (err instanceof QueryError || err instanceof FetchUrlError) {
       return jsonResponse(400, { error: err.message });
     }
     logger.error({ err }, "Request handler error");

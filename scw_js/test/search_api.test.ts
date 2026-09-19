@@ -7,6 +7,12 @@ import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 // by anyone but the owner.
 import { privateKeyToAccount } from "viem/accounts";
 
+// DNS is stubbed so these stay hermetic: /fetch resolves every hostname before connecting, and a
+// test that needs a working resolver fails on an offline machine for reasons that have nothing to
+// do with the code. Literal IPs still take the real path through isPrivateAddress.
+const mockLookup = vi.fn();
+vi.mock("node:dns/promises", () => ({ lookup: mockLookup }));
+
 // Anvil account #0 — a well-known test key, never used for anything real.
 const owner = privateKeyToAccount(
   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
@@ -65,6 +71,12 @@ let validAuth: string;
 
 beforeEach(async () => {
   vi.resetModules();
+  mockLookup.mockReset();
+  // Hostnames resolve public by default; the private-address cases below use literal IPs, which
+  // node's lookup returns verbatim.
+  mockLookup.mockImplementation((host: string) =>
+    Promise.resolve([{ address: /^[\d.]+$/.test(host) ? host : "93.184.216.34", family: 4 }]),
+  );
   validAuth = await makeAuthHeader();
   process.env.OWNER_ETH_ADDRESS = OWNER_ADDRESS;
   process.env.BRAVE_API_KEY = "test-token";
@@ -228,6 +240,55 @@ describe("GET /search", () => {
 
     expect(res.statusCode).toBe(500);
     expect(JSON.parse(res.body).error).toBe("Internal server error");
+  });
+});
+
+describe("GET /fetch", () => {
+  /** The whole point of the shared function: one gate in front of both routes. */
+  test("requires the same wallet auth as /search", async () => {
+    const res = await handle(
+      makeEvent("GET", "fetch", { auth: null, query: { url: "https://example.com/" } }),
+      {},
+    );
+
+    expect(res.statusCode).toBe(401);
+  });
+
+  test("returns the fetched envelope", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        status: 200,
+        ok: true,
+        statusText: "OK",
+        headers: new Headers({ "content-type": "text/html" }),
+        body: new Blob(["<html><article><p>Hello</p></article></html>"]).stream(),
+      }),
+    );
+
+    const res = await handle(
+      makeEvent("GET", "fetch", { auth: validAuth, query: { url: "https://example.com/" } }),
+      {},
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.body)).toMatchObject({
+      finalUrl: "https://example.com/",
+      contentType: "text/html",
+    });
+  });
+
+  /** An SSRF refusal must read as a caller error the model can correct, not as a 500. */
+  test.each([
+    ["a missing url", {}],
+    ["an http url", { url: "http://example.com/" }],
+    ["a file url", { url: "file:///etc/passwd" }],
+    ["a loopback url", { url: "https://127.0.0.1/" }],
+    ["a metadata url", { url: "https://169.254.169.254/" }],
+  ])("answers 400 for %s", async (_label, query) => {
+    const res = await handle(makeEvent("GET", "fetch", { auth: validAuth, query }), {});
+
+    expect(res.statusCode).toBe(400);
   });
 });
 

@@ -26,6 +26,7 @@ const {
   mockFetchContentIndex,
   mockFetchPageHtml,
   mockFetchSearch,
+  mockFetchViaProxy,
 } = vi.hoisted(() => ({
   mockFetchSitzungen: vi.fn(),
   mockFetchClaims: vi.fn(),
@@ -33,6 +34,7 @@ const {
   mockFetchContentIndex: vi.fn(),
   mockFetchPageHtml: vi.fn(),
   mockFetchSearch: vi.fn(),
+  mockFetchViaProxy: vi.fn(),
 }));
 
 vi.mock("../hooks/useX402Chat", () => ({
@@ -131,6 +133,12 @@ vi.mock("../tools/search", async (importOriginal) => {
   return { ...actual, fetchSearch: mockFetchSearch };
 });
 
+// And for fetch_url: the real extraction and url guard run, only the proxy call is stubbed.
+vi.mock("../tools/webFetch", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../tools/webFetch")>();
+  return { ...actual, fetchViaProxy: mockFetchViaProxy };
+});
+
 import { AssistantChat, TOOL_REGISTRY } from "../components/AssistantChat";
 import { precheckLlmV1Agent } from "../hooks/x402Discovery";
 import { useX402Chat } from "../hooks/useX402Chat";
@@ -203,6 +211,15 @@ describe("AssistantChat", () => {
     mockFetchContentIndex.mockResolvedValue([{ url: "/blog/36/", title: "My static site got a tool loop" }]);
     mockFetchSearch.mockResolvedValue({
       results: [{ url: "https://example.com/0", title: "Result 0", text: "Some extracted context." }],
+    });
+    mockFetchViaProxy.mockResolvedValue({
+      finalUrl: "https://example.com/post",
+      contentType: "text/html",
+      // Long enough to clear the prose floor in selectPage, which fetch_url reuses.
+      html:
+        "<html><head><title>A Post | Example</title></head><body><main><article><h2>Part</h2><p>" +
+        "Real prose that clears the two-hundred-character floor. ".repeat(6) +
+        "</p></article></main></body></html>",
     });
     // Long enough to clear the tool's prose floor, below which a page reads as a client-rendered
     // listing rather than an article.

@@ -59,6 +59,14 @@ import {
   fetchFailed as searchFetchFailed,
   type SearchToolResult,
 } from "../tools/search";
+import {
+  fetchUrlTool,
+  fetchViaProxy,
+  selectFetched,
+  normalizeFetchUrl,
+  fetchFailed as webFetchFailed,
+  type FetchToolResult,
+} from "../tools/webFetch";
 import { useWalletAuth } from "../hooks/useWalletAuth";
 import { isOwnerAddress, type OwnerScope } from "../utils/getChain";
 import type { X402ChatMessage, X402Tool, X402ToolCall } from "../types/x402";
@@ -99,6 +107,10 @@ export const TOOL_REGISTRY = [
   { tool: searchClaimsTool, label: "Fact-checks", ownerScope: null, source: "bundestakt" },
   { tool: getPageTool, label: "Site content", ownerScope: null, source: null },
   { tool: searchWebTool, label: "Web search", ownerScope: "search", source: "brave" },
+  // Same scope as search — both reach the outside web, and an ungated fetcher is an open proxy.
+  // `source: null` because the citation *is* the url, which the result carries and the prompt
+  // already requires the answer to link.
+  { tool: fetchUrlTool, label: "Fetch URL", ownerScope: "search", source: null },
   { tool: getAnalyticsTool, label: "Site analytics", ownerScope: "analytics", source: "analytics" },
 ] as const satisfies readonly {
   tool: X402Tool;
@@ -553,6 +565,48 @@ export function AssistantChat() {
   }
 
   /**
+   * Reads one arbitrary web page, through the same owner-gated function as search.
+   *
+   * Shares `getSearchAuth` deliberately: one `search-api` token covers both routes, so following a
+   * search result to the page it names costs no second signature prompt.
+   *
+   * Cached per turn because the intended flow reads a page and then asks for one of its sections,
+   * which is the same document twice — and unlike this site's own pages, that one is a stranger's
+   * bandwidth.
+   *
+   * Everything is recoverable: a refused scheme, a private address, a PDF, a JavaScript shell are
+   * all answered by trying a different url, which is exactly what the model should do next.
+   */
+  async function loadFetch(args: Record<string, unknown>): Promise<ToolRunResult> {
+    const url = normalizeFetchUrl(args.url);
+    if (!url) {
+      return {
+        result: {
+          status: "invalid_url",
+          // Echoed back only when it really was a string; anything else would stringify to
+          // "[object Object]" and tell the model it had sent something it had not.
+          url: typeof args.url === "string" ? args.url : "",
+          hint: "Only absolute https urls can be fetched.",
+        } satisfies FetchToolResult,
+        recoverable: true,
+      };
+    }
+
+    try {
+      const auth = await getSearchAuth();
+      const raw = await queryClient.fetchQuery({
+        queryKey: ["web-fetch", url],
+        queryFn: () => fetchViaProxy(url, auth),
+        staleTime: 5 * 60_000,
+        retry: 0,
+      });
+      return { result: selectFetched(raw, args.section), recoverable: true };
+    } catch (err) {
+      return { result: webFetchFailed(err), recoverable: true };
+    }
+  }
+
+  /**
    * Reads this site's own pages: no `url` lists them, a `url` returns that page's text.
    *
    * Cached per turn like Bundestakt, and for the same reason doubled: the intended flow calls this
@@ -622,6 +676,7 @@ export function AssistantChat() {
   toolRunners[searchClaimsTool.function.name] = (args) => loadBundestakt("claims", args);
   toolRunners[getPageTool.function.name] = loadPage;
   toolRunners[searchWebTool.function.name] = loadSearch;
+  toolRunners[fetchUrlTool.function.name] = loadFetch;
   toolRunners[getAnalyticsTool.function.name] = async (args) => ({ result: await loadAnalytics(args) });
 
   /** Dispatches one tool call by name, or tells the model it invented one. */

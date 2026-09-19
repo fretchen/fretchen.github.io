@@ -245,12 +245,16 @@ describe("the free owner path", () => {
     expect(res.statusCode).toBe(200);
   });
 
-  /** Fails closed: an unset or empty owner list must not read as "everyone". */
+  /**
+   * Fails closed: an unset or empty owner list must not read as "everyone". It quotes a price
+   * rather than 500ing, though — the misconfiguration is logged, but it belongs to the free path
+   * and must not take down a paid path that never read the variable.
+   */
   test.each([
     ["unset", undefined],
     ["empty", ""],
     ["only separators", "  ,  "],
-  ])("refuses every caller when OWNER_ETH_ADDRESS is %s", async (_label, value) => {
+  ])("serves nobody free when OWNER_ETH_ADDRESS is %s", async (_label, value) => {
     if (value === undefined) delete process.env.OWNER_ETH_ADDRESS;
     else process.env.OWNER_ETH_ADDRESS = value;
 
@@ -260,7 +264,8 @@ describe("the free owner path", () => {
     );
 
     expect(res.statusCode).not.toBe(200);
-    expect(res.statusCode).toBe(500);
+    expect(res.statusCode).toBe(402);
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   test("never calls Brave when the caller has neither signature nor payment", async () => {
@@ -287,6 +292,18 @@ describe("OPTIONS preflight", () => {
 
     expect(res.headers["Access-Control-Allow-Headers"]).toContain("PAYMENT-SIGNATURE");
     expect(res.headers["Access-Control-Expose-Headers"]).toContain("Payment-Response");
+  });
+
+  /**
+   * Both ways in have to survive the preflight, and `Authorization` is the one header a `*`
+   * wildcard does not cover — it must be named. Without it the browser blocks the owner's request
+   * before it is sent, so it cannot even fall through to the 402. `analytics/stats.ts` names it
+   * for the same reason.
+   */
+  test("allows the owner's bearer header too", async () => {
+    const res = await handle(makeEvent("OPTIONS", "search", { auth: null }), {});
+
+    expect(res.headers["Access-Control-Allow-Headers"]).toContain("Authorization");
   });
 });
 
@@ -539,6 +556,24 @@ describe("the paid path", () => {
 
     expect(res.statusCode).toBe(400);
     expect(mockVerifyPayment).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The url's scheme is checked without I/O, so it is checked before paying. Not for the money —
+   * a rejected request never settles anyway — but for the lock: `verifyPayment` takes the
+   * channel's `pendingRequest` lock, and a request that dies after it orphans that lock on the
+   * channel the chat shares, stalling the user's next chat message for MAX_TIMEOUT_SECONDS.
+   */
+  test.each([
+    ["an http url", "http://example.com/"],
+    ["a file url", "file:///etc/passwd"],
+    ["not a url at all", "certainly not a url"],
+  ])("rejects %s before touching the channel", async (_label, url) => {
+    const res = await handle(makeEvent("GET", "fetch", { auth: null, query: { url } }), {});
+
+    expect(res.statusCode).toBe(400);
+    expect(mockVerifyPayment).not.toHaveBeenCalled();
+    expect(mockSettlePayment).not.toHaveBeenCalled();
   });
 
   test("does not settle a paid request for a private address", async () => {

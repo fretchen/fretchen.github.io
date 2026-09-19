@@ -116,12 +116,18 @@ export function isPrivateAddress(ip: string): boolean {
 }
 
 /**
- * Parse a caller-supplied url and prove it points somewhere public, or throw.
+ * The local half of `assertPublicUrl`: trim, parse, scheme. No I/O.
  *
  * `https:` only. That is not just tidiness: it removes `file:`, `gopher:`, `javascript:` and
  * credentials-in-url in one rule, at the cost of the handful of sites still http-only.
+ *
+ * Separate from the DNS half so `search_api.ts` can refuse a malformed url **before** verifying a
+ * payment. Verification takes the channel's `pendingRequest` lock, and a request rejected after
+ * that point never settles, so the lock is orphaned — on a channel the chat shares, which means a
+ * junk url would stall the user's next chat message. The DNS half stays inside the paid path:
+ * resolving a stranger's hostname is work, and an unpaid caller does not get to ask for it.
  */
-export async function assertPublicUrl(raw: string): Promise<URL> {
+export function parseHttpsUrl(raw: string): URL {
   const trimmed = raw.trim();
   if (!trimmed) {
     throw new FetchUrlError("Missing required query parameter 'url'");
@@ -137,6 +143,18 @@ export async function assertPublicUrl(raw: string): Promise<URL> {
   if (url.protocol !== "https:") {
     throw new FetchUrlError(`Only https urls can be fetched, got ${url.protocol}`);
   }
+
+  return url;
+}
+
+/**
+ * Parse a caller-supplied url and prove it points somewhere public, or throw.
+ *
+ * Unchanged in behaviour — `parseHttpsUrl` above is the first half of what this always did, lifted
+ * out so it can also run on its own.
+ */
+export async function assertPublicUrl(raw: string): Promise<URL> {
+  const url = parseHttpsUrl(raw);
 
   let addresses: { address: string }[];
   try {

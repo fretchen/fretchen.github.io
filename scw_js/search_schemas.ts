@@ -4,9 +4,9 @@ import { MAX_QUERY_CHARS } from "./search_service.js";
 /**
  * The query strings `search_api.ts` accepts, as schemas rather than hand-written checks.
  *
- * Shaped after `llm_schemas.ts`: the published description of a request and the thing the handler
- * actually enforces are one object, so a caller reading the spec reads the truth. These are the
- * source for `openapi.search.json`.
+ * Shaped after `llm_schemas.ts`: the description of a request and the thing the handler actually
+ * enforces are one object, so the two cannot drift. There is no generated spec yet — when
+ * discovery lands, `openapi.search.json` is built from these rather than written beside them.
  *
  * **`looseObject`, not `object`.** An unknown query parameter is ignored here, and has been since
  * the routes existed: `CONTEXT_LIMITS` in `search_service.ts` pins the cost knobs whatever the

@@ -6,7 +6,7 @@ import {
   verifySignedMessage,
 } from "@fretchen/chain-utils";
 import { searchWeb, QueryError } from "./search_service.js";
-import { fetchExternalHtml, FetchUrlError } from "./web_fetch_service.js";
+import { fetchExternalHtml, FetchUrlError, parseHttpsUrl } from "./web_fetch_service.js";
 import { FetchQuerySchema, SearchQuerySchema } from "./search_schemas.js";
 import { CORS_HEADERS } from "./utils.js";
 import {
@@ -101,10 +101,27 @@ const MAX_TIMEOUT_SECONDS = 30;
  *  answers, but this is the identity x402scan lists, so it is the one advertised. */
 const SERVICE_URL = process.env.SEARCH_SERVICE_URL ?? "https://web-agent.fretchen.eu";
 
+/**
+ * `CORS_HEADERS` covers what x402 needs, and nothing else does it need — `genimg` and `llmx402`
+ * are payment-only. This endpoint is the only one with **two** ways in, so its preflight must also
+ * permit the owner's bearer.
+ *
+ * `Authorization` has to be named. It is the one header a `*` wildcard in
+ * `Access-Control-Allow-Headers` does not cover, which is why `analytics/stats.ts` — the repo's
+ * other browser-facing bearer endpoint — lists it explicitly rather than wildcarding.
+ *
+ * Local rather than a change to the shared constant, so that constant stays an honest description
+ * of what the payment-only endpoints accept.
+ */
+const SEARCH_CORS_HEADERS = {
+  ...CORS_HEADERS,
+  "Access-Control-Allow-Headers": `${CORS_HEADERS["Access-Control-Allow-Headers"]}, Authorization`,
+};
+
 function jsonResponse(statusCode: number, body: unknown) {
   return {
     statusCode,
-    headers: CORS_HEADERS,
+    headers: SEARCH_CORS_HEADERS,
     body: JSON.stringify(body),
   };
 }
@@ -119,27 +136,27 @@ function isRoute(path: string): path is Route {
 
 // --- The two ways in ----------------------------------------------------------------------------
 
-type OwnerCheck = "owner" | "not-owner" | "misconfigured";
-
 /**
  * Is this the owner, asking for the free path?
  *
- * A missing or unverifiable bearer returns `not-owner` rather than a 401: under x402 the caller
- * still has a way to be served, and refusing them before offering the price would be wrong. Only a
- * *presented* bearer against an unconfigured `OWNER_ETH_ADDRESS` is an error, and it is ours — 500,
- * as in `growth_service.ts`'s `verifyOwner`, so it reads as broken rather than as "your wallet is
- * wrong".
+ * Everything that is not a verified owner is `false` rather than an error: under x402 the caller
+ * still has a way to be served, and refusing them before offering the price would be wrong.
+ *
+ * That includes an unconfigured `OWNER_ETH_ADDRESS`, which used to be a 500 back when this was a
+ * gate and an empty owner list meant nobody could be served at all. It is logged loudly, because it
+ * is a misconfiguration, but it fails *closed* the way that matters — nobody gets in free — and it
+ * no longer takes down a paid path that never depended on the variable.
  */
-async function checkOwner(headers: Record<string, string> | undefined): Promise<OwnerCheck> {
+async function checkOwner(headers: Record<string, string> | undefined): Promise<boolean> {
   const auth = parseBearerToken(headers?.authorization || headers?.Authorization);
   if (!auth) {
-    return "not-owner";
+    return false;
   }
 
   const ownerAddresses = parseOwnerAddresses(process.env.OWNER_ETH_ADDRESS);
   if (ownerAddresses.length === 0) {
-    logger.error("OWNER_ETH_ADDRESS not configured");
-    return "misconfigured";
+    logger.error("OWNER_ETH_ADDRESS not configured — the free owner path is unavailable");
+    return false;
   }
 
   const authError = await verifySignedMessage(
@@ -151,9 +168,9 @@ async function checkOwner(headers: Record<string, string> | undefined): Promise<
   );
   if (authError) {
     logger.info({ reason: authError }, "Bearer token rejected, falling through to payment");
-    return "not-owner";
+    return false;
   }
-  return "owner";
+  return true;
 }
 
 // --- Serving ------------------------------------------------------------------------------------
@@ -161,10 +178,13 @@ async function checkOwner(headers: Record<string, string> | undefined): Promise<
 type Args = { route: "search"; q: string } | { route: "fetch"; url: string };
 
 /**
- * Validate the query string, or throw `QueryError`.
+ * Validate the query string, or throw `QueryError` / `FetchUrlError`.
  *
  * Separate from `run` below so a paid request can be rejected **before** anything is verified or
- * settled: a caller must never be charged for a request we refused to attempt.
+ * settled — and that ordering does more than save the caller money. `verifyPayment` takes the
+ * channel's `pendingRequest` lock, and a request that fails after it never settles, so the lock is
+ * orphaned for `MAX_TIMEOUT_SECONDS` on a channel the chat shares. Every check that can happen
+ * without I/O therefore happens here, including the url's scheme.
  *
  * One parameter per route means the first issue is the error, so it is used verbatim.
  * `z.prettifyError` would wrap the same sentence in a multi-line report and change the 400 bodies
@@ -183,7 +203,9 @@ function parseArgs(route: Route, queryParams: Record<string, string>): Args {
   if (!parsed.success) {
     throw new QueryError(parsed.error.issues[0].message);
   }
-  return { route, url: parsed.data.url };
+  // The schema says "a non-empty string"; `parseHttpsUrl` says "a url we could actually fetch",
+  // and it is the same function `assertPublicUrl` runs later — the scheme rule has one home.
+  return { route, url: parseHttpsUrl(parsed.data.url).toString() };
 }
 
 function run(args: Args): Promise<unknown> {
@@ -339,7 +361,7 @@ async function servePaid(
   logger.info({ route, network, amount: PRICE_ATOMIC[route] }, "Served and settled");
   return {
     statusCode: 200,
-    headers: { ...CORS_HEADERS, ...createSettlementHeaders(settlement) },
+    headers: { ...SEARCH_CORS_HEADERS, ...createSettlementHeaders(settlement) },
     body: JSON.stringify(data),
   };
 }
@@ -380,7 +402,7 @@ export async function handle(
   // CORS preflight, answered before anything else — a browser sends it with neither an
   // Authorization header nor a payment.
   if ((event.httpMethod as string) === "OPTIONS") {
-    return { statusCode: 200, headers: CORS_HEADERS, body: "" };
+    return { statusCode: 200, headers: SEARCH_CORS_HEADERS, body: "" };
   }
 
   const headers = event.headers as Record<string, string> | undefined;
@@ -392,11 +414,7 @@ export async function handle(
     return jsonResponse(404, { error: "Not found" });
   }
 
-  const owner = await checkOwner(headers);
-  if (owner === "misconfigured") {
-    return jsonResponse(500, { error: "Internal server error" });
-  }
-  if (owner === "owner") {
+  if (await checkOwner(headers)) {
     try {
       return jsonResponse(200, await run(parseArgs(path, queryParams)));
     } catch (err) {

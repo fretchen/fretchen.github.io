@@ -37,6 +37,11 @@ export interface ChannelSyncResult {
   channelId: string;
   storedBalance: string;
   chainBalance: string;
+  /** Carried for the same reason as the balance pair: `corrected` is true when ANY of the three
+   *  chain-owned fields drifted, so a caller that reports the drift needs all three or it prints
+   *  a channel id with no reason after it. */
+  storedTotalClaimed: string;
+  chainTotalClaimed: string;
   storedRefundNonce: number;
   chainRefundNonce: number;
   corrected: boolean;
@@ -120,6 +125,8 @@ export async function resyncChannelState(
       channelId: channel.channelId,
       storedBalance: channel.balance,
       chainBalance: chainBalance.toString(),
+      storedTotalClaimed: channel.totalClaimed,
+      chainTotalClaimed: chainTotalClaimed.toString(),
       storedRefundNonce: channel.refundNonce,
       chainRefundNonce: Number(chainRefundNonce),
       corrected,

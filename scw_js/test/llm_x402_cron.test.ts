@@ -360,6 +360,7 @@ describe("llm_x402_cron", () => {
     return {
       channelId: "0xstuck",
       balance: "544239",
+      totalClaimed: "0",
       chargedCumulativeAmount: "52897",
       lastRequestTimestamp: Date.now() - 48 * 3600 * 1000,
       ...overrides,
@@ -398,6 +399,20 @@ describe("llm_x402_cron", () => {
     };
     expect(body.results[0].stuckChannels).toBeUndefined();
     expect(body.results[0].escrowHeld).toBe("52897");
+  });
+
+  /** `balance` is cumulative deposits, so a channel with claim history holds less than it has
+   *  received. Reporting the deposits would overstate the money at risk in the very line the
+   *  stuck-escrow alert points a human at. */
+  it("reports escrow net of what has already been claimed out", async () => {
+    mockStorageList.mockResolvedValue([
+      stuckChannel({ balance: "544239", totalClaimed: "52897", chargedCumulativeAmount: "52897" }),
+    ]);
+
+    const res = await handle(makeEvent() as never, {});
+
+    const body = JSON.parse(res.body) as { results: Array<{ escrowHeld?: string }> };
+    expect(body.results[0].escrowHeld).toBe("491342");
   });
 
   it("passes a funded channel that is still in active use", async () => {

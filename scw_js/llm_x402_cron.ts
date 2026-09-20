@@ -64,8 +64,8 @@ interface NetworkResult {
   /** Cached channel records that disagreed with the chain and were corrected. Reported, not
    *  escalated: the repair is the design, but drift means something upstream is wrong. */
   driftCorrected?: number;
-  /** Escrow this network's channels still hold, in USDC atomic units. Context for the check
-   *  below, not a condition of its own. */
+  /** Escrow this network's channels still hold (deposits minus what has been claimed out), in
+   *  USDC atomic units. Context for the check below, not a condition of its own. */
   escrowHeld?: string;
   /** Channels that should have been refunded by now and were not — see assertSweptClean. */
   stuckChannels?: string[];
@@ -264,7 +264,16 @@ export async function handle(
       // The sweep's post-condition, checked against storage as it now stands. Runs even when the
       // refund step threw: a failed sweep is exactly when escrow is most likely left behind.
       const remaining = await scheme.getStorage().list();
-      const escrowHeld = remaining.reduce((sum, c) => sum + BigInt(c.balance), 0n);
+      // `balance` is cumulative DEPOSITS — claims do not decrement it, they move funds out via
+      // `totalClaimed` (the SDK validates a voucher's cumulative maxClaimable against `balance`,
+      // so it has to keep growing). Summing `balance` alone therefore reports money that has
+      // already been collected as still at risk, in the field printed next to the stuck-escrow
+      // error. Clamped at zero so a record caught mid-drift reads as nothing held rather than a
+      // negative total.
+      const escrowHeld = remaining.reduce((sum, c) => {
+        const held = BigInt(c.balance) - BigInt(c.totalClaimed);
+        return sum + (held > 0n ? held : 0n);
+      }, 0n);
       const stuckChannels = findStuckChannels(remaining);
       if (stuckChannels.length > 0) {
         logger.error(

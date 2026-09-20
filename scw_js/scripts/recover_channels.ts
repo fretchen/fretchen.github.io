@@ -73,9 +73,16 @@ async function main(): Promise<void> {
   const synced = await resyncChannelState(scheme.getStorage(), network, { dryRun: !APPLY });
   for (const s of synced) {
     if (!s.corrected) continue;
+    // One entry per term of resyncChannelState's `corrected` predicate, so a corrected channel
+    // can never print as a bare id with nothing after it.
     const drifted: string[] = [];
     if (s.storedBalance !== s.chainBalance) {
       drifted.push(`balance ${usdc(s.storedBalance)} -> ${usdc(s.chainBalance)} USDC`);
+    }
+    if (s.storedTotalClaimed !== s.chainTotalClaimed) {
+      drifted.push(
+        `totalClaimed ${usdc(s.storedTotalClaimed)} -> ${usdc(s.chainTotalClaimed)} USDC`,
+      );
     }
     // A stale nonce is the difference between a refund that works and one that reverts, so it is
     // reported as its own line rather than folded into a generic "was stale".

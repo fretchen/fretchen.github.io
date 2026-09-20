@@ -18,6 +18,19 @@ vi.mock("viem", async () => {
         blockNumber: 12345678n,
         transactionHash: hash,
       })),
+      // @x402/evm 2.26 added an asset-is-a-contract precheck to the exact scheme's verify:
+      // `verifyEIP3009` calls `startAssetContractCheck`, which eth_getCode's the token and
+      // treats an empty result as "not a deployed contract". Without this the mock throws
+      // `publicClient.getCode is not a function`.
+      //
+      // It has to be mocked even though no assertion here cares about it, because the check is
+      // started in a constructor and only awaited later — so a verify that returns early (a bad
+      // signature, say) abandons the promise and its rejection surfaces as an UNHANDLED one.
+      // Vitest then exits non-zero with every test still reported as passing, which is how this
+      // stayed invisible until CI failed on it.
+      //
+      // Any non-"0x" bytecode satisfies the check; the value is never inspected.
+      getCode: vi.fn(async () => "0x60806040"),
     })),
     createWalletClient: vi.fn(() => ({
       writeContract: vi.fn(

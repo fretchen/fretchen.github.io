@@ -294,7 +294,10 @@ async function handlePaymentRequest(
           success: false,
           errorReason: result.errorReason,
           payer: result.payer,
-          transaction: "",
+          // Forwarded, not blanked: settlePayment already returns "" for every terminal failure
+          // and the broadcast hash for settlement_pending — the one failure a caller can
+          // reconcile on chain instead of retrying a transaction that may have confirmed.
+          transaction: result.transaction ?? "",
           network: result.network,
         };
         return {

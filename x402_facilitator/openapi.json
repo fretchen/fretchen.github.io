@@ -223,7 +223,7 @@
             "type": "string"
           },
           "transaction": {
-            "description": "On-chain settlement tx hash. Empty string on failure.",
+            "description": "On-chain settlement tx hash. Empty string on a terminal failure; on errorReason settlement_pending it carries the broadcast-but-unconfirmed hash to reconcile.",
             "type": "string"
           },
           "network": {

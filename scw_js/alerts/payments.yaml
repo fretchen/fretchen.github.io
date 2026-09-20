@@ -60,9 +60,15 @@ rules:
 
   # Only the subset of settle failures that are OUR problem. A bad signature or a caller's empty
   # allowance is their business and must not page us.
+  #
+  # `refund_[a-z_]*failed` matches the family, not a list: it started as refund_simulation_failed
+  # alone and missed refund_transaction_failed, one of the four causes of the incident above, which
+  # then paged nothing until the 12-hourly cron tripped RefundEscrowStuck. withdraw_delay_mismatch
+  # stays out deliberately — it is a channel-config disagreement a buyer can cause, and the outcome
+  # rule above already catches the version of it that costs anyone money.
   - alert: FacilitatorNeedsAttention
     expr: |
-      sum(count_over_time({resource_name=~".+facilitator"} |= "Settlement failed" |~ "refund_simulation_failed|insufficient_fee_allowance|settlement_pending" [15m])) > 0
+      sum(count_over_time({resource_name=~".+facilitator"} |= "Settlement failed" |~ "refund_[a-z_]*failed|insufficient_fee_allowance|settlement_pending" [1h])) > 0
     for: 0m
     labels:
       severity: critical

@@ -136,7 +136,10 @@ export const SettleResponseSchema = z.object({
   transaction: z
     .string()
     .optional()
-    .describe("On-chain settlement tx hash. Empty string on failure."),
+    .describe(
+      "On-chain settlement tx hash. Empty string on a terminal failure; on " +
+        "errorReason settlement_pending it carries the broadcast-but-unconfirmed hash to reconcile.",
+    ),
   network: z.string().optional().describe("CAIP-2 network id the settlement ran on."),
   errorReason: z.string().optional().describe("Present when success is false."),
   fee: z

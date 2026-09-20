@@ -395,6 +395,38 @@ describe("x402_facilitator handlers", () => {
       expect(body.transaction).toBe("");
     });
 
+    /**
+     * The contrast to the case above. `settlement_pending` is the one `success: false` that is
+     * recoverable: the transaction was broadcast and only the receipt wait timed out, so the
+     * hash has to survive the HTTP boundary — blanking it leaves the caller unable to tell a
+     * settlement that never happened from one that may already have confirmed, and retrying is
+     * then a double payment.
+     */
+    it("forwards the broadcast hash on settlement_pending instead of blanking it", async () => {
+      settlePayment.mockResolvedValue({
+        success: false,
+        errorReason: "settlement_pending",
+        payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        transaction: "0xbroadcastbutunconfirmed",
+        network: "eip155:10",
+      });
+
+      const event = {
+        httpMethod: "POST",
+        body: JSON.stringify({
+          paymentPayload: { accepted: { network: "eip155:10" } },
+          paymentRequirements: { amount: "1000000" },
+        }),
+      };
+      const result = await handleSettle(event, {});
+
+      expect(result.statusCode).toBe(200);
+      const body = JSON.parse(result.body);
+      expect(body.success).toBe(false);
+      expect(body.errorReason).toBe("settlement_pending");
+      expect(body.transaction).toBe("0xbroadcastbutunconfirmed");
+    });
+
     it("should handle unexpected settlement error", async () => {
       settlePayment.mockRejectedValue(new Error("Unexpected error"));
 

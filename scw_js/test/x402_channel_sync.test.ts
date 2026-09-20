@@ -129,9 +129,31 @@ describe("resyncChannelState", () => {
     const { storage, channels } = makeStorage([makeChannel({ balance: "0", totalClaimed: "0" })]);
     setChain({ balance: 1_000_000n, totalClaimed: 35_147n });
 
-    await resyncChannelState(storage, OP);
+    const results = await resyncChannelState(storage, OP);
 
     expect(channels[0].totalClaimed).toBe("35147");
+    expect(results[0].storedTotalClaimed).toBe("0");
+    expect(results[0].chainTotalClaimed).toBe("35147");
+  });
+
+  /**
+   * `corrected` is true when any of the three chain-owned fields drifted, so the result has to
+   * carry all three: with only the balance and nonce pairs reported, a channel whose totalClaimed
+   * alone had moved came out of `scripts/recover_channels.ts` as a bare id with no reason after it.
+   */
+  it("reports a totalClaimed-only drift, which nothing else in the result would show", async () => {
+    const { storage } = makeStorage([
+      makeChannel({ balance: "544239", totalClaimed: "0", refundNonce: 1 }),
+    ]);
+    setChain({ balance: 544_239n, totalClaimed: 52_897n, refundNonce: 1n });
+
+    const results = await resyncChannelState(storage, OP);
+
+    expect(results[0].corrected).toBe(true);
+    expect(results[0].storedBalance).toBe(results[0].chainBalance);
+    expect(results[0].storedRefundNonce).toBe(results[0].chainRefundNonce);
+    expect(results[0].storedTotalClaimed).toBe("0");
+    expect(results[0].chainTotalClaimed).toBe("52897");
   });
 
   /**

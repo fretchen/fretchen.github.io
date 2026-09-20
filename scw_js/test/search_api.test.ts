@@ -106,7 +106,14 @@ function makeEvent(
 type Handler = (
   event: Record<string, unknown>,
   context: unknown,
-) => Promise<{ statusCode: number; headers: Record<string, string>; body: string }>;
+) => Promise<{
+  statusCode: number;
+  headers: Record<string, string>;
+  body: string;
+  /** Set by the favicon branch only. Mirrored from the handler's own return type so the
+   *  discovery assertions below are checked rather than silently typed away. */
+  isBase64Encoded?: boolean;
+}>;
 
 let handle: Handler;
 let validAuth: string;
@@ -434,6 +441,88 @@ describe("routing", () => {
    *  answers 404 the moment it is paid for. */
   test("answers 404 for an unknown path without quoting a price", async () => {
     const res = await handle(makeEvent("GET", "elsewhere", { auth: null }), {});
+
+    expect(res.statusCode).toBe(404);
+    expect(mockCreateBatchSettlementPaymentRequirements).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Discovery: free, unauthenticated, unpaid.
+ *
+ * These exist so something that has never heard of this endpoint can find it. x402scan resolves an
+ * icon by fetching the origin ROOT and parsing `<link rel="icon">` before it probes any favicon
+ * path (see discovery.ts), so the root HTML is what makes the crawler index the origin at all — a
+ * published spec nobody crawls is not discovery. Every one of these paths returned 404 before
+ * PR 3, verified against the live endpoint.
+ */
+describe("discovery", () => {
+  function discoveryEvent(method: string, path: string, headers: Record<string, string> = {}) {
+    return { httpMethod: method, path: `/${path}`, queryStringParameters: {}, headers };
+  }
+
+  test("serves the generated spec, unpaid and unauthenticated", async () => {
+    const res = await handle(discoveryEvent("GET", "openapi.json"), {});
+
+    expect(res.statusCode).toBe(200);
+    const spec = JSON.parse(res.body) as Record<string, unknown>;
+    expect(spec["openapi"]).toBe("3.1.0");
+    expect(spec["x-service-type"]).toBe("web/v1");
+    expect(mockCreateBatchSettlementPaymentRequirements).not.toHaveBeenCalled();
+  });
+
+  /** The price in the served document must be the price the 402 quotes. They are generated from
+   *  one constant; this asserts the served copy did not get stale between build and deploy. */
+  test("quotes the same prices in the spec as the routes charge", async () => {
+    const res = await handle(discoveryEvent("GET", "openapi.json"), {});
+
+    const spec = JSON.parse(res.body) as Record<
+      string,
+      Record<string, Record<string, Record<string, Record<string, string>>>>
+    >;
+    expect(spec["paths"]["/search"]["get"]["x-payment-info"]["price"]["amount"]).toBe("0.01");
+    expect(spec["paths"]["/fetch"]["get"]["x-payment-info"]["price"]["amount"]).toBe("0.001");
+  });
+
+  test("serves the favicon as base64 on GET", async () => {
+    const res = await handle(discoveryEvent("GET", "favicon.png"), {});
+
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["Content-Type"]).toBe("image/jpeg");
+    expect(res.isBase64Encoded).toBe(true);
+    expect(res.body.length).toBeGreaterThan(0);
+  });
+
+  /** HEAD was a 404 before PR 3 — the dispatch accepted GET only. A crawler that probes with HEAD
+   *  would have concluded the icon was absent. */
+  test("answers HEAD for the favicon with headers but no body", async () => {
+    const res = await handle(discoveryEvent("HEAD", "favicon.png"), {});
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toBe("");
+    expect(res.isBase64Encoded).toBe(false);
+  });
+
+  test("serves the discovery HTML at the root when the caller accepts HTML", async () => {
+    const res = await handle(discoveryEvent("GET", "", { Accept: "text/html" }), {});
+
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["Content-Type"]).toContain("text/html");
+    expect(res.body).toContain('rel="icon"');
+  });
+
+  /** Only when HTML is asked for. A bare root request is not a browser or a crawler looking for an
+   *  icon, and answering HTML to it would hide the fact that the root serves no API. */
+  test("does not serve HTML at the root without an HTML Accept header", async () => {
+    const res = await handle(discoveryEvent("GET", "", {}), {});
+
+    expect(res.statusCode).toBe(404);
+  });
+
+  /** Discovery must not open a hole in the route check: an unknown path is still 404, and still
+   *  without a price. */
+  test("leaves the unknown-path 404 intact", async () => {
+    const res = await handle(discoveryEvent("GET", "openapi.yaml"), {});
 
     expect(res.statusCode).toBe(404);
     expect(mockCreateBatchSettlementPaymentRequirements).not.toHaveBeenCalled();

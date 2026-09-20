@@ -44,7 +44,7 @@ export default function Page() {
             </li>
           </ul>
 
-          <h2>The two live endpoints</h2>
+          <h2>The live endpoints</h2>
           <table className={table}>
             <thead>
               <tr>
@@ -71,12 +71,30 @@ export default function Page() {
                 <td>OpenAI-shaped chat completion</td>
                 <td>~$0.003 / message</td>
               </tr>
+              <tr>
+                <td>
+                  <code>web-agent.fretchen.eu/search</code>
+                </td>
+                <td>batch-settlement</td>
+                <td>Web search with extracted page content</td>
+                <td>$0.01 / call</td>
+              </tr>
+              <tr>
+                <td>
+                  <code>web-agent.fretchen.eu/fetch</code>
+                </td>
+                <td>batch-settlement</td>
+                <td>The readable text of one public web page</td>
+                <td>$0.001 / call</td>
+              </tr>
             </tbody>
           </table>
           <p>
-            Both are consumed on the site by <Link href="/imagegen">the AI Image Generator</Link> and{" "}
+            They are consumed on the site by <Link href="/imagegen">the AI Image Generator</Link> and{" "}
             <Link href="/assistent">the AI Assistant</Link> — those are the UIs; the endpoints above are what your own
-            code calls directly.
+            code calls directly. The two <code>web-agent</code> routes bill onto the <em>same</em> payment channel as{" "}
+            <code>llm-agent</code> when the payer and receiver match, so an agent already chatting there pays for web
+            access without opening a second channel or signing another deposit.
           </p>
 
           <h2>Which scheme, when</h2>

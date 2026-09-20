@@ -1,14 +1,19 @@
 import pino from "pino";
-import {
-  getUSDCConfig,
-  parseBearerToken,
-  parseOwnerAddresses,
-  verifySignedMessage,
-} from "@fretchen/chain-utils";
+import { getUSDCConfig } from "@fretchen/chain-utils";
 import { searchWeb, QueryError } from "./search_service.js";
 import { fetchExternalHtml, FetchUrlError, parseHttpsUrl } from "./web_fetch_service.js";
-import { FetchQuerySchema, SearchQuerySchema } from "./search_schemas.js";
+import {
+  DESCRIPTION,
+  FetchQuerySchema,
+  PRICE_ATOMIC,
+  ROUTES,
+  SearchQuerySchema,
+  type Route,
+} from "./search_schemas.js";
 import { CORS_HEADERS } from "./utils.js";
+import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
+import { faviconBase64, faviconContentType } from "./favicon.js";
+import openapiSpec from "./openapi.search.json" with { type: "json" };
 import {
   create402Response,
   createBatchSettlementPaymentRequirements,
@@ -24,11 +29,18 @@ import {
  * The function is still deployed as `searchapi` — renaming it would change its URL, which the
  * website hard-codes — so the name is now narrower than what it does.
  *
- * **Two ways in, and they are alternatives, not layers.** A valid owner signature over
- * `search-api:<timestamp>` serves for free; anything else pays. The owner path is what lets
- * server-side callers (growth-agent, notebooks, curl) work without a funded wallet, and what makes
- * own testing free. A bearer that does not verify is not an error — it simply is not the owner, and
- * falls through to the 402.
+ * **One way in: everybody pays.** There was an owner-signature path that served for free,
+ * justified as what let server-side callers work without a funded wallet. It was removed once that
+ * turned out to name a consumer that does not exist — `growth-agent` never called this endpoint,
+ * the website stopped using it when the tools moved to paid fetch, and the notebook's owner cell
+ * was a demonstration whose last run returned 402. `genimg_x402_token.ts` and `sc_llm_x402.ts`
+ * never had such a path; this one was the outlier, and the published spec already declared
+ * `security: []` and described x402 alone. A second way in that nothing used was a second thing to
+ * keep true.
+ *
+ * The consequence, accepted deliberately: there is no free path at all, and no testnet either (see
+ * MAINNET_NETWORKS), so exercising these routes costs real money. At $0.001 a fetch that is the
+ * same trade `genimg` already makes.
  *
  * The paid path is an x402 **batch-settlement** seller, and deliberately the same one as
  * `sc_llm_x402.ts`: `createLLMResourceServer` gives it the same receiver, receiver authorizer,
@@ -43,32 +55,6 @@ import {
  */
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
-
-const AUTH_PREFIX = "search-api";
-
-/** The routes served. A path outside this set is a 404 *before* any payment is advertised — a
- *  resource that does not exist has no price. */
-const ROUTES = ["search", "fetch"] as const;
-type Route = (typeof ROUTES)[number];
-
-/**
- * Price per call, in USDC atomic units (6 decimals), as `USDC_PAYMENT_AMOUNT` is in
- * `genimg_x402_token.ts` — never a dollar float.
- *
- * Search is ten times fetch on purpose. Brave costs ~$0.005 a query, so $0.01 covers it twice over
- * with the invoke and a share of settlement; a fetch is egress only and priced to mean "not open"
- * rather than to recover a cost. The ratio also steers the model into the pattern that reads best:
- * search once, then read several of the results.
- */
-const PRICE_ATOMIC: Record<Route, string> = {
-  search: "10000",
-  fetch: "1000",
-};
-
-const DESCRIPTION: Record<Route, string> = {
-  search: "Web search with extracted page content (Brave LLM Context API)",
-  fetch: "The readable text of one public web page",
-};
 
 /**
  * Mainnet only, unlike the chat, which also accepts Base Sepolia.
@@ -101,27 +87,10 @@ const MAX_TIMEOUT_SECONDS = 30;
  *  answers, but this is the identity x402scan lists, so it is the one advertised. */
 const SERVICE_URL = process.env.SEARCH_SERVICE_URL ?? "https://web-agent.fretchen.eu";
 
-/**
- * `CORS_HEADERS` covers what x402 needs, and nothing else does it need — `genimg` and `llmx402`
- * are payment-only. This endpoint is the only one with **two** ways in, so its preflight must also
- * permit the owner's bearer.
- *
- * `Authorization` has to be named. It is the one header a `*` wildcard in
- * `Access-Control-Allow-Headers` does not cover, which is why `analytics/stats.ts` — the repo's
- * other browser-facing bearer endpoint — lists it explicitly rather than wildcarding.
- *
- * Local rather than a change to the shared constant, so that constant stays an honest description
- * of what the payment-only endpoints accept.
- */
-const SEARCH_CORS_HEADERS = {
-  ...CORS_HEADERS,
-  "Access-Control-Allow-Headers": `${CORS_HEADERS["Access-Control-Allow-Headers"]}, Authorization`,
-};
-
 function jsonResponse(statusCode: number, body: unknown) {
   return {
     statusCode,
-    headers: SEARCH_CORS_HEADERS,
+    headers: CORS_HEADERS,
     body: JSON.stringify(body),
   };
 }
@@ -132,45 +101,6 @@ function parsePath(rawPath: string): string {
 
 function isRoute(path: string): path is Route {
   return (ROUTES as readonly string[]).includes(path);
-}
-
-// --- The two ways in ----------------------------------------------------------------------------
-
-/**
- * Is this the owner, asking for the free path?
- *
- * Everything that is not a verified owner is `false` rather than an error: under x402 the caller
- * still has a way to be served, and refusing them before offering the price would be wrong.
- *
- * That includes an unconfigured `OWNER_ETH_ADDRESS`, which used to be a 500 back when this was a
- * gate and an empty owner list meant nobody could be served at all. It is logged loudly, because it
- * is a misconfiguration, but it fails *closed* the way that matters — nobody gets in free — and it
- * no longer takes down a paid path that never depended on the variable.
- */
-async function checkOwner(headers: Record<string, string> | undefined): Promise<boolean> {
-  const auth = parseBearerToken(headers?.authorization || headers?.Authorization);
-  if (!auth) {
-    return false;
-  }
-
-  const ownerAddresses = parseOwnerAddresses(process.env.OWNER_ETH_ADDRESS);
-  if (ownerAddresses.length === 0) {
-    logger.error("OWNER_ETH_ADDRESS not configured — the free owner path is unavailable");
-    return false;
-  }
-
-  const authError = await verifySignedMessage(
-    auth.address,
-    auth.signature,
-    auth.message,
-    AUTH_PREFIX,
-    ownerAddresses,
-  );
-  if (authError) {
-    logger.info({ reason: authError }, "Bearer token rejected, falling through to payment");
-    return false;
-  }
-  return true;
 }
 
 // --- Serving ------------------------------------------------------------------------------------
@@ -361,7 +291,7 @@ async function servePaid(
   logger.info({ route, network, amount: PRICE_ATOMIC[route] }, "Served and settled");
   return {
     statusCode: 200,
-    headers: { ...SEARCH_CORS_HEADERS, ...createSettlementHeaders(settlement) },
+    headers: { ...CORS_HEADERS, ...createSettlementHeaders(settlement) },
     body: JSON.stringify(data),
   };
 }
@@ -398,11 +328,17 @@ function isHexAddress(addr: unknown): addr is `0x${string}` {
 export async function handle(
   event: Record<string, unknown>,
   _context: unknown,
-): Promise<{ statusCode: number; headers: Record<string, string>; body: string }> {
+): Promise<{
+  statusCode: number;
+  headers: Record<string, string>;
+  body: string;
+  /** Set only by the favicon branch — Scaleway decodes the body when it is true. */
+  isBase64Encoded?: boolean;
+}> {
   // CORS preflight, answered before anything else — a browser sends it with neither an
   // Authorization header nor a payment.
   if ((event.httpMethod as string) === "OPTIONS") {
-    return { statusCode: 200, headers: SEARCH_CORS_HEADERS, body: "" };
+    return { statusCode: 200, headers: CORS_HEADERS, body: "" };
   }
 
   const headers = event.headers as Record<string, string> | undefined;
@@ -410,16 +346,46 @@ export async function handle(
   const path = parsePath((event.path as string) || "");
   const queryParams = (event.queryStringParameters as Record<string, string>) || {};
 
-  if (method !== "GET" || !isRoute(path)) {
-    return jsonResponse(404, { error: "Not found" });
+  // ── Discovery, answered before payment and before the route check ─────────────────────────
+  // Free, unauthenticated and unpaid, exactly as on `sc_llm_x402.ts` and `genimg_x402_token.ts`.
+  // A price list nobody can read is not a price list: x402scan resolves an icon by fetching the
+  // origin ROOT and parsing <link rel="icon"> before it ever probes /favicon.png, so the root
+  // HTML is what makes the crawler index this origin at all (see discovery.ts).
+  const isGetOrHead = method === "GET" || method === "HEAD";
+  const isHead = method === "HEAD";
+
+  if (isGetOrHead && path === "openapi.json") {
+    // Served verbatim, unlike the chat's, which rewrites its price ceiling at serve time because
+    // that ceiling is dynamic. Both prices here are constants generated from PRICE_ATOMIC, so
+    // there is nothing that could drift between the document and the 402.
+    return {
+      statusCode: 200,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      body: isHead ? "" : JSON.stringify(openapiSpec),
+    };
   }
 
-  if (await checkOwner(headers)) {
-    try {
-      return jsonResponse(200, await run(parseArgs(path, queryParams)));
-    } catch (err) {
-      return errorResponseFor(err);
-    }
+  if (isGetOrHead && path === "favicon.png") {
+    return {
+      statusCode: 200,
+      headers: { ...CORS_HEADERS, "Content-Type": faviconContentType },
+      body: isHead ? "" : faviconBase64,
+      isBase64Encoded: !isHead,
+    };
+  }
+
+  if (isGetOrHead && path === "" && wantsHtml(headers)) {
+    return {
+      statusCode: 200,
+      headers: { ...CORS_HEADERS, "Content-Type": "text/html; charset=utf-8" },
+      body: isHead ? "" : FAVICON_DISCOVERY_HTML,
+    };
+  }
+
+  // Paid routes are GET only. The 404 stays ahead of the 402: a resource that does not exist has
+  // no price, so an unknown path must never be answered with payment requirements.
+  if (method !== "GET" || !isRoute(path)) {
+    return jsonResponse(404, { error: "Not found" });
   }
 
   const receiverAddress = process.env.NFT_WALLET_PUBLIC_KEY;

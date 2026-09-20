@@ -26,8 +26,14 @@ import type {
  * strings, so plain JSON round-trips cleanly.
  */
 export class WebStorageClientChannelStorage implements ClientChannelStorage {
+  /**
+   * `network` is ours, not the SDK's: every record is tagged with the chain it belongs to, because
+   * without that a zero on-chain balance is ambiguous — see `resyncFromChain`. Optional so a caller
+   * that only reads (and the storage's own unit tests) can leave it out.
+   */
   constructor(
     private backend: Storage,
+    private network?: string,
     private prefix = "x402-channel:",
   ) {}
   private keyFor(key: string) {
@@ -35,10 +41,16 @@ export class WebStorageClientChannelStorage implements ClientChannelStorage {
   }
   get(key: string): Promise<BatchSettlementClientContext | undefined> {
     const raw = this.backend.getItem(this.keyFor(key));
-    return Promise.resolve(raw ? (JSON.parse(raw) as BatchSettlementClientContext) : undefined);
+    if (!raw) {
+      return Promise.resolve(undefined);
+    }
+    // The tag is stripped on the way out, so what the SDK sees is exactly the context it wrote.
+    const stored = JSON.parse(raw) as Record<string, unknown>;
+    delete stored.network;
+    return Promise.resolve(stored as BatchSettlementClientContext);
   }
   set(key: string, context: BatchSettlementClientContext): Promise<void> {
-    this.backend.setItem(this.keyFor(key), JSON.stringify(context));
+    this.backend.setItem(this.keyFor(key), JSON.stringify({ ...context, network: this.network }));
     return Promise.resolve();
   }
   delete(key: string): Promise<void> {
@@ -67,6 +79,17 @@ export class WebStorageClientChannelStorage implements ClientChannelStorage {
    * lags the server's cumulative, and adopting the lagging figure makes the client sign a
    * voucher below the server's state and collect `cumulative_amount_mismatch`. Floor it at
    * the chain's `totalClaimed` regardless, since a cumulative below that is never valid.
+   *
+   * **A zero on-chain balance is left alone**, deliberately. It reads as "this channel was opened
+   * on another chain", which every network's records sharing one localStorage namespace makes the
+   * normal case — and overwriting it would strand that escrow. The network tag below narrows this
+   * further: another chain's record is skipped before an RPC read is even spent on it.
+   *
+   * This briefly deleted such records instead, on the theory that a zero meant the record was
+   * fiction. It was the wrong way round. The case that prompted it — a chat refusing every request
+   * with `cumulative_exceeds_balance` — turned out to be the *server's* cached balance reading 0
+   * while the chain held 544239 and this record said so correctly. The client has been right each
+   * time it has been checked; `scw_js/x402_channel_sync.ts` documents why the server's copy drifts.
    */
   async resyncFromChain(read: (channelId: `0x${string}`) => Promise<readonly [bigint, bigint]>): Promise<void> {
     for (let i = 0; i < this.backend.length; i++) {
@@ -75,14 +98,18 @@ export class WebStorageClientChannelStorage implements ClientChannelStorage {
       const raw = this.backend.getItem(key);
       if (!raw) continue;
 
-      let context: BatchSettlementClientContext;
+      let context: BatchSettlementClientContext & { network?: string };
       try {
-        context = JSON.parse(raw) as BatchSettlementClientContext;
+        context = JSON.parse(raw) as BatchSettlementClientContext & { network?: string };
       } catch {
         // Unparseable record: leave it alone. The SDK treats it as absent and recovers, which
         // is no worse than what we would write over it.
         continue;
       }
+
+      // Another chain's record. Its escrow is real, just not visible from the chain being read —
+      // and reading for it would only ever answer zero.
+      if (context.network && context.network !== this.network) continue;
 
       const channelId = key.slice(this.prefix.length) as `0x${string}`;
       let chainBalance: bigint;
@@ -94,9 +121,8 @@ export class WebStorageClientChannelStorage implements ClientChannelStorage {
         continue;
       }
 
-      // Zero balance means this channel does not exist on the chain we are currently reading.
-      // Every network's records share one localStorage namespace, so this is the normal case
-      // for a channel opened on another chain — and overwriting it would strand that escrow.
+      // Nothing on this chain for it, so there is nothing to correct from. See the note above on
+      // why this is not treated as evidence that the record is wrong.
       if (chainBalance === 0n) continue;
 
       const localCumulative = BigInt(context.chargedCumulativeAmount ?? "0");
@@ -106,6 +132,9 @@ export class WebStorageClientChannelStorage implements ClientChannelStorage {
         key,
         JSON.stringify({
           ...context,
+          // A non-zero balance on the chain just read is proof of which chain this record is for,
+          // so an untagged one gets tagged here rather than waiting for the next settle.
+          network: this.network ?? context.network,
           balance: chainBalance.toString(),
           totalClaimed: chainTotalClaimed.toString(),
           chargedCumulativeAmount: cumulative.toString(),
@@ -227,6 +256,12 @@ export class PaymentError extends Error {
   get isChannelBusy(): boolean {
     return errorCodeOf(this.body)?.includes("channel_busy") ?? false;
   }
+
+  /** The escrow cannot cover another call. Survives the retry in `createPaidFetch` only when the
+   *  channel is genuinely out of funds, so by the time a caller sees it, it is the real thing. */
+  get isDrainedChannel(): boolean {
+    return isDrainedChannel(this.body);
+  }
 }
 
 /**
@@ -291,14 +326,22 @@ export async function createPaidFetch({
   // recoverFromOnChainState bail out immediately with `if (!deps.signer.readContract) return
   // false`. Without it, a client/server cumulative desync surfaces as a hard 402 instead of
   // self-healing.
+  // Bound: a viem client action is a closure today, but reading the method off the object and
+  // calling it elsewhere is exactly the shape that breaks if that ever stops being true.
+  const signerInput = {
+    address: walletClient.account.address,
+    signTypedData: walletClient.signTypedData.bind(walletClient),
+  };
   const signer = toClientEvmSigner(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- viem/x402 signer interfaces differ slightly
-    { address: walletClient.account.address, signTypedData: walletClient.signTypedData } as any,
+    signerInput as any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- wagmi public client satisfies the readContract dep
     publicClient as any,
   );
 
-  const storage = new WebStorageClientChannelStorage(window.localStorage);
+  // Tagged with the network so a zero on-chain balance can be read as "this channel is fiction"
+  // rather than "this channel is on another chain" — see resyncFromChain.
+  const storage = new WebStorageClientChannelStorage(window.localStorage, network);
   // Delegate voucher signing to a persisted local key so only the deposit/top-up prompts the
   // real wallet — see getOrCreateVoucherSigner's doc comment.
   const voucherSigner = getOrCreateVoucherSigner(walletClient.account.address);

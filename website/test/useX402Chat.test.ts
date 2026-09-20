@@ -874,4 +874,77 @@ describe("WebStorageClientChannelStorage", () => {
 
     await expect(storage.get("0xabc")).resolves.toBeUndefined();
   });
+
+  /**
+   * Records are tagged with their chain, which is what lets `resyncFromChain` read a zero on-chain
+   * balance as "this channel is fiction" rather than "this channel is on another chain". Every
+   * network's records share one localStorage namespace, so without the tag the two are identical.
+   */
+  describe("network tagging", () => {
+    const OPTIMISM = "eip155:10";
+    const BASE = "eip155:8453";
+    const FUNDED = [1_000_000n, 40_000n] as const;
+    const EMPTY = [0n, 0n] as const;
+
+    /** What the SDK stores, plus the tag we add. Written raw so a record can be posed as untagged,
+     *  which is how every record written before tagging shipped looks. */
+    function writeRecord(id: string, record: Record<string, unknown>) {
+      backend.setItem(`x402-channel:${id}`, JSON.stringify(record));
+    }
+    const readRecord = (id: string) => JSON.parse(backend.getItem(`x402-channel:${id}`) ?? "null");
+
+    it("tags a written record with its network, and hides the tag from the SDK", async () => {
+      const storage = new WebStorageClientChannelStorage(backend, OPTIMISM);
+      const context = { chargedCumulativeAmount: "1420", balance: "7100" };
+
+      await storage.set("0xabc", context);
+
+      expect(readRecord("0xabc")).toMatchObject({ network: OPTIMISM });
+      // The SDK gets back exactly what it wrote — the tag is our bookkeeping, not part of its
+      // channel context.
+      await expect(storage.get("0xabc")).resolves.toEqual(context);
+    });
+
+    it("leaves another network's record alone, without even reading the chain for it", async () => {
+      writeRecord("0xbase", { network: BASE, balance: "500000", chargedCumulativeAmount: "100" });
+      const read = vi.fn();
+
+      await new WebStorageClientChannelStorage(backend, OPTIMISM).resyncFromChain(read);
+
+      expect(read).not.toHaveBeenCalled();
+      expect(readRecord("0xbase")).toMatchObject({ balance: "500000" });
+    });
+
+    /**
+     * A zero read is not evidence that the record is wrong, tagged or not. This briefly deleted
+     * such records: the incident that prompted it turned out to be the *server's* cached balance
+     * reading 0 while the chain held 544239 and this record said so correctly, so deleting would
+     * have thrown away the accurate copy. `scw_js/x402_channel_sync.ts` documents the drift.
+     */
+    it.each([
+      ["tagged for this network", { network: OPTIMISM, balance: "544239", chargedCumulativeAmount: "52897" }],
+      ["untagged, written before tagging shipped", { balance: "544239", chargedCumulativeAmount: "52897" }],
+    ])("leaves a record %s alone when the chain reads zero", async (_label, record) => {
+      writeRecord("0xquiet", record);
+
+      await new WebStorageClientChannelStorage(backend, OPTIMISM).resyncFromChain(() => Promise.resolve(EMPTY));
+
+      expect(readRecord("0xquiet")).toMatchObject({ balance: "544239", chargedCumulativeAmount: "52897" });
+    });
+
+    /** A real balance is itself proof of which chain the record belongs to, so the resync is also
+     *  where an untagged record gets its tag — no need to wait for the next settle. */
+    it("tags an untagged record once the chain confirms it", async () => {
+      writeRecord("0xlegacy", { balance: "1", chargedCumulativeAmount: "52897" });
+
+      await new WebStorageClientChannelStorage(backend, OPTIMISM).resyncFromChain(() => Promise.resolve(FUNDED));
+
+      expect(readRecord("0xlegacy")).toMatchObject({
+        network: OPTIMISM,
+        balance: "1000000",
+        // Kept because it is ahead of the chain's totalClaimed — settlement here is batched.
+        chargedCumulativeAmount: "52897",
+      });
+    });
+  });
 });

@@ -22,6 +22,20 @@ describe("paymentFailed", () => {
     expect(result?.reason).toMatch(/USDC/i);
   });
 
+  /**
+   * A drained channel gets wording of its own rather than PaymentError's, which was written for
+   * the chat: there, the user resends and the SDK deposits on the way. Mid-turn nothing is going
+   * to pop up, and a tool result that told the model otherwise sent a real user hunting for a
+   * wallet prompt that could not appear.
+   */
+  it("does not promise a wallet prompt when the channel is drained", () => {
+    const result = paymentFailed(new PaymentError(402, JSON.stringify({ error: "cumulative_exceeds_balance" })));
+
+    expect(result?.status).toBe("payment_failed");
+    expect(result?.reason).toMatch(/no funds left/i);
+    expect(result?.reason).not.toMatch(/signature|approve|appears/i);
+  });
+
   /** Not every failure is a payment failure — a 500 from Brave is the request failing, and the
    *  caller falls through to `fetchFailed` for those. */
   it("returns null for an error that is not a payment failure", () => {

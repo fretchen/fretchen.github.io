@@ -12,11 +12,10 @@ there is one code path and one set of failure statuses to test.
 
 ---
 
-## Status — 19 September 2026
+## Status — 20 September 2026
 
-PR 1 is merged (#682) and deployed. `web-agent.fretchen.eu` sells both routes now. Nothing
-user-facing has moved: the assistant's tools still send the owner bearer, so the paid path has no
-callers until PR 2.
+PR 1 is merged (#682) and deployed. `web-agent.fretchen.eu` sells both routes. **PR 2 is written
+and green on `x402_brave`** — the frontend now pays instead of authenticating.
 
 | Section                  | State                                                         |
 | ------------------------ | ------------------------------------------------------------- |
@@ -24,9 +23,45 @@ callers until PR 2.
 | §2 Prices                | Live at $0.01 / $0.001, still estimates; no Brave invoice yet |
 | §4 PR 1 — seller         | Merged and deployed                                           |
 | §5 Deploy and smoke-test | Done                                                          |
-| §6 PR 2 — buyer          | **Not started — next**                                        |
+| §6 PR 2 — buyer          | **Written, green, awaiting merge** — see deviations below     |
 | §7 PR 3 — discovery      | Not started                                                   |
 | §8 Deferred              | Unchanged; `safesearch: "moderate"` still unpinned            |
+
+### What the payment incident changed for this work
+
+Diagnosing a "payment channel too low" report on a _funded_ channel found our own facilitator's
+`/verify` omitting the scheme's `extra` from its response. The seller's SDK writes its cached
+channel record straight from that field, wholesale, defaulting each key to zero — so every remote
+verify was overwriting the real `balance`, `totalClaimed` and `refundNonce` with zeros.
+
+This matters here more than anywhere else. PR 2 puts `/search` and `/fetch` on the **same channel**
+as the chat, so a turn that searches once and fetches twice runs three verifies where there was one
+— tripling the rate of a bug that empties the cache on every call. Fixed and deployed
+(20 September) **before** merging PR 2, deliberately.
+
+The same deploy exposed a second problem worth recording: `npm run deploy:prod` had been shipping a
+stale bundle for ten days, silently, because npm's `predeploy` hook only fires for the exact script
+name `deploy` and never for a sibling like `deploy:prod`. Every deploy script now chains
+`npm run build` explicitly. Verify a facilitator deploy at the endpoint, never from the CLI's exit
+code:
+
+```bash
+curl -s https://facilitator.fretchen.eu/openapi.json | jq '.components.schemas.VerifyResponse.properties | has("extra")'
+```
+
+### Two deliberate deviations in PR 2 as built
+
+- **Two tool statuses, not three.** `website/tools/failure.ts` implements
+  `channel_busy | payment_failed`; `payment_required` was dropped. `recoverable` is true only for
+  `channel_busy`, which is the behaviour the table in §6 actually wanted — a drained channel and a
+  broken verification are both "do not retry", so they did not need separate names.
+- **The per-turn ceiling withdraws tools rather than failing calls.** `MAX_PAID_CALLS = 6` filters
+  the paid tools out of the offered menu once the budget is spent, so the model sees a smaller menu
+  instead of an error it has to interpret.
+
+`website/utils/x402PaidFetch.ts` also carries client-side drained-channel recovery (`resyncFromChain`
+plus one retry) — the buyer-side mirror of the same drift class, covered by
+`website/test/x402PaidFetch.test.ts`.
 
 **The central claim held.** A run of `notebooks/search_x402_buyer.ipynb` against Base mainnet paid
 for both routes with **no deposit transaction** — each signed a voucher against the channel an
@@ -278,9 +313,10 @@ testnet, it exercises the paths users will actually hit.
 
 ---
 
-## 6. PR 2 — buyer side (`website/`) ← next
+## 6. PR 2 — buyer side (`website/`) ✅ written, green, awaiting merge
 
-Four commits.
+Four commits. All four landed; see _Status_ above for the two places the implementation
+deliberately diverged from what is written below.
 
 **1. Extract the payment client from `useX402Chat`.**
 `sendMessage` (`hooks/useX402Chat.ts:339-374`) builds the signer, `BatchSettlementEvmScheme`,

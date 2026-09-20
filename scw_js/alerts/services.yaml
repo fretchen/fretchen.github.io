@@ -1,0 +1,131 @@
+# Loki alerting rules for the scw_js service functions.
+#
+# Pushed with `npx tsx scripts/alerts.ts --push alerts/services.yaml`; never on deploy. A separate
+# group from `payments.yaml` in the same namespace — pushing one leaves the other alone.
+#
+# Covers llmx402, searchapi, genimgx402token and growthapi. The claim/refund cron is NOT here;
+# `payments.yaml` owns llmx402cron and the facilitator.
+#
+# ── Why now ────────────────────────────────────────────────────────────────────────────────────
+# Because /search and /fetch are becoming paid, public routes. A Brave outage used to degrade a
+# tool the owner used; now it breaks something a stranger has paid for, against a published price
+# list, and nothing anywhere would say so.
+#
+# ── Two things these rules depend on, both checked rather than assumed ──────────────────────────
+# 1. Loki ANCHORS label regexes. `resource_name=~".+llmx402"` matches `…-llmx402` and never
+#    `…-llmx402cron` — verified by query. Without that every rule here would double-fire on the
+#    cron, and it is also what keeps payments.yaml correct.
+# 2. Our pino output reaches Loki as TEXT, not JSON:
+#      50    - <nil> err={…} msg="Refund sweep failed" … source=user
+#    so a rule matches `msg="<exact string>"` to avoid also matching those words inside a
+#    serialized `err`. genimgx402token uses console.* instead of pino, so its lines are plain text
+#    with an `❌` prefix and no `msg=` — matched literally, emoji included.
+#
+# ── Windows ────────────────────────────────────────────────────────────────────────────────────
+# `[1h]`, the maximum Scaleway's ruler accepts (see payments.yaml for the full reasoning). These
+# functions serve continuously rather than on a 12h cron, so an hour is a reasonable window
+# rather than a compromise.
+name: services
+interval: 1m
+rules:
+  # A metered upstream refusing us: 401 (key revoked), 429 (quota), 5xx (their outage). Always our
+  # problem to act on, never the caller's — and the reason this is the first rule is that it breaks
+  # a PAID product silently. The customer's request fails, we never settle, and the only trace is
+  # one log line.
+  #
+  # Only the LLM provider logs its own line (`msg="LLM API error"`, with the status on the line).
+  # Brave and BFL throw instead, so their text is matched where it actually appears — inside the
+  # serialized `err` of whichever handler caught it.
+  - alert: UpstreamProviderFailing
+    expr: |
+      sum(count_over_time({resource_name=~".+(llmx402|searchapi|genimgx402token)"} |~ "msg=\"LLM API error\"|Could not reach Brave|Could not reach BFL" [1h])) > 0
+    for: 0m
+    labels:
+      severity: critical
+      area: services
+    annotations:
+      summary: "A paid upstream (Mistral, Brave or BFL) is refusing our requests"
+      description: >-
+        401 means the key was revoked or rotated, 429 means the quota is spent, 5xx is their
+        outage. The provider and status are on the log line.
+        Investigate: cd scw_js && npx tsx scripts/logs.ts searchapi --since 6h --grep "Could not reach"
+        Also try: npx tsx scripts/logs.ts llmx402 --since 6h --grep "LLM API error"
+
+  # Disjoint from the rule above, and worth its own alert because the fix is different: this one
+  # throws before any HTTP call is made, so no "could not reach" line is ever produced. One string
+  # covers all three products — BRAVE_API_KEY, MISTRAL_API_KEY and BFL_API_TOKEN share the wording.
+  # Always a deploy or secret error, never transient.
+  - alert: ServiceKeyMissing
+    expr: |
+      sum(count_over_time({resource_name=~".+(llmx402|searchapi|genimgx402token)"} |= "API token not found. Please configure the" [1h])) > 0
+    for: 0m
+    labels:
+      severity: critical
+      area: services
+    annotations:
+      summary: "A service is running without its upstream API key"
+      description: >-
+        The env var named in the log line is unset on the deployed function. Secrets come from
+        scw_js/.env via serverless.yml, and an unset one deploys as an EMPTY secret rather than
+        failing the deploy — so this survives a successful-looking deployment.
+        Investigate: cd scw_js && npx tsx scripts/logs.ts searchapi --since 6h --grep "API token not found"
+
+  # The function cannot sell at all: either the x402 seller could not be constructed, or an address
+  # it needs is missing, or the image wallet has run out of gas. Every one of these returns 500 to
+  # every buyer, so none of them is survivable.
+  - alert: PaidPathBroken
+    expr: |
+      sum(count_over_time({resource_name=~".+(llmx402|searchapi|genimgx402token|growthapi)"} |~ "msg=\"Failed to configure batch-settlement resource server\"|NFT_WALLET_PUBLIC_KEY not configured|OWNER_ETH_ADDRESS not configured|❌ Pre-flight check failed:" [1h])) > 0
+    for: 0m
+    labels:
+      severity: critical
+      area: services
+    annotations:
+      summary: "A function cannot serve its paid path (misconfigured, or out of gas)"
+      description: >-
+        Either a secret/address is missing on the deployed function, or genimg's wallet is out of
+        native gas for minting. Both return 500 to every buyer.
+        Investigate: cd scw_js && npx tsx scripts/logs.ts searchapi --since 6h --grep "not configured"
+        For genimg: npx tsx scripts/logs.ts genimgx402token --since 6h --grep "Pre-flight"
+
+  # The only rule here where money actually moved. The payment settled and the image was delivered,
+  # but the NFT never minted — and the caller still got a 200, so nothing else will ever notice. A
+  # customer is owed something specific and identifiable.
+  - alert: PaidButUndelivered
+    expr: |
+      sum(count_over_time({resource_name=~".+genimgx402token"} |= "❌ Mint failed after successful generation:" [1h])) > 0
+    for: 0m
+    labels:
+      severity: critical
+      area: services
+    annotations:
+      summary: "A buyer paid, got the image, and the NFT was never minted"
+      description: >-
+        Settlement succeeded and the response was 200, so this is invisible to the buyer until they
+        look for the token. The mint error and the recipient are on the log line.
+        Investigate: cd scw_js && npx tsx scripts/logs.ts genimgx402token --since 24h --grep "Mint failed"
+
+  # The outcome-level net — the RefundEscrowStuck lesson applied here. These are the outer catch
+  # blocks, and caller faults are split off to 400/404 BEFORE reaching them, so what lands here is
+  # ours or something nobody anticipated. That is the whole point: the specific rules above only
+  # catch causes already thought of.
+  #
+  # The upstream strings are excluded so a Brave or BFL outage pages once, through the rule that
+  # names it, rather than twice.
+  #
+  # Expect to tune this one: odd input that escapes classification lands here too, and /fetch is
+  # about to be public. If it fires on something that turns out to be a caller's fault, classify
+  # that input properly in search_api.ts — do not delete the rule.
+  - alert: ServiceUnhandledError
+    expr: |
+      sum(count_over_time({resource_name=~".+(llmx402|searchapi|genimgx402token|growthapi)"} |~ "msg=\"Request handler error\"|msg=\"Paid request handler error\"|❌ Error during operation:" != "Could not reach Brave" != "Could not reach BFL" != "API token not found" [1h])) > 0
+    for: 0m
+    labels:
+      severity: warning
+      area: services
+    annotations:
+      summary: "A service threw an error it could not classify as the caller's fault"
+      description: >-
+        The outer catch. Bad input already returned 400/404 before this point, so this is a bug, an
+        upstream nobody has a rule for yet, or S3 failing. The cause is in the serialized err.
+        Investigate: cd scw_js && npx tsx scripts/logs.ts searchapi --since 6h --grep "handler error"

@@ -136,6 +136,22 @@ export async function runToolLoop<S extends string>(
     // safe and would have overlapped the round-trips.)
     for (const call of toolCalls) {
       if (isPaid.has(call.function.name)) {
+        // The cap has to bite here and not only on the next hop's menu: one hop can ask for a
+        // dozen searches, and the menu filter above runs after every one of them has been paid
+        // for. Answered rather than skipped, because every tool_call needs a matching result or
+        // the next request is malformed.
+        if (paidCalls >= MAX_PAID_CALLS) {
+          failedTools.add(call.function.name);
+          convo.push({
+            role: "tool",
+            tool_call_id: call.id,
+            content: JSON.stringify({
+              status: "budget_exhausted",
+              reason: "This turn's budget for paid tools is used up. Answer with what you already have.",
+            }),
+          });
+          continue;
+        }
         paidCalls++;
       }
       const { result, imageUrl, recoverable } = await runToolCall(call);

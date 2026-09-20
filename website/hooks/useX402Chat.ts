@@ -12,7 +12,7 @@
  * `scw_js/notebooks/sc_llm_x402_buyer.ipynb`.
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useWalletClient } from "wagmi";
 import { getConfiguredPublicClient } from "./useConfiguredPublicClient";
 import { useIsWalletConnected } from "./useIsWalletConnected";
@@ -84,12 +84,19 @@ export function useX402Chat(network: string, agentUrl: string = DEFAULT_LLM_AGEN
   const [negotiated, setNegotiated] = useState<{ agentUrl: string; preferred: string; network: string } | null>(null);
   const paymentNetwork =
     negotiated?.agentUrl === agentUrl && negotiated?.preferred === network ? negotiated.network : network;
+  // The network the last send actually paid on. `paymentNetwork` is the rendered value and can lag
+  // a send-time renegotiation by a render, but the tools of that same turn must spend on the
+  // channel the turn opened — a different network computes a different channelId, which is a
+  // second channel and a second deposit. Cleared by the probe effect, so a changed agent or
+  // preference does not inherit the old turn's answer.
+  const payNetworkRef = useRef<string | null>(null);
 
   // Probe the agent up front so the UI (and the caller's chain switch) knows which network
   // will be paid before the user hits send. Leaves the preferred network in place when the
   // agent can't be read — sendMessage negotiates again for real and reports any mismatch.
   useEffect(() => {
     let cancelled = false;
+    payNetworkRef.current = null;
     void probeAccepts(agentUrl).then((accepts) => {
       if (cancelled) return;
       const result = negotiateNetwork(accepts, network);
@@ -124,6 +131,9 @@ export function useX402Chat(network: string, agentUrl: string = DEFAULT_LLM_AGEN
       // that — proceed on the preferred network and let the real 402 be the judge.
       const payNetwork = resolved ?? network;
       setNegotiated({ agentUrl, preferred: network, network: payNetwork });
+      // Synchronously, unlike the state above: this turn's tool calls read it during the very
+      // loop this send belongs to, long before a re-render could deliver the state.
+      payNetworkRef.current = payNetwork;
 
       // A readContract-capable client is required: batch-settlement's corrective-402
       // recovery reads channel state on-chain, unlike the exact scheme. Resolved here, not
@@ -166,6 +176,15 @@ export function useX402Chat(network: string, agentUrl: string = DEFAULT_LLM_AGEN
           }),
         });
 
+        // `paidFetch` throws for a payment failure and hands back everything else, so a non-OK here
+        // is the agent's own error and this is where it becomes one. Without this, a 500 body would
+        // be parsed as a completion. The wording matches `describePaymentError`'s fallback, and its
+        // special cases (channel_busy, cumulative_exceeds_balance, insufficient_balance) only ever
+        // arrive on a 402, so nothing the user reads changes.
+        if (!response.ok) {
+          throw new Error(`Request failed: ${response.status} - ${await response.text()}`);
+        }
+
         setStatus("processing");
 
         const result = (await response.json()) as X402ChatResponse;
@@ -192,8 +211,11 @@ export function useX402Chat(network: string, agentUrl: string = DEFAULT_LLM_AGEN
    * A `fetch` that pays on **this chat's channel**, for the paid tools `/assistent` offers during
    * a turn (`scw_js/search_api.ts` sells as the same receiver, so the channel is the same one).
    *
-   * Bound to `paymentNetwork`, not to the caller's preference: registering a different network
-   * would compute a different `channelId` and open a second channel the user has to fund again.
+   * Bound to the network the turn's own send negotiated, not to the caller's preference and not to
+   * the rendered `paymentNetwork` (which can still hold a stale mount-time probe): registering a
+   * different network would compute a different `channelId` and open a second channel the user has
+   * to fund again. `paymentNetwork` is only the fallback for a call before any send, which the tool
+   * loop never makes — it pays first, then runs tools.
    *
    * No status juggling here — a tool failure is the model's to report, not the chat UI's, so this
    * deliberately leaves `status` alone and lets `PaymentError` reach the caller.
@@ -203,11 +225,12 @@ export function useX402Chat(network: string, agentUrl: string = DEFAULT_LLM_AGEN
       if (!walletClient) {
         throw new Error("Wallet not connected");
       }
-      const publicClient = getConfiguredPublicClient(paymentNetwork);
+      const payNetwork = payNetworkRef.current ?? paymentNetwork;
+      const publicClient = getConfiguredPublicClient(payNetwork);
       if (!publicClient) {
-        throw new Error(`No public client for network ${paymentNetwork}`);
+        throw new Error(`No public client for network ${payNetwork}`);
       }
-      const client = await createPaidFetch({ walletClient, publicClient, network: paymentNetwork });
+      const client = await createPaidFetch({ walletClient, publicClient, network: payNetwork });
       return client.paidFetch(input, init);
     },
     [walletClient, paymentNetwork],

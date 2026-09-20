@@ -266,6 +266,35 @@ describe("runToolLoop", () => {
       expect(offeredOn(payAndSend, 1)).toContain("paid_tool");
     });
 
+    /**
+     * The case the budget exists for, and the one the tests above miss by asking for exactly the
+     * budget: a single hop that asks for MORE. Withdrawing the tool from the next hop's menu is no
+     * defence here, because the menu is built after every one of these calls has already been paid
+     * for. Each call still needs a result of its own — an assistant turn with a tool_call and no
+     * matching `role: "tool"` message is a malformed request on the next hop.
+     */
+    it("stops paying inside the hop that overshoots, and answers the calls it refused", async () => {
+      const overshoot = MAX_PAID_CALLS + 3;
+      const payAndSend = vi
+        .fn()
+        .mockResolvedValueOnce(manyCallsInOneHop("paid_tool", overshoot))
+        .mockResolvedValue(textTurn("done"));
+      const runToolCall = vi.fn().mockResolvedValue({ result: { status: "ok" } });
+      const messages = convo();
+
+      const result = await runToolLoop(messages, paidOffered, deps(payAndSend, runToolCall));
+
+      expect(runToolCall).toHaveBeenCalledTimes(MAX_PAID_CALLS);
+      const toolResults = messages.filter((m) => m.role === "tool");
+      expect(toolResults).toHaveLength(overshoot);
+      expect(toolResults.filter((m) => String(m.content).includes("budget_exhausted"))).toHaveLength(
+        overshoot - MAX_PAID_CALLS,
+      );
+      // The turn still closes with an answer rather than erroring out.
+      expect(result.finalContent).toBe("done");
+      expect(offeredOn(payAndSend, 1)).toEqual(["free_tool"]);
+    });
+
     /** A free tool called many times costs nothing, so it must not consume the budget. */
     it("does not count free tool calls against the budget", async () => {
       const payAndSend = vi

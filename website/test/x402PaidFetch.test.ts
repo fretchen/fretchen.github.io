@@ -146,6 +146,39 @@ describe("createPaidFetch", () => {
   });
 
   /**
+   * The contract, and the one this module got wrong: only a 402 is a payment failure. The seller
+   * refuses a url or a query with a 400 AFTER the payment has verified, so throwing there told the
+   * user their payment had failed when it had not, and withdrew the tool for the rest of the turn
+   * over a mistake the model could have corrected in one hop. Nothing else pins this — the tools'
+   * own tests stub a `paidFetch` that behaves correctly.
+   */
+  it("hands back the resource's own refusal instead of calling it a payment failure", async () => {
+    seedChannel();
+    mockPaidTransport.mockResolvedValueOnce(jsonResponse(400, { error: "url resolves to a non-public address" }));
+
+    const { paidFetch } = await makeClient();
+    const res = await paidFetch("https://web-agent.fretchen.eu/fetch?url=http://10.0.0.1/");
+
+    expect(res.ok).toBe(false);
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toMatchObject({ error: expect.stringContaining("non-public address") });
+    // Not a payment problem, so nothing on-chain is consulted and nothing is retried.
+    expect(mockReadChannelBalanceAndTotalClaimed).not.toHaveBeenCalled();
+    expect(mockPaidTransport).toHaveBeenCalledTimes(1);
+  });
+
+  it("hands back an upstream 500 the same way", async () => {
+    seedChannel();
+    mockPaidTransport.mockResolvedValueOnce(jsonResponse(500, { error: "Internal server error" }));
+
+    const { paidFetch } = await makeClient();
+    const res = await paidFetch("https://web-agent.fretchen.eu/search?q=x");
+
+    expect(res.status).toBe(500);
+    expect(mockPaidTransport).toHaveBeenCalledTimes(1);
+  });
+
+  /**
    * The drained-channel path, and the reason it exists: the SDK tops up from the `balance` on our
    * own cached record rather than from the chain, so a record that has drifted low suppresses the
    * top-up and the call fails on an escrow that is actually funded. Re-reading the chain and

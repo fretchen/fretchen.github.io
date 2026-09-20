@@ -303,6 +303,30 @@ describe("useX402Chat", () => {
       expect(result.current.error).toContain("402");
     });
 
+    /**
+     * `paidFetch` hands a non-402 back as a Response rather than throwing, because the paid tools
+     * need to read the seller's own refusal. The chat has no use for one, so it must still fail
+     * here — otherwise a 500's body would be parsed as a completion and rendered as an answer.
+     */
+    it("rethrows a non-payment HTTP failure rather than parsing the body as a completion", async () => {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("upstream exploded", { status: 500 })));
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+
+      let thrown: Error | undefined;
+      await act(async () => {
+        try {
+          await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+        } catch (err) {
+          thrown = err as Error;
+        }
+      });
+
+      expect(thrown?.message).toContain("500");
+      expect(thrown?.message).toContain("upstream exploded");
+      expect(result.current.status).toBe("error");
+    });
+
     it("surfaces a friendly, actionable message for a channel_busy 402", async () => {
       // The transient per-channel lock the server holds across verify→settle. The raw code
       // is opaque and the client SDK does not auto-recover from it, so the hook maps it to
@@ -721,6 +745,46 @@ describe("useX402Chat", () => {
       expect(thrown?.message).toContain("eip155:42161");
       expect(thrown?.message).toContain(OPTIMISM);
       expect(mockRegister).not.toHaveBeenCalled();
+    });
+
+    /**
+     * The turn's tool calls must spend on the channel the turn opened. The mount-time probe can
+     * fail transiently, leaving the rendered `paymentNetwork` on the preference while the send-time
+     * probe negotiates something else — and the running loop holds the `paidFetch` closure from
+     * before that render. Binding to the rendered value there paid on the wrong chain, which is a
+     * different channelId: a second channel, a second $0.50 deposit and a wallet prompt mid-turn.
+     *
+     * `paidFetch` is deliberately called from the pre-send closure, because that is what the tool
+     * loop does — reading `result.current.paidFetch` after the act would re-render the bug away.
+     */
+    it("pays for tools on the network the send negotiated, not the one that was rendered", async () => {
+      let probes = 0;
+      const accepts = [{ scheme: "batch-settlement", network: BASE, payTo: "0xabc" }];
+      const header = btoa(JSON.stringify({ accepts }));
+      vi.stubGlobal(
+        "fetch",
+        vi.fn((_input: string, init?: RequestInit) => {
+          if (!isProbeRequest(init)) {
+            return Promise.resolve(new Response(JSON.stringify({ content: "hi" }), { status: 200 }));
+          }
+          // The mount probe fails; the send-time one succeeds and offers only BASE.
+          probes += 1;
+          return probes === 1
+            ? Promise.reject(new TypeError("Failed to fetch"))
+            : Promise.resolve(new Response("{}", { status: 402, headers: { "Payment-Required": header } }));
+        }),
+      );
+
+      const { result } = renderHook(() => useX402Chat(OPTIMISM));
+      // Captured before the send, exactly as the tool loop captures it for the turn.
+      const paidFetchForTurn = result.current.paidFetch;
+
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+        await paidFetchForTurn("https://web-agent.fretchen.eu/search?q=x");
+      });
+
+      expect(mockRegister.mock.calls.map((call) => call[0])).toEqual([BASE, BASE]);
     });
 
     it("proceeds on the preferred network when the agent can't be read (CORS/offline)", async () => {

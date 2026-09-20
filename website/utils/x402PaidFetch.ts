@@ -276,8 +276,9 @@ function isDrainedChannel(body: string): boolean {
   return errorCodeOf(body)?.includes("cumulative_exceeds_balance") ?? false;
 }
 
-/** A `fetch` that pays. Throws `PaymentError` when the payment itself fails; an HTTP error from
- *  the resource behind it comes back as a non-OK `Response` for the caller to read. */
+/** A `fetch` that pays. Throws `PaymentError` when the payment itself fails — a 402, which is what
+ *  every payment failure answers with; an HTTP error from the resource behind it comes back as a
+ *  non-OK `Response` for the caller to read. */
 export type PaidFetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 export interface PaidFetchOptions {
@@ -375,6 +376,15 @@ export async function createPaidFetch({
       return response;
     }
 
+    // Only a 402 is a payment failure. `scw_js/search_api.ts` answers 402 for every one of them —
+    // verify, settle, unsupported network — and 400/404/500 for its own refusals (a blocked url, a
+    // bad query, an unsupported content type), which it raises AFTER verification and which the
+    // caller is meant to read and act on. Throwing on those turned a correctable refusal into
+    // "payment failed" and withdrew the tool for the rest of the turn.
+    if (response.status !== 402) {
+      return response;
+    }
+
     // A Response body is single-use, so read it once here and once more after any retry.
     const errorText = await response.text();
 
@@ -391,7 +401,8 @@ export async function createPaidFetch({
       await storage.resyncFromChain((id) => readChannelBalanceAndTotalClaimed(signer, id));
       onTopUp?.();
       response = await fetchWithPayment(input, init);
-      if (!response.ok) {
+      // Same rule as above: the retry can land on the resource's own refusal just as easily.
+      if (response.status === 402) {
         throw new PaymentError(response.status, await response.text());
       }
       return response;

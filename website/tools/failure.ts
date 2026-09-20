@@ -1,4 +1,4 @@
-import { PaymentError } from "../utils/x402PaidFetch";
+import { PaymentError, DRAINED_CHANNEL_MESSAGE } from "../utils/x402PaidFetch";
 
 /**
  * Turning a thrown error into something a tool can hand back to the model.
@@ -49,15 +49,10 @@ export function paymentFailed(err: unknown): PaymentFailure | null {
       reason: "The payment channel is busy settling the previous request. It clears within seconds.",
     };
   }
-  // Its own wording rather than `PaymentError`'s, which was written for the chat — where the user
-  // resends and the SDK deposits on the way. Mid-turn there is nothing to approve, and a tool that
-  // told the model to promise a wallet prompt sent a real user looking for a popup that could not
-  // appear. State the situation; the next message is what triggers the top-up.
+  // The tool reading of the same condition, not `PaymentError`'s, which is written for the chat.
+  // Both wordings live together in `DRAINED_CHANNEL_MESSAGE`, which says why they differ.
   if (err.isDrainedChannel) {
-    return {
-      status: "payment_failed",
-      reason: "The payment channel has no funds left for this call. It needs a top-up before the web tools work again.",
-    };
+    return { status: "payment_failed", reason: DRAINED_CHANNEL_MESSAGE.tool };
   }
   return { status: "payment_failed", reason: describeFailure(err) };
 }

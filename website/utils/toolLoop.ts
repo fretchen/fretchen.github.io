@@ -132,8 +132,8 @@ export async function runToolLoop<S extends string>(
 
     // Serial, and it has to stay that way: the paid tools spend vouchers on ONE payment channel,
     // and the server holds a per-channel lock from verify to settle, so two in flight is
-    // `channel_busy` by construction. (Before they charged, `Promise.all` here would have been
-    // safe and would have overlapped the round-trips.)
+    // `channel_busy` by construction. `Promise.all` here would overlap the round-trips and break
+    // exactly that.
     for (const call of toolCalls) {
       if (isPaid.has(call.function.name)) {
         // The cap has to bite here and not only on the next hop's menu: one hop can ask for a

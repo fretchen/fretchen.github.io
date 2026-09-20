@@ -10,8 +10,8 @@ import type {
 /**
  * One x402 batch-settlement payment channel, as a `fetch`.
  *
- * Lifted out of `useX402Chat.ts`, which built all of this inline, because the chat is no longer
- * the only thing that spends: `/assistent`'s `search_web` and `fetch_url` tools bill onto the
+ * Shared by everything on the site that spends, not just the chat: `/assistent`'s `search_web` and
+ * `fetch_url` tools bill onto the
  * **same channel** (`scw_js/search_api.ts` sells as the same receiver, and `computeChannelId`
  * hashes payer, payerAuthorizer, receiver, receiverAuthorizer, token, withdrawDelay and salt — so
  * same wallet plus same voucher signer plus same receiver means the same channel, already funded).
@@ -60,18 +60,17 @@ export class WebStorageClientChannelStorage implements ClientChannelStorage {
   /**
    * Re-read every cached channel's true state from the chain.
    *
-   * This replaces a `forceDeposit()` that set `balance: "0"` to make the SDK deposit again.
-   * That was a one-way door. `BatchSettlementEvmScheme.createPaymentPayload` decides from
-   * `balance` on THIS record and never from the chain, and the SDK's only writer for it,
-   * `updateChannelFromSettle`, is **additive** — `balance = previous.balance + depositAmount`.
-   * The server's settle response carries a cumulative charge, never an absolute balance, so
-   * nothing could ever restore a zeroed figure. Meanwhile `maxClaimableAmount` stayed
-   * lifetime-absolute, so the zeroed record kept losing the comparison and every message
-   * signed a fresh $0.50 deposit. That locked ~$7.40 of escrow across 15 deposits against
-   * ~$0.10 of real usage.
+   * **Never zero `balance` to force a deposit instead.** That is a one-way door:
+   * `BatchSettlementEvmScheme.createPaymentPayload` decides from `balance` on THIS record and never
+   * from the chain, and the SDK's only writer for it, `updateChannelFromSettle`, is **additive**
+   * (`balance = previous.balance + depositAmount`). The server's settle response carries a
+   * cumulative charge, never an absolute balance, so nothing can restore a zeroed figure. Meanwhile
+   * `maxClaimableAmount` is lifetime-absolute, so a zeroed record keeps losing the comparison and
+   * every message signs a fresh $0.50 deposit — which once locked ~$7.40 of escrow across 15
+   * deposits against ~$0.10 of real usage.
    *
-   * Reading the chain puts `balance` back in the same coordinate system as
-   * `maxClaimableAmount`, which is the whole bug.
+   * Reading the chain puts `balance` back in the same coordinate system as `maxClaimableAmount`,
+   * which is the whole point.
    *
    * `chargedCumulativeAmount` keeps the local value when it is ahead. This deliberately
    * differs from the SDK's `recoverChannel`, which resets it to the on-chain `totalClaimed`:
@@ -85,11 +84,9 @@ export class WebStorageClientChannelStorage implements ClientChannelStorage {
    * normal case — and overwriting it would strand that escrow. The network tag below narrows this
    * further: another chain's record is skipped before an RPC read is even spent on it.
    *
-   * This briefly deleted such records instead, on the theory that a zero meant the record was
-   * fiction. It was the wrong way round. The case that prompted it — a chat refusing every request
-   * with `cumulative_exceeds_balance` — turned out to be the *server's* cached balance reading 0
-   * while the chain held 544239 and this record said so correctly. The client has been right each
-   * time it has been checked; `scw_js/x402_channel_sync.ts` documents why the server's copy drifts.
+   * Deleting such a record as fiction is the wrong instinct. When a chat refuses every request with
+   * `cumulative_exceeds_balance`, the client is not the suspect — it has been right every time it
+   * has been checked; `scw_js/x402_channel_sync.ts` documents why the *server's* copy drifts.
    */
   async resyncFromChain(read: (channelId: `0x${string}`) => Promise<readonly [bigint, bigint]>): Promise<void> {
     for (let i = 0; i < this.backend.length; i++) {
@@ -117,7 +114,7 @@ export class WebStorageClientChannelStorage implements ClientChannelStorage {
       try {
         [chainBalance, chainTotalClaimed] = await read(channelId);
       } catch {
-        // An RPC failure must not corrupt a good record — that was the old behaviour's sin.
+        // An RPC failure must not corrupt a good record.
         continue;
       }
 
@@ -180,8 +177,8 @@ function getOrCreateVoucherSigner(walletAddress: string) {
 // they have to wait out withdrawDelay to exit unilaterally. Both are trivial at $0.50;
 // neither improves by going lower, so lower just buys more top-up friction for no benefit.
 //
-// The tool calls added in PR 2 do not move this: a search is $0.01 and a fetch $0.001
-// against a $0.50 escrow.
+// The paid tool calls do not move this: a search is $0.01 and a fetch $0.001 against a
+// $0.50 escrow.
 export const MINIMUM_DEPOSIT_ATOMIC = 500_000n;
 
 /**
@@ -196,6 +193,20 @@ function depositStrategy(context: BatchSettlementDepositStrategyContext): string
   const required = BigInt(context.minimumDepositAmount);
   return (required > MINIMUM_DEPOSIT_ATOMIC ? required : MINIMUM_DEPOSIT_ATOMIC).toString();
 }
+
+/**
+ * The two readings of a drained channel, side by side because they describe one condition and would
+ * otherwise drift apart in separate files.
+ *
+ * The chat's wording promises a wallet prompt, which is right there: the user resends and the SDK
+ * deposits on the way. Mid-turn there is nothing to approve, so the tool wording must not send
+ * someone looking for a popup that cannot appear — it states the situation and leaves the top-up to
+ * the next message.
+ */
+export const DRAINED_CHANNEL_MESSAGE = {
+  chat: "Your payment channel needs topping up. Approve the wallet signature when it appears, then send again.",
+  tool: "The payment channel has no funds left for this call. It needs a top-up before the web tools work again.",
+} as const;
 
 /** The `error` code in a non-OK payment response body, or undefined when there is none. */
 function errorCodeOf(body: string): string | undefined {
@@ -221,10 +232,10 @@ function describePaymentError(status: number, body: string): string {
   }
   // The facilitator has a separate code for an underfunded wallet (see below), so reaching this
   // one means the money is there and the deposit itself did not go through — realistically a
-  // declined or dismissed signature prompt. Saying "check you have USDC" here, as this used to,
-  // sends people to look at the one thing already known to be fine.
+  // declined or dismissed signature prompt. Saying "check you have USDC" here would send people to
+  // look at the one thing already known to be fine.
   if (errorCode?.includes("cumulative_exceeds_balance")) {
-    return "Your payment channel needs topping up. Approve the wallet signature when it appears, then send again.";
+    return DRAINED_CHANNEL_MESSAGE.chat;
   }
   if (errorCode?.includes("insufficient_balance")) {
     return "Not enough USDC in your wallet to fund the payment channel. Note that only native USDC works — a bridged variant such as USDC.e cannot be used.";
@@ -392,9 +403,8 @@ export async function createPaidFetch({
       // The SDK would have topped up on its own, but decides from the `balance` on our cached
       // record, which had drifted from the chain. Re-read the truth and let the SDK decide: if
       // the channel really is short, its own `needsTopUp` fires and the retry carries a deposit;
-      // if it is not, no deposit is signed and the retry fails honestly. The predecessor zeroed
-      // `balance` instead, which forced a $0.50 deposit whether one was needed or not — see
-      // resyncFromChain().
+      // if it is not, no deposit is signed and the retry fails honestly. Not by zeroing `balance`,
+      // which would force a $0.50 deposit whether one was needed or not — see resyncFromChain().
       //
       // Once only: looping here would re-read on every pass if the true problem were something
       // else.

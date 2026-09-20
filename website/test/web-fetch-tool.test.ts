@@ -152,6 +152,7 @@ describe("registry", () => {
 
     expect(entry?.ownerScope).toBeNull();
     expect(entry?.defaultAgentOnly).toBe(true);
+    expect(entry?.paid).toBe(true);
     // The citation is the url itself, carried in the result — no source line to render.
     expect(entry?.source).toBeNull();
   });

@@ -90,18 +90,20 @@ type ToolSource = "bundestakt" | "analytics" | "brave";
 
 /**
  * Everything offered to the model, with what the chat loop needs to know about a tool besides its
- * schema: who may be offered it, whether a stranger's agent may be, and whether its answer must
- * cite a source.
+ * schema: who may be offered it, whether a stranger's agent may be, whether it costs the user
+ * money, and whether its answer must cite a source.
  *
  * `ownerScope: null` means anyone; an owner scope means the endpoint answers 401 to everyone else,
  * so offering it to a visitor would burn a hop on a guaranteed failure and put the tool's
  * description in front of the upstream model for people it can never serve.
  *
- * `defaultAgentOnly` is the separate question, and the two came apart when the web tools started
- * charging instead of checking a signature: they are open to every visitor and still must never be
- * offered while a third-party agent is selected. See `availableTools`.
+ * `defaultAgentOnly` is a separate question from `ownerScope`, because a tool can be open to every
+ * visitor and still be one a third-party agent must never be handed. See `availableTools`.
  *
- * All three fields are required, so adding a tool and forgetting a gate is a type error rather than
+ * `paid` means the runner spends USDC per call, which is what `runToolLoop` bounds. The image tool
+ * is deliberately not `paid`: it pays on its own scheme and asks the user first.
+ *
+ * All four fields are required, so adding a tool and forgetting a gate is a type error rather than
  * a silently ungated tool. The metadata sits beside the tool rather than on it because these
  * objects go on the wire as `tools:` — extra keys would be sent upstream.
  *
@@ -109,28 +111,51 @@ type ToolSource = "bundestakt" | "analytics" | "brave";
  * the array itself stays constant.
  */
 export const TOOL_REGISTRY = [
-  { tool: generateImageTool, label: "Image generation", ownerScope: null, defaultAgentOnly: false, source: null },
+  {
+    tool: generateImageTool,
+    label: "Image generation",
+    ownerScope: null,
+    defaultAgentOnly: false,
+    paid: false,
+    source: null,
+  },
   {
     tool: getSitzungenTool,
     label: "Bundestag sessions",
     ownerScope: null,
     defaultAgentOnly: false,
+    paid: false,
     source: "bundestakt",
   },
-  { tool: searchClaimsTool, label: "Fact-checks", ownerScope: null, defaultAgentOnly: false, source: "bundestakt" },
-  { tool: getPageTool, label: "Site content", ownerScope: null, defaultAgentOnly: false, source: null },
+  {
+    tool: searchClaimsTool,
+    label: "Fact-checks",
+    ownerScope: null,
+    defaultAgentOnly: false,
+    paid: false,
+    source: "bundestakt",
+  },
+  { tool: getPageTool, label: "Site content", ownerScope: null, defaultAgentOnly: false, paid: false, source: null },
   // Open to anyone — the visitor pays $0.01 per search from the channel their chat already
   // funded — but never offered to a third-party agent, which would be spending someone else's
   // escrow on prompts of its own choosing.
-  { tool: searchWebTool, label: "Web search", ownerScope: null, defaultAgentOnly: true, source: "brave" },
+  {
+    tool: searchWebTool,
+    label: "Web search",
+    ownerScope: null,
+    defaultAgentOnly: true,
+    paid: true,
+    source: "brave",
+  },
   // Same terms as search, at a tenth the price. `source: null` because the citation *is* the url,
   // which the result carries and the prompt already requires the answer to link.
-  { tool: fetchUrlTool, label: "Fetch URL", ownerScope: null, defaultAgentOnly: true, source: null },
+  { tool: fetchUrlTool, label: "Fetch URL", ownerScope: null, defaultAgentOnly: true, paid: true, source: null },
   {
     tool: getAnalyticsTool,
     label: "Site analytics",
     ownerScope: "analytics",
     defaultAgentOnly: true,
+    paid: false,
     source: "analytics",
   },
 ] as const satisfies readonly {
@@ -140,12 +165,10 @@ export const TOOL_REGISTRY = [
   ownerScope: OwnerScope | null;
   /** Withheld while a custom agent is selected, whoever the user is. */
   defaultAgentOnly: boolean;
+  /** The runner spends USDC per call, so it counts against the turn's budget. */
+  paid: boolean;
   source: ToolSource | null;
 }[];
-
-/** The tools whose runners spend USDC per call, so `runToolLoop` can bound a turn's bill. The
- *  image tool is deliberately absent: it pays on its own scheme and already asks the user first. */
-const PAID_TOOLS = new Set<string>([searchWebTool.function.name, fetchUrlTool.function.name]);
 
 // Hoisted so the array identity is stable across renders. Mainnet-only on purpose — see the
 // useAutoNetwork call in the component for why a testnet entry here would be a real hazard.
@@ -769,9 +792,7 @@ export function AssistantChat() {
       // user switched off in the ToolSelector. Failures within the turn are the loop's business.
       const offeredTools = availableTools
         .filter((entry) => !disabledTools.has(entry.tool.function.name))
-        // `paid` is derived from the registry rather than stored on it: what makes these two cost
-        // money is that their runners spend through `paidFetch`, and that is visible right here.
-        .map((entry) => ({ tool: entry.tool, source: entry.source, paid: PAID_TOOLS.has(entry.tool.function.name) }));
+        .map((entry) => ({ tool: entry.tool, source: entry.source, paid: entry.paid }));
 
       const { finalContent, finalImageUrl, sources } = await runToolLoop<ToolSource>(convo, offeredTools, {
         ensureReady: async () => {

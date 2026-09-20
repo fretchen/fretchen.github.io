@@ -7,10 +7,10 @@ import type { PaymentFailure } from "./failure";
  * Web search as a tool for the chat model, bought from the `searchapi` function
  * (`scw_js/search_api.ts`), which proxies Brave's LLM Context API.
  *
- * Paid rather than gated, since PR 2: Brave bills per query, and x402 is how a visitor covers that
- * without an allowlist. $0.01 a call, settled as a voucher on the channel the chat already opened,
- * so it costs no wallet prompt. The paid fetch arrives as a parameter rather than from a hook, like
- * the auth token it replaced, so this module stays React-free and testable without a wallet.
+ * Paid rather than gated: Brave bills per query, and x402 is how a visitor covers that without an
+ * allowlist. $0.01 a call, settled as a voucher on the channel the chat already opened, so it costs
+ * no wallet prompt. The paid fetch arrives as a parameter rather than from a hook, so this module
+ * stays React-free and testable without a wallet.
  *
  * The server already projects Brave's payload down. This module caps it again — not from distrust
  * of our own endpoint, but because the size of a tool result is this module's promise to the chat

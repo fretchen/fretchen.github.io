@@ -132,5 +132,8 @@ describe("registry", () => {
     expect(entry?.ownerScope).toBeNull();
     expect(entry?.defaultAgentOnly).toBe(true);
     expect(entry?.source).toBe("brave");
+    // The type forces the field to be present, not to be right — and wrong here means the turn's
+    // spend is unbounded, which nothing else would notice.
+    expect(entry?.paid).toBe(true);
   });
 });

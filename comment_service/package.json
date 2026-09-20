@@ -15,8 +15,7 @@
     "format:check": "prettier --check \"**/*.{ts,js,json,md}\"",
     "typecheck": "tsc --noEmit",
     "check": "npm run lint && npm run format:check && npm run typecheck && npm run test:coverage",
-    "predeploy": "npm run build",
-    "deploy": "serverless deploy",
+    "deploy": "npm run build && serverless deploy",
     "info": "serverless info",
     "logs": "serverless logs -f comments",
     "remove": "serverless remove"

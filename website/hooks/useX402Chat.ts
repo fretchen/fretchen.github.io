@@ -12,13 +12,12 @@
  * `scw_js/notebooks/sc_llm_x402_buyer.ipynb`.
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useWalletClient } from "wagmi";
-import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
 import { getConfiguredPublicClient } from "./useConfiguredPublicClient";
 import { useIsWalletConnected } from "./useIsWalletConnected";
 import { probeAccepts, negotiateNetwork, LLM_V1_FLOOR } from "./x402Discovery";
-import { buildUsdcAllowedAssets } from "./x402SpendControls";
+import { createPaidFetch, type PaidFetch } from "../utils/x402PaidFetch";
 import type {
   X402ChatMessage,
   X402ChatResponse,
@@ -26,12 +25,6 @@ import type {
   X402GenerationStatus,
   X402Tool,
 } from "../types/x402";
-// Type-only import — erased at compile time, so no @x402 runtime is pulled into SSR.
-import type {
-  ClientChannelStorage,
-  BatchSettlementClientContext,
-  BatchSettlementDepositStrategyContext,
-} from "@x402/evm/batch-settlement/client";
 
 // Default batch-settlement chat agent — fretchen's own llm/v1 endpoint (the origin
 // advertised in scw_js/openapi.llm.json). Override for local dev with
@@ -45,198 +38,6 @@ export const DEFAULT_LLM_AGENT_URL =
 // advertises in its openapi.json (the default fretchen agent serves mistral-large-latest).
 const LLM_MODEL = (import.meta.env.PUBLIC_ENV__LLM_MODEL as string | undefined) ?? "mistral-large-latest";
 
-/**
- * Client-side `ClientChannelStorage` backed by the Web Storage API. Persists channel
- * state to `localStorage` so an open channel survives a page reload (the browser
- * equivalent of the notebook's file/localStorage storage). Channel context is all
- * strings, so plain JSON round-trips cleanly.
- */
-export class WebStorageClientChannelStorage implements ClientChannelStorage {
-  constructor(
-    private backend: Storage,
-    private prefix = "x402-channel:",
-  ) {}
-  private keyFor(key: string) {
-    return `${this.prefix}${key.toLowerCase()}`;
-  }
-  get(key: string): Promise<BatchSettlementClientContext | undefined> {
-    const raw = this.backend.getItem(this.keyFor(key));
-    return Promise.resolve(raw ? (JSON.parse(raw) as BatchSettlementClientContext) : undefined);
-  }
-  set(key: string, context: BatchSettlementClientContext): Promise<void> {
-    this.backend.setItem(this.keyFor(key), JSON.stringify(context));
-    return Promise.resolve();
-  }
-  delete(key: string): Promise<void> {
-    this.backend.removeItem(this.keyFor(key));
-    return Promise.resolve();
-  }
-  /**
-   * Re-read every cached channel's true state from the chain.
-   *
-   * This replaces a `forceDeposit()` that set `balance: "0"` to make the SDK deposit again.
-   * That was a one-way door. `BatchSettlementEvmScheme.createPaymentPayload` decides from
-   * `balance` on THIS record and never from the chain, and the SDK's only writer for it,
-   * `updateChannelFromSettle`, is **additive** — `balance = previous.balance + depositAmount`.
-   * The server's settle response carries a cumulative charge, never an absolute balance, so
-   * nothing could ever restore a zeroed figure. Meanwhile `maxClaimableAmount` stayed
-   * lifetime-absolute, so the zeroed record kept losing the comparison and every message
-   * signed a fresh $0.50 deposit. That locked ~$7.40 of escrow across 15 deposits against
-   * ~$0.10 of real usage.
-   *
-   * Reading the chain puts `balance` back in the same coordinate system as
-   * `maxClaimableAmount`, which is the whole bug.
-   *
-   * `chargedCumulativeAmount` keeps the local value when it is ahead. This deliberately
-   * differs from the SDK's `recoverChannel`, which resets it to the on-chain `totalClaimed`:
-   * settlement here is batched by `scw_js/llm_x402_cron.ts`, so `totalClaimed` legitimately
-   * lags the server's cumulative, and adopting the lagging figure makes the client sign a
-   * voucher below the server's state and collect `cumulative_amount_mismatch`. Floor it at
-   * the chain's `totalClaimed` regardless, since a cumulative below that is never valid.
-   */
-  async resyncFromChain(read: (channelId: `0x${string}`) => Promise<readonly [bigint, bigint]>): Promise<void> {
-    for (let i = 0; i < this.backend.length; i++) {
-      const key = this.backend.key(i);
-      if (!key?.startsWith(this.prefix)) continue;
-      const raw = this.backend.getItem(key);
-      if (!raw) continue;
-
-      let context: BatchSettlementClientContext;
-      try {
-        context = JSON.parse(raw) as BatchSettlementClientContext;
-      } catch {
-        // Unparseable record: leave it alone. The SDK treats it as absent and recovers, which
-        // is no worse than what we would write over it.
-        continue;
-      }
-
-      const channelId = key.slice(this.prefix.length) as `0x${string}`;
-      let chainBalance: bigint;
-      let chainTotalClaimed: bigint;
-      try {
-        [chainBalance, chainTotalClaimed] = await read(channelId);
-      } catch {
-        // An RPC failure must not corrupt a good record — that was the old behaviour's sin.
-        continue;
-      }
-
-      // Zero balance means this channel does not exist on the chain we are currently reading.
-      // Every network's records share one localStorage namespace, so this is the normal case
-      // for a channel opened on another chain — and overwriting it would strand that escrow.
-      if (chainBalance === 0n) continue;
-
-      const localCumulative = BigInt(context.chargedCumulativeAmount ?? "0");
-      const cumulative = localCumulative > chainTotalClaimed ? localCumulative : chainTotalClaimed;
-
-      this.backend.setItem(
-        key,
-        JSON.stringify({
-          ...context,
-          balance: chainBalance.toString(),
-          totalClaimed: chainTotalClaimed.toString(),
-          chargedCumulativeAmount: cumulative.toString(),
-        }),
-      );
-    }
-  }
-}
-
-/**
- * Returns a stable, locally-generated delegate signer for voucher signing, persisted to
- * `localStorage` and keyed by the connected wallet address. Passing this as `voucherSigner`
- * to `BatchSettlementEvmScheme` means only the channel deposit (and later top-ups) prompts
- * the real wallet — every off-chain voucher after that signs in-memory, with no wallet popup.
- *
- * IMPORTANT: this key's address is baked into the channel's `payerAuthorizer` field (part of
- * the EIP-712 struct hashed into `channelId`) at deposit time. It must stay stable for the
- * life of an open channel — rotating it independently of the channel storage below would make
- * the SDK compute a different channelId and silently open an unwanted new channel. Bounded
- * risk: this key can only sign vouchers up to the currently escrowed deposit (never pull in
- * additional funds) and can request a cooperative refund, which returns funds to the real
- * wallet, not an attacker — same plaintext-localStorage trust model as the channel state below.
- */
-function getOrCreateVoucherSigner(walletAddress: string) {
-  const storageKey = `x402-voucher-signer:${walletAddress.toLowerCase()}`;
-  let privateKey = window.localStorage.getItem(storageKey) as `0x${string}` | null;
-  if (!privateKey) {
-    privateKey = generatePrivateKey();
-    window.localStorage.setItem(storageKey, privateKey);
-  }
-  return privateKeyToAccount(privateKey);
-}
-
-// Floor for channel deposits/top-ups, in USDC atomic units (6 decimals) — $0.50.
-// The SDK's own default (depositMultiplier x per-message ceiling) tracks whatever the
-// ceiling happens to be, currently ~$0.003/message, so it sizes deposits at ~1-3 cents:
-// enough for only ~5 messages worst-case before another on-chain top-up (a real tx, a
-// real wallet-adjacent wait) is needed. $0.50 comfortably covers a full multi-message
-// session (100s of messages even at worst-case per-message pricing) while keeping the
-// number small on the two axes that actually matter for this app: it's the blast radius
-// of the localStorage voucher-signer above if it ever leaks (bounded to this amount,
-// never more), and the capital a user has locked up if the server stops cooperating and
-// they have to wait out withdrawDelay to exit unilaterally. Both are trivial at $0.50;
-// neither improves by going lower, so lower just buys more top-up friction for no benefit.
-const MINIMUM_DEPOSIT_ATOMIC = 500_000n;
-
-/**
- * Custom deposit sizing: always deposit/top-up to at least `MINIMUM_DEPOSIT_ATOMIC`,
- * regardless of the SDK's default multiplier-of-ceiling formula — see the constant's
- * comment for why a fixed floor is the right lever here, not `depositPolicy.depositMultiplier`
- * (which would still scale with the ceiling rather than decoupling from it).
- * `minimumDepositAmount` is the true minimum the SDK needs for the top-up in progress; the
- * SDK requires the returned amount be >= it, so it's respected as a floor of its own.
- */
-function depositStrategy(context: BatchSettlementDepositStrategyContext): string {
-  const required = BigInt(context.minimumDepositAmount);
-  return (required > MINIMUM_DEPOSIT_ATOMIC ? required : MINIMUM_DEPOSIT_ATOMIC).toString();
-}
-
-/**
- * Turn a non-OK payment response into a user-facing message. Batch-settlement's
- * `channel_busy` is a transient, self-healing per-channel lock — the server holds it across
- * a single message's verify→settle to serialize requests on one channel, and the x402 client
- * SDK does NOT auto-recover from it — so it warrants an actionable "wait and retry" line
- * rather than dumping the raw reason code. Any other reason keeps the informative default.
- */
-function describePaymentError(status: number, body: string): string {
-  let errorCode: string | undefined;
-  try {
-    errorCode = (JSON.parse(body) as { error?: string }).error;
-  } catch {
-    // Non-JSON body — fall through to the generic message.
-  }
-  if (errorCode?.includes("channel_busy")) {
-    return "Your previous message is still being settled on-chain. Please wait a few seconds and send it again.";
-  }
-  // The facilitator has a separate code for an underfunded wallet (see below), so reaching this
-  // one means the money is there and the deposit itself did not go through — realistically a
-  // declined or dismissed signature prompt. Saying "check you have USDC" here, as this used to,
-  // sends people to look at the one thing already known to be fine.
-  if (errorCode?.includes("cumulative_exceeds_balance")) {
-    return "Your payment channel needs topping up. Approve the wallet signature when it appears, then send again.";
-  }
-  if (errorCode?.includes("insufficient_balance")) {
-    return "Not enough USDC in your wallet to fund the payment channel. Note that only native USDC works — a bridged variant such as USDC.e cannot be used.";
-  }
-  return `Request failed: ${status} - ${body}`;
-}
-
-/**
- * Whether a 402 body says the channel's deposit can no longer cover another message's ceiling.
- *
- * Worth singling out because the SDK *can* fix it and doesn't: `BatchSettlementEvmScheme` tops up
- * inside `createPaymentPayload`, but decides whether to from the `balance` on our own cached
- * record, so a stale record suppresses it — and its corrective-402 recovery explicitly handles
- * only `cumulative_amount_mismatch` and `cumulative_amount_below_claimed`, not this.
- */
-function isDrainedChannel(body: string): boolean {
-  try {
-    return ((JSON.parse(body) as { error?: string }).error ?? "").includes("cumulative_exceeds_balance");
-  } catch {
-    return false;
-  }
-}
-
 /** Additive: offering tools is opt-in per call, so every existing caller is unaffected. */
 export interface SendMessageOptions {
   tools?: X402Tool[];
@@ -245,6 +46,9 @@ export interface SendMessageOptions {
 
 export interface UseX402ChatResult {
   sendMessage: (prompt: X402ChatMessage[], options?: SendMessageOptions) => Promise<X402ChatResponse>;
+  /** Pays for something other than a chat message on the same channel — see the tools in
+   *  `website/tools/`. Throws `PaymentError` when the payment fails. */
+  paidFetch: PaidFetch;
   status: X402GenerationStatus;
   error: string | null;
   paymentReceipt: X402PaymentReceipt | null;
@@ -280,12 +84,19 @@ export function useX402Chat(network: string, agentUrl: string = DEFAULT_LLM_AGEN
   const [negotiated, setNegotiated] = useState<{ agentUrl: string; preferred: string; network: string } | null>(null);
   const paymentNetwork =
     negotiated?.agentUrl === agentUrl && negotiated?.preferred === network ? negotiated.network : network;
+  // The network the last send actually paid on. `paymentNetwork` is the rendered value and can lag
+  // a send-time renegotiation by a render, but the tools of that same turn must spend on the
+  // channel the turn opened — a different network computes a different channelId, which is a
+  // second channel and a second deposit. Cleared by the probe effect, so a changed agent or
+  // preference does not inherit the old turn's answer.
+  const payNetworkRef = useRef<string | null>(null);
 
   // Probe the agent up front so the UI (and the caller's chain switch) knows which network
   // will be paid before the user hits send. Leaves the preferred network in place when the
   // agent can't be read — sendMessage negotiates again for real and reports any mismatch.
   useEffect(() => {
     let cancelled = false;
+    payNetworkRef.current = null;
     void probeAccepts(agentUrl).then((accepts) => {
       if (cancelled) return;
       const result = negotiateNetwork(accepts, network);
@@ -320,6 +131,9 @@ export function useX402Chat(network: string, agentUrl: string = DEFAULT_LLM_AGEN
       // that — proceed on the preferred network and let the real 402 be the judge.
       const payNetwork = resolved ?? network;
       setNegotiated({ agentUrl, preferred: network, network: payNetwork });
+      // Synchronously, unlike the state above: this turn's tool calls read it during the very
+      // loop this send belongs to, long before a re-render could deliver the state.
+      payNetworkRef.current = payNetwork;
 
       // A readContract-capable client is required: batch-settlement's corrective-402
       // recovery reads channel state on-chain, unlike the exact scheme. Resolved here, not
@@ -337,100 +151,48 @@ export function useX402Chat(network: string, agentUrl: string = DEFAULT_LLM_AGEN
       // clearing here would blank the link on every message after the first.
 
       try {
-        // === Dynamic imports (browser-only, like the notebook) ===
-        const { x402Client, wrapFetchWithPayment, x402HTTPClient } = await import("@x402/fetch");
-        const { toClientEvmSigner } = await import("@x402/evm");
-        const { BatchSettlementEvmScheme, readChannelBalanceAndTotalClaimed } = await import(
-          "@x402/evm/batch-settlement/client"
-        );
-
-        // === Signer: wagmi WalletClient adapter wrapped so readContract exists ===
-        const signerInput = {
-          address: walletClient.account.address,
-          signTypedData: walletClient.signTypedData.bind(walletClient),
-        };
-        const signer = toClientEvmSigner(
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- viem/x402 signer interfaces differ slightly
-          signerInput as any,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument -- wagmi public client satisfies the readContract dep
-          publicClient as any,
-        );
-
-        // === Batch-settlement scheme (no register helper) + localStorage channel store ===
-        const storage = new WebStorageClientChannelStorage(window.localStorage);
-        // Delegate voucher signing to a persisted local key so only the deposit/top-up
-        // prompts the real wallet — see getOrCreateVoucherSigner's doc comment.
-        const voucherSigner = getOrCreateVoucherSigner(walletClient.account.address);
-        const scheme = new BatchSettlementEvmScheme(signer, { storage, voucherSigner, depositStrategy });
-
-        const client = new x402Client();
-        // Explicitly allowlist USDC on every network this site pays on — the SDK's
-        // default spend controls reject Optimism USDC otherwise. See x402SpendControls.ts.
-        client.setSpendControls({ allowedAssets: buildUsdcAllowedAssets() });
-        // `payNetwork` is a CAIP-2 id (e.g. "eip155:10"); register's type wants the literal
-        // `${string}:${string}` shape, which every CAIP-2 value satisfies.
-        client.register(payNetwork as `${string}:${string}`, scheme);
-
-        const fetchWithPayment = wrapFetchWithPayment(fetch, client);
+        // The channel, the signer, the deposit strategy and the drained-channel recovery all live
+        // in `utils/x402PaidFetch.ts` — /assistent's paid tools spend on this same channel, so the
+        // assembly could not stay private to the chat.
+        const { paidFetch, readReceipt } = await createPaidFetch({
+          walletClient,
+          publicClient,
+          network: payNetwork,
+          onTopUp: () => setStatus("topping-up"),
+        });
 
         // First bare request → 402 → SDK opens channel (deposit) or signs a voucher → retries.
-        // Wrapped in try/catch as defense-in-depth (see notebook: a client-side crash could
-        // once mask a successful settlement; the underlying facilitator bug is fixed).
-        const doPaidRequest = () =>
-          fetchWithPayment(agentUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            // OpenAI chat-completions body. `model` must be one the agent advertises in its
-            // openapi.json (mistral-large-latest for fretchen's default agent). `tools` is
-            // spread in only when offered, so a caller that never passes `options` sends the
-            // exact body it always has — no behaviour change for existing callers.
-            body: JSON.stringify({
-              model: LLM_MODEL,
-              messages: prompt,
-              ...(options?.tools ? { tools: options.tools, tool_choice: options.tool_choice ?? "auto" } : {}),
-            }),
-          });
+        const response = await paidFetch(agentUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          // OpenAI chat-completions body. `model` must be one the agent advertises in its
+          // openapi.json (mistral-large-latest for fretchen's default agent). `tools` is
+          // spread in only when offered, so a caller that never passes `options` sends the
+          // exact body it always has — no behaviour change for existing callers.
+          body: JSON.stringify({
+            model: LLM_MODEL,
+            messages: prompt,
+            ...(options?.tools ? { tools: options.tools, tool_choice: options.tool_choice ?? "auto" } : {}),
+          }),
+        });
 
-        let response = await doPaidRequest();
-
+        // `paidFetch` throws for a payment failure and hands back everything else, so a non-OK here
+        // is the agent's own error and this is where it becomes one. Without this, a 500 body would
+        // be parsed as a completion. The wording matches `describePaymentError`'s fallback, and its
+        // special cases (channel_busy, cumulative_exceeds_balance, insufficient_balance) only ever
+        // arrive on a 402, so nothing the user reads changes.
         if (!response.ok) {
-          // A Response body is single-use, so read it once here and once more after any retry.
-          const errorText = await response.text();
-
-          if (isDrainedChannel(errorText)) {
-            // The SDK would have topped up on its own, but decides from the `balance` on our
-            // cached record, which had drifted from the chain. Re-read the truth and let the
-            // SDK decide: if the channel really is short, its own `needsTopUp` fires and the
-            // retry carries a deposit; if it is not, no deposit is signed and the retry fails
-            // honestly. The predecessor zeroed `balance` instead, which forced a $0.50 deposit
-            // whether one was needed or not — see resyncFromChain().
-            //
-            // Once only: looping here would re-read on every pass if the true problem were
-            // something else.
-            await storage.resyncFromChain((id) => readChannelBalanceAndTotalClaimed(signer, id));
-            setStatus("topping-up");
-            response = await doPaidRequest();
-            if (!response.ok) {
-              throw new Error(describePaymentError(response.status, await response.text()));
-            }
-          } else {
-            throw new Error(describePaymentError(response.status, errorText));
-          }
+          throw new Error(`Request failed: ${response.status} - ${await response.text()}`);
         }
 
         setStatus("processing");
 
         const result = (await response.json()) as X402ChatResponse;
 
-        // === Extract settlement receipt (deposit tx on the first message, "" for vouchers) ===
-        try {
-          const httpClient = new x402HTTPClient(client);
-          const receipt = httpClient.getPaymentSettleResponse((name: string) => response.headers.get(name));
-          if (receipt?.transaction) {
-            setPaymentReceipt({ transaction: receipt.transaction, network: receipt.network });
-          }
-        } catch {
-          // Receipt extraction is optional — continue without it
+        // The deposit tx on the message that opened the channel; nothing on the vouchers after it.
+        const receipt = readReceipt(response);
+        if (receipt) {
+          setPaymentReceipt(receipt);
         }
 
         setStatus("success");
@@ -445,13 +207,42 @@ export function useX402Chat(network: string, agentUrl: string = DEFAULT_LLM_AGEN
     [walletClient, network, agentUrl],
   );
 
+  /**
+   * A `fetch` that pays on **this chat's channel**, for the paid tools `/assistent` offers during
+   * a turn (`scw_js/search_api.ts` sells as the same receiver, so the channel is the same one).
+   *
+   * Bound to the network the turn's own send negotiated, not to the caller's preference and not to
+   * the rendered `paymentNetwork` (which can still hold a stale mount-time probe): registering a
+   * different network would compute a different `channelId` and open a second channel the user has
+   * to fund again. `paymentNetwork` is only the fallback for a call before any send, which the tool
+   * loop never makes — it pays first, then runs tools.
+   *
+   * No status juggling here — a tool failure is the model's to report, not the chat UI's, so this
+   * deliberately leaves `status` alone and lets `PaymentError` reach the caller.
+   */
+  const paidFetch = useCallback<PaidFetch>(
+    async (input, init) => {
+      if (!walletClient) {
+        throw new Error("Wallet not connected");
+      }
+      const payNetwork = payNetworkRef.current ?? paymentNetwork;
+      const publicClient = getConfiguredPublicClient(payNetwork);
+      if (!publicClient) {
+        throw new Error(`No public client for network ${payNetwork}`);
+      }
+      const client = await createPaidFetch({ walletClient, publicClient, network: payNetwork });
+      return client.paidFetch(input, init);
+    },
+    [walletClient, paymentNetwork],
+  );
+
   const reset = useCallback(() => {
     setStatus("idle");
     setError(null);
     setPaymentReceipt(null);
   }, []);
 
-  return { sendMessage, status, error, paymentReceipt, reset, isReady, paymentNetwork };
+  return { sendMessage, paidFetch, status, error, paymentReceipt, reset, isReady, paymentNetwork };
 }
 
 export default useX402Chat;

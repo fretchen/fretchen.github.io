@@ -463,6 +463,15 @@ if (isEntrypoint && process.env.NODE_ENV === "test") {
     const dotenvModule = await import("dotenv");
     dotenvModule.config();
 
+    // Said out loud because it is not obvious and it has already cost a debugging session: a local
+    // run verifies and settles against the **shared, production** channel store, so its writes are
+    // the same records the deployed chat reads. That is deliberate — testing the paid path needs a
+    // real, funded channel — but it means a local experiment is not a local experiment.
+    logger.warn(
+      { bucket: process.env.SCW_S3_BUCKET ?? "my-imagestore", prefix: "channels/<network>/" },
+      "Local server uses the PRODUCTION x402 channel store",
+    );
+
     const scw = await import("@scaleway/serverless-functions");
     scw.serveHandler(handle, 8084);
   })().catch((err) => logger.error({ err }, "Error starting local server"));

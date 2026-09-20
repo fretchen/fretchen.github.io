@@ -17,6 +17,16 @@ import type { X402ChatMessage, X402ChatResponse, X402Tool, X402ToolCall } from "
  *  a combined question (find the session, read it, then check a claim) needs one more. */
 export const MAX_HOPS = 4;
 
+/**
+ * Paid tool calls allowed in one turn.
+ *
+ * `MAX_HOPS` bounds hops, not calls — a single hop may ask for as many tools as it likes, so one
+ * question could fan out into a dozen searches before anyone noticed. At $0.01 a search this caps
+ * a turn's tool spend at about six cents, and it behaves like a failed tool rather than an error:
+ * the paid tools come off the menu and the model answers with what it already has.
+ */
+export const MAX_PAID_CALLS = 6;
+
 /** What running one tool produces: the compact `{status}` object the model gets back, plus two
  *  fields the loop reads and the model never sees — the image URL the chat renders locally, and
  *  whether a non-`ok` result still leaves the tool worth offering. */
@@ -35,6 +45,8 @@ export type ToolRunResult = {
 export interface OfferedTool<S extends string> {
   tool: X402Tool;
   source: S | null;
+  /** Costs the user USDC per call, so it counts against `MAX_PAID_CALLS`. */
+  paid?: boolean;
 }
 
 export interface ToolTurnResult<S extends string> {
@@ -78,6 +90,8 @@ export async function runToolLoop<S extends string>(
   // rest of the turn. A failed tool is simply no longer offered on later hops.
   const failedTools = new Set<string>();
   const sourceOf = new Map(offeredTools.map((entry) => [entry.tool.function.name, entry.source]));
+  const isPaid = new Set(offeredTools.filter((entry) => entry.paid).map((entry) => entry.tool.function.name));
+  let paidCalls = 0;
 
   for (let hop = 0; hop < maxHops; hop++) {
     // Re-checked every hop, not just the first: a mid-loop deposit or top-up could in principle
@@ -91,6 +105,9 @@ export async function runToolLoop<S extends string>(
     // fallback because no hop ever produced text.
     const offered = offeredTools
       .filter((entry) => !failedTools.has(entry.tool.function.name))
+      // Budget spent: the paid tools come off the menu, the free ones stay. Withdrawing rather
+      // than refusing is what lets the model close with what it has.
+      .filter((entry) => !entry.paid || paidCalls < MAX_PAID_CALLS)
       .map((entry) => entry.tool);
 
     const data = await payAndSend(convo, {
@@ -113,11 +130,30 @@ export async function runToolLoop<S extends string>(
 
     convo.push(choice.message); // the assistant turn, content: null, tool_calls intact
 
-    // TODO: several calls in one hop run one after another. `failedTools`/`usedSources` have no
-    // ordering dependency within a hop, so `Promise.all` would be safe and would overlap the
-    // round-trips. Left serial for now because the model reliably asks for one tool per hop —
-    // list -> detail -> answer is three hops, not three calls in one.
+    // Serial, and it has to stay that way: the paid tools spend vouchers on ONE payment channel,
+    // and the server holds a per-channel lock from verify to settle, so two in flight is
+    // `channel_busy` by construction. `Promise.all` here would overlap the round-trips and break
+    // exactly that.
     for (const call of toolCalls) {
+      if (isPaid.has(call.function.name)) {
+        // The cap has to bite here and not only on the next hop's menu: one hop can ask for a
+        // dozen searches, and the menu filter above runs after every one of them has been paid
+        // for. Answered rather than skipped, because every tool_call needs a matching result or
+        // the next request is malformed.
+        if (paidCalls >= MAX_PAID_CALLS) {
+          failedTools.add(call.function.name);
+          convo.push({
+            role: "tool",
+            tool_call_id: call.id,
+            content: JSON.stringify({
+              status: "budget_exhausted",
+              reason: "This turn's budget for paid tools is used up. Answer with what you already have.",
+            }),
+          });
+          continue;
+        }
+        paidCalls++;
+      }
       const { result, imageUrl, recoverable } = await runToolCall(call);
       if (imageUrl) finalImageUrl = imageUrl;
       // Only a real failure withdraws the tool for the rest of the turn. Which non-`ok` statuses

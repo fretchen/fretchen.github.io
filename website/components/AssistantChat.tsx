@@ -67,6 +67,7 @@ import {
   fetchFailed as webFetchFailed,
   type FetchToolResult,
 } from "../tools/webFetch";
+import { paymentFailed } from "../tools/failure";
 import { useWalletAuth } from "../hooks/useWalletAuth";
 import { isOwnerAddress, type OwnerScope } from "../utils/getChain";
 import type { X402ChatMessage, X402Tool, X402ToolCall } from "../types/x402";
@@ -88,35 +89,84 @@ import { PageHeader } from "./PageHeader";
 type ToolSource = "bundestakt" | "analytics" | "brave";
 
 /**
- * Everything offered to the model, with the two things the chat loop needs to know about a tool
- * besides its schema: which owner scope may be offered it, and whether its answer must cite a
- * source. `ownerScope: null` means anyone; an owner scope means the endpoint answers 401 to
- * everyone else, so offering it to a visitor would burn a hop on a guaranteed failure and put the
- * tool's description in front of the upstream model for people it can never serve.
+ * Everything offered to the model, with what the chat loop needs to know about a tool besides its
+ * schema: who may be offered it, whether a stranger's agent may be, whether it costs the user
+ * money, and whether its answer must cite a source.
  *
- * Both fields are required, so adding a tool and forgetting its gate is a type error rather than a
- * silently ungated tool. The metadata sits beside the tool rather than on it because these objects
- * go on the wire as `tools:` — extra keys would be sent upstream.
+ * `ownerScope: null` means anyone; an owner scope means the endpoint answers 401 to everyone else,
+ * so offering it to a visitor would burn a hop on a guaranteed failure and put the tool's
+ * description in front of the upstream model for people it can never serve.
+ *
+ * `defaultAgentOnly` is a separate question from `ownerScope`, because a tool can be open to every
+ * visitor and still be one a third-party agent must never be handed. See `availableTools`.
+ *
+ * `paid` means the runner spends USDC per call, which is what `runToolLoop` bounds. The image tool
+ * is deliberately not `paid`: it pays on its own scheme and asks the user first.
+ *
+ * All four fields are required, so adding a tool and forgetting a gate is a type error rather than
+ * a silently ungated tool. The metadata sits beside the tool rather than on it because these
+ * objects go on the wire as `tools:` — extra keys would be sent upstream.
  *
  * Hoisted for a stable identity across renders; the loop filters it as tools fail, which is why
  * the array itself stays constant.
  */
 export const TOOL_REGISTRY = [
-  { tool: generateImageTool, label: "Image generation", ownerScope: null, source: null },
-  { tool: getSitzungenTool, label: "Bundestag sessions", ownerScope: null, source: "bundestakt" },
-  { tool: searchClaimsTool, label: "Fact-checks", ownerScope: null, source: "bundestakt" },
-  { tool: getPageTool, label: "Site content", ownerScope: null, source: null },
-  { tool: searchWebTool, label: "Web search", ownerScope: "search", source: "brave" },
-  // Same scope as search — both reach the outside web, and an ungated fetcher is an open proxy.
-  // `source: null` because the citation *is* the url, which the result carries and the prompt
-  // already requires the answer to link.
-  { tool: fetchUrlTool, label: "Fetch URL", ownerScope: "search", source: null },
-  { tool: getAnalyticsTool, label: "Site analytics", ownerScope: "analytics", source: "analytics" },
+  {
+    tool: generateImageTool,
+    label: "Image generation",
+    ownerScope: null,
+    defaultAgentOnly: false,
+    paid: false,
+    source: null,
+  },
+  {
+    tool: getSitzungenTool,
+    label: "Bundestag sessions",
+    ownerScope: null,
+    defaultAgentOnly: false,
+    paid: false,
+    source: "bundestakt",
+  },
+  {
+    tool: searchClaimsTool,
+    label: "Fact-checks",
+    ownerScope: null,
+    defaultAgentOnly: false,
+    paid: false,
+    source: "bundestakt",
+  },
+  { tool: getPageTool, label: "Site content", ownerScope: null, defaultAgentOnly: false, paid: false, source: null },
+  // Open to anyone — the visitor pays $0.01 per search from the channel their chat already
+  // funded — but never offered to a third-party agent, which would be spending someone else's
+  // escrow on prompts of its own choosing.
+  {
+    tool: searchWebTool,
+    label: "Web search",
+    ownerScope: null,
+    defaultAgentOnly: true,
+    paid: true,
+    source: "brave",
+  },
+  // Same terms as search, at a tenth the price. `source: null` because the citation *is* the url,
+  // which the result carries and the prompt already requires the answer to link.
+  { tool: fetchUrlTool, label: "Fetch URL", ownerScope: null, defaultAgentOnly: true, paid: true, source: null },
+  {
+    tool: getAnalyticsTool,
+    label: "Site analytics",
+    ownerScope: "analytics",
+    defaultAgentOnly: true,
+    paid: false,
+    source: "analytics",
+  },
 ] as const satisfies readonly {
   tool: X402Tool;
   /** Shown in the ToolSelector. Required, so a new tool cannot arrive without a readable name. */
   label: string;
   ownerScope: OwnerScope | null;
+  /** Withheld while a custom agent is selected, whoever the user is. */
+  defaultAgentOnly: boolean;
+  /** The runner spends USDC per call, so it counts against the turn's budget. */
+  paid: boolean;
   source: ToolSource | null;
 }[];
 
@@ -308,16 +358,19 @@ export function AssistantChat() {
    *
    * Two independent conditions, because "who may call this tool" and "who may read its answer" are
    * different questions. A tool result is JSON-serialised into `convo` and sent to whichever agent
-   * is selected on the next hop, so an owner-scoped tool offered while a custom agent is in use
-   * would hand that stranger the very data the scope exists to keep private — and the *agent*, not
-   * the user, decides when to call it. `ownerScope !== null` already means "this output is
-   * private", so the default agent is the only one it may reach. Switching agents stays free; an
-   * owner-scoped tool simply is not on the menu while a third party is being paid.
+   * is selected on the next hop, so a tool offered while a custom agent is in use hands that
+   * stranger whatever it returns — and the *agent*, not the user, decides when to call it. That is
+   * why `defaultAgentOnly` is its own flag rather than a reading of `ownerScope`: it covers the
+   * owner-scoped tools, whose output is private, and the paid ones, which spend the visitor's
+   * escrow. Switching agents stays free; those tools simply are not on the menu while a third
+   * party is being paid.
    */
   const availableTools = useMemo(
     () =>
       TOOL_REGISTRY.filter(
-        (entry) => entry.ownerScope === null || (customUrl === null && hasOwnerScope(entry.ownerScope)),
+        (entry) =>
+          (entry.ownerScope === null || hasOwnerScope(entry.ownerScope)) &&
+          (!entry.defaultAgentOnly || customUrl === null),
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- hasOwnerScope is derived from the first two
     [isConnected, address, customUrl],
@@ -346,6 +399,7 @@ export function AssistantChat() {
   // switched to what will actually be paid — `paymentNetwork`, not the preference.
   const {
     sendMessage: payAndSend,
+    paidFetch,
     paymentReceipt,
     paymentNetwork,
     status: chatStatus,
@@ -374,11 +428,6 @@ export function AssistantChat() {
   // Same auth prefix as useAnalyticsStats, so a visit to /analytics in the last 4 minutes leaves
   // the token cached and the tool call costs no signature at all.
   const getAnalyticsAuth = useWalletAuth("analytics-api");
-  // Its own prefix rather than reusing "analytics-api": useWalletAuth keys its token cache by
-  // `prefix:address` precisely so a token minted for one service cannot be spent on another, and
-  // search spends metered credit where analytics only reads. The cost is one extra signature
-  // prompt per session for an owner who uses both, which the 4-minute cache then covers.
-  const getSearchAuth = useWalletAuth("search-api");
 
   // The confirm card is transient UI state, never a chat message — it cannot be scrolled back
   // to or replayed. `confirmResolverRef` is how a linear async loop (sendMessage) pauses for a
@@ -534,15 +583,30 @@ export function AssistantChat() {
   }
 
   /**
-   * Searches the live web through the owner-gated Brave proxy.
+   * A paid tool's failure, as the model should read it.
    *
-   * Cached per turn for the same reason as the other lookups, and here it also guards the bill: a
-   * model that asks the same question twice in one turn spends Brave credit twice otherwise.
+   * A payment that did not go through is its own status — saying "I found nothing" when the channel
+   * is empty would be false — and only `channel_busy` is worth another hop, since that lock clears
+   * in seconds. Everything else is the request failing, which is the tool's own `fetch_failed`.
+   */
+  function paidToolFailure(err: unknown, requestFailed: (err: unknown) => ToolRunResult["result"]): ToolRunResult {
+    const payment = paymentFailed(err);
+    if (payment) {
+      return { result: payment, recoverable: payment.status === "channel_busy" };
+    }
+    return { result: requestFailed(err), recoverable: true };
+  }
+
+  /**
+   * Searches the live web, paid per call on the chat's own payment channel.
    *
-   * Every result is recoverable. An empty result set and a rejected query are both answered by
-   * rephrasing, and even a failed request is worth one retry with different words — this is a free,
-   * read-only lookup for the user, so the only cost of staying on offer is a hop, and MAX_HOPS
-   * bounds that.
+   * Cached per turn for the same reason as the other lookups, and here the cache is money: a cache
+   * hit is served without a payment, so a model that asks the same question twice in one turn is
+   * billed once.
+   *
+   * A failed request stays recoverable — an empty result set and a rejected query are both answered
+   * by rephrasing, and one retry with different words is worth a hop. A failed *payment* is not;
+   * see `paidToolFailure`.
    */
   async function loadSearch(args: Record<string, unknown>): Promise<ToolRunResult> {
     const query = normalizeQuery(args.query);
@@ -551,24 +615,21 @@ export function AssistantChat() {
     }
 
     try {
-      const auth = await getSearchAuth();
       const raw = await queryClient.fetchQuery({
         queryKey: ["search", query],
-        queryFn: () => fetchSearch(query, auth),
+        queryFn: () => fetchSearch(query, paidFetch),
         staleTime: 5 * 60_000,
         retry: 0,
       });
       return { result: selectSearch(raw, query), recoverable: true };
     } catch (err) {
-      return { result: searchFetchFailed(err), recoverable: true };
+      return paidToolFailure(err, searchFetchFailed);
     }
   }
 
   /**
-   * Reads one arbitrary web page, through the same owner-gated function as search.
-   *
-   * Shares `getSearchAuth` deliberately: one `search-api` token covers both routes, so following a
-   * search result to the page it names costs no second signature prompt.
+   * Reads one arbitrary web page, through the same paid function as search — $0.001 rather than
+   * $0.01, since no metered API sits behind it.
    *
    * Cached per turn because the intended flow reads a page and then asks for one of its sections,
    * which is the same document twice — and unlike this site's own pages, that one is a stranger's
@@ -593,16 +654,15 @@ export function AssistantChat() {
     }
 
     try {
-      const auth = await getSearchAuth();
       const raw = await queryClient.fetchQuery({
         queryKey: ["web-fetch", url],
-        queryFn: () => fetchViaProxy(url, auth),
+        queryFn: () => fetchViaProxy(url, paidFetch),
         staleTime: 5 * 60_000,
         retry: 0,
       });
       return { result: selectFetched(raw, args.section), recoverable: true };
     } catch (err) {
-      return { result: webFetchFailed(err), recoverable: true };
+      return paidToolFailure(err, webFetchFailed);
     }
   }
 
@@ -732,7 +792,7 @@ export function AssistantChat() {
       // user switched off in the ToolSelector. Failures within the turn are the loop's business.
       const offeredTools = availableTools
         .filter((entry) => !disabledTools.has(entry.tool.function.name))
-        .map((entry) => ({ tool: entry.tool, source: entry.source }));
+        .map((entry) => ({ tool: entry.tool, source: entry.source, paid: entry.paid }));
 
       const { finalContent, finalImageUrl, sources } = await runToolLoop<ToolSource>(convo, offeredTools, {
         ensureReady: async () => {

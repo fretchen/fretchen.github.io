@@ -12,7 +12,84 @@ there is one code path and one set of failure statuses to test.
 
 ---
 
-## 1. Channel identity — decide this before writing any code
+## Status — 20 September 2026
+
+PR 1 is merged (#682) and deployed. `web-agent.fretchen.eu` sells both routes. **PR 2 is written
+and green on `x402_brave`** — the frontend now pays instead of authenticating.
+
+| Section                  | State                                                         |
+| ------------------------ | ------------------------------------------------------------- |
+| §1 Channel identity      | Done, and no longer an assumption — see below                 |
+| §2 Prices                | Live at $0.01 / $0.001, still estimates; no Brave invoice yet |
+| §4 PR 1 — seller         | Merged and deployed                                           |
+| §5 Deploy and smoke-test | Done                                                          |
+| §6 PR 2 — buyer          | **Written, green, awaiting merge** — see deviations below     |
+| §7 PR 3 — discovery      | Not started                                                   |
+| §8 Deferred              | Unchanged; `safesearch: "moderate"` still unpinned            |
+
+### What the payment incident changed for this work
+
+Diagnosing a "payment channel too low" report on a _funded_ channel found our own facilitator's
+`/verify` omitting the scheme's `extra` from its response. The seller's SDK writes its cached
+channel record straight from that field, wholesale, defaulting each key to zero — so every remote
+verify was overwriting the real `balance`, `totalClaimed` and `refundNonce` with zeros.
+
+This matters here more than anywhere else. PR 2 puts `/search` and `/fetch` on the **same channel**
+as the chat, so a turn that searches once and fetches twice runs three verifies where there was one
+— tripling the rate of a bug that empties the cache on every call. Fixed and deployed
+(20 September) **before** merging PR 2, deliberately.
+
+The same deploy exposed a second problem worth recording: `npm run deploy:prod` had been shipping a
+stale bundle for ten days, silently, because npm's `predeploy` hook only fires for the exact script
+name `deploy` and never for a sibling like `deploy:prod`. Every deploy script now chains
+`npm run build` explicitly. Verify a facilitator deploy at the endpoint, never from the CLI's exit
+code:
+
+```bash
+curl -s https://facilitator.fretchen.eu/openapi.json | jq '.components.schemas.VerifyResponse.properties | has("extra")'
+```
+
+### Two deliberate deviations in PR 2 as built
+
+- **Two tool statuses, not three.** `website/tools/failure.ts` implements
+  `channel_busy | payment_failed`; `payment_required` was dropped. `recoverable` is true only for
+  `channel_busy`, which is the behaviour the table in §6 actually wanted — a drained channel and a
+  broken verification are both "do not retry", so they did not need separate names.
+- **The per-turn ceiling withdraws tools rather than failing calls.** `MAX_PAID_CALLS = 6` filters
+  the paid tools out of the offered menu once the budget is spent, so the model sees a smaller menu
+  instead of an error it has to interpret.
+
+`website/utils/x402PaidFetch.ts` also carries client-side drained-channel recovery (`resyncFromChain`
+plus one retry) — the buyer-side mirror of the same drift class, covered by
+`website/test/x402PaidFetch.test.ts`.
+
+**The central claim held.** A run of `notebooks/search_x402_buyer.ipynb` against Base mainnet paid
+for both routes with **no deposit transaction** — each signed a voucher against the channel an
+earlier chat session had opened. The live 402 confirms the other half of it: `payTo` is
+`0xAAEBC1…`, the chat's own receiver, and `extra` carries the `receiverAuthorizer` and
+`withdrawDelay` that go into `computeChannelId`.
+
+Also decided or built while implementing, and not in the plan as first written:
+
+- **`web-agent.fretchen.eu`**, not `search-agent` — the endpoint sells page fetches as well as
+  searches, and `search.fretchen.eu` would have read as a site-search box. Declared in
+  `serverless.yml`, which is what keeps it: the deploy plugin deletes any domain that file omits.
+- **`httpOption: redirected` on every function.** Scaleway served these over plain HTTP by
+  default, and each one carries either an owner bearer or a payment header.
+- **`notebooks/search_x402_buyer.ipynb`** — the buyer notebook, and the only thing that exercises a
+  paid GET end to end.
+- **Four review findings fixed** after the branch was written. The one that mattered:
+  `Access-Control-Allow-Headers` lost `Authorization` when the handler moved to the shared
+  `CORS_HEADERS`, which would have blocked the owner's own tools in the browser at the preflight.
+  `Authorization` cannot be wildcarded, so it has to be named.
+
+Two carried into PR 2 rather than fixed in PR 1: `looseObject` instead of `strictObject` on the
+query schemas (the endpoint has always ignored unknown parameters and a test pins that), and no
+`PAID_ROUTES` staging, since both routes are one code path.
+
+---
+
+## 1. Channel identity — decide this before writing any code ✅
 
 These routes must bill onto the **same batch-settlement channel the chat already opens**, not onto
 a channel of their own. A second channel means a second on-chain deposit prompt, which destroys the
@@ -117,7 +194,7 @@ working tree. That is not a race worth running to save one review.
 
 ---
 
-## 4. PR 1 — seller side (`scw_js/`)
+## 4. PR 1 — seller side (`scw_js/`) ✅ merged (#682)
 
 Six commits, each green on `npm run check`.
 
@@ -219,7 +296,7 @@ and here they do not. Add both routes and their prices to `scw_js/README.md`.
 
 ---
 
-## 5. Between PR 1 and PR 2 — deploy and smoke-test
+## 5. Between PR 1 and PR 2 — deploy and smoke-test ✅
 
 `npm run deploy` in `scw_js/`, then check the live function on whichever mainnet the chat is
 already using:
@@ -236,9 +313,10 @@ testnet, it exercises the paths users will actually hit.
 
 ---
 
-## 6. PR 2 — buyer side (`website/`)
+## 6. PR 2 — buyer side (`website/`) ✅ written, green, awaiting merge
 
-Four commits.
+Four commits. All four landed; see _Status_ above for the two places the implementation
+deliberately diverged from what is written below.
 
 **1. Extract the payment client from `useX402Chat`.**
 `sendMessage` (`hooks/useX402Chat.ts:339-374`) builds the signer, `BatchSettlementEvmScheme`,
@@ -302,7 +380,7 @@ offered) and a broken Brave key (→ 500, no settlement, chat still usable on th
 
 ---
 
-## 7. PR 3 — discovery (can trail)
+## 7. PR 3 — discovery (can trail) — not started
 
 - `scripts/generate-openapi-search.ts`, mirroring the genimg and llm generators, wired into
   `generate:openapi` in `package.json` (which `build` already runs) → `openapi.search.json`, with

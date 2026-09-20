@@ -1,12 +1,14 @@
 import type { X402Tool } from "../types/x402";
 import { SEARCH_URL } from "../utils/searchApi";
+import type { PaidFetch } from "../utils/x402PaidFetch";
+import type { PaymentFailure } from "./failure";
 import { collapseText, extractPageText, selectPage, type ExtractedPage, type PageResult } from "./page";
 
 /**
  * Reading one arbitrary web page, for the chat model.
  *
  * The split of work is forced rather than chosen. A browser cannot read a third-party response —
- * CORS forbids it — so the bytes come through our own owner-gated function
+ * CORS forbids it — so the bytes come through our own paid function
  * (`scw_js/web_fetch_service.ts`, where the SSRF defence lives). But the *extraction* happens here,
  * with `extractPageText` from `./page` used verbatim: Node has no `DOMParser`, so doing it on the
  * server would mean a new dependency and a second copy of a careful piece of DOM walking.
@@ -18,7 +20,7 @@ import { collapseText, extractPageText, selectPage, type ExtractedPage, type Pag
  * may be plain text rather than HTML, it may legitimately be short, and it is empty for different
  * reasons.
  *
- * Kept React-free like the other tool modules; the wallet token arrives as a parameter.
+ * Kept React-free like the other tool modules; the paid fetch arrives as a parameter.
  */
 
 /** Mirrored from the server so an obviously bad argument costs no round trip. The authoritative
@@ -81,7 +83,8 @@ export const fetchUrlTool: X402Tool = {
 export type FetchToolResult =
   | PageResult
   | { status: "invalid_url"; url: string; hint: string }
-  | { status: "invalid_response" };
+  | { status: "invalid_response" }
+  | PaymentFailure;
 
 /** Turns a fetch-time error (thrown by `fetchViaProxy`) into a result. */
 export { fetchFailed } from "./failure";
@@ -98,12 +101,12 @@ export function normalizeFetchUrl(raw: unknown): string | null {
   }
 }
 
-// --- Fetcher: plain fetch, no cache, throws on failure -----------------------------------------
+// --- Fetcher: paid fetch, no cache, throws on failure ------------------------------------------
 
-export async function fetchViaProxy(url: string, auth: string): Promise<unknown> {
-  const res = await fetch(`${SEARCH_URL}/fetch?url=${encodeURIComponent(url)}`, {
-    headers: { Authorization: auth },
-  });
+/** $0.001 a page, on the chat's channel — a tenth of a search, which is what steers the model into
+ *  searching once and reading several of the results. See `fetchSearch` for the rest. */
+export async function fetchViaProxy(url: string, paidFetch: PaidFetch): Promise<unknown> {
+  const res = await paidFetch(`${SEARCH_URL}/fetch?url=${encodeURIComponent(url)}`);
   if (!res.ok) {
     // The proxy says precisely why a url was refused (scheme, address space, content type) and
     // the model can act on that, so a 400's body is worth surfacing. Other statuses are ours.

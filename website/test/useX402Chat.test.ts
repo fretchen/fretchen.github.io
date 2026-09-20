@@ -11,7 +11,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useWalletClient, useAccount } from "wagmi";
-import { useX402Chat, WebStorageClientChannelStorage } from "../hooks/useX402Chat";
+import { useX402Chat } from "../hooks/useX402Chat";
+import { WebStorageClientChannelStorage } from "../utils/x402PaidFetch";
 import { buildUsdcAllowedAssets } from "../hooks/x402SpendControls";
 import { resetAcceptsCache } from "../hooks/x402Discovery";
 import type { X402ChatMessage } from "../types/x402";
@@ -300,6 +301,30 @@ describe("useX402Chat", () => {
       expect(thrown?.message).toContain("402");
       expect(result.current.status).toBe("error");
       expect(result.current.error).toContain("402");
+    });
+
+    /**
+     * `paidFetch` hands a non-402 back as a Response rather than throwing, because the paid tools
+     * need to read the seller's own refusal. The chat has no use for one, so it must still fail
+     * here — otherwise a 500's body would be parsed as a completion and rendered as an answer.
+     */
+    it("rethrows a non-payment HTTP failure rather than parsing the body as a completion", async () => {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("upstream exploded", { status: 500 })));
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+
+      let thrown: Error | undefined;
+      await act(async () => {
+        try {
+          await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+        } catch (err) {
+          thrown = err as Error;
+        }
+      });
+
+      expect(thrown?.message).toContain("500");
+      expect(thrown?.message).toContain("upstream exploded");
+      expect(result.current.status).toBe("error");
     });
 
     it("surfaces a friendly, actionable message for a channel_busy 402", async () => {
@@ -722,6 +747,46 @@ describe("useX402Chat", () => {
       expect(mockRegister).not.toHaveBeenCalled();
     });
 
+    /**
+     * The turn's tool calls must spend on the channel the turn opened. The mount-time probe can
+     * fail transiently, leaving the rendered `paymentNetwork` on the preference while the send-time
+     * probe negotiates something else — and the running loop holds the `paidFetch` closure from
+     * before that render. Binding to the rendered value there paid on the wrong chain, which is a
+     * different channelId: a second channel, a second $0.50 deposit and a wallet prompt mid-turn.
+     *
+     * `paidFetch` is deliberately called from the pre-send closure, because that is what the tool
+     * loop does — reading `result.current.paidFetch` after the act would re-render the bug away.
+     */
+    it("pays for tools on the network the send negotiated, not the one that was rendered", async () => {
+      let probes = 0;
+      const accepts = [{ scheme: "batch-settlement", network: BASE, payTo: "0xabc" }];
+      const header = btoa(JSON.stringify({ accepts }));
+      vi.stubGlobal(
+        "fetch",
+        vi.fn((_input: string, init?: RequestInit) => {
+          if (!isProbeRequest(init)) {
+            return Promise.resolve(new Response(JSON.stringify({ content: "hi" }), { status: 200 }));
+          }
+          // The mount probe fails; the send-time one succeeds and offers only BASE.
+          probes += 1;
+          return probes === 1
+            ? Promise.reject(new TypeError("Failed to fetch"))
+            : Promise.resolve(new Response("{}", { status: 402, headers: { "Payment-Required": header } }));
+        }),
+      );
+
+      const { result } = renderHook(() => useX402Chat(OPTIMISM));
+      // Captured before the send, exactly as the tool loop captures it for the turn.
+      const paidFetchForTurn = result.current.paidFetch;
+
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+        await paidFetchForTurn("https://web-agent.fretchen.eu/search?q=x");
+      });
+
+      expect(mockRegister.mock.calls.map((call) => call[0])).toEqual([BASE, BASE]);
+    });
+
     it("proceeds on the preferred network when the agent can't be read (CORS/offline)", async () => {
       // A probe that throws must not block payment — the real 402 is the judge.
       vi.stubGlobal(
@@ -872,5 +937,78 @@ describe("WebStorageClientChannelStorage", () => {
     await storage.delete("0xabc");
 
     await expect(storage.get("0xabc")).resolves.toBeUndefined();
+  });
+
+  /**
+   * Records are tagged with their chain, which is what lets `resyncFromChain` read a zero on-chain
+   * balance as "this channel is fiction" rather than "this channel is on another chain". Every
+   * network's records share one localStorage namespace, so without the tag the two are identical.
+   */
+  describe("network tagging", () => {
+    const OPTIMISM = "eip155:10";
+    const BASE = "eip155:8453";
+    const FUNDED = [1_000_000n, 40_000n] as const;
+    const EMPTY = [0n, 0n] as const;
+
+    /** What the SDK stores, plus the tag we add. Written raw so a record can be posed as untagged,
+     *  which is how every record written before tagging shipped looks. */
+    function writeRecord(id: string, record: Record<string, unknown>) {
+      backend.setItem(`x402-channel:${id}`, JSON.stringify(record));
+    }
+    const readRecord = (id: string) => JSON.parse(backend.getItem(`x402-channel:${id}`) ?? "null");
+
+    it("tags a written record with its network, and hides the tag from the SDK", async () => {
+      const storage = new WebStorageClientChannelStorage(backend, OPTIMISM);
+      const context = { chargedCumulativeAmount: "1420", balance: "7100" };
+
+      await storage.set("0xabc", context);
+
+      expect(readRecord("0xabc")).toMatchObject({ network: OPTIMISM });
+      // The SDK gets back exactly what it wrote — the tag is our bookkeeping, not part of its
+      // channel context.
+      await expect(storage.get("0xabc")).resolves.toEqual(context);
+    });
+
+    it("leaves another network's record alone, without even reading the chain for it", async () => {
+      writeRecord("0xbase", { network: BASE, balance: "500000", chargedCumulativeAmount: "100" });
+      const read = vi.fn();
+
+      await new WebStorageClientChannelStorage(backend, OPTIMISM).resyncFromChain(read);
+
+      expect(read).not.toHaveBeenCalled();
+      expect(readRecord("0xbase")).toMatchObject({ balance: "500000" });
+    });
+
+    /**
+     * A zero read is not evidence that the record is wrong, tagged or not. This briefly deleted
+     * such records: the incident that prompted it turned out to be the *server's* cached balance
+     * reading 0 while the chain held 544239 and this record said so correctly, so deleting would
+     * have thrown away the accurate copy. `scw_js/x402_channel_sync.ts` documents the drift.
+     */
+    it.each([
+      ["tagged for this network", { network: OPTIMISM, balance: "544239", chargedCumulativeAmount: "52897" }],
+      ["untagged, written before tagging shipped", { balance: "544239", chargedCumulativeAmount: "52897" }],
+    ])("leaves a record %s alone when the chain reads zero", async (_label, record) => {
+      writeRecord("0xquiet", record);
+
+      await new WebStorageClientChannelStorage(backend, OPTIMISM).resyncFromChain(() => Promise.resolve(EMPTY));
+
+      expect(readRecord("0xquiet")).toMatchObject({ balance: "544239", chargedCumulativeAmount: "52897" });
+    });
+
+    /** A real balance is itself proof of which chain the record belongs to, so the resync is also
+     *  where an untagged record gets its tag — no need to wait for the next settle. */
+    it("tags an untagged record once the chain confirms it", async () => {
+      writeRecord("0xlegacy", { balance: "1", chargedCumulativeAmount: "52897" });
+
+      await new WebStorageClientChannelStorage(backend, OPTIMISM).resyncFromChain(() => Promise.resolve(FUNDED));
+
+      expect(readRecord("0xlegacy")).toMatchObject({
+        network: OPTIMISM,
+        balance: "1000000",
+        // Kept because it is ahead of the chain's totalClaimed — settlement here is batched.
+        chargedCumulativeAmount: "52897",
+      });
+    });
   });
 });

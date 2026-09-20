@@ -4,7 +4,7 @@
  * the UI: hop exhaustion, which tools stay on offer, and what counts as a contributing source.
  */
 import { describe, it, expect, vi } from "vitest";
-import { runToolLoop, MAX_HOPS, type OfferedTool } from "../utils/toolLoop";
+import { runToolLoop, MAX_HOPS, MAX_PAID_CALLS, type OfferedTool } from "../utils/toolLoop";
 import type { X402ChatMessage, X402Tool } from "../types/x402";
 
 type Source = "alpha" | "beta";
@@ -209,5 +209,103 @@ describe("runToolLoop", () => {
       runToolLoop<Source>(convo(), OFFERED, { ensureReady, payAndSend: payAndSend as never, runToolCall: vi.fn() }),
     ).rejects.toThrow("wrong network");
     expect(payAndSend).not.toHaveBeenCalled();
+  });
+
+  /**
+   * MAX_HOPS bounds hops, not calls — one hop may ask for a dozen tools. Once the web tools cost
+   * USDC per call that stopped being merely untidy, so the loop counts them.
+   */
+  describe("paid-tool budget", () => {
+    const paidOffered: OfferedTool<Source>[] = [
+      { tool: tool("paid_tool"), source: "alpha", paid: true },
+      { tool: tool("free_tool"), source: null },
+    ];
+
+    /** Every call in ONE hop, which is the case MAX_HOPS cannot bound. */
+    function manyCallsInOneHop(name: string, count: number) {
+      return {
+        choices: [
+          {
+            message: {
+              role: "assistant",
+              content: null,
+              tool_calls: Array.from({ length: count }, (_, i) => ({
+                id: `call_${i}`,
+                type: "function",
+                function: { name, arguments: "{}" },
+              })),
+            },
+            finish_reason: "tool_calls",
+          },
+        ],
+      };
+    }
+
+    it("withdraws a paid tool once the budget is spent, and keeps the free one", async () => {
+      const payAndSend = vi
+        .fn()
+        .mockResolvedValueOnce(manyCallsInOneHop("paid_tool", MAX_PAID_CALLS))
+        .mockResolvedValue(textTurn("done"));
+      const runToolCall = vi.fn().mockResolvedValue({ result: { status: "ok" } });
+
+      await runToolLoop(convo(), paidOffered, deps(payAndSend, runToolCall));
+
+      expect(offeredOn(payAndSend, 0)).toEqual(["paid_tool", "free_tool"]);
+      expect(offeredOn(payAndSend, 1)).toEqual(["free_tool"]);
+    });
+
+    it("keeps a paid tool on offer while budget remains", async () => {
+      const payAndSend = vi
+        .fn()
+        .mockResolvedValueOnce(manyCallsInOneHop("paid_tool", MAX_PAID_CALLS - 1))
+        .mockResolvedValue(textTurn("done"));
+      const runToolCall = vi.fn().mockResolvedValue({ result: { status: "ok" } });
+
+      await runToolLoop(convo(), paidOffered, deps(payAndSend, runToolCall));
+
+      expect(offeredOn(payAndSend, 1)).toContain("paid_tool");
+    });
+
+    /**
+     * The case the budget exists for, and the one the tests above miss by asking for exactly the
+     * budget: a single hop that asks for MORE. Withdrawing the tool from the next hop's menu is no
+     * defence here, because the menu is built after every one of these calls has already been paid
+     * for. Each call still needs a result of its own — an assistant turn with a tool_call and no
+     * matching `role: "tool"` message is a malformed request on the next hop.
+     */
+    it("stops paying inside the hop that overshoots, and answers the calls it refused", async () => {
+      const overshoot = MAX_PAID_CALLS + 3;
+      const payAndSend = vi
+        .fn()
+        .mockResolvedValueOnce(manyCallsInOneHop("paid_tool", overshoot))
+        .mockResolvedValue(textTurn("done"));
+      const runToolCall = vi.fn().mockResolvedValue({ result: { status: "ok" } });
+      const messages = convo();
+
+      const result = await runToolLoop(messages, paidOffered, deps(payAndSend, runToolCall));
+
+      expect(runToolCall).toHaveBeenCalledTimes(MAX_PAID_CALLS);
+      const toolResults = messages.filter((m) => m.role === "tool");
+      expect(toolResults).toHaveLength(overshoot);
+      expect(toolResults.filter((m) => String(m.content).includes("budget_exhausted"))).toHaveLength(
+        overshoot - MAX_PAID_CALLS,
+      );
+      // The turn still closes with an answer rather than erroring out.
+      expect(result.finalContent).toBe("done");
+      expect(offeredOn(payAndSend, 1)).toEqual(["free_tool"]);
+    });
+
+    /** A free tool called many times costs nothing, so it must not consume the budget. */
+    it("does not count free tool calls against the budget", async () => {
+      const payAndSend = vi
+        .fn()
+        .mockResolvedValueOnce(manyCallsInOneHop("free_tool", MAX_PAID_CALLS * 2))
+        .mockResolvedValue(textTurn("done"));
+      const runToolCall = vi.fn().mockResolvedValue({ result: { status: "ok" } });
+
+      await runToolLoop(convo(), paidOffered, deps(payAndSend, runToolCall));
+
+      expect(offeredOn(payAndSend, 1)).toContain("paid_tool");
+    });
   });
 });

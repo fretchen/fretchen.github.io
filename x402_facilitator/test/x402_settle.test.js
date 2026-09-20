@@ -454,6 +454,59 @@ describe("x402_settle with mocked facilitator", () => {
     expect(result.transaction).toBe("");
   });
 
+  /**
+   * `settlement_pending` (new in @x402/evm 2.23) is the one `success: false` that is not terminal:
+   * the transaction was broadcast and only the receipt wait failed, so it may still confirm. The
+   * hash is what lets a caller reconcile instead of blindly retrying, and hard-coding
+   * `transaction: ""` on the failure path would throw it away.
+   */
+  it("passes the broadcast hash through on settlement_pending", async () => {
+    const mockFacilitator = {
+      settle: vi.fn().mockResolvedValue({
+        success: false,
+        errorReason: "settlement_pending",
+        errorMessage: "receipt wait timed out",
+        transaction: "0xbroadcastbutunconfirmed",
+        network: "eip155:11155420",
+      }),
+    };
+
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
+      isValid: true,
+      payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    });
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
+
+    expect(result.success).toBe(false);
+    expect(result.errorReason).toBe("settlement_pending");
+    expect(result.transaction).toBe("0xbroadcastbutunconfirmed");
+  });
+
+  /** The contrast that gives the case above its meaning: a genuinely terminal failure never
+   *  broadcast anything, so it must not hand back a hash to reconcile against. */
+  it("still reports no transaction for a terminal settlement failure", async () => {
+    const mockFacilitator = {
+      settle: vi.fn().mockResolvedValue({
+        success: false,
+        errorReason: "insufficient_allowance",
+        transaction: "0xshouldnotbesurfaced",
+      }),
+    };
+
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
+      isValid: true,
+      payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    });
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
+
+    expect(result.success).toBe(false);
+    expect(result.transaction).toBe("");
+  });
+
   it("extracts insufficient_funds error reason from exception", async () => {
     vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
       isValid: true,

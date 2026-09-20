@@ -6,7 +6,8 @@
   "scripts": {
     "generate:openapi:genimg": "tsx scripts/generate-openapi-genimg.ts && prettier --write --log-level warn openapi.genimg.json",
     "generate:openapi:llm": "tsx scripts/generate-openapi-llm.ts && prettier --write --log-level warn openapi.llm.json",
-    "generate:openapi": "npm run generate:openapi:genimg && npm run generate:openapi:llm",
+    "generate:openapi:search": "tsx scripts/generate-openapi-search.ts && prettier --write --log-level warn openapi.search.json",
+    "generate:openapi": "npm run generate:openapi:genimg && npm run generate:openapi:llm && npm run generate:openapi:search",
     "build": "npm run generate:openapi && tsup",
     "deploy": "npm run build && npx osls deploy",
     "test": "NODE_ENV=test vitest run",

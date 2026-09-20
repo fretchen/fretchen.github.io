@@ -73,10 +73,10 @@ export default function Page() {
         <SequenceDiagram participants={rolesParticipants} steps={rolesSteps} territory="explore" />
 
         <p>
-          This site runs all three: a facilitator, two paid endpoints acting as sellers, and the buyers that call them —
-          the <Link href="/imagegen">AI Image Generator</Link> and the <Link href="/assistent">assistant</Link>, which
-          pay for every request you make from them. Because nothing here is gated, you can point your own seller at that
-          facilitator instead of running one yourself.
+          This site runs all three: a facilitator, several paid endpoints acting as sellers, and the buyers that call
+          them — the <Link href="/imagegen">AI Image Generator</Link> and the <Link href="/assistent">assistant</Link>,
+          which pay for every request you make from them. Because nothing here is gated, you can point your own seller
+          at that facilitator instead of running one yourself.
         </p>
 
         <CardList>
@@ -87,7 +87,7 @@ export default function Page() {
           />
           <Card
             title="Pay for services (buyers)"
-            description="Call the two live x402 endpoints from TypeScript — the exact scheme and batch-settlement."
+            description="Call the live x402 endpoints from TypeScript — the exact scheme and batch-settlement."
             link="/x402/buyers"
           />
         </CardList>

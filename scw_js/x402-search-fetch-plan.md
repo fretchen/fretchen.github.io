@@ -49,6 +49,19 @@ code:
 curl -s https://facilitator.fretchen.eu/openapi.json | jq '.components.schemas.VerifyResponse.properties | has("extra")'
 ```
 
+### The owner path is gone (PR 3)
+
+§4 commit 1 kept an owner-signature path and argued it "costs nothing and buys three things: the
+frontend migrates independently, own testing stays free, and server-side agents need no funded
+wallet to call our own service." The first is spent — PR 2 landed. The third was never true:
+`growth-agent` has no search integration at all and never called this endpoint. That left free
+testing, against a permanent second way in that the published spec did not describe
+(`security: []`, x402-only) and that neither `genimg` nor `llmx402` has.
+
+So it was removed, along with `SEARCH_CORS_HEADERS` — which existed solely to name `Authorization`
+in the preflight. The accepted cost: exercising these routes now costs real money, mainnet only,
+exactly as `genimg` already does.
+
 ### Two deliberate deviations in PR 2 as built
 
 - **Two tool statuses, not three.** `website/tools/failure.ts` implements

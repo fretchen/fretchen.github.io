@@ -144,6 +144,23 @@ The assistant's two web tools, sold per call. `search_service.ts` proxies Brave'
 
 **The SSRF defence is unchanged by payment.** A payment authorises a fetch, not a fetch of `169.254.169.254`. See the header comment of [`web_fetch_service.ts`](./web_fetch_service.ts).
 
+**Refunds, and the one exercise that tests them.** Cooperative refunds are the seller's job (`llmx402cron`, or `scripts/recover_channels.ts` on demand), and the SDK builds each one entirely from the **stored** channel record — the amount from `balance - chargedCumulativeAmount`, the candidate filter from `balance !== 0`, and the signature from `refundNonce`. All three are caches of chain state, and all three have gone stale in production. `resyncChannelState` re-reads them before every sweep, which is the only thing standing between a working refund and a permanently broken one.
+
+The failure mode that hid for months: a successful refund **deletes** the channel record, and a later deposit with the same voucher signer recreates it with `refundNonce: 0` while the chain has moved on. Every later refund is then signed against a consumed nonce and reverts (`0x164f1afe`) — and because the SDK's refund loop has no per-channel catch, one such channel blocks the whole sweep. 2.08 USDC accumulated behind it.
+
+No unit test can catch that: every test here replaces the chain with a mock that agrees with the local record by construction. The exercise that _would_ catch it needs a real chain, and it must **refund the same channel twice** — a single refund passes and proves nothing, because the nonce only goes stale after the first one. On Base Sepolia (free USDC, and the escrow contract is deployed there):
+
+```bash
+# 1. buyer: open a channel and spend on it — scw_js/notebooks/sc_llm_x402_buyer.ipynb (USE_BASE, testnet)
+# 2. seller: claim what is owed, then refund the rest
+npx tsx scripts/recover_channels.ts eip155:84532 --apply
+# 3. buyer: run the notebook again — same voucher signer, so the SAME channelId is re-funded
+# 4. seller: refund a second time. THIS is the step that used to revert.
+npx tsx scripts/recover_channels.ts eip155:84532 --apply
+```
+
+Run it before touching the refund path. It is deliberately not in CI: it needs a funded key and a network, and CI stays hermetic.
+
 ### `growth_api.ts` - Growth Agent Draft Approval
 
 API for reviewing, editing, and approving AI-generated social media drafts. Used by the Growth Agent notebooks and cron job.
@@ -206,6 +223,66 @@ npm run dev:growth
 npm run dev:llmx402
 npm run dev:llmx402cron
 ```
+
+## Reading the logs
+
+Not the Scaleway console, and not Grafana — both show nothing useful here. `scripts/logs.ts` queries
+Cockpit's Loki API directly:
+
+```bash
+npx tsx scripts/logs.ts                                      # which functions are logging
+npx tsx scripts/logs.ts facilitator --since 36h --grep "Settlement failed"
+npx tsx scripts/logs.ts llmx402cron --since 48h --grep "Refund sweep"
+```
+
+**It reads the whole Scaleway project, not just this package** — Cockpit is scoped per project, so
+the facilitator, analytics and comment-service logs come out of the same command. The script lives
+here only because this is where the operational scripts live.
+
+Needs `SCW_COCKPIT_LOGS_URL` and `SCW_COCKPIT_LOGS_TOKEN` in `.env`. That token is a **Cockpit**
+token with `read_only_logs` scope — `SCW_SECRET_KEY` is rejected with a 403 — created with
+`scw cockpit token create name=<name> token-scopes.0=read_only_logs region=fr-par`. Its secret is
+shown once, so save it immediately: a token whose secret is lost can only be deleted.
+
+Worth knowing before an incident: a function that has not run inside the `--since` window does not
+appear in the discovery listing at all, so widen the window before concluding anything is missing.
+
+## Alerting on log content
+
+Scaleway's built-in alerts are metric-based, and the failure that motivated this section produced no
+error metric at all — the facilitator answered HTTP 200 with `success: false` and the revert reason
+buried in the body. That is only ever visible as text in a log line, so `alerts/payments.yaml`
+defines Loki ruler rules that watch for it directly.
+
+```bash
+npx tsx scripts/alerts.ts                  # list the rule groups currently on the ruler
+npx tsx scripts/alerts.ts --push           # push alerts/payments.yaml
+npx tsx scripts/alerts.ts --delete payments
+```
+
+Needs `SCW_COCKPIT_RULES_TOKEN` in `.env` — a **separate** Cockpit token from the read-only one
+above, scoped `full_access_logs_rules`:
+`scw cockpit token create name=<name> token-scopes.0=full_access_logs_rules region=fr-par`. Kept
+separate because `logs.ts` is run casually and often and should only ever be able to read; this one
+can write and delete alerting rules.
+
+Four rules, deliberately few — see the comments at the top of `alerts/payments.yaml` for the
+reasoning on which four and why the rest were left out. One constraint worth knowing before writing
+a fifth: **Scaleway's Loki ruler caps a range-vector window at 1h.** `llmx402cron` runs every 12h,
+so a rule cannot stay pinned "firing" across the gap between runs the way a naive `[13h]` window
+would suggest — that gets rejected outright. Every rule here uses `[1h]`, which resolves after an
+hour and re-fires on the next cron run if the problem persists. Read a resolved notification as "no
+new occurrence in the last hour", not as "fixed".
+
+Push is a manual, explicit step — never wired into deploy. Alerting rules changing as a side effect
+of shipping code is its own kind of surprise, and a rule silently dropped by a deploy looks
+identical to a system that is simply quiet.
+
+**A rule that has never fired is not known to work.** Before trusting a new one, push a throwaway
+group matching a log line that occurs on every routine run (e.g. `"claimAndSettle completed"`),
+confirm the email arrives with the summary/description actually populated, then
+`--delete` it. This is exactly how `PaymentCronFailed` was proven to work in practice — pushing a
+test rule surfaced a real, previously-unnoticed `withdraw_delay_mismatch` failure on Base Sepolia.
 
 ## Deployment
 

@@ -1,0 +1,92 @@
+# Loki alerting rules for the x402 payment path.
+#
+# Pushed with `npx tsx scripts/alerts.ts --push`; never on deploy. Alerting config that changes as
+# a side effect of shipping code is its own kind of surprise.
+#
+# ── Why these four and not more ────────────────────────────────────────────────────────────────
+# Each rule has to mean "a human needs to do something". The failure mode of alerting is not
+# missing an alert, it is sending enough useless ones that people stop reading — which is how the
+# refund bug survived for weeks in a log line that was printed every 12 hours.
+#
+# So: no rule on `"Settlement failed"` as a whole, because most of those are a caller's bad
+# signature or their own empty allowance, not our problem. No rule on
+# `"Cached channel state had drifted"`, because the repair working is the design.
+#
+# ── Why the windows are [1h] ───────────────────────────────────────────────────────────────────
+# Scaleway's Loki ruler caps a range-vector window at 1h — a rule written as `[13h]` is rejected
+# outright (`matrix selector range 13h0m0s exceeds maximum allowed limit of 1h0m0s`), so there is
+# no way to keep an alert pinned open across the 12h gap between `llmx402cron` runs.
+#
+# The honest design given that cap: `[1h]` fires within an hour of the bad line appearing, then
+# resolves — and if the underlying problem is still there, the next cron run produces the same
+# line and the rule fires again 12h later. You get paged every time it recurs, just not
+# continuously in between. A resolved notification here means "no new occurrence in the last
+# hour", not "fixed" — read it that way, don't take it as confirmation.
+name: payments
+interval: 1m
+rules:
+  # The post-condition of the refund sweep, and the most valuable rule here: it is written against
+  # the OUTCOME, so it fires for causes nobody has thought of yet. Four unrelated bugs — a stale
+  # cached balance, a stale refundNonce, a failed refund transaction on Base, a withdrawDelay
+  # mismatch on Base Sepolia — all present identically as escrow that should have gone home.
+  - alert: RefundEscrowStuck
+    expr: |
+      sum(count_over_time({resource_name=~".+llmx402cron"} |= "still hold escrow" [1h])) > 0
+    for: 0m
+    labels:
+      severity: critical
+      area: payments
+    annotations:
+      summary: "Escrow is stuck: channels are past the refund threshold and still hold funds"
+      description: >-
+        The refund sweep ran and left money behind. This fires on the outcome, so the cause is
+        open — read the run before assuming which one it is.
+        Investigate: cd scw_js && npx tsx scripts/logs.ts llmx402cron --since 24h --grep "still hold escrow"
+        Then: npx tsx scripts/recover_channels.ts eip155:10   (dry run; --apply to recover)
+
+  # The cron's own failures. Always ours, never a caller's.
+  - alert: PaymentCronFailed
+    expr: |
+      sum(count_over_time({resource_name=~".+llmx402cron"} |~ "Refund sweep failed|claimAndSettle failed" [1h])) > 0
+    for: 0m
+    labels:
+      severity: critical
+      area: payments
+    annotations:
+      summary: "The payment cron failed a claim or refund sweep"
+      description: >-
+        Claims or refunds threw. The error reason is in the log line.
+        Investigate: cd scw_js && npx tsx scripts/logs.ts llmx402cron --since 24h --grep "failed"
+
+  # Only the subset of settle failures that are OUR problem. A bad signature or a caller's empty
+  # allowance is their business and must not page us.
+  - alert: FacilitatorNeedsAttention
+    expr: |
+      sum(count_over_time({resource_name=~".+facilitator"} |= "Settlement failed" |~ "refund_simulation_failed|insufficient_fee_allowance|settlement_pending" [15m])) > 0
+    for: 0m
+    labels:
+      severity: critical
+      area: payments
+    annotations:
+      summary: "Facilitator settlement needs attention (not a caller error)"
+      description: >-
+        One of: a refund simulation reverted, our fee allowance ran out, or a settlement was
+        broadcast but never confirmed (settlement_pending carries a tx hash to reconcile).
+        The decoded EVM revert is in errorMessage, which is logged and never returned over HTTP.
+        Investigate: cd scw_js && npx tsx scripts/logs.ts facilitator --since 2h --grep "Settlement failed"
+
+  # Days of lead time. claim/settle skip /verify, so this path gets no `remainingSettlements`
+  # warning from the facilitator — without this the approval simply runs out one day.
+  - alert: FeeAllowanceLow
+    expr: |
+      sum(count_over_time({resource_name=~".+llmx402cron"} |= "Fee allowance nearly exhausted" [1h])) > 0
+    for: 0m
+    labels:
+      severity: warning
+      area: payments
+    annotations:
+      summary: "Facilitator fee allowance is nearly exhausted"
+      description: >-
+        Claims will start failing with insufficient_fee_allowance once it runs out. Re-approve USDC
+        for the facilitator's spender address from the receiver wallet.
+        Investigate: cd scw_js && npx tsx scripts/logs.ts llmx402cron --since 24h --grep "allowance"

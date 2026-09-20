@@ -29,7 +29,7 @@ import {
   getBatchSettlementNetworks,
   useEnhancedRefundRequirements,
 } from "../x402_server.js";
-import { resyncChannelBalances } from "../x402_channel_sync.js";
+import { resyncChannelState } from "../x402_channel_sync.js";
 
 dotenv.config();
 
@@ -69,15 +69,30 @@ async function main(): Promise<void> {
   // SDK refunds `balance - chargedCumulativeAmount` from it — a stale zero either skips the
   // channel (the balance!==0 filter) or computes a negative amount. Two live Optimism
   // channels holding 1.0 and 6.5 USDC both cached "0".
-  console.log("Re-syncing cached balances from chain...");
-  const synced = await resyncChannelBalances(scheme.getStorage(), network, { dryRun: !APPLY });
+  console.log("Re-syncing cached channel state from chain...");
+  const synced = await resyncChannelState(scheme.getStorage(), network, { dryRun: !APPLY });
   for (const s of synced) {
-    if (s.corrected) {
-      console.log(
-        `  ${s.channelId.slice(0, 18)}…  stored ${usdc(s.storedBalance)} -> chain ${usdc(s.chainBalance)} USDC` +
-          (APPLY ? "" : "  (dry run: not written)"),
+    if (!s.corrected) continue;
+    // One entry per term of resyncChannelState's `corrected` predicate, so a corrected channel
+    // can never print as a bare id with nothing after it.
+    const drifted: string[] = [];
+    if (s.storedBalance !== s.chainBalance) {
+      drifted.push(`balance ${usdc(s.storedBalance)} -> ${usdc(s.chainBalance)} USDC`);
+    }
+    if (s.storedTotalClaimed !== s.chainTotalClaimed) {
+      drifted.push(
+        `totalClaimed ${usdc(s.storedTotalClaimed)} -> ${usdc(s.chainTotalClaimed)} USDC`,
       );
     }
+    // A stale nonce is the difference between a refund that works and one that reverts, so it is
+    // reported as its own line rather than folded into a generic "was stale".
+    if (s.storedRefundNonce !== s.chainRefundNonce) {
+      drifted.push(`refundNonce ${s.storedRefundNonce} -> ${s.chainRefundNonce}`);
+    }
+    console.log(
+      `  ${s.channelId.slice(0, 18)}…  ${drifted.join(", ")}` +
+        (APPLY ? "" : "  (dry run: not written)"),
+    );
   }
   console.log(`  ${synced.filter((s) => s.corrected).length} of ${synced.length} were stale.\n`);
 

@@ -18,6 +18,19 @@ vi.mock("viem", async () => {
         blockNumber: 12345678n,
         transactionHash: hash,
       })),
+      // @x402/evm 2.26 added an asset-is-a-contract precheck to the exact scheme's verify:
+      // `verifyEIP3009` calls `startAssetContractCheck`, which eth_getCode's the token and
+      // treats an empty result as "not a deployed contract". Without this the mock throws
+      // `publicClient.getCode is not a function`.
+      //
+      // It has to be mocked even though no assertion here cares about it, because the check is
+      // started in a constructor and only awaited later — so a verify that returns early (a bad
+      // signature, say) abandons the promise and its rejection surfaces as an UNHANDLED one.
+      // Vitest then exits non-zero with every test still reported as passing, which is how this
+      // stayed invisible until CI failed on it.
+      //
+      // Any non-"0x" bytecode satisfies the check; the value is never inspected.
+      getCode: vi.fn(async () => "0x60806040"),
     })),
     createWalletClient: vi.fn(() => ({
       writeContract: vi.fn(
@@ -451,6 +464,59 @@ describe("x402_settle with mocked facilitator", () => {
     expect(result.success).toBe(false);
     expect(result.errorReason).toBe("insufficient_allowance");
     expect(result.payer).toBe("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+    expect(result.transaction).toBe("");
+  });
+
+  /**
+   * `settlement_pending` (new in @x402/evm 2.23) is the one `success: false` that is not terminal:
+   * the transaction was broadcast and only the receipt wait failed, so it may still confirm. The
+   * hash is what lets a caller reconcile instead of blindly retrying, and hard-coding
+   * `transaction: ""` on the failure path would throw it away.
+   */
+  it("passes the broadcast hash through on settlement_pending", async () => {
+    const mockFacilitator = {
+      settle: vi.fn().mockResolvedValue({
+        success: false,
+        errorReason: "settlement_pending",
+        errorMessage: "receipt wait timed out",
+        transaction: "0xbroadcastbutunconfirmed",
+        network: "eip155:11155420",
+      }),
+    };
+
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
+      isValid: true,
+      payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    });
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
+
+    expect(result.success).toBe(false);
+    expect(result.errorReason).toBe("settlement_pending");
+    expect(result.transaction).toBe("0xbroadcastbutunconfirmed");
+  });
+
+  /** The contrast that gives the case above its meaning: a genuinely terminal failure never
+   *  broadcast anything, so it must not hand back a hash to reconcile against. */
+  it("still reports no transaction for a terminal settlement failure", async () => {
+    const mockFacilitator = {
+      settle: vi.fn().mockResolvedValue({
+        success: false,
+        errorReason: "insufficient_allowance",
+        transaction: "0xshouldnotbesurfaced",
+      }),
+    };
+
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
+      isValid: true,
+      payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    });
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
+
+    expect(result.success).toBe(false);
     expect(result.transaction).toBe("");
   });
 

@@ -9,7 +9,7 @@ const {
   mockGetFacilitatorFeeConfig,
   mockReadContract,
   mockLoggerWarn,
-  mockResyncChannelBalances,
+  mockResyncChannelState,
   mockUseEnhancedRefundRequirements,
 } = vi.hoisted(() => ({
   mockCreateLLMResourceServer: vi.fn(),
@@ -18,13 +18,13 @@ const {
   mockGetFacilitatorFeeConfig: vi.fn(),
   mockReadContract: vi.fn(),
   mockLoggerWarn: vi.fn(),
-  mockResyncChannelBalances: vi.fn(),
+  mockResyncChannelState: vi.fn(),
   mockUseEnhancedRefundRequirements: vi.fn(),
 }));
 
 // Hits a real RPC otherwise. Its own behaviour is covered in x402_channel_sync.test.ts.
 vi.mock("../x402_channel_sync.js", () => ({
-  resyncChannelBalances: mockResyncChannelBalances,
+  resyncChannelState: mockResyncChannelState,
 }));
 
 vi.mock("../x402_server.js", () => ({
@@ -72,6 +72,7 @@ describe("llm_x402_cron", () => {
   let mockClaimAndSettle: ReturnType<typeof vi.fn>;
   let mockRefundIdleChannels: ReturnType<typeof vi.fn>;
   let mockSchemeFor: ReturnType<typeof vi.fn>;
+  let mockStorageList: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -88,11 +89,14 @@ describe("llm_x402_cron", () => {
     });
 
     // One scheme per network, each owning storage scoped to that network's S3 prefix.
+    // list() is read by the post-condition check after every sweep. Default: nothing left
+    // behind, which is what a healthy run looks like.
+    mockStorageList = vi.fn().mockResolvedValue([]);
     mockSchemeFor = vi.fn().mockReturnValue({
       createChannelManager: mockCreateChannelManager,
-      getStorage: vi.fn().mockReturnValue({}),
+      getStorage: vi.fn().mockReturnValue({ list: mockStorageList }),
     });
-    mockResyncChannelBalances.mockResolvedValue([]);
+    mockResyncChannelState.mockResolvedValue([]);
     mockUseEnhancedRefundRequirements.mockResolvedValue(undefined);
     mockCreateLLMResourceServer.mockReturnValue({
       resourceServer: {},
@@ -144,6 +148,10 @@ describe("llm_x402_cron", () => {
       settled: true,
       refunds: 0,
       feeAllowanceClaimsLeft: 100,
+      // Reported on every run, including the healthy one: "we checked and found nothing" is the
+      // signal that distinguishes a working sweep from one that never looked.
+      driftCorrected: 0,
+      escrowHeld: "0",
     });
   });
 
@@ -184,6 +192,8 @@ describe("llm_x402_cron", () => {
       settled: false,
       refunds: 0,
       feeAllowanceClaimsLeft: 100,
+      driftCorrected: 0,
+      escrowHeld: "0",
     });
   });
 
@@ -277,19 +287,152 @@ describe("llm_x402_cron", () => {
     );
   });
 
-  it("a failing refund sweep never masks a successful claim", async () => {
+  /**
+   * The resync must come FIRST, and this ordering is the whole reason refunds work at all.
+   *
+   * The SDK refunds `balance - chargedCumulativeAmount` read from the stored record, and signs
+   * the refund against the stored `refundNonce`. Both are caches of chain state that the verify
+   * path zeroes, so a sweep run against unsynced storage either skips the channel (the SDK's own
+   * `balance === 0n` filter) or signs against an already-consumed nonce and reverts on chain.
+   *
+   * Nothing asserted this before — the ordering held by accident of source order, which is not
+   * the same as being guaranteed.
+   */
+  it("resyncs cached channel state before sweeping, not after", async () => {
+    await handle(makeEvent() as never, {});
+
+    expect(mockResyncChannelState).toHaveBeenCalled();
+    expect(mockResyncChannelState.mock.invocationCallOrder[0]).toBeLessThan(
+      mockRefundIdleChannels.mock.invocationCallOrder[0],
+    );
+  });
+
+  /**
+   * A resync that throws must fail the run rather than let the sweep proceed on stale state.
+   * It sits inside the same try as the sweep, so it surfaces as `refundError` — asserted here
+   * so that staying true is a deliberate choice, not an accident of where the try block ends.
+   */
+  it("fails the run when the resync throws, instead of sweeping stale state", async () => {
+    mockResyncChannelState.mockRejectedValue(new Error("S3 unavailable"));
+
+    const result = await handle(makeEvent() as never, {});
+
+    expect(result.statusCode).toBe(500);
+    const body = JSON.parse(result.body);
+    expect(body.results[0].refundError).toBe("S3 unavailable");
+    expect(mockRefundIdleChannels).not.toHaveBeenCalled();
+  });
+
+  /**
+   * A failed refund sweep still reports its successful claim — but the RUN fails.
+   *
+   * It used to return 200: `refundError` is a different key from `error`, and only `error` was
+   * counted, so Scaleway recorded a successful invocation. That is how a refund sweep that failed
+   * twice a day went unnoticed for weeks. The claim detail below is what must not be masked; the
+   * status code is what must not lie.
+   */
+  it("a failing refund sweep fails the run without masking a successful claim", async () => {
     mockRefundIdleChannels.mockRejectedValue(new Error("facilitator rejected refund"));
 
     const res = await handle(makeEvent() as never, {});
 
-    // The claim succeeded, so the run is still a 200 and still reports its claims.
-    expect(res.statusCode).toBe(200);
+    expect(res.statusCode).toBe(500);
     const body = JSON.parse(res.body) as {
       results: Array<{ claims?: number; refunds?: number; refundError?: string }>;
     };
     expect(body.results[0].claims).toBe(1);
     expect(body.results[0].refundError).toBe("facilitator rejected refund");
     expect(body.results[0].refunds).toBeUndefined();
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // The sweep's post-condition
+  //
+  // Refunds failed for four unrelated reasons over one period — a stale cached balance, a stale
+  // refundNonce, a refund_transaction_failed on Base, a withdraw_delay_mismatch on Base Sepolia.
+  // Every one presents identically as escrow that should have gone home and did not, so the check
+  // is written against that outcome rather than any of the causes.
+  // ═══════════════════════════════════════════════════════════
+
+  /** Idle past the threshold, still holding escrow: the sweep did not do its job, whatever the
+   *  reason — including a reason nobody has thought of yet. */
+  function stuckChannel(overrides: Record<string, unknown> = {}) {
+    return {
+      channelId: "0xstuck",
+      balance: "544239",
+      totalClaimed: "0",
+      chargedCumulativeAmount: "52897",
+      lastRequestTimestamp: Date.now() - 48 * 3600 * 1000,
+      ...overrides,
+    };
+  }
+
+  it("fails the run when a channel is past the refund threshold and still holds escrow", async () => {
+    mockStorageList.mockResolvedValue([stuckChannel()]);
+
+    const res = await handle(makeEvent() as never, {});
+
+    expect(res.statusCode).toBe(500);
+    const body = JSON.parse(res.body) as { results: Array<{ stuckChannels?: string[] }> };
+    expect(body.results[0].stuckChannels).toEqual(["0xstuck"]);
+  });
+
+  /** Nothing thrown, refunds reported as done — and escrow still sitting there. This is the case
+   *  no error-based check can see, and the reason the post-condition is written at all. */
+  it("catches stuck escrow even when the sweep reported success", async () => {
+    mockRefundIdleChannels.mockResolvedValue([{ transaction: "0xabc" }]);
+    mockStorageList.mockResolvedValue([stuckChannel()]);
+
+    const res = await handle(makeEvent() as never, {});
+
+    expect(res.statusCode).toBe(500);
+  });
+
+  it("passes a channel that is idle but has nothing left to refund", async () => {
+    mockStorageList.mockResolvedValue([stuckChannel({ balance: "52897" })]);
+
+    const res = await handle(makeEvent() as never, {});
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body) as {
+      results: Array<{ stuckChannels?: string[]; escrowHeld?: string }>;
+    };
+    expect(body.results[0].stuckChannels).toBeUndefined();
+    expect(body.results[0].escrowHeld).toBe("52897");
+  });
+
+  /** `balance` is cumulative deposits, so a channel with claim history holds less than it has
+   *  received. Reporting the deposits would overstate the money at risk in the very line the
+   *  stuck-escrow alert points a human at. */
+  it("reports escrow net of what has already been claimed out", async () => {
+    mockStorageList.mockResolvedValue([
+      stuckChannel({ balance: "544239", totalClaimed: "52897", chargedCumulativeAmount: "52897" }),
+    ]);
+
+    const res = await handle(makeEvent() as never, {});
+
+    const body = JSON.parse(res.body) as { results: Array<{ escrowHeld?: string }> };
+    expect(body.results[0].escrowHeld).toBe("491342");
+  });
+
+  it("passes a funded channel that is still in active use", async () => {
+    mockStorageList.mockResolvedValue([stuckChannel({ lastRequestTimestamp: Date.now() })]);
+
+    const res = await handle(makeEvent() as never, {});
+
+    expect(res.statusCode).toBe(200);
+  });
+
+  /** Drift is reported but not escalated: the repair working is the design. What must not happen
+   *  is the silence — the stale refundNonce was corrected on every run while refunds failed. */
+  it("reports corrected drift without failing the run", async () => {
+    mockResyncChannelState.mockResolvedValue([{ corrected: true }, { corrected: false }]);
+
+    const res = await handle(makeEvent() as never, {});
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body) as { results: Array<{ driftCorrected?: number }> };
+    expect(body.results[0].driftCorrected).toBe(1);
   });
 
   // ═══════════════════════════════════════════════════════════

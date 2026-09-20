@@ -55,6 +55,24 @@ export type FacilitatorFeePaid = z.infer<typeof FacilitatorFeePaidSchema>;
 export type SettleResult = SettleResponseBody & { errorMessage?: string };
 
 /**
+ * The one `success: false` that is **not** a terminal failure.
+ *
+ * Added by @x402/evm 2.23 for every settle path (eip3009/permit2 for `exact` and `upto`, and
+ * batch-settlement's settle/claim/deposit/refund): when the transaction has been **broadcast** but
+ * waiting for its receipt fails — an RPC error, a timeout — the chain may still confirm it. Before
+ * 2.23 that came back as a terminal failure, so a caller could conclude "settlement failed" about a
+ * transaction that in fact succeeded, and retry it.
+ *
+ * What makes it recoverable is the `transaction` hash that comes with it, so the caller can
+ * reconcile on chain before deciding anything. Which is precisely why the failure branches below
+ * must stop hard-coding `transaction: ""`.
+ *
+ * Declared here rather than imported: neither `@x402/core` nor `@x402/evm` exports its constant
+ * from a public entry point (it lives in an internal chunk in both), so the string is the contract.
+ */
+const SETTLEMENT_PENDING = "settlement_pending";
+
+/**
  * Derive the single receiver a batch-settlement claim/settle command pays out to.
  *
  * Read straight from the payload because that is what the SDK acts on:
@@ -372,16 +390,27 @@ export async function settlePayment(
       const payer = claims?.[0]?.voucher?.channel?.payer;
 
       if (!result.success) {
+        const pending = result.errorReason === SETTLEMENT_PENDING;
         logger.warn(
-          { errorReason: result.errorReason, errorMessage: result.errorMessage },
-          "Batch-settlement claim/settle failed",
+          {
+            errorReason: result.errorReason,
+            errorMessage: result.errorMessage,
+            // Only meaningful when pending — a terminal failure never broadcast anything.
+            ...(pending && { transaction: result.transaction, network }),
+          },
+          pending
+            ? "Batch-settlement claim/settle broadcast but unconfirmed — reconcile on chain"
+            : "Batch-settlement claim/settle failed",
         );
         return {
           success: false,
           errorReason: result.errorReason,
           errorMessage: result.errorMessage,
           payer,
-          transaction: "",
+          // Pass the broadcast hash through. Hard-coding "" here would throw away the one thing
+          // that makes settlement_pending recoverable, leaving the caller unable to tell a
+          // transaction that never happened from one that may already have confirmed.
+          transaction: pending ? (result.transaction ?? "") : "",
           network,
         };
       }
@@ -476,16 +505,22 @@ export async function settlePayment(
     const result = await facilitator.settle(paymentPayload as any, paymentRequirements as any);
 
     if (!result.success) {
+      const pending = result.errorReason === SETTLEMENT_PENDING;
       logger.warn(
-        { errorReason: result.errorReason, errorMessage: result.errorMessage },
-        "Settlement failed",
+        {
+          errorReason: result.errorReason,
+          errorMessage: result.errorMessage,
+          ...(pending && { transaction: result.transaction, network: accepted?.network }),
+        },
+        pending ? "Settlement broadcast but unconfirmed — reconcile on chain" : "Settlement failed",
       );
       return {
         success: false,
         errorReason: result.errorReason,
         errorMessage: result.errorMessage,
         payer: verifyResult.payer,
-        transaction: "",
+        // See SETTLEMENT_PENDING: the hash is what the caller reconciles against.
+        transaction: pending ? (result.transaction ?? "") : "",
         network: accepted?.network as string,
       };
     }

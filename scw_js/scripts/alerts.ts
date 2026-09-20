@@ -51,7 +51,9 @@ async function ruler(path: string, init: RequestInit = {}): Promise<string> {
   // it looks identical to a missing namespace. A real permission problem is a bare 403.
   if (!res.ok && !(res.status === 404 && text.includes("no rule groups found"))) {
     // Never echo the token, not even truncated — this output gets pasted into issues.
-    throw new Error(`${init.method ?? "GET"} ${path} failed: HTTP ${res.status} ${text.slice(0, 300)}`);
+    throw new Error(
+      `${init.method ?? "GET"} ${path} failed: HTTP ${res.status} ${text.slice(0, 300)}`,
+    );
   }
   return text;
 }

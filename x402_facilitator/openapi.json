@@ -200,6 +200,14 @@
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
+          },
+          "extra": {
+            "description": "Scheme-specific state from the verifier, passed through verbatim. For batch-settlement this carries the on-chain channel state (balance, totalClaimed, refundNonce, withdrawRequestedAt) that the seller caches — omitting it makes the seller cache zeros.",
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
           }
         },
         "required": ["isValid"],

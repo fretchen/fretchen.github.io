@@ -318,6 +318,10 @@ async function handlePaymentRequest(
         ...(result.remainingSettlements !== undefined && {
           remainingSettlements: result.remainingSettlements,
         }),
+        // Must be forwarded, not summarised: the seller writes its cached channel record
+        // straight from this, and a missing `extra` makes it cache zeros rather than leave
+        // the record alone. See VerifyResponseSchema.extra. /settle already does this.
+        ...(result.extra !== undefined && { extra: result.extra }),
       };
       return {
         statusCode: 200,

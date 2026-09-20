@@ -80,6 +80,34 @@ export const VerifyResponseSchema = z.object({
         "still covers. Present only when a fee is configured and the allowance could be " +
         "read — an early warning before it hits zero.",
     ),
+  /**
+   * Scheme-specific state, forwarded from the scheme verifier untouched.
+   *
+   * Omitting it is not cosmetic — it corrupts the seller's channel store. The seller's SDK
+   * writes its cached channel record straight from this field, WHOLESALE, with zero defaults:
+   *
+   *     const ex = result.extra ?? {};
+   *     const balance     = readExtraString(ex, "balance", "0");
+   *     const refundNonce = readExtraNumber(ex, "refundNonce", 0);
+   *
+   * A response without `extra` therefore does not leave the record alone, it overwrites the
+   * real balance and nonce with zeros on every verify — and stamps `onchainSyncedAt`, marking
+   * the poisoned record fresh so later local verifies copy the zeros forward. That was the
+   * September incident: "payment channel too low" on funded channels, and refunds reverting on
+   * a consumed nonce while escrow sat unrecoverable.
+   *
+   * Never rebuild it field by field here: verify reads flat keys, settle reads a nested
+   * `channelState`, and hand-assembling either is how it was lost in the first place.
+   */
+  extra: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .describe(
+      "Scheme-specific state from the verifier, passed through verbatim. For " +
+        "batch-settlement this carries the on-chain channel state (balance, totalClaimed, " +
+        "refundNonce, withdrawRequestedAt) that the seller caches — omitting it makes the " +
+        "seller cache zeros.",
+    ),
 });
 
 export type VerifyResponseBody = z.infer<typeof VerifyResponseSchema>;

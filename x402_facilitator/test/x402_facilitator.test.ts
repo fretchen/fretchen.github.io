@@ -126,6 +126,70 @@ describe("x402_facilitator handlers", () => {
       expect(body.payer).toBe("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
     });
 
+    /**
+     * The September incident, in one assertion. This endpoint used to build its response from a
+     * fixed field list and silently drop `extra`, which for batch-settlement carries the channel
+     * state the seller caches. The seller's SDK writes its record from that field WHOLESALE,
+     * defaulting each key to zero:
+     *
+     *   const ex = result.extra ?? {};
+     *   const balance     = readExtraString(ex, "balance", "0");
+     *   const refundNonce = readExtraNumber(ex, "refundNonce", 0);
+     *
+     * So dropping it did not leave the seller's record alone — it zeroed the real balance and
+     * nonce on every single verify, which surfaced as "payment channel too low" on funded
+     * channels and refunds reverting on an already-consumed nonce.
+     *
+     * Nothing asserted this passthrough before, which is exactly how it was lost.
+     */
+    it("forwards the scheme's extra, which the seller caches as its channel state", async () => {
+      const channelState = {
+        channelId: "0xdd9e576d5d30096bce8ed29916ee2d3faaf3a34269011b881eccfb0e082719d7",
+        balance: "21300",
+        totalClaimed: "5680",
+        withdrawRequestedAt: 0,
+        refundNonce: "1",
+      };
+      verifyPayment.mockResolvedValue({
+        isValid: true,
+        payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        extra: channelState,
+      });
+
+      const event = {
+        httpMethod: "POST",
+        body: JSON.stringify({
+          paymentPayload: { accepted: { network: "eip155:10" } },
+          paymentRequirements: { amount: "1000000" },
+        }),
+      };
+      const result = await handleVerify(event, {});
+
+      // Verbatim: the seller reads these keys directly, so a reshaped or partial copy is as
+      // damaging as none at all.
+      expect(JSON.parse(result.body).extra).toEqual(channelState);
+    });
+
+    it("omits extra entirely when the scheme produced none", async () => {
+      verifyPayment.mockResolvedValue({
+        isValid: true,
+        payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      });
+
+      const event = {
+        httpMethod: "POST",
+        body: JSON.stringify({
+          paymentPayload: { accepted: { network: "eip155:10" } },
+          paymentRequirements: { amount: "1000000" },
+        }),
+      };
+      const result = await handleVerify(event, {});
+
+      // Absent, not `"extra": null` — the seller tests `result.extra ?? {}`, and a null would
+      // read as "no state" just the same, but an explicit null is a claim we have none.
+      expect(JSON.parse(result.body)).not.toHaveProperty("extra");
+    });
+
     it("should return invalid payment result with reason", async () => {
       verifyPayment.mockResolvedValue({
         isValid: false,

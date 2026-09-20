@@ -288,6 +288,42 @@ describe("llm_x402_cron", () => {
   });
 
   /**
+   * The resync must come FIRST, and this ordering is the whole reason refunds work at all.
+   *
+   * The SDK refunds `balance - chargedCumulativeAmount` read from the stored record, and signs
+   * the refund against the stored `refundNonce`. Both are caches of chain state that the verify
+   * path zeroes, so a sweep run against unsynced storage either skips the channel (the SDK's own
+   * `balance === 0n` filter) or signs against an already-consumed nonce and reverts on chain.
+   *
+   * Nothing asserted this before — the ordering held by accident of source order, which is not
+   * the same as being guaranteed.
+   */
+  it("resyncs cached channel state before sweeping, not after", async () => {
+    await handle(makeEvent() as never, {});
+
+    expect(mockResyncChannelState).toHaveBeenCalled();
+    expect(mockResyncChannelState.mock.invocationCallOrder[0]).toBeLessThan(
+      mockRefundIdleChannels.mock.invocationCallOrder[0],
+    );
+  });
+
+  /**
+   * A resync that throws must fail the run rather than let the sweep proceed on stale state.
+   * It sits inside the same try as the sweep, so it surfaces as `refundError` — asserted here
+   * so that staying true is a deliberate choice, not an accident of where the try block ends.
+   */
+  it("fails the run when the resync throws, instead of sweeping stale state", async () => {
+    mockResyncChannelState.mockRejectedValue(new Error("S3 unavailable"));
+
+    const result = await handle(makeEvent() as never, {});
+
+    expect(result.statusCode).toBe(500);
+    const body = JSON.parse(result.body);
+    expect(body.results[0].refundError).toBe("S3 unavailable");
+    expect(mockRefundIdleChannels).not.toHaveBeenCalled();
+  });
+
+  /**
    * A failed refund sweep still reports its successful claim — but the RUN fails.
    *
    * It used to return 200: `refundError` is a different key from `error`, and only `error` was

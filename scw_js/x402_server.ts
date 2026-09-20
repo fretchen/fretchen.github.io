@@ -240,8 +240,33 @@ export async function useEnhancedRefundRequirements(
     },
     [],
   );
+
+  // Drop `withdrawDelay`, which the enhancer stamps from the CURRENT server config. It is part
+  // of `computeChannelId` (payer, payerAuthorizer, receiver, receiverAuthorizer, token,
+  // withdrawDelay, salt), so it is fixed per channel at creation and can never be updated — a
+  // different delay is a different channel. The facilitator's validateChannelConfig compares
+  // the payload's stored config against this field:
+  //
+  //     if (extra?.withdrawDelay !== undefined && config.withdrawDelay !== Number(extra.withdrawDelay))
+  //       return ErrWithdrawDelayMismatch;
+  //
+  // so once LLM_WITHDRAW_DELAY_SECONDS changed (900 -> 86400, commit 313e76df), every channel
+  // opened before it became permanently unrefundable: `withdraw_delay_mismatch` on every sweep,
+  // escrow stranded with no way back. Absent, the equality branch is skipped; the range check
+  // that follows still applies (MIN_WITHDRAW_DELAY is 900).
+  //
+  // Safe to omit because the check immediately above it in the same function already binds the
+  // config cryptographically — `computeChannelId(config) === channelId` fails first if anything
+  // in the config was forged. The equality test is policy ("this channel matches today's
+  // setting"), not security, and enforcing today's policy on an old channel only strands funds.
+  // `receiverAuthorizer` is kept: that one the facilitator fails closed on, and it is why this
+  // function exists.
+  const enhancedExtra = (enhanced as { extra?: Record<string, unknown> }).extra ?? {};
+  const { withdrawDelay: _configuredDelay, ...extraWithoutDelay } = enhancedExtra;
+  const refundRequirements = { ...enhanced, extra: extraWithoutDelay };
+
   (manager as { buildPaymentRequirements: () => unknown }).buildPaymentRequirements = () =>
-    enhanced;
+    refundRequirements;
 }
 
 export interface BatchSettlementPaymentRequirementsOptions {

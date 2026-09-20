@@ -54,6 +54,7 @@
             "name": "q",
             "in": "query",
             "required": true,
+            "description": "The search query. Result count and token budgets are fixed server-side.",
             "schema": {
               "type": "string",
               "minLength": 1,
@@ -107,6 +108,7 @@
             "name": "url",
             "in": "query",
             "required": true,
+            "description": "Absolute https URL. Other schemes and non-public hosts are rejected with 400.",
             "schema": {
               "type": "string",
               "minLength": 1
@@ -167,7 +169,8 @@
           "q": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 600
+            "maxLength": 600,
+            "description": "The search query. Result count and token budgets are fixed server-side."
           }
         },
         "required": ["q"],
@@ -178,7 +181,8 @@
         "properties": {
           "url": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Absolute https URL. Other schemes and non-public hosts are rejected with 400."
           }
         },
         "required": ["url"],

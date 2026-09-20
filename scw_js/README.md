@@ -15,7 +15,7 @@ Serverless functions for AI image generation and LLM services with blockchain in
 | LLM Chat         | `llmx402`         | x402 batch-settlement LLM chat (USDC payment channels) |
 | LLM Claim/Settle | `llmx402cron`     | Claims and settles accumulated LLM channels every 12h  |
 | Growth API       | `growthapi`       | Draft approval API for Growth Agent (wallet auth)      |
-| Web access       | `searchapi`       | Brave search + web fetch (x402, or owner wallet auth)  |
+| Web access       | `searchapi`       | Brave search + web fetch (x402)                        |
 
 ## Functions
 
@@ -134,7 +134,7 @@ The assistant's two web tools, sold per call. `search_service.ts` proxies Brave'
 | GET    | `/search` | $0.01 USDC  | `10000`      |
 | GET    | `/fetch`  | $0.001 USDC | `1000`       |
 
-**Two ways in, and they are alternatives.** A valid owner signature over `search-api:<timestamp>` serves for free — that is what lets server-side callers and notebooks work without a funded wallet. Everything else pays. A bearer that does not verify is not an error; it simply is not the owner, and gets the 402.
+**One way in: everybody pays.** There was an owner-signature path that served for free, justified as what let server-side callers work without a funded wallet. It was removed once that proved to name a consumer that does not exist — `growth-agent` never called this endpoint, the frontend stopped using it when the assistant's tools moved to paid fetch, and the buyer notebook's owner cell was a demonstration. `genimg` and `llmx402` never had such a path. The consequence, accepted deliberately: there is no free path and no testnet, so exercising these routes costs real money — the same trade `genimg` already makes.
 
 **Payment is x402 batch-settlement on the chat's channel.** `createLLMResourceServer` is shared with `sc_llm_x402.ts`, giving both the same receiver, receiver authorizer, token and withdraw delay — the tuple `computeChannelId` hashes. A tool call from `/assistent` therefore bills onto the channel the chat already funded, with no second deposit, and `llmx402cron` claims it unchanged. The exact scheme could not be used at these prices: the facilitator's flat 0.01 USDC per settlement is the entire price of a search.
 

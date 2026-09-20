@@ -1,10 +1,10 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 
-// Signatures here are real, not mocked — same reasoning as growth_api.test.ts: `verifySignedMessage`
-// lives in @fretchen/chain-utils, which resolves its own copy of viem through the symlinked
-// workspace package, so a `vi.mock("viem")` in this package cannot reach it. Signing for real is
-// also the stronger test of a gate whose whole job is to keep a metered API key from being spent
-// by anyone but the owner.
+// Kept only to build a genuinely valid owner bearer, which the "no free path" cases below send to
+// prove it now buys nothing. Signing for real rather than mocking: `verifySignedMessage` resolves
+// its own copy of viem through the symlinked workspace package, so a `vi.mock("viem")` here could
+// never have reached it anyway — and a hand-faked token would not prove the point, since the thing
+// being asserted is that even a CORRECT signature is ignored.
 import { privateKeyToAccount } from "viem/accounts";
 
 // DNS is stubbed so these stay hermetic: /fetch resolves every hostname before connecting, and a
@@ -60,11 +60,6 @@ const owner = privateKeyToAccount(
   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
 );
 const OWNER_ADDRESS = owner.address;
-// Anvil account #1, standing in for everybody else.
-const stranger = privateKeyToAccount(
-  "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
-);
-
 const AUTH_PREFIX = "search-api";
 
 function braveResponse() {
@@ -193,89 +188,48 @@ afterEach(() => {
 });
 
 /**
- * The owner signature is one of two ways in, not a gate. Everything that used to be a 401 is now a
- * 402: a caller who cannot prove they are the owner has not been refused, they have been quoted a
- * price. What must not happen is either of them being served for free.
+ * There is one way in: payment. The owner-signature path was removed — `genimg` and `llmx402`
+ * never had one, and the consumer it was justified by (server-side callers without a funded
+ * wallet) turned out not to exist. What these pin is that its removal did not leave a crack:
+ * a bearer is now just an ignored header, not a cheaper route.
  */
-describe("the free owner path", () => {
-  test("quotes a price instead of refusing a request with no Authorization header", async () => {
+describe("no free path", () => {
+  test("quotes a price for a request with no Authorization header", async () => {
     const res = await handle(makeEvent("GET", "search", { auth: null, query: { q: "x402" } }), {});
 
     expect(res.statusCode).toBe(402);
   });
 
-  test("quotes a price for a signature from somebody who is not the owner", async () => {
-    const res = await handle(
-      makeEvent("GET", "search", { auth: await makeAuthHeader(stranger), query: { q: "x402" } }),
-      {},
-    );
-
-    expect(res.statusCode).toBe(402);
-    expect(fetch).not.toHaveBeenCalled();
-  });
-
-  test("quotes a price for an expired token", async () => {
-    const stale = Math.floor(Date.now() / 1000) - 10 * 60;
-    const res = await handle(
-      makeEvent("GET", "search", {
-        auth: await makeAuthHeader(owner, { timestamp: stale }),
-        query: { q: "x" },
-      }),
-      {},
-    );
-
-    expect(res.statusCode).toBe(402);
-    expect(fetch).not.toHaveBeenCalled();
-  });
-
-  /** The prefix is what stops a token minted for one service being spent on another. */
-  test("rejects a token signed for a different service", async () => {
-    const res = await handle(
-      makeEvent("GET", "search", {
-        auth: await makeAuthHeader(owner, { prefix: "analytics-api" }),
-        query: { q: "x402" },
-      }),
-      {},
-    );
-
-    expect(res.statusCode).toBe(402);
-  });
-
-  test("accepts a second owner from a comma-separated list", async () => {
-    process.env.OWNER_ETH_ADDRESS = `${stranger.address},${OWNER_ADDRESS}`;
-
-    const res = await handle(
-      makeEvent("GET", "search", { auth: validAuth, query: { q: "x402" } }),
-      {},
-    );
-
-    expect(res.statusCode).toBe(200);
-  });
-
   /**
-   * Fails closed: an unset or empty owner list must not read as "everyone". It quotes a price
-   * rather than 500ing, though — the misconfiguration is logged, but it belongs to the free path
-   * and must not take down a paid path that never read the variable.
+   * The regression guard for this change. A token that used to be served for free — correctly
+   * signed, current, right prefix, right owner — must now be quoted a price like anything else,
+   * and must not reach the metered upstream on the way.
    */
-  test.each([
-    ["unset", undefined],
-    ["empty", ""],
-    ["only separators", "  ,  "],
-  ])("serves nobody free when OWNER_ETH_ADDRESS is %s", async (_label, value) => {
-    if (value === undefined) delete process.env.OWNER_ETH_ADDRESS;
-    else process.env.OWNER_ETH_ADDRESS = value;
+  test("quotes a price even for what used to be a valid owner token", async () => {
+    const res = await handle(
+      makeEvent("GET", "search", { auth: validAuth, query: { q: "x402" } }),
+      {},
+    );
+
+    expect(res.statusCode).toBe(402);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  /** OWNER_ETH_ADDRESS is no longer read by this endpoint at all; setting it buys nobody a
+   *  free call. It stays in the environment for growthapi and analytics. */
+  test("serves nobody free even when OWNER_ETH_ADDRESS names the signer", async () => {
+    process.env.OWNER_ETH_ADDRESS = OWNER_ADDRESS;
 
     const res = await handle(
       makeEvent("GET", "search", { auth: validAuth, query: { q: "x402" } }),
       {},
     );
 
-    expect(res.statusCode).not.toBe(200);
     expect(res.statusCode).toBe(402);
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  test("never calls Brave when the caller has neither signature nor payment", async () => {
+  test("never calls Brave when the caller has not paid", async () => {
     await handle(makeEvent("GET", "search", { auth: null, query: { q: "x402" } }), {});
 
     expect(fetch).not.toHaveBeenCalled();
@@ -302,24 +256,33 @@ describe("OPTIONS preflight", () => {
   });
 
   /**
-   * Both ways in have to survive the preflight, and `Authorization` is the one header a `*`
-   * wildcard does not cover — it must be named. Without it the browser blocks the owner's request
-   * before it is sent, so it cannot even fall through to the 402. `analytics/stats.ts` names it
-   * for the same reason.
+   * `Authorization` is deliberately NOT named any more. It had to be, while the owner bearer was a
+   * way in — it is the one header a `*` wildcard does not cover. With that path gone the endpoint
+   * is payment-only like `genimg` and `llmx402`, and the shared `CORS_HEADERS` is the honest
+   * description of what it accepts. Asserted rather than left implicit, because silently
+   * re-widening the preflight is how a removed auth path grows back.
    */
-  test("allows the owner's bearer header too", async () => {
+  test("does not advertise Authorization, which nothing sends any more", async () => {
     const res = await handle(makeEvent("OPTIONS", "search", { auth: null }), {});
 
-    expect(res.headers["Access-Control-Allow-Headers"]).toContain("Authorization");
+    expect(res.headers["Access-Control-Allow-Headers"]).not.toContain("Authorization");
   });
 });
 
+/**
+ * These exercise the route's behaviour, which now means exercising it PAID — there is no other way
+ * in since the owner signature was removed. Note what that changes about validation: an unpaid
+ * request is answered with a 402 before its query is ever looked at (a client probing for terms is
+ * not first told its query is malformed), so a 400 is only reachable once a payment payload is
+ * present. It still costs nothing — `parseArgs` runs before verify and settle.
+ */
 describe("GET /search", () => {
+  beforeEach(() => {
+    mockExtractPaymentPayload.mockReturnValue(payment());
+  });
+
   test("returns the projected results", async () => {
-    const res = await handle(
-      makeEvent("GET", "search", { auth: validAuth, query: { q: "x402" } }),
-      {},
-    );
+    const res = await handle(makeEvent("GET", "search", { auth: null, query: { q: "x402" } }), {});
 
     expect(res.statusCode).toBe(200);
     expect(JSON.parse(res.body)).toEqual({
@@ -331,7 +294,7 @@ describe("GET /search", () => {
   test("pins the cost knobs whatever the caller passes", async () => {
     await handle(
       makeEvent("GET", "search", {
-        auth: validAuth,
+        auth: null,
         query: {
           q: "x402",
           maximum_number_of_tokens: "32768",
@@ -353,7 +316,7 @@ describe("GET /search", () => {
     ["an empty q", { q: "" }],
     ["an over-long q", { q: "x".repeat(601) }],
   ])("answers 400 for %s", async (_label, query) => {
-    const res = await handle(makeEvent("GET", "search", { auth: validAuth, query }), {});
+    const res = await handle(makeEvent("GET", "search", { auth: null, query }), {});
 
     expect(res.statusCode).toBe(400);
   });
@@ -364,10 +327,7 @@ describe("GET /search", () => {
       vi.fn().mockResolvedValue({ ok: false, status: 429, statusText: "Too Many Requests" }),
     );
 
-    const res = await handle(
-      makeEvent("GET", "search", { auth: validAuth, query: { q: "x402" } }),
-      {},
-    );
+    const res = await handle(makeEvent("GET", "search", { auth: null, query: { q: "x402" } }), {});
 
     expect(res.statusCode).toBe(500);
     expect(JSON.parse(res.body).error).toBe("Internal server error");
@@ -375,8 +335,14 @@ describe("GET /search", () => {
 });
 
 describe("GET /fetch", () => {
-  /** The whole point of the shared function: the same two ways in front of both routes. */
-  test("takes the same signature or payment as /search", async () => {
+  beforeEach(() => {
+    mockExtractPaymentPayload.mockReturnValue(payment());
+  });
+
+  /** The whole point of the shared function: one way in, priced per route, in front of both. */
+  test("quotes a price when unpaid, exactly as /search does", async () => {
+    mockExtractPaymentPayload.mockReturnValue(null);
+
     const res = await handle(
       makeEvent("GET", "fetch", { auth: null, query: { url: "https://example.com/" } }),
       {},
@@ -398,7 +364,7 @@ describe("GET /fetch", () => {
     );
 
     const res = await handle(
-      makeEvent("GET", "fetch", { auth: validAuth, query: { url: "https://example.com/" } }),
+      makeEvent("GET", "fetch", { auth: null, query: { url: "https://example.com/" } }),
       {},
     );
 
@@ -417,7 +383,7 @@ describe("GET /fetch", () => {
     ["a loopback url", { url: "https://127.0.0.1/" }],
     ["a metadata url", { url: "https://169.254.169.254/" }],
   ])("answers 400 for %s", async (_label, query) => {
-    const res = await handle(makeEvent("GET", "fetch", { auth: validAuth, query }), {});
+    const res = await handle(makeEvent("GET", "fetch", { auth: null, query }), {});
 
     expect(res.statusCode).toBe(400);
   });
@@ -707,15 +673,16 @@ describe("the paid path", () => {
     expect(JSON.parse(res.body).error).toMatch(/cumulative_exceeds_balance/);
   });
 
-  /** The owner path must stay free — a signature must never be charged for. */
-  test("does not charge the owner", async () => {
+  /** A bearer no longer buys an exemption: a paid request carrying one is charged like any other,
+   *  and the header is simply ignored. */
+  test("charges a paying caller even when it also sends a bearer", async () => {
     const res = await handle(
       makeEvent("GET", "search", { auth: validAuth, query: { q: "x402" } }),
       {},
     );
 
     expect(res.statusCode).toBe(200);
-    expect(mockVerifyPayment).not.toHaveBeenCalled();
-    expect(mockSettlePayment).not.toHaveBeenCalled();
+    expect(mockVerifyPayment).toHaveBeenCalled();
+    expect(mockSettlePayment).toHaveBeenCalled();
   });
 });

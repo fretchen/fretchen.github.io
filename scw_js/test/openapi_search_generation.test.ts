@@ -125,5 +125,29 @@ describe("openapi.search.json generation", () => {
       expect(params).toHaveLength(1);
       expect(params[0]).toMatchObject({ name: "url", required: true });
     });
+
+    /**
+     * The mirror image of the `additionalProperties` rule above, and just as much a lie when it is
+     * wrong. `url` is enforced as https-only by `parseHttpsUrl`, but the JSON Schema is a bare
+     * string — the scheme rule deliberately has one home, since `parseHttpsUrl` trims first and a
+     * duplicate regex here would reject a leading space the handler accepts. So the constraint has
+     * to reach the reader as prose, or the published contract under-describes what we enforce and
+     * a client wastes calls discovering it.
+     */
+    it("states the https rule in the url parameter's description", () => {
+      const params = paths["/fetch"]["get"]["parameters"] as { description?: string }[];
+      expect(params[0].description).toMatch(/https/i);
+    });
+
+    /** Lifted to the parameter, not left inside `schema` — OpenAPI's own convention, and it should
+     *  appear exactly once. */
+    it("carries the description on the parameter rather than the schema", () => {
+      const param = paths["/fetch"]["get"]["parameters"][0] as {
+        description?: string;
+        schema: Record<string, unknown>;
+      };
+      expect(param.description).toBeDefined();
+      expect(param.schema.description).toBeUndefined();
+    });
   });
 });

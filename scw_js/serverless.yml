@@ -89,7 +89,7 @@ functions:
     maxScale: 1
   searchapi:
     handler: dist/search_api.handle
-    description: "x402 web access - Brave search and page fetch (or owner wallet auth)"
+    description: "x402 web access - Brave search and page fetch"
     httpOption: redirected
     custom_domains:
       - web-agent.fretchen.eu

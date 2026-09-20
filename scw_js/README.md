@@ -224,6 +224,29 @@ npm run dev:llmx402
 npm run dev:llmx402cron
 ```
 
+## Reading the logs
+
+Not the Scaleway console, and not Grafana — both show nothing useful here. `scripts/logs.ts` queries
+Cockpit's Loki API directly:
+
+```bash
+npx tsx scripts/logs.ts                                      # which functions are logging
+npx tsx scripts/logs.ts facilitator --since 36h --grep "Settlement failed"
+npx tsx scripts/logs.ts llmx402cron --since 48h --grep "Refund sweep"
+```
+
+**It reads the whole Scaleway project, not just this package** — Cockpit is scoped per project, so
+the facilitator, analytics and comment-service logs come out of the same command. The script lives
+here only because this is where the operational scripts live.
+
+Needs `SCW_COCKPIT_LOGS_URL` and `SCW_COCKPIT_LOGS_TOKEN` in `.env`. That token is a **Cockpit**
+token with `read_only_logs` scope — `SCW_SECRET_KEY` is rejected with a 403 — created with
+`scw cockpit token create name=<name> token-scopes.0=read_only_logs region=fr-par`. Its secret is
+shown once, so save it immediately: a token whose secret is lost can only be deleted.
+
+Worth knowing before an incident: a function that has not run inside the `--since` window does not
+appear in the discovery listing at all, so widen the window before concluding anything is missing.
+
 ## Deployment
 
 ```bash

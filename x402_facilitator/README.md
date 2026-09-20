@@ -4,6 +4,17 @@ A production-ready x402 v2 Facilitator for Optimism, enabling EIP-3009 USDC paym
 
 **Production Endpoint:** https://facilitator.fretchen.eu
 
+> **Logs.** This function's logs are read with `scw_js/scripts/logs.ts`, not from the Scaleway
+> console or Grafana:
+>
+> ```bash
+> cd ../scw_js && npx tsx scripts/logs.ts facilitator --since 24h --grep "Settlement failed"
+> ```
+>
+> One Cockpit token covers the whole project, so the script reads this function from there. The
+> `errorMessage` field on a failed settle carries the decoded EVM revert — deliberately logged
+> only, never returned over HTTP.
+
 ## Overview
 
 The x402 Facilitator bridges the gap between Resource Servers and blockchain payments. It provides three core functions:

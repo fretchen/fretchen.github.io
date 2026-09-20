@@ -27,13 +27,13 @@ Export it as a picture with `uv run python scripts/run_local.py --graph` (writes
 
 ## Stack
 
-| Component | Technology |
-|---|---|
-| Runtime | Python 3.11 (Scaleway Serverless Container) |
-| LLM | IONOS AI Model Hub (Llama 3.3 70B) by default — see below |
-| Social | Mastodon REST API, Bluesky AT Protocol |
-| Storage | Scaleway S3 |
-| Package manager | uv |
+| Component       | Technology                                                |
+| --------------- | --------------------------------------------------------- |
+| Runtime         | Python 3.11 (Scaleway Serverless Container)               |
+| LLM             | IONOS AI Model Hub (Llama 3.3 70B) by default — see below |
+| Social          | Mastodon REST API, Bluesky AT Protocol                    |
+| Storage         | Scaleway S3                                               |
+| Package manager | uv                                                        |
 
 ### LLM provider
 
@@ -41,10 +41,10 @@ The provider is selected at runtime by the `LLM_PROVIDER` env var — `ionos` (d
 `mistral` — and each needs its matching API key. Set `LLM_MODEL` to override the provider's
 default model. Selection logic is in `agent/llm_client.py` (`LLMClient.from_env()`).
 
-| `LLM_PROVIDER` | API key env var |
-| --- | --- |
+| `LLM_PROVIDER`    | API key env var   |
+| ----------------- | ----------------- |
 | `ionos` (default) | `IONOS_API_TOKEN` |
-| `mistral` | `MISTRAL_API_KEY` |
+| `mistral`         | `MISTRAL_API_KEY` |
 
 ## Development
 
@@ -137,12 +137,12 @@ uv run python scripts/run_local.py --diagnose
 
 This shows the content queue, next scheduled drafts, LLM analysis status, and recent run logs. Log statuses:
 
-| Status | Meaning |
-|---|---|
-| `completed` | Handler ran successfully |
-| `started` | Handler was invoked but never finished (timeout or crash) |
-| `crashed` | Handler hit an unexpected error (traceback included) |
-| No log for today | Cron did not fire at all |
+| Status           | Meaning                                                   |
+| ---------------- | --------------------------------------------------------- |
+| `completed`      | Handler ran successfully                                  |
+| `started`        | Handler was invoked but never finished (timeout or crash) |
+| `crashed`        | Handler hit an unexpected error (traceback included)      |
+| No log for today | Cron did not fire at all                                  |
 
 ### 2. Run individual tasks locally
 
@@ -177,17 +177,18 @@ kill %1
 
 This runs all daily tasks (analytics, publish, pipeline refill) and weekly tasks (insights on Monday) — exactly what Scaleway executes on `0 8 * * *`.
 
-### 4. Inspect container logs in Grafana (Cockpit)
+### 4. Inspect logs
 
-Grafana gives you the actual stdout/stderr from the running container — useful when the cron fires but no S3 log is written (e.g. startup crash before `_get_storage()` succeeds).
+Grafana/Cockpit dashboards have not worked for this account — they render empty. Read the logs
+through Cockpit's Loki API instead, with the script in `scw_js`:
 
 ```bash
-# After bin/deploy.sh, retrieve the URL once:
-cd terraform
-tofu output grafana_url
+cd ../scw_js && npx tsx scripts/logs.ts growth --since 24h
 ```
 
-Open the URL and log in with your Scaleway account (IAM — no separate Grafana user needed). In Grafana: **Explore → Loki**, query: `{service_name="growth-agent"}`.
+One Cockpit token covers the whole Scaleway project, so that command reads this container's logs as
+well as every serverless function's. Setup and caveats are in
+[`scw_js/README.md`](../scw_js/README.md) → _Reading the logs_.
 
 ### Common issues
 

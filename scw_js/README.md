@@ -144,6 +144,23 @@ The assistant's two web tools, sold per call. `search_service.ts` proxies Brave'
 
 **The SSRF defence is unchanged by payment.** A payment authorises a fetch, not a fetch of `169.254.169.254`. See the header comment of [`web_fetch_service.ts`](./web_fetch_service.ts).
 
+**Refunds, and the one exercise that tests them.** Cooperative refunds are the seller's job (`llmx402cron`, or `scripts/recover_channels.ts` on demand), and the SDK builds each one entirely from the **stored** channel record — the amount from `balance - chargedCumulativeAmount`, the candidate filter from `balance !== 0`, and the signature from `refundNonce`. All three are caches of chain state, and all three have gone stale in production. `resyncChannelState` re-reads them before every sweep, which is the only thing standing between a working refund and a permanently broken one.
+
+The failure mode that hid for months: a successful refund **deletes** the channel record, and a later deposit with the same voucher signer recreates it with `refundNonce: 0` while the chain has moved on. Every later refund is then signed against a consumed nonce and reverts (`0x164f1afe`) — and because the SDK's refund loop has no per-channel catch, one such channel blocks the whole sweep. 2.08 USDC accumulated behind it.
+
+No unit test can catch that: every test here replaces the chain with a mock that agrees with the local record by construction. The exercise that _would_ catch it needs a real chain, and it must **refund the same channel twice** — a single refund passes and proves nothing, because the nonce only goes stale after the first one. On Base Sepolia (free USDC, and the escrow contract is deployed there):
+
+```bash
+# 1. buyer: open a channel and spend on it — scw_js/notebooks/sc_llm_x402_buyer.ipynb (USE_BASE, testnet)
+# 2. seller: claim what is owed, then refund the rest
+npx tsx scripts/recover_channels.ts eip155:84532 --apply
+# 3. buyer: run the notebook again — same voucher signer, so the SAME channelId is re-funded
+# 4. seller: refund a second time. THIS is the step that used to revert.
+npx tsx scripts/recover_channels.ts eip155:84532 --apply
+```
+
+Run it before touching the refund path. It is deliberately not in CI: it needs a funded key and a network, and CI stays hermetic.
+
 ### `growth_api.ts` - Growth Agent Draft Approval
 
 API for reviewing, editing, and approving AI-generated social media drafts. Used by the Growth Agent notebooks and cron job.

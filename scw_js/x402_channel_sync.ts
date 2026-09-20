@@ -21,31 +21,55 @@ const CHANNELS_ABI = [
   },
 ] as const;
 
+/** The contract's per-channel refund nonce, which `channels()` does not return — it lives in its
+ *  own getter. Selector `0xf0dc792e`. */
+const REFUND_NONCE_ABI = [
+  {
+    type: "function",
+    name: "refundNonce",
+    inputs: [{ name: "channelId", type: "bytes32" }],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+  },
+] as const;
+
 export interface ChannelSyncResult {
   channelId: string;
   storedBalance: string;
   chainBalance: string;
+  storedRefundNonce: number;
+  chainRefundNonce: number;
   corrected: boolean;
 }
 
 /**
- * Refresh each stored channel's `balance`/`totalClaimed` from the escrow contract.
+ * Refresh everything the CHAIN owns on each stored channel — `balance`, `totalClaimed` and
+ * `refundNonce` — before any of it is used to build a refund.
  *
- * Why this is needed before any refund: the SDK computes a refund as
- * `balance - chargedCumulativeAmount` from the STORED record (server/index.mjs refundChannel),
- * and filters refund candidates on `balance !== 0`. The stored balance is only a cache —
- * `handleAfterVerify` writes the facilitator's PRE-deposit reading and relies on
- * `handleAfterSettle` to correct it afterwards, so any request that dies in between leaves a
- * stale-low figure behind for good.
+ * Why this is needed before any refund: the SDK builds a refund entirely from the STORED record
+ * (server/index.mjs refundChannel) — the amount from `balance - chargedCumulativeAmount`, the
+ * candidate filter from `balance !== 0`, and the signature from `refundNonce`. Every one of those
+ * is a cache, and each has gone stale in production:
  *
- * That is not hypothetical: two live Optimism channels holding 1.0 and 6.5 USDC both cached
- * `balance: "0"`. Refunding from that cache would have skipped them entirely (the zero
- * filter) or computed a NEGATIVE refund amount (0 - chargedCumulative). Either way the 7.5
- * USDC stays locked.
+ * - **`balance`.** `handleAfterVerify` writes the facilitator's PRE-deposit reading and relies on
+ *   `handleAfterSettle` to correct it, so a request that dies in between leaves a stale-low figure
+ *   behind for good. Two live Optimism channels holding 1.0 and 6.5 USDC both cached `balance: 0`;
+ *   refunding from that cache would have skipped them (the zero filter) or computed a NEGATIVE
+ *   amount. Either way the 7.5 USDC stays locked.
+ * - **`refundNonce`.** A successful refund DELETES the channel record, and a later deposit with the
+ *   same voucher signer recreates it — same `channelId`, `refundNonce` back to 0, while the chain
+ *   has moved to 1. Every subsequent refund is then signed against a consumed nonce and the
+ *   contract reverts with `0x164f1afe`. Two Optimism channels sat like that: refunds had never
+ *   worked on either, and because the SDK's `refundChannels` throws on the first failure with no
+ *   per-channel catch, one of them blocked the whole sweep — including a third channel whose nonce
+ *   was fine. 2.08 USDC accumulated behind it.
+ *
+ * That last point is the reason this function exists in its current shape: it is the one place that
+ * re-reads the chain, so it is the one place that can stop a cached mirror from drifting.
  *
  * Read-only against the chain; the only writes are corrections to our own S3 records.
  */
-export async function resyncChannelBalances(
+export async function resyncChannelState(
   storage: ChannelStorage,
   network: string,
   { dryRun = false }: { dryRun?: boolean } = {},
@@ -61,13 +85,26 @@ export async function resyncChannelBalances(
   for (const channel of channels) {
     let chainBalance: bigint;
     let chainTotalClaimed: bigint;
+    let chainRefundNonce: bigint;
     try {
-      [chainBalance, chainTotalClaimed] = (await client.readContract({
-        address: BATCH_SETTLEMENT_ADDRESS,
-        abi: CHANNELS_ABI,
-        functionName: "channels",
-        args: [channel.channelId as `0x${string}`],
-      })) as [bigint, bigint];
+      // Both reads together: a record corrected from one and not the other would be a third
+      // flavour of the same drift this function exists to prevent.
+      const [channelState, refundNonce] = await Promise.all([
+        client.readContract({
+          address: BATCH_SETTLEMENT_ADDRESS,
+          abi: CHANNELS_ABI,
+          functionName: "channels",
+          args: [channel.channelId as `0x${string}`],
+        }) as Promise<[bigint, bigint]>,
+        client.readContract({
+          address: BATCH_SETTLEMENT_ADDRESS,
+          abi: REFUND_NONCE_ABI,
+          functionName: "refundNonce",
+          args: [channel.channelId as `0x${string}`],
+        }) as Promise<bigint>,
+      ]);
+      [chainBalance, chainTotalClaimed] = channelState;
+      chainRefundNonce = refundNonce;
     } catch (err) {
       // A bad read must never overwrite a good record — leave it exactly as it is.
       logger.warn({ err, network, channelId: channel.channelId }, "Channel state read failed");
@@ -76,12 +113,15 @@ export async function resyncChannelBalances(
 
     const corrected =
       chainBalance.toString() !== channel.balance ||
-      chainTotalClaimed.toString() !== channel.totalClaimed;
+      chainTotalClaimed.toString() !== channel.totalClaimed ||
+      Number(chainRefundNonce) !== channel.refundNonce;
 
     results.push({
       channelId: channel.channelId,
       storedBalance: channel.balance,
       chainBalance: chainBalance.toString(),
+      storedRefundNonce: channel.refundNonce,
+      chainRefundNonce: Number(chainRefundNonce),
       corrected,
     });
 
@@ -95,6 +135,7 @@ export async function resyncChannelBalances(
             ...current,
             balance: chainBalance.toString(),
             totalClaimed: chainTotalClaimed.toString(),
+            refundNonce: Number(chainRefundNonce),
           }
         : current,
     );
@@ -102,10 +143,12 @@ export async function resyncChannelBalances(
       {
         network,
         channelId: channel.channelId,
-        from: channel.balance,
-        to: chainBalance.toString(),
+        balanceFrom: channel.balance,
+        balanceTo: chainBalance.toString(),
+        refundNonceFrom: channel.refundNonce,
+        refundNonceTo: Number(chainRefundNonce),
       },
-      "Corrected stale cached channel balance",
+      "Corrected stale cached channel state",
     );
   }
 

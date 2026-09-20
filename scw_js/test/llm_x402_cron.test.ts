@@ -9,7 +9,7 @@ const {
   mockGetFacilitatorFeeConfig,
   mockReadContract,
   mockLoggerWarn,
-  mockResyncChannelBalances,
+  mockResyncChannelState,
   mockUseEnhancedRefundRequirements,
 } = vi.hoisted(() => ({
   mockCreateLLMResourceServer: vi.fn(),
@@ -18,13 +18,13 @@ const {
   mockGetFacilitatorFeeConfig: vi.fn(),
   mockReadContract: vi.fn(),
   mockLoggerWarn: vi.fn(),
-  mockResyncChannelBalances: vi.fn(),
+  mockResyncChannelState: vi.fn(),
   mockUseEnhancedRefundRequirements: vi.fn(),
 }));
 
 // Hits a real RPC otherwise. Its own behaviour is covered in x402_channel_sync.test.ts.
 vi.mock("../x402_channel_sync.js", () => ({
-  resyncChannelBalances: mockResyncChannelBalances,
+  resyncChannelState: mockResyncChannelState,
 }));
 
 vi.mock("../x402_server.js", () => ({
@@ -92,7 +92,7 @@ describe("llm_x402_cron", () => {
       createChannelManager: mockCreateChannelManager,
       getStorage: vi.fn().mockReturnValue({}),
     });
-    mockResyncChannelBalances.mockResolvedValue([]);
+    mockResyncChannelState.mockResolvedValue([]);
     mockUseEnhancedRefundRequirements.mockResolvedValue(undefined);
     mockCreateLLMResourceServer.mockReturnValue({
       resourceServer: {},

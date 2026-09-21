@@ -18,7 +18,7 @@
  * decouples this endpoint from the cron's cadence.
  */
 import { type HitStorage, defaultStorage } from "./storage.js";
-import { parseBearerToken, verifySignedMessage } from "@fretchen/chain-utils";
+import { parseBearerToken, parseOwnerAddresses, verifySignedMessage } from "@fretchen/chain-utils";
 import {
   HOURLY_FALLBACK_DAYS,
   addDays,
@@ -130,9 +130,10 @@ export async function handleStats(
     return { statusCode: 401, headers, body: JSON.stringify({ error: "Missing or invalid Authorization header" }) };
   }
 
-  const ownerAddress = process.env.OWNER_ETH_ADDRESS;
-  const authError = ownerAddress
-    ? await verifySignedMessage(token.address, token.signature, token.message, AUTH_PREFIX, ownerAddress)
+  // OWNER_ETH_ADDRESS holds one address or a comma-separated list; an empty list authorises nobody.
+  const ownerAddresses = parseOwnerAddresses(process.env.OWNER_ETH_ADDRESS);
+  const authError = ownerAddresses.length
+    ? await verifySignedMessage(token.address, token.signature, token.message, AUTH_PREFIX, ownerAddresses)
     : "Owner address not configured";
   if (authError) {
     return { statusCode: 401, headers, body: JSON.stringify({ error: authError }) };

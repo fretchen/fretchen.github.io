@@ -131,37 +131,44 @@
                 },
                 "tool_calls": {
                   "description": "Present when replaying an assistant turn that requested tool calls.",
-                  "minItems": 1,
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string",
-                        "description": "Echo this back as tool_call_id on the matching tool result message."
-                      },
-                      "type": {
-                        "type": "string",
-                        "const": "function"
-                      },
-                      "function": {
+                  "anyOf": [
+                    {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
                         "type": "object",
                         "properties": {
-                          "name": {
-                            "type": "string"
-                          },
-                          "arguments": {
+                          "id": {
                             "type": "string",
-                            "description": "JSON-encoded arguments, as a string."
+                            "description": "Echo this back as tool_call_id on the matching tool result message."
+                          },
+                          "type": {
+                            "type": "string",
+                            "const": "function"
+                          },
+                          "function": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "arguments": {
+                                "type": "string",
+                                "description": "JSON-encoded arguments, as a string."
+                              }
+                            },
+                            "required": ["name", "arguments"],
+                            "additionalProperties": {}
                           }
                         },
-                        "required": ["name", "arguments"],
+                        "required": ["id", "type", "function"],
                         "additionalProperties": {}
                       }
                     },
-                    "required": ["id", "type", "function"],
-                    "additionalProperties": {}
-                  }
+                    {
+                      "type": "null"
+                    }
+                  ]
                 },
                 "tool_call_id": {
                   "description": "On a role:'tool' message, the id of the call this message answers.",
@@ -172,7 +179,7 @@
               "additionalProperties": {},
               "description": "One turn of the conversation."
             },
-            "description": "The conversation so far."
+            "description": "The conversation so far. At most 65536 bytes serialized — conversation turns are input tokens charged on every hop, and this endpoint meters each message against a fixed price ceiling, so an uncapped conversation would be billed far below what it costs to serve."
           },
           "stream": {
             "description": "Streaming is not supported. Each message settles on its final token usage, which requires the whole completion, so stream:true is rejected rather than silently buffered.",

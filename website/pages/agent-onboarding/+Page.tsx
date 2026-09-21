@@ -8,7 +8,12 @@ import { CommentsSection } from "../../components/CommentsSection";
 import { SpecParamTable } from "../../components/SpecParamTable";
 import { Foldable } from "../../components/Foldable";
 import { CodeBlock } from "../../components/CodeBlock";
-import MermaidDiagram from "../../components/MermaidDiagram";
+import {
+  SequenceDiagram,
+  type SequenceParticipant,
+  type SequenceMessage,
+  type SequenceNote,
+} from "../../components/blog/SequenceDiagram";
 import { PageHeader } from "../../components/PageHeader";
 import { Link } from "../../components/Link";
 
@@ -22,32 +27,30 @@ const GH_PIN = "https://github.com/fretchen/fretchen.github.io/blob/7f517783fcac
 const X402_DOCS = "https://docs.x402.org";
 
 /** The payment flow, as a sequence — same style as the /x402 page's diagrams. */
-const paymentFlowDiagram = `
-sequenceDiagram
-    participant Client as Client / Wallet
-    participant Server as Your endpoint
-    participant Facilitator as Facilitator
-    participant Chain as Blockchain<br/>(USDC)
+const paymentFlowParticipants: SequenceParticipant[] = [
+  { id: "client", label: "Client / Wallet" },
+  { id: "server", label: "Your endpoint" },
+  { id: "facilitator", label: "Facilitator" },
+  { id: "chain", labelLines: ["Blockchain", "(USDC)"] },
+];
 
-    Client->>Server: POST (no payment)
-    Server-->>Client: 402 + how to pay
-
-    Note over Client,Chain: First message only — open the channel
-    Client->>Chain: Deposit USDC into escrow
-    Client->>Server: POST + deposit payload
-    Server->>Facilitator: verify → settle
-    Server-->>Client: 200 + reply
-
-    Note over Client,Server: Every later message — off-chain, no tx
-    Client->>Server: POST + signed voucher (IOU)
-    Server->>Facilitator: verify → settle (bookkeeping only)
-    Server-->>Client: 200 + reply
-
-    Note over Server,Chain: Your cron job, on a schedule
-    Server->>Facilitator: claimAndSettle()
-    Facilitator->>Chain: Redeem accumulated vouchers
-    Chain-->>Server: 💰 Paid
-`;
+const paymentFlowSteps: (SequenceMessage | SequenceNote)[] = [
+  { kind: "message", from: "client", to: "server", label: "POST (no payment)" },
+  { kind: "message", from: "server", to: "client", label: "402 + how to pay", style: "dashed" },
+  { kind: "note", from: "client", to: "chain", label: "First message only — open the channel" },
+  { kind: "message", from: "client", to: "chain", label: "Deposit USDC into escrow" },
+  { kind: "message", from: "client", to: "server", label: "POST + deposit payload" },
+  { kind: "message", from: "server", to: "facilitator", label: "verify → settle" },
+  { kind: "message", from: "server", to: "client", label: "200 + reply", style: "dashed" },
+  { kind: "note", from: "client", to: "server", label: "Every later message — off-chain, no tx" },
+  { kind: "message", from: "client", to: "server", label: "POST + signed voucher (IOU)" },
+  { kind: "message", from: "server", to: "facilitator", label: "verify → settle (bookkeeping only)" },
+  { kind: "message", from: "server", to: "client", label: "200 + reply", style: "dashed" },
+  { kind: "note", from: "server", to: "chain", label: "Your cron job, on a schedule" },
+  { kind: "message", from: "server", to: "facilitator", label: "claimAndSettle()" },
+  { kind: "message", from: "facilitator", to: "chain", label: "Redeem accumulated vouchers" },
+  { kind: "message", from: "chain", to: "server", label: "💰 Paid", style: "dashed" },
+];
 
 // Small presentational helpers ------------------------------------------------
 
@@ -303,7 +306,12 @@ export default function Page() {
               batch. That scheme is called <strong>batch-settlement</strong>.
             </p>
 
-            <MermaidDiagram definition={paymentFlowDiagram} title="Batch-settlement payment flow" />
+            <SequenceDiagram
+              participants={paymentFlowParticipants}
+              steps={paymentFlowSteps}
+              caption="Batch-settlement payment flow"
+              territory="explore"
+            />
 
             <p>
               You don&apos;t implement the protocol yourself — the <code className={inlineCode}>@x402/evm</code> SDK

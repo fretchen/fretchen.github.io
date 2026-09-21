@@ -1,0 +1,572 @@
+{
+  "lizenz": "CC BY 4.0 – Nutzung mit Quellenangabe „Bundestakt“ erlaubt",
+  "quelle": "https://www.bundestakt.de",
+  "methodik": "https://www.bundestakt.de/methodik",
+  "anzahl": 3,
+  "sitzungen": [
+    {
+      "slug": "21-92-2026-09-09",
+      "url": "https://www.bundestakt.de/sitzung/21-92-2026-09-09",
+      "wahlperiode": 21,
+      "sitzungNr": 92,
+      "datum": "2026-09-09",
+      "dokumentnummer": "21/92",
+      "kernthema": "Haushalt 2027 und der Schock von Sachsen-Anhalt",
+      "in30Sekunden": [
+        {
+          "text": "Drei Tage nach der Landtagswahl in Sachsen-Anhalt erklaert AfD-Chefin Alice Weidel Schwarz-Rot fuer beendet. Kanzler Friedrich Merz haelt ihr entgegen: 56 Prozent haetten die AfD nicht gewaehlt.",
+          "titel": "Weidel greift an, Merz kontert"
+        },
+        {
+          "text": "Der Wehretat waechst 2027 samt Sondervermoegen auf rund 140 Milliarden Euro. Minister Pistorius nennt Russland eine akute Gefahr und verweist auf die Sprengstoffdrohne am Flughafen Leipzig.",
+          "titel": "140 Milliarden fuer Verteidigung"
+        },
+        {
+          "text": "Wohngeld, Elterngeld, Unterhaltsvorschuss, Kindersofortzuschlag: Gruene und Linke rechnen die Streichungen vor. Die SPD-Fraktion kuendigt an, im parlamentarischen Verfahren nachzusteuern.",
+          "titel": "Gekuerzt wird bei den Familien"
+        },
+        {
+          "text": "Das Auswaertige Amt sinkt auf 5,96 Milliarden Euro, das Entwicklungsministerium auf 9,47 Milliarden. Aussenminister Wadephul bittet das Parlament selbst, die humanitaere Hilfe wieder aufzustocken.",
+          "titel": "Aussenpolitik wird billiger"
+        },
+        {
+          "text": "Abgestimmt wurde an diesem Tag nichts. In den kommenden Wochen verhandeln die Ausschuesse. Union und SPD haben Korrekturen bei Familienleistungen, humanitaerer Hilfe und Sport angekuendigt.",
+          "titel": "Jetzt entscheiden die Ausschuesse"
+        }
+      ],
+      "zahlen": {
+        "anzahlReden": 93,
+        "abstimmungen": [],
+        "anzahlZwischenrufe": 632,
+        "redezeitJeFraktion": [
+          {
+            "minuten": 180,
+            "fraktion": "CDU/CSU",
+            "wortzahl": 19831,
+            "anzahlReden": 24
+          },
+          {
+            "minuten": 147,
+            "fraktion": "AfD",
+            "wortzahl": 15940,
+            "anzahlReden": 24
+          },
+          {
+            "minuten": 95,
+            "fraktion": "SPD",
+            "wortzahl": 10566,
+            "anzahlReden": 15
+          },
+          {
+            "minuten": 88,
+            "fraktion": "BÜNDNIS 90/DIE GRÜNEN",
+            "wortzahl": 9643,
+            "anzahlReden": 15
+          },
+          {
+            "minuten": 72,
+            "fraktion": "Die Linke",
+            "wortzahl": 7917,
+            "anzahlReden": 10
+          },
+          {
+            "minuten": 15,
+            "fraktion": "Bundesminister der Verteidigung",
+            "wortzahl": 1599,
+            "anzahlReden": 1
+          },
+          {
+            "minuten": 10,
+            "fraktion": "Bundesminister des Auswärtigen",
+            "wortzahl": 1112,
+            "anzahlReden": 1
+          },
+          {
+            "minuten": 7,
+            "fraktion": "Staatsminister beim Bundeskanzler",
+            "wortzahl": 804,
+            "anzahlReden": 1
+          },
+          {
+            "minuten": 7,
+            "fraktion": "Bundesministerin für wirtschaftliche Zusammenarbeit und Entwicklung",
+            "wortzahl": 726,
+            "anzahlReden": 1
+          },
+          {
+            "minuten": 4,
+            "fraktion": "fraktionslos",
+            "wortzahl": 420,
+            "anzahlReden": 1
+          }
+        ],
+        "sitzungsdauerMinuten": 541,
+        "zwischenrufeJeFraktion": [
+          {
+            "anzahl": 337,
+            "fraktion": "AfD"
+          },
+          {
+            "anzahl": 92,
+            "fraktion": "BÜNDNIS 90/DIE GRÜNEN"
+          },
+          {
+            "anzahl": 77,
+            "fraktion": "CDU/CSU"
+          },
+          {
+            "anzahl": 67,
+            "fraktion": "SPD"
+          },
+          {
+            "anzahl": 58,
+            "fraktion": "Die Linke"
+          }
+        ]
+      },
+      "protokollPdf": "https://dserver.bundestag.de/btp/21/21092.pdf"
+    },
+    {
+      "slug": "21-91-2026-09-08",
+      "url": "https://www.bundestakt.de/sitzung/21-91-2026-09-08",
+      "wahlperiode": 21,
+      "sitzungNr": 91,
+      "datum": "2026-09-08",
+      "dokumentnummer": "21/91",
+      "kernthema": "Haushalt 2027: Investitionen, Schulden, Energiepreise",
+      "in30Sekunden": [
+        {
+          "text": "Finanzminister Klingbeil bringt den Haushalt 2027 ein: 555 Milliarden Euro im Kernhaushalt, 118 Milliarden Euro Investitionen – finanziert auch über gut 200 Milliarden Euro neue Kredite.",
+          "titel": "204 Milliarden Euro neue Schulden"
+        },
+        {
+          "text": "Steffen Bilger wird als Verkehrsminister vereidigt, Carsten Linnemann als Gesundheitsminister. Der Kabinettsumbau nach der Sommerpause prägt die Debatte über Stil und Führung des Kanzlers.",
+          "titel": "Zwei Minister leisten den Amtseid"
+        },
+        {
+          "text": "Die AfD holte 43,8 Prozent, die CDU halbierte sich. Fast jede Rede kreist um die Frage, warum Vertrauen verloren geht – Regierung wie Opposition suchen Erklärungen.",
+          "titel": "Sachsen-Anhalt überschattet alles"
+        },
+        {
+          "text": "16 000 Hitzetote, leere Gasspeicher, Rekord-Spritpreise: Koalition verteidigt Klimaziele und Entlastungen, AfD fordert das Ende der Energiewende, Grüne und Linke kritisieren Kürzungen.",
+          "titel": "Streit um Energie und Klima"
+        },
+        {
+          "text": "Der Entwurf ist erst überwiesen. Bis zum Herbst verhandeln die Haushälter über Mittelstandsförderung, Schiene, Klimaanpassung – auch Koalitionäre kündigen Nachbesserungen an.",
+          "titel": "Jetzt beginnt das Feilschen"
+        }
+      ],
+      "zahlen": {
+        "anzahlReden": 105,
+        "abstimmungen": [
+          {
+            "titel": "Überweisung des Entwurfs eines Haushaltsbegleitgesetzes 2027 an die Ausschüsse",
+            "zahlen": null,
+            "ergebnis": "ueberwiesen",
+            "drucksache": "21/7860",
+            "abstimmungsart": "handzeichen",
+            "stimmverhalten": []
+          }
+        ],
+        "anzahlZwischenrufe": 515,
+        "redezeitJeFraktion": [
+          {
+            "minuten": 182,
+            "fraktion": "CDU/CSU",
+            "wortzahl": 19730,
+            "anzahlReden": 27
+          },
+          {
+            "minuten": 155,
+            "fraktion": "SPD",
+            "wortzahl": 17163,
+            "anzahlReden": 21
+          },
+          {
+            "minuten": 141,
+            "fraktion": "AfD",
+            "wortzahl": 15482,
+            "anzahlReden": 27
+          },
+          {
+            "minuten": 84,
+            "fraktion": "BÜNDNIS 90/DIE GRÜNEN",
+            "wortzahl": 9156,
+            "anzahlReden": 15
+          },
+          {
+            "minuten": 60,
+            "fraktion": "Die Linke",
+            "wortzahl": 6583,
+            "anzahlReden": 10
+          },
+          {
+            "minuten": 13,
+            "fraktion": "Bundesminister für Verkehr",
+            "wortzahl": 1429,
+            "anzahlReden": 2
+          },
+          {
+            "minuten": 5,
+            "fraktion": "Staatsministerin beim Bundesminister der Finanzen",
+            "wortzahl": 525,
+            "anzahlReden": 1
+          },
+          {
+            "minuten": 3,
+            "fraktion": "fraktionslos",
+            "wortzahl": 325,
+            "anzahlReden": 1
+          },
+          {
+            "minuten": 1,
+            "fraktion": "Bundesminister für Gesundheit",
+            "wortzahl": 73,
+            "anzahlReden": 1
+          }
+        ],
+        "sitzungsdauerMinuten": 550,
+        "zwischenrufeJeFraktion": [
+          {
+            "anzahl": 331,
+            "fraktion": "AfD"
+          },
+          {
+            "anzahl": 92,
+            "fraktion": "BÜNDNIS 90/DIE GRÜNEN"
+          },
+          {
+            "anzahl": 34,
+            "fraktion": "CDU/CSU"
+          },
+          {
+            "anzahl": 29,
+            "fraktion": "SPD"
+          },
+          {
+            "anzahl": 28,
+            "fraktion": "Die Linke"
+          },
+          {
+            "anzahl": 1,
+            "fraktion": "fraktionslos"
+          }
+        ]
+      },
+      "protokollPdf": "https://dserver.bundestag.de/btp/21/21091.pdf"
+    },
+    {
+      "slug": "21-90-2026-07-10",
+      "url": "https://www.bundestakt.de/sitzung/21-90-2026-07-10",
+      "wahlperiode": 21,
+      "sitzungNr": 90,
+      "datum": "2026-07-10",
+      "dokumentnummer": "21/90",
+      "kernthema": "GKV-Sparpaket, Heizungsgesetz und Diätenstopp",
+      "in30Sekunden": [
+        {
+          "text": "Der Bundestag beschließt namentlich das GKV-Beitragssatzstabilisierungsgesetz. Ohne Gesetz würden die Kassenbeiträge um rund einen Prozentpunkt steigen – bei 5.000 Euro Brutto etwa 25 Euro im Monat.",
+          "titel": "18,5 Milliarden Euro Sparpaket"
+        },
+        {
+          "text": "Nach einer Geschäftsordnungsdebatte und einem gescheiterten Gang der Linken nach Karlsruhe setzt die Koalition das Gebäudemodernisierungsgesetz auf und beschließt es: Öl- und Gasheizungen bleiben erlaubt.",
+          "titel": "Heizungsgesetz abgeschafft"
+        },
+        {
+          "text": "279 Seiten Änderungsanträge, 102 Anträge im Gesundheitsausschuss, zwei Entschließungsanträge kurz vor der Abstimmung: Grüne und Linke sprechen von Chaostagen, die Koalition von intensiver Beratung.",
+          "titel": "Streit über das Verfahren"
+        },
+        {
+          "text": "Erstes Sportfördergesetz des Bundes, neues Bundespolizeigesetz mit biometrischer Echtzeiterkennung und der Stopp der Diätenerhöhung – die Koalition räumt vor der Sommerpause ab.",
+          "titel": "Sport, Polizei, Diäten"
+        },
+        {
+          "text": "Die Koalition verspricht Korrekturen bei der Psychotherapie, eine Strukturreform im Gesundheitswesen und die Umsetzung von 34 Koalitionsbeschlüssen – inklusive Attestpflicht ab Tag eins.",
+          "titel": "Was im Herbst folgt"
+        }
+      ],
+      "zahlen": {
+        "anzahlReden": 95,
+        "abstimmungen": [
+          {
+            "titel": "Aufsetzung der zweiten und dritten Lesung des Gebäudemodernisierungsgesetzes auf die Tagesordnung",
+            "zahlen": null,
+            "ergebnis": "angenommen",
+            "drucksache": null,
+            "abstimmungsart": "handzeichen",
+            "stimmverhalten": [
+              {
+                "votum": "ja",
+                "fraktion": "CDU/CSU"
+              },
+              {
+                "votum": "ja",
+                "fraktion": "SPD"
+              },
+              {
+                "votum": "nein",
+                "fraktion": "AfD"
+              },
+              {
+                "votum": "nein",
+                "fraktion": "BÜNDNIS 90/DIE GRÜNEN"
+              },
+              {
+                "votum": "nein",
+                "fraktion": "Die Linke"
+              }
+            ]
+          },
+          {
+            "titel": "GKV-Beitragssatzstabilisierungsgesetz (zweite und dritte Lesung)",
+            "zahlen": null,
+            "ergebnis": "angenommen",
+            "drucksache": null,
+            "abstimmungsart": "namentlich",
+            "stimmverhalten": [
+              {
+                "votum": "ja",
+                "fraktion": "CDU/CSU"
+              },
+              {
+                "votum": "ja",
+                "fraktion": "SPD"
+              },
+              {
+                "votum": "nein",
+                "fraktion": "AfD"
+              },
+              {
+                "votum": "nein",
+                "fraktion": "BÜNDNIS 90/DIE GRÜNEN"
+              },
+              {
+                "votum": "nein",
+                "fraktion": "Die Linke"
+              }
+            ]
+          },
+          {
+            "titel": "Gebäudemodernisierungsgesetz (zweite und dritte Lesung)",
+            "zahlen": null,
+            "ergebnis": "angenommen",
+            "drucksache": null,
+            "abstimmungsart": "namentlich",
+            "stimmverhalten": [
+              {
+                "votum": "ja",
+                "fraktion": "CDU/CSU"
+              },
+              {
+                "votum": "ja",
+                "fraktion": "SPD"
+              },
+              {
+                "votum": "nein",
+                "fraktion": "AfD"
+              },
+              {
+                "votum": "nein",
+                "fraktion": "BÜNDNIS 90/DIE GRÜNEN"
+              },
+              {
+                "votum": "nein",
+                "fraktion": "Die Linke"
+              }
+            ]
+          },
+          {
+            "titel": "Antrag der AfD zum Wirtschaftsstandort Deutschland",
+            "zahlen": null,
+            "ergebnis": "abgelehnt",
+            "drucksache": null,
+            "abstimmungsart": "handzeichen",
+            "stimmverhalten": [
+              {
+                "votum": "ja",
+                "fraktion": "AfD"
+              },
+              {
+                "votum": "nein",
+                "fraktion": "CDU/CSU"
+              },
+              {
+                "votum": "nein",
+                "fraktion": "SPD"
+              },
+              {
+                "votum": "nein",
+                "fraktion": "BÜNDNIS 90/DIE GRÜNEN"
+              },
+              {
+                "votum": "nein",
+                "fraktion": "Die Linke"
+              }
+            ]
+          },
+          {
+            "titel": "Antrag der Fraktion Die Linke: Kultur und Sport als Staatsziel ins Grundgesetz",
+            "zahlen": null,
+            "ergebnis": "abgelehnt",
+            "drucksache": null,
+            "abstimmungsart": "handzeichen",
+            "stimmverhalten": [
+              {
+                "votum": "ja",
+                "fraktion": "Die Linke"
+              },
+              {
+                "votum": "nein",
+                "fraktion": "CDU/CSU"
+              },
+              {
+                "votum": "nein",
+                "fraktion": "AfD"
+              }
+            ]
+          },
+          {
+            "titel": "Änderung des Abgeordnetengesetzes: Aussetzung der Diätenanpassung",
+            "zahlen": null,
+            "ergebnis": "angenommen",
+            "drucksache": null,
+            "abstimmungsart": "handzeichen",
+            "stimmverhalten": [
+              {
+                "votum": "ja",
+                "fraktion": "CDU/CSU"
+              },
+              {
+                "votum": "ja",
+                "fraktion": "SPD"
+              },
+              {
+                "votum": "ja",
+                "fraktion": "AfD"
+              },
+              {
+                "votum": "ja",
+                "fraktion": "BÜNDNIS 90/DIE GRÜNEN"
+              },
+              {
+                "votum": "ja",
+                "fraktion": "Die Linke"
+              }
+            ]
+          },
+          {
+            "titel": "Bundespolizeigesetz (zweite und dritte Lesung)",
+            "zahlen": null,
+            "ergebnis": "angenommen",
+            "drucksache": null,
+            "abstimmungsart": "handzeichen",
+            "stimmverhalten": [
+              {
+                "votum": "ja",
+                "fraktion": "CDU/CSU"
+              },
+              {
+                "votum": "ja",
+                "fraktion": "SPD"
+              },
+              {
+                "votum": "nein",
+                "fraktion": "BÜNDNIS 90/DIE GRÜNEN"
+              },
+              {
+                "votum": "nein",
+                "fraktion": "Die Linke"
+              }
+            ]
+          },
+          {
+            "titel": "Sportfördergesetz (zweite und dritte Lesung)",
+            "zahlen": null,
+            "ergebnis": "angenommen",
+            "drucksache": null,
+            "abstimmungsart": "namentlich",
+            "stimmverhalten": [
+              {
+                "votum": "ja",
+                "fraktion": "CDU/CSU"
+              },
+              {
+                "votum": "ja",
+                "fraktion": "SPD"
+              },
+              {
+                "votum": "ja",
+                "fraktion": "BÜNDNIS 90/DIE GRÜNEN"
+              },
+              {
+                "votum": "ja",
+                "fraktion": "AfD"
+              },
+              {
+                "votum": "nein",
+                "fraktion": "Die Linke"
+              }
+            ]
+          }
+        ],
+        "anzahlZwischenrufe": 609,
+        "redezeitJeFraktion": [
+          {
+            "minuten": 171,
+            "fraktion": "CDU/CSU",
+            "wortzahl": 18875,
+            "anzahlReden": 27
+          },
+          {
+            "minuten": 109,
+            "fraktion": "SPD",
+            "wortzahl": 12049,
+            "anzahlReden": 18
+          },
+          {
+            "minuten": 105,
+            "fraktion": "AfD",
+            "wortzahl": 11734,
+            "anzahlReden": 24
+          },
+          {
+            "minuten": 73,
+            "fraktion": "BÜNDNIS 90/DIE GRÜNEN",
+            "wortzahl": 8202,
+            "anzahlReden": 14
+          },
+          {
+            "minuten": 50,
+            "fraktion": "Die Linke",
+            "wortzahl": 5426,
+            "anzahlReden": 12
+          }
+        ],
+        "sitzungsdauerMinuten": 488,
+        "zwischenrufeJeFraktion": [
+          {
+            "anzahl": 218,
+            "fraktion": "BÜNDNIS 90/DIE GRÜNEN"
+          },
+          {
+            "anzahl": 183,
+            "fraktion": "AfD"
+          },
+          {
+            "anzahl": 110,
+            "fraktion": "CDU/CSU"
+          },
+          {
+            "anzahl": 50,
+            "fraktion": "Die Linke"
+          },
+          {
+            "anzahl": 48,
+            "fraktion": "SPD"
+          }
+        ]
+      },
+      "protokollPdf": "https://dserver.bundestag.de/btp/21/21090.pdf"
+    }
+  ]
+}

@@ -107,5 +107,8 @@ false misses.
 - Client-only components need `{ ssr: false }` in their import.
 - **Wagmi v2 + TanStack Query** for blockchain state. Wagmi hooks are auto-generated from
   `wagmi.config.ts` — not manually written.
+- Use the **`chat-tools`** skill before adding or changing an assistant tool — it carries the
+  two-part contract (`TOOL_REGISTRY` + a runner), why `tools/*.ts` stay React-free, and the
+  backend caps that turn an over-budget `tools` array into a 400.
 - **ABIs** come from `eth/abi/contracts/*.ts` (TypeScript `as const` exports). After contract
   changes, regenerate them in `eth/` first, then update the imports here.

@@ -8,8 +8,9 @@ provider:
   runtime: node22
   env:
     NODE_ENV: production
-    # Public address, not a secret — only ever compared against a recovered
-    # signer in stats.ts. Same value scw_js's growth API uses.
+    # Public address(es), not a secret — only ever compared against a recovered
+    # signer in stats.ts. One address, or several comma-separated. Same value
+    # scw_js's growth API uses.
     OWNER_ETH_ADDRESS: ${env:OWNER_ETH_ADDRESS}
   secret:
     SCW_SECRET_KEY: ${env:SCW_SECRET_KEY}

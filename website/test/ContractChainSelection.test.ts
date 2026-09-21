@@ -12,10 +12,10 @@ vi.mock("../wagmi.config", () => ({
 }));
 
 vi.mock("wagmi/actions", () => ({
-  getPublicClient: vi.fn().mockReturnValue({
-    readContract: vi.fn().mockResolvedValue([1, 2, 3]),
+  getPublicClient: vi.fn(() => ({
+    readContract: vi.fn(async () => [1, 2, 3]),
     chain: { id: 10 }, // Optimism chain ID
-  }),
+  })),
 }));
 
 vi.mock("@fretchen/chain-utils", () => ({

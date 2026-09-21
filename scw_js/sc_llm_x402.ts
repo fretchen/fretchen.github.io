@@ -13,6 +13,7 @@ import {
   LLMToolsSchema,
   REJECTED_PARAMS,
   FORWARDED_OWN_KEYS,
+  MAX_MESSAGES_BYTES,
 } from "./llm_schemas.js";
 import { getUSDCConfig, isTestnet } from "@fretchen/chain-utils";
 import pino from "pino";
@@ -260,6 +261,20 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
   if (!Array.isArray(messages) || messages.length === 0) {
     return openAiError(400, "'messages' must be a non-empty array.", "invalid_request_error");
   }
+  // Capped for the same reason `tools` is, and checked before verifyPayment for the same reason:
+  // an over-limit request must be rejected without being charged. This is the bigger of the two
+  // by far — `tools` is at most 8 KB, while an uncapped conversation can fill the model's whole
+  // context window and still settle at the fixed per-message ceiling. See MAX_MESSAGES_BYTES.
+  const messagesBytes = Buffer.byteLength(JSON.stringify(messages), "utf8");
+  if (messagesBytes > MAX_MESSAGES_BYTES) {
+    return openAiError(
+      400,
+      `'messages' must serialize to at most ${MAX_MESSAGES_BYTES} bytes (received ${messagesBytes}). Each message is metered against a fixed per-message price ceiling, which a larger conversation would exceed.`,
+      "invalid_request_error",
+      "unsupported_value",
+      "messages",
+    );
+  }
   // Validated against the published LLMChatMessageSchema rather than a hand-rolled check, so the
   // enforced shape matches the spec: tool_calls entries must be well-formed, content must be a
   // string or null, and its .refine() keeps "content required unless the turn carries tool_calls".
@@ -452,9 +467,7 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     llmData = await callLLMAPI(prompt, useMock, resolved.provider, forwardedParams);
   } catch (error) {
     logger.error({ err: error }, "Error during answer generation");
-    const msg = (error as Error).message;
-    const statusCode = msg.includes("API Token nicht gefunden") ? 401 : 500;
-    return errorResponse(statusCode, msg);
+    return errorResponse(500, (error as Error).message);
   }
 
   // Commits chargedCumulativeAmount locally for a voucher payload (no on-chain tx, no

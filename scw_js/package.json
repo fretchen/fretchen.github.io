@@ -6,7 +6,8 @@
   "scripts": {
     "generate:openapi:genimg": "tsx scripts/generate-openapi-genimg.ts && prettier --write --log-level warn openapi.genimg.json",
     "generate:openapi:llm": "tsx scripts/generate-openapi-llm.ts && prettier --write --log-level warn openapi.llm.json",
-    "generate:openapi": "npm run generate:openapi:genimg && npm run generate:openapi:llm",
+    "generate:openapi:search": "tsx scripts/generate-openapi-search.ts && prettier --write --log-level warn openapi.search.json",
+    "generate:openapi": "npm run generate:openapi:genimg && npm run generate:openapi:llm && npm run generate:openapi:search",
     "build": "npm run generate:openapi && tsup",
     "deploy": "npm run build && npx osls deploy",
     "test": "NODE_ENV=test vitest run",
@@ -20,7 +21,8 @@
     "dev:x402": "NODE_ENV=test npx tsx genimg_x402_token.ts",
     "dev:llmx402": "NODE_ENV=test npx tsx sc_llm_x402.ts",
     "dev:llmx402cron": "NODE_ENV=test npx tsx llm_x402_cron.ts",
-    "dev:growth": "NODE_ENV=test npx tsx growth_api.ts"
+    "dev:growth": "NODE_ENV=test npx tsx growth_api.ts",
+    "dev:search": "NODE_ENV=test npx tsx search_api.ts"
   },
   "keywords": [],
   "author": "",
@@ -32,7 +34,7 @@
     "@fastify/url-data": "^6.0.4",
     "@scaleway/serverless-functions": "^1.1.2",
     "@types/node": "^26.1.0",
-    "@vitest/coverage-v8": "^4.0.18",
+    "@vitest/coverage-v8": "^4.1.11",
     "@vitest/eslint-plugin": "^1.6.27",
     "eslint": "^10.0.0",
     "eslint-plugin-node": "^11.1.0",
@@ -42,7 +44,7 @@
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.58.2",
-    "vitest": "^4.0.18"
+    "vitest": "^4.1.11"
   },
   "dependencies": {
     "@fretchen/chain-utils": "file:../shared/chain-utils",

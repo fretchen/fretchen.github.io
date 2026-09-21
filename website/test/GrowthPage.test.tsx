@@ -2,7 +2,10 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import { useAccount, useConnect } from "wagmi";
-import { OWNER_ADDRESS } from "../utils/getChain";
+import { OWNER_SCOPES } from "../utils/getChain";
+
+/** The first wallet with growth scope; that list may hold more. */
+const OWNER_ADDRESS = OWNER_SCOPES.growth[0];
 import { buildAccountData, buildConnectData } from "./setup";
 
 // Mock the new TQ-based growth hooks

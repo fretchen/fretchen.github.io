@@ -18,8 +18,7 @@
     "dev": "NODE_ENV=test ANALYTICS_STORAGE=file npx tsx analytics.ts",
     "dev:live": "NODE_ENV=test npx tsx analytics.ts",
     "dev:rollup": "NODE_ENV=test ANALYTICS_STORAGE=file npx tsx rollup.ts",
-    "predeploy": "npm run build",
-    "deploy": "serverless deploy",
+    "deploy": "npm run build && serverless deploy",
     "info": "serverless info",
     "logs": "serverless logs -f analytics",
     "logs:rollup": "serverless logs -f rollup",
@@ -42,7 +41,7 @@
     "@eslint/js": "^10.0.0",
     "@scaleway/serverless-functions": "^1.1.2",
     "@types/node": "^25.0.10",
-    "@vitest/coverage-v8": "^4.0.16",
+    "@vitest/coverage-v8": "^4.1.11",
     "dotenv": "^17.4.2",
     "eslint": "^10.0.0",
     "prettier": "^3.0.0",
@@ -51,7 +50,7 @@
     "tsx": "^4.23.5",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.60.0",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.11"
   },
   "engines": {
     "node": ">=18.0.0"

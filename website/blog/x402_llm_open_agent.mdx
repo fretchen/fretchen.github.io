@@ -7,35 +7,32 @@ description: "I replaced my AI assistant's custodial smart contract with x402 pa
 tokenID: 200
 ---
 
-import MermaidDiagram from "../components/MermaidDiagram";
+import { SequenceDiagram } from "../components/blog/SequenceDiagram";
 
-export const channelFlowDiagram = `
-sequenceDiagram
-    participant Alice as Alice's wallet
-    participant Agent as llm-agent.fretchen.eu
-    participant Facilitator as Facilitator
-    participant Chain as Optimism / Base<br/>(USDC escrow)
+export const channelFlowParticipants = [
+  { id: "alice", label: "Alice's wallet" },
+  { id: "agent", label: "llm-agent.fretchen.eu" },
+  { id: "facilitator", label: "Facilitator" },
+  { id: "chain", labelLines: ["Optimism / Base", "(USDC escrow)"] },
+];
 
-    Alice->>Agent: POST / (no payment)
-    Agent-->>Alice: 402 + how to pay
-
-    Note over Alice,Chain: First message only — open the channel
-    Alice->>Chain: Deposit USDC into escrow
-    Alice->>Agent: POST / + deposit payload
-    Agent->>Facilitator: verify
-    Agent-->>Alice: 200 + reply
-
-    Note over Alice,Agent: Every later message — no transaction at all
-    Alice->>Agent: POST / + signed voucher
-    Agent->>Facilitator: verify → settle (bookkeeping only)
-    Agent-->>Alice: 200 + reply
-
-    Note over Agent,Chain: My cron job, every 12 hours
-    Agent->>Facilitator: claimAndSettle()
-    Facilitator->>Chain: Redeem accumulated vouchers
-    Chain-->>Agent: Paid
-
-`;
+export const channelFlowSteps = [
+  { kind: "message", from: "alice", to: "agent", label: "POST / (no payment)" },
+  { kind: "message", from: "agent", to: "alice", label: "402 + how to pay", style: "dashed" },
+  { kind: "note", from: "alice", to: "chain", label: "First message only — open the channel" },
+  { kind: "message", from: "alice", to: "chain", label: "Deposit USDC into escrow" },
+  { kind: "message", from: "alice", to: "agent", label: "POST / + deposit payload" },
+  { kind: "message", from: "agent", to: "facilitator", label: "verify" },
+  { kind: "message", from: "agent", to: "alice", label: "200 + reply", style: "dashed" },
+  { kind: "note", from: "alice", to: "agent", label: "Every later message — no transaction at all" },
+  { kind: "message", from: "alice", to: "agent", label: "POST / + signed voucher" },
+  { kind: "message", from: "agent", to: "facilitator", label: "verify → settle (bookkeeping only)" },
+  { kind: "message", from: "agent", to: "alice", label: "200 + reply", style: "dashed" },
+  { kind: "note", from: "agent", to: "chain", label: "My cron job, every 12 hours" },
+  { kind: "message", from: "agent", to: "facilitator", label: "claimAndSettle()" },
+  { kind: "message", from: "facilitator", to: "chain", label: "Redeem accumulated vouchers" },
+  { kind: "message", from: "chain", to: "agent", label: "Paid", style: "dashed" },
+];
 
 Ideally, I want to use a good AI model without the need of personal information. Just pay for the messages I actually send and tell nobody who I am.
 
@@ -61,7 +58,11 @@ The new _Batch-settlement_ uses a payment channel instead, which works like a ba
 2. **Run up the tab.** Every later message signs a _voucher_ — an off-chain IOU capping what the agent may claim in total. Just a signature. No transaction, no gas, no waiting.
 3. **Cash out.** A cron job on my side runs `claimAndSettle()` every 12 hours, through a facilitator — the service that checks payments are valid and pushes them on-chain.
 
-<MermaidDiagram definition={channelFlowDiagram} title="x402 batch-settlement: one deposit, then off-chain vouchers" />
+<SequenceDiagram
+  participants={channelFlowParticipants}
+  steps={channelFlowSteps}
+  caption="x402 batch-settlement: one deposit, then off-chain vouchers"
+/>
 
 Each voucher supersedes the last, so only the final one is ever redeemed. A hundred messages produce a hundred signatures and one transaction.
 

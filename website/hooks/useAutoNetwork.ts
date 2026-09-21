@@ -12,7 +12,7 @@
  */
 
 import { useChainId, useSwitchChain } from "wagmi";
-import { useCallback, useState } from "react";
+import { useCallback, useRef } from "react";
 import { toCAIP2, fromCAIP2 } from "@fretchen/chain-utils";
 import { useIsWalletConnected } from "./useIsWalletConnected";
 
@@ -24,14 +24,17 @@ interface UseAutoNetworkResult {
   /** Call before submitting a transaction - switches chain if needed */
   switchIfNeeded: () => Promise<boolean>;
   /**
-   * The error message from the most recent failed switchIfNeeded() call, if any.
-   * Null on success or before any switch attempt. Useful for surfacing why a switch
-   * failed instead of a generic "please switch" message — e.g. a wallet connector
-   * without automatic `wallet_addEthereumChain` fallback (some WalletConnect-linked
-   * wallets) will reject with the raw "Unrecognized chain ID" RPC error here, whereas
-   * MetaMask's own injected connector recovers from that automatically (see switchIfNeeded).
+   * Why the most recent switchIfNeeded() returned false, or null on success / before any attempt.
+   * Useful for surfacing why a switch failed instead of a generic "please switch" message — e.g. a
+   * wallet connector without automatic `wallet_addEthereumChain` fallback (some WalletConnect-linked
+   * wallets) will reject with the raw "Unrecognized chain ID" RPC error here, whereas MetaMask's own
+   * injected connector recovers from that automatically (see switchIfNeeded).
+   *
+   * A getter rather than rendered state, because every caller reads it immediately after awaiting
+   * the switch. State would still hold the *pre-call* value at that moment — the failure has not
+   * re-rendered anything yet — so the very attempt that produced the error would report none.
    */
-  switchError: string | null;
+  getSwitchError: () => string | null;
 }
 
 /**
@@ -59,7 +62,7 @@ export function useAutoNetwork(supportedNetworks: readonly string[]): UseAutoNet
   const chainId = useChainId();
   const isConnected = useIsWalletConnected();
   const { switchChainAsync } = useSwitchChain();
-  const [switchError, setSwitchError] = useState<string | null>(null);
+  const switchErrorRef = useRef<string | null>(null);
 
   const defaultNetwork = supportedNetworks[0];
   const currentNetwork = toCAIP2(chainId);
@@ -83,19 +86,21 @@ export function useAutoNetwork(supportedNetworks: readonly string[]): UseAutoNet
     // (e.g. some WalletConnect-linked wallets), so a failure here is still possible.
     try {
       await switchChainAsync({ chainId: fromCAIP2(defaultNetwork) });
-      setSwitchError(null);
+      switchErrorRef.current = null;
       return true;
     } catch (err) {
       // User rejected, or the wallet couldn't add/switch to the chain
-      setSwitchError(err instanceof Error ? err.message : "Failed to switch network");
+      switchErrorRef.current = err instanceof Error ? err.message : "Failed to switch network";
       return false;
     }
   }, [isSupported, isConnected, switchChainAsync, defaultNetwork]);
+
+  const getSwitchError = useCallback(() => switchErrorRef.current, []);
 
   return {
     network,
     isOnCorrectNetwork: isSupported,
     switchIfNeeded,
-    switchError,
+    getSwitchError,
   };
 }

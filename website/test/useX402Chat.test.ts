@@ -11,8 +11,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useWalletClient, useAccount } from "wagmi";
-import { useX402Chat, WebStorageClientChannelStorage } from "../hooks/useX402Chat";
+import { useX402Chat } from "../hooks/useX402Chat";
+import { WebStorageClientChannelStorage } from "../utils/x402PaidFetch";
 import { buildUsdcAllowedAssets } from "../hooks/x402SpendControls";
+import { resetAcceptsCache } from "../hooks/x402Discovery";
 import type { X402ChatMessage } from "../types/x402";
 import { buildAccountData, buildWalletClientData } from "./setup";
 
@@ -20,6 +22,11 @@ const mockRegister = vi.fn();
 const mockSetSpendControls = vi.fn();
 const mockGetPaymentSettleResponse = vi.fn();
 const mockBatchSettlementEvmScheme = vi.fn();
+// Chain read behind resyncFromChain: [balance, totalClaimed]. Default is a funded channel,
+// so a drained-channel retry re-reads the truth rather than blindly depositing.
+const mockReadChannelBalanceAndTotalClaimed = vi.fn(
+  async (_signer: unknown, _channelId: unknown): Promise<readonly [bigint, bigint]> => [1_000_000n, 0n],
+);
 const mockToClientEvmSigner = vi.fn((...args: unknown[]) => args[0]);
 
 vi.mock("../hooks/useConfiguredPublicClient", () => ({
@@ -30,13 +37,13 @@ vi.mock("../hooks/useConfiguredPublicClient", () => ({
 
 vi.mock("@x402/fetch", () => ({
   // vi.fn() needs a real `function`, not an arrow, to remain usable via `new`.
-  x402Client: vi.fn().mockImplementation(function MockX402Client() {
+  x402Client: vi.fn(function MockX402Client() {
     return { register: mockRegister, setSpendControls: mockSetSpendControls };
   }),
   // Pass the caller's fetch straight through — lets us drive the real
   // validatingFetch → global fetch path from the hook without a real SDK.
   wrapFetchWithPayment: vi.fn((fetchFn: typeof fetch) => fetchFn),
-  x402HTTPClient: vi.fn().mockImplementation(function MockX402HTTPClient() {
+  x402HTTPClient: vi.fn(function MockX402HTTPClient() {
     return { getPaymentSettleResponse: mockGetPaymentSettleResponse };
   }),
 }));
@@ -47,6 +54,8 @@ vi.mock("@x402/evm", () => ({
 
 vi.mock("@x402/evm/batch-settlement/client", () => ({
   BatchSettlementEvmScheme: mockBatchSettlementEvmScheme,
+  readChannelBalanceAndTotalClaimed: (signer: unknown, channelId: unknown) =>
+    mockReadChannelBalanceAndTotalClaimed(signer, channelId),
 }));
 
 const NETWORK = "eip155:84532";
@@ -59,6 +68,9 @@ describe("useX402Chat", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.localStorage.clear();
+    // Every case here probes the same agent URL; a cached hit would serve the previous case's
+    // accepts[] and silently defeat the per-case fetch mocks.
+    resetAcceptsCache();
     mockGetPaymentSettleResponse.mockReturnValue({
       success: true,
       transaction: "0xdeposit",
@@ -291,6 +303,30 @@ describe("useX402Chat", () => {
       expect(result.current.error).toContain("402");
     });
 
+    /**
+     * `paidFetch` hands a non-402 back as a Response rather than throwing, because the paid tools
+     * need to read the seller's own refusal. The chat has no use for one, so it must still fail
+     * here — otherwise a 500's body would be parsed as a completion and rendered as an answer.
+     */
+    it("rethrows a non-payment HTTP failure rather than parsing the body as a completion", async () => {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("upstream exploded", { status: 500 })));
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+
+      let thrown: Error | undefined;
+      await act(async () => {
+        try {
+          await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+        } catch (err) {
+          thrown = err as Error;
+        }
+      });
+
+      expect(thrown?.message).toContain("500");
+      expect(thrown?.message).toContain("upstream exploded");
+      expect(result.current.status).toBe("error");
+    });
+
     it("surfaces a friendly, actionable message for a channel_busy 402", async () => {
       // The transient per-channel lock the server holds across verify→settle. The raw code
       // is opaque and the client SDK does not auto-recover from it, so the hook maps it to
@@ -319,6 +355,274 @@ describe("useX402Chat", () => {
       expect(thrown?.message).not.toContain("channel_busy");
       expect(result.current.status).toBe("error");
       expect(result.current.error).toMatch(/wait a few seconds/i);
+    });
+
+    /**
+     * A drained channel is recoverable and the SDK knows how: it tops up inside
+     * createPaymentPayload. It decides whether to from the `balance` on our cached record though,
+     * so a stale record suppresses it — and its corrective-402 recovery covers
+     * cumulative_amount_mismatch and below_claimed but not this reason. Zeroing that balance
+     * forces the deposit, while keeping the cumulative the chain cannot restore.
+     *
+     * Each stub returns a FRESH Response per call: a body is single-use, and a shared
+     * mockResolvedValue object would fail the retry with "Body has already been read" — an
+     * artifact of the mock, not of the code.
+     */
+    const drained402 = () =>
+      new Response(
+        JSON.stringify({
+          x402Version: 2,
+          error: "invalid_batch_settlement_evm_cumulative_exceeds_balance",
+          accepts: [{ scheme: "batch-settlement", network: NETWORK, amount: "9000" }],
+        }),
+        { status: 402 },
+      );
+
+    it("re-syncs the cached balance from chain and retries once when the channel is drained", async () => {
+      window.localStorage.setItem(
+        "x402-channel:0xstalechannel",
+        JSON.stringify({ balance: "500000", chargedCumulativeAmount: "7062" }),
+      );
+      // sendMessage issues an unpaid discovery probe first, so "first call" and "first paid call"
+      // are not the same thing — count only the paid ones, or the drained 402 lands on the probe
+      // and the real request sails through unaffected.
+      let paidCalls = 0;
+      const fetchMock = vi.fn((_input: string, init?: RequestInit) => {
+        const isProbe = (() => {
+          try {
+            return (JSON.parse(init?.body as string) as { model?: string }).model === "probe";
+          } catch {
+            return false;
+          }
+        })();
+        if (isProbe) return Promise.resolve(new Response("{}", { status: 200 }));
+        paidCalls += 1;
+        return Promise.resolve(
+          paidCalls === 1 ? drained402() : new Response(JSON.stringify({ content: "hi" }), { status: 200 }),
+        );
+      });
+      vi.stubGlobal("fetch", fetchMock);
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+
+      let returned: unknown;
+      await act(async () => {
+        returned = await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+      });
+
+      // The record survives, re-synced to the chain's real balance. It must NOT be zeroed:
+      // `updateChannelFromSettle` only ever does `balance += depositAmount`, so a zero is
+      // permanent, and the SDK then re-deposits $0.50 on every subsequent message.
+      // `chargedCumulativeAmount` keeps the local figure because it is ahead of the chain's
+      // lagging `totalClaimed` — adopting the lag yields cumulative_amount_mismatch.
+      const record = JSON.parse(window.localStorage.getItem("x402-channel:0xstalechannel") ?? "{}") as {
+        balance?: string;
+        chargedCumulativeAmount?: string;
+        totalClaimed?: string;
+      };
+      expect(record.balance).toBe("1000000");
+      expect(record.totalClaimed).toBe("0");
+      expect(record.chargedCumulativeAmount).toBe("7062");
+      // And the message went through rather than dead-ending on the 402.
+      expect(returned).toEqual({ content: "hi" });
+      expect(result.current.status).toBe("success");
+      expect(result.current.error).toBeNull();
+    });
+
+    it("retries a drained channel only once, then reports it honestly", async () => {
+      // If the top-up itself cannot complete — a declined signature, an empty wallet — looping
+      // would sign a fresh real deposit on every pass.
+      const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(drained402()));
+      vi.stubGlobal("fetch", fetchMock);
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+
+      let thrown: Error | undefined;
+      await act(async () => {
+        try {
+          await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+        } catch (err) {
+          thrown = err as Error;
+        }
+      });
+
+      const paidCalls = fetchMock.mock.calls.filter((args: unknown[]) => {
+        const init = args[1] as RequestInit | undefined;
+        try {
+          return (JSON.parse(init?.body as string) as { model?: string }).model !== "probe";
+        } catch {
+          return false;
+        }
+      });
+      expect(paidCalls).toHaveLength(2); // the original and exactly one retry
+      expect(thrown?.message).toMatch(/needs topping up/i);
+      expect(thrown?.message).not.toContain("cumulative_exceeds_balance");
+      expect(thrown?.message).not.toContain("x402Version");
+      // The wallet balance is NOT the suspect here: the facilitator has a separate code for that
+      // (insufficient_balance), so pointing at USDC would send the user to check a non-problem.
+      expect(thrown?.message).not.toMatch(/has USDC/i);
+    });
+
+    it("re-syncs every channel record from chain without deleting any of them", async () => {
+      window.localStorage.setItem(
+        "x402-channel:0xone",
+        JSON.stringify({ balance: "500000", chargedCumulativeAmount: "10" }),
+      );
+      window.localStorage.setItem(
+        "x402-channel:0xtwo",
+        JSON.stringify({ balance: "250000", chargedCumulativeAmount: "20" }),
+      );
+      window.localStorage.setItem("unrelated-key", "keep me");
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockImplementation(() => Promise.resolve(drained402())),
+      );
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]).catch(() => {});
+      });
+
+      for (const [key, charged] of [
+        ["x402-channel:0xone", "10"],
+        ["x402-channel:0xtwo", "20"],
+      ] as const) {
+        const stored = window.localStorage.getItem(key);
+        expect(stored).not.toBeNull();
+        const record = JSON.parse(stored!) as { balance: string; chargedCumulativeAmount: string };
+        expect(record.balance).toBe("1000000");
+        expect(record.chargedCumulativeAmount).toBe(charged);
+      }
+      expect(window.localStorage.getItem("unrelated-key")).toBe("keep me");
+    });
+
+    it("leaves a record untouched when the chain read fails", async () => {
+      // An RPC hiccup must not corrupt a good record. The predecessor zeroed unconditionally,
+      // and a zeroed balance is unrecoverable — every later message then re-deposits $0.50.
+      const original = JSON.stringify({ balance: "500000", chargedCumulativeAmount: "7062" });
+      window.localStorage.setItem("x402-channel:0xone", original);
+      mockReadChannelBalanceAndTotalClaimed.mockRejectedValueOnce(new Error("RPC down"));
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockImplementation(() => Promise.resolve(drained402())),
+      );
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]).catch(() => {});
+      });
+
+      expect(window.localStorage.getItem("x402-channel:0xone")).toBe(original);
+    });
+
+    it("leaves another network's record untouched when its chain balance reads zero", async () => {
+      // Every network's channels share one localStorage namespace. A zero balance means the
+      // channel does not exist on the chain being read — overwriting it would strand that
+      // channel's escrow, which is exactly what the blunt zeroing used to do.
+      const foreign = JSON.stringify({ balance: "500000", chargedCumulativeAmount: "42" });
+      window.localStorage.setItem("x402-channel:0xforeign", foreign);
+      window.localStorage.setItem(
+        "x402-channel:0xlocal",
+        JSON.stringify({ balance: "500000", chargedCumulativeAmount: "10" }),
+      );
+      // Signature is (signer, channelId) — the channel is the SECOND argument.
+      mockReadChannelBalanceAndTotalClaimed.mockImplementation(async (_signer: unknown, channelId: unknown) =>
+        String(channelId).includes("foreign") ? ([0n, 0n] as const) : ([1_000_000n, 0n] as const),
+      );
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockImplementation(() => Promise.resolve(drained402())),
+      );
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]).catch(() => {});
+      });
+
+      expect(window.localStorage.getItem("x402-channel:0xforeign")).toBe(foreign);
+      const local = JSON.parse(window.localStorage.getItem("x402-channel:0xlocal")!) as {
+        balance: string;
+      };
+      expect(local.balance).toBe("1000000");
+    });
+
+    it("leaves an unparseable channel record alone instead of throwing", async () => {
+      window.localStorage.setItem("x402-channel:0xbroken", "{not json");
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockImplementation(() => Promise.resolve(drained402())),
+      );
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+      let thrown: Error | undefined;
+      await act(async () => {
+        try {
+          await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+        } catch (err) {
+          thrown = err as Error;
+        }
+      });
+
+      // It fails on the payment, not on a JSON parse of our own storage.
+      expect(thrown?.message).toMatch(/needs topping up/i);
+      expect(window.localStorage.getItem("x402-channel:0xbroken")).toBe("{not json");
+    });
+
+    it("names the real problem when the wallet itself is short of USDC", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockImplementation(() =>
+          Promise.resolve(
+            new Response(
+              JSON.stringify({
+                x402Version: 2,
+                error: "invalid_batch_settlement_evm_insufficient_balance",
+                accepts: [{ scheme: "batch-settlement", network: NETWORK, amount: "9000" }],
+              }),
+              { status: 402 },
+            ),
+          ),
+        ),
+      );
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+      let thrown: Error | undefined;
+      await act(async () => {
+        try {
+          await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+        } catch (err) {
+          thrown = err as Error;
+        }
+      });
+
+      expect(thrown?.message).toMatch(/Not enough USDC/i);
+      expect(thrown?.message).toMatch(/USDC\.e/);
+    });
+
+    it("does not clear or retry for an unrelated 402", async () => {
+      window.localStorage.setItem("x402-channel:0xkeepme", JSON.stringify({ balance: "500000" }));
+      const fetchMock = vi
+        .fn()
+        .mockImplementation(() =>
+          Promise.resolve(
+            new Response(JSON.stringify({ error: "invalid_batch_settlement_evm_channel_busy" }), { status: 402 }),
+          ),
+        );
+      vi.stubGlobal("fetch", fetchMock);
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+
+      let thrown: Error | undefined;
+      await act(async () => {
+        try {
+          await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+        } catch (err) {
+          thrown = err as Error;
+        }
+      });
+
+      expect(window.localStorage.getItem("x402-channel:0xkeepme")).not.toBeNull();
+      expect(thrown?.message).toMatch(/still being settled/i);
     });
   });
 
@@ -443,6 +747,46 @@ describe("useX402Chat", () => {
       expect(mockRegister).not.toHaveBeenCalled();
     });
 
+    /**
+     * The turn's tool calls must spend on the channel the turn opened. The mount-time probe can
+     * fail transiently, leaving the rendered `paymentNetwork` on the preference while the send-time
+     * probe negotiates something else — and the running loop holds the `paidFetch` closure from
+     * before that render. Binding to the rendered value there paid on the wrong chain, which is a
+     * different channelId: a second channel, a second $0.50 deposit and a wallet prompt mid-turn.
+     *
+     * `paidFetch` is deliberately called from the pre-send closure, because that is what the tool
+     * loop does — reading `result.current.paidFetch` after the act would re-render the bug away.
+     */
+    it("pays for tools on the network the send negotiated, not the one that was rendered", async () => {
+      let probes = 0;
+      const accepts = [{ scheme: "batch-settlement", network: BASE, payTo: "0xabc" }];
+      const header = btoa(JSON.stringify({ accepts }));
+      vi.stubGlobal(
+        "fetch",
+        vi.fn((_input: string, init?: RequestInit) => {
+          if (!isProbeRequest(init)) {
+            return Promise.resolve(new Response(JSON.stringify({ content: "hi" }), { status: 200 }));
+          }
+          // The mount probe fails; the send-time one succeeds and offers only BASE.
+          probes += 1;
+          return probes === 1
+            ? Promise.reject(new TypeError("Failed to fetch"))
+            : Promise.resolve(new Response("{}", { status: 402, headers: { "Payment-Required": header } }));
+        }),
+      );
+
+      const { result } = renderHook(() => useX402Chat(OPTIMISM));
+      // Captured before the send, exactly as the tool loop captures it for the turn.
+      const paidFetchForTurn = result.current.paidFetch;
+
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+        await paidFetchForTurn("https://web-agent.fretchen.eu/search?q=x");
+      });
+
+      expect(mockRegister.mock.calls.map((call) => call[0])).toEqual([BASE, BASE]);
+    });
+
     it("proceeds on the preferred network when the agent can't be read (CORS/offline)", async () => {
       // A probe that throws must not block payment — the real 402 is the judge.
       vi.stubGlobal(
@@ -460,6 +804,78 @@ describe("useX402Chat", () => {
       });
 
       expect(mockRegister).toHaveBeenCalledWith(OPTIMISM, expect.anything());
+    });
+  });
+
+  describe("Request body — tools (additive)", () => {
+    beforeEach(() => {
+      vi.mocked(useWalletClient).mockReturnValue(buildWalletClientData({ data: mockWalletClient }));
+      vi.mocked(useAccount).mockReturnValue(buildAccountData({ isConnected: true }));
+    });
+
+    const tool = {
+      type: "function" as const,
+      function: { name: "generate_image", parameters: { type: "object" } },
+    };
+
+    // sendMessage also issues an unpaid discovery probe (a body with model: "probe") before
+    // the real paid POST — see the "Network negotiation" describe block above. Every assertion
+    // here needs the real request, not whichever the mock happened to see first.
+    function paidRequestBody(fetchMock: ReturnType<typeof vi.fn>): Record<string, unknown> {
+      const call = fetchMock.mock.calls.find((args: unknown[]) => {
+        const init = args[1] as RequestInit | undefined;
+        try {
+          return (JSON.parse(init?.body as string) as { model?: string }).model !== "probe";
+        } catch {
+          return false;
+        }
+      }) as [string, RequestInit] | undefined;
+      if (!call) throw new Error("no non-probe fetch call recorded");
+      return JSON.parse(call[1].body as string) as Record<string, unknown>;
+    }
+
+    it("omits tools/tool_choice entirely when no options are given", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ content: "hi" }), { status: 200 }));
+      vi.stubGlobal("fetch", fetchMock);
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+      });
+
+      const body = paidRequestBody(fetchMock);
+      expect(body).not.toHaveProperty("tools");
+      expect(body).not.toHaveProperty("tool_choice");
+    });
+
+    it("includes tools and defaults tool_choice to auto when tools are offered", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ content: "hi" }), { status: 200 }));
+      vi.stubGlobal("fetch", fetchMock);
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }], { tools: [tool] });
+      });
+
+      const body = paidRequestBody(fetchMock);
+      expect(body.tools).toEqual([tool]);
+      expect(body.tool_choice).toBe("auto");
+    });
+
+    it("forwards an explicit tool_choice", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ content: "hi" }), { status: 200 }));
+      vi.stubGlobal("fetch", fetchMock);
+
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }], {
+          tools: [tool],
+          tool_choice: "none",
+        });
+      });
+
+      const body = paidRequestBody(fetchMock);
+      expect(body.tool_choice).toBe("none");
     });
   });
 
@@ -521,5 +937,78 @@ describe("WebStorageClientChannelStorage", () => {
     await storage.delete("0xabc");
 
     await expect(storage.get("0xabc")).resolves.toBeUndefined();
+  });
+
+  /**
+   * Records are tagged with their chain, which is what lets `resyncFromChain` read a zero on-chain
+   * balance as "this channel is fiction" rather than "this channel is on another chain". Every
+   * network's records share one localStorage namespace, so without the tag the two are identical.
+   */
+  describe("network tagging", () => {
+    const OPTIMISM = "eip155:10";
+    const BASE = "eip155:8453";
+    const FUNDED = [1_000_000n, 40_000n] as const;
+    const EMPTY = [0n, 0n] as const;
+
+    /** What the SDK stores, plus the tag we add. Written raw so a record can be posed as untagged,
+     *  which is how every record written before tagging shipped looks. */
+    function writeRecord(id: string, record: Record<string, unknown>) {
+      backend.setItem(`x402-channel:${id}`, JSON.stringify(record));
+    }
+    const readRecord = (id: string) => JSON.parse(backend.getItem(`x402-channel:${id}`) ?? "null");
+
+    it("tags a written record with its network, and hides the tag from the SDK", async () => {
+      const storage = new WebStorageClientChannelStorage(backend, OPTIMISM);
+      const context = { chargedCumulativeAmount: "1420", balance: "7100" };
+
+      await storage.set("0xabc", context);
+
+      expect(readRecord("0xabc")).toMatchObject({ network: OPTIMISM });
+      // The SDK gets back exactly what it wrote — the tag is our bookkeeping, not part of its
+      // channel context.
+      await expect(storage.get("0xabc")).resolves.toEqual(context);
+    });
+
+    it("leaves another network's record alone, without even reading the chain for it", async () => {
+      writeRecord("0xbase", { network: BASE, balance: "500000", chargedCumulativeAmount: "100" });
+      const read = vi.fn();
+
+      await new WebStorageClientChannelStorage(backend, OPTIMISM).resyncFromChain(read);
+
+      expect(read).not.toHaveBeenCalled();
+      expect(readRecord("0xbase")).toMatchObject({ balance: "500000" });
+    });
+
+    /**
+     * A zero read is not evidence that the record is wrong, tagged or not. This briefly deleted
+     * such records: the incident that prompted it turned out to be the *server's* cached balance
+     * reading 0 while the chain held 544239 and this record said so correctly, so deleting would
+     * have thrown away the accurate copy. `scw_js/x402_channel_sync.ts` documents the drift.
+     */
+    it.each([
+      ["tagged for this network", { network: OPTIMISM, balance: "544239", chargedCumulativeAmount: "52897" }],
+      ["untagged, written before tagging shipped", { balance: "544239", chargedCumulativeAmount: "52897" }],
+    ])("leaves a record %s alone when the chain reads zero", async (_label, record) => {
+      writeRecord("0xquiet", record);
+
+      await new WebStorageClientChannelStorage(backend, OPTIMISM).resyncFromChain(() => Promise.resolve(EMPTY));
+
+      expect(readRecord("0xquiet")).toMatchObject({ balance: "544239", chargedCumulativeAmount: "52897" });
+    });
+
+    /** A real balance is itself proof of which chain the record belongs to, so the resync is also
+     *  where an untagged record gets its tag — no need to wait for the next settle. */
+    it("tags an untagged record once the chain confirms it", async () => {
+      writeRecord("0xlegacy", { balance: "1", chargedCumulativeAmount: "52897" });
+
+      await new WebStorageClientChannelStorage(backend, OPTIMISM).resyncFromChain(() => Promise.resolve(FUNDED));
+
+      expect(readRecord("0xlegacy")).toMatchObject({
+        network: OPTIMISM,
+        balance: "1000000",
+        // Kept because it is ahead of the chain's totalClaimed — settlement here is batched.
+        chargedCumulativeAmount: "52897",
+      });
+    });
   });
 });

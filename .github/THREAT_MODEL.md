@@ -50,6 +50,8 @@ If a component is fully compromised, what else falls with it:
 
 Key observation: the **owner EOA** is the single point of catastrophic failure. All other compromises are bounded in scope. This makes key management the highest-priority operational security concern, ahead of any code-level finding.
 
+The signature-gated read/admin APIs (analytics `GET /stats`, the growth approval API) accept **more than one** wallet: `OWNER_ETH_ADDRESS` holds a comma-separated list, parsed by `parseOwnerAddresses` in `shared/chain-utils`. Every listed key can therefore read analytics and approve drafts — and approving a draft publishes to Mastodon/Bluesky. The set is deliberately small and is configuration, not code; an empty or blank value authorises nobody rather than everybody.
+
 ---
 
 ## 3. Threat Actors
@@ -131,7 +133,7 @@ This is the **HOW** that complements §3 (WHO) and §4 (WHERE): the concrete cla
 
 | Technique (OWASP) | Where it applies | Status | Tracked in |
 |---|---|---|---|
-| Broken authentication (API2) | EIP-712/EIP-3009 sig verify (facilitator); agent-wallet whitelist (scw_js); `useWalletAuth` owner-sig bearer (growth); origin whitelist (comment_service) | Mitigated | §4; §7 |
+| Broken authentication (API2) | EIP-712/EIP-3009 sig verify (facilitator); agent-wallet whitelist (scw_js); `useWalletAuth` owner-sig bearer (growth **and analytics**); origin whitelist (comment_service) | Mitigated | §4; §7 |
 | Broken function-level authz (API5) | x402 `Access-Control-Allow-Origin: *`; bounded by EIP-3009 crypto | Accepted (intentional open protocol) | §4 ★; §7 |
 | Unrestricted resource consumption (API4) | `/settle` spam gas drain; serverless cold starts (accepted); LLM pre-charge balance gate (batch-settlement stall; Open, medium); analytics `/hit` request volume (not rate-limited, and **CORS is not the control** — browser-only, and `sendBeacon` sends a simple request with no preflight; accepted, since the consequence is a skewed counter, not cost or exposure); analytics `pages` map cardinality abuse (mitigated via path validation + a 200-entry cap) | Mixed — gas drain and `/hit` volume accepted; balance-gate open; `pages` cardinality mitigated | §4; scw_js/SECURITY.md |
 | Unrestricted access to sensitive business flows (API6) | Deliver-before-payment in the LLM and genimg flows | Open (medium) | scw_js/SECURITY.md |

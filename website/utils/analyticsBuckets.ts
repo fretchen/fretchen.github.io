@@ -18,6 +18,8 @@ import type { DayBucket, Stats } from "../types/analytics";
 export type Granularity = "day" | "week" | "month";
 
 export interface Range {
+  /** Stable identity, shared with the chat tool's `range` argument — never the array position. */
+  key: "30d" | "90d" | "1y";
   days: number;
   granularity: Granularity;
   label: string;
@@ -28,9 +30,9 @@ export interface Range {
  * unreadable — hence one range per granularity rather than one per duration.
  */
 export const RANGES: Range[] = [
-  { days: 30, granularity: "day", label: "30 days" },
-  { days: 90, granularity: "week", label: "90 days" },
-  { days: 365, granularity: "month", label: "1 year" },
+  { key: "30d", days: 30, granularity: "day", label: "30 days" },
+  { key: "90d", days: 90, granularity: "week", label: "90 days" },
+  { key: "1y", days: 365, granularity: "month", label: "1 year" },
 ];
 
 export interface Bucket {

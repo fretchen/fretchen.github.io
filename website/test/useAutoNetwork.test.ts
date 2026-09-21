@@ -43,6 +43,23 @@ const sharedConfig = createConfig({
   },
 });
 
+/** A second config whose connector always refuses to switch — the only way to reach the failure
+ *  branch, since the shared connector above always succeeds. Its own config so the shared
+ *  connector's state stays untouched. */
+const refusingConfig = createConfig({
+  chains: [optimism, optimismSepolia],
+  connectors: [
+    mock({
+      accounts: ["0x1234567890123456789012345678901234567890"],
+      features: {
+        defaultConnected: true,
+        switchChainError: new Error("Unrecognized chain ID. Try adding the chain first."),
+      },
+    }),
+  ],
+  transports: { [optimism.id]: http(), [optimismSepolia.id]: http() },
+});
+
 // Create test wrapper with shared config
 function createTestWrapper() {
   const queryClient = new QueryClient({
@@ -333,6 +350,56 @@ describe("useAutoNetwork Hook", () => {
       await waitFor(() => {
         expect(result.current.chainId).toBe(11155420);
         expect(result.current.autoNetwork.isOnCorrectNetwork).toBe(true);
+      });
+    });
+  });
+
+  describe("getSwitchError", () => {
+    function refusingWrapper() {
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const TestWrapper = ({ children }: { children: React.ReactNode }) =>
+        createElement(
+          QueryClientProvider,
+          { client: queryClient },
+          createElement(WagmiProvider, { config: refusingConfig }, children),
+        );
+      TestWrapper.displayName = "RefusingWrapper";
+      return TestWrapper;
+    }
+
+    it("is null before any attempt", async () => {
+      const { result } = renderHook(() => useAutoNetwork([OPTIMISM_MAINNET]), { wrapper: createTestWrapper() });
+
+      await waitFor(() => expect(result.current.network).toBeDefined());
+      expect(result.current.getSwitchError()).toBeNull();
+    });
+
+    // The point of the getter. A rendered value would still be the pre-call one here — the failing
+    // switch has not re-rendered anything yet — so the attempt that produced the error would
+    // report none, and the caller would fall back to a generic "please switch" message.
+    it("carries the wallet's reason immediately after the failing await, without a re-render", async () => {
+      const { result } = renderHook(
+        () => ({
+          autoNetwork: useAutoNetwork([OPTIMISM_SEPOLIA]), // only Sepolia supported
+          account: useAccount(),
+          connect: useConnect(),
+        }),
+        { wrapper: refusingWrapper() },
+      );
+
+      // switchIfNeeded returns early when disconnected, so the failure branch is unreachable
+      // without a real connection (useIsWalletConnected requires status === "connected").
+      await act(async () => {
+        result.current.connect.connect({ connector: result.current.connect.connectors[0] });
+      });
+      await waitFor(() => expect(result.current.account.isConnected).toBe(true));
+      expect(result.current.autoNetwork.isOnCorrectNetwork).toBe(false);
+
+      await act(async () => {
+        const switched = await result.current.autoNetwork.switchIfNeeded();
+        expect(switched).toBe(false);
+        // Read inside the same turn as the await — no render has happened in between.
+        expect(result.current.autoNetwork.getSwitchError()).toMatch(/Unrecognized chain ID/);
       });
     });
   });

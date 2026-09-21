@@ -203,6 +203,62 @@ describe("growth_api", () => {
       expect(JSON.parse(res.body).error).toMatch(/Not the owner/i);
     });
 
+    // OWNER_ETH_ADDRESS carries a comma-separated list so a second wallet can administer the
+    // queue. These three cases are the widening, its limit, and the fail-closed default.
+    test("accepts a second address listed in OWNER_ETH_ADDRESS", async () => {
+      const second = privateKeyToAccount(
+        "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
+      );
+      process.env.OWNER_ETH_ADDRESS = `${OWNER_ADDRESS},${second.address}`;
+      mockGetS3Object.mockResolvedValue(null);
+
+      const message = `growth-api:${Math.floor(Date.now() / 1000)}`;
+      const payload = {
+        address: second.address,
+        signature: await second.signMessage({ message }),
+        message,
+      };
+      const auth = `Bearer ${Buffer.from(JSON.stringify(payload)).toString("base64")}`;
+      const res = (await handle(makeEvent("GET", "drafts", { auth }), {})) as {
+        statusCode: number;
+      };
+      expect(res.statusCode).toBe(200);
+    });
+
+    test("still returns 401 for an address on neither entry of the list", async () => {
+      const second = privateKeyToAccount(
+        "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
+      );
+      const stranger = privateKeyToAccount(
+        "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a",
+      );
+      process.env.OWNER_ETH_ADDRESS = `${OWNER_ADDRESS},${second.address}`;
+
+      const message = `growth-api:${Math.floor(Date.now() / 1000)}`;
+      const payload = {
+        address: stranger.address,
+        signature: await stranger.signMessage({ message }),
+        message,
+      };
+      const auth = `Bearer ${Buffer.from(JSON.stringify(payload)).toString("base64")}`;
+      const res = (await handle(makeEvent("GET", "drafts", { auth }), {})) as {
+        statusCode: number;
+      };
+      expect(res.statusCode).toBe(401);
+    });
+
+    // Fails closed, and deliberately as a 500 rather than a 401: this handler treats a missing
+    // owner configuration as a server fault (verifyOwner throws a plain Error, and only AuthError
+    // becomes a 401). A whitespace-only value used to slip past the old truthiness check and land
+    // as "Address mismatch"; it is a misconfiguration and now reads as one.
+    test("treats a blank OWNER_ETH_ADDRESS as authorising nobody, not everybody", async () => {
+      process.env.OWNER_ETH_ADDRESS = "  ,  ";
+      const event = makeEvent("GET", "drafts", { auth: validAuth });
+      const res = (await handle(event, {})) as { statusCode: number };
+      expect(res.statusCode).toBe(500);
+      expect(res.statusCode).not.toBe(200);
+    });
+
     test("returns 401 when message timestamp is expired", async () => {
       const oldTimestamp = Math.floor(Date.now() / 1000) - 600; // 10 min ago
       const event = makeEvent("GET", "drafts", { auth: await makeAuthHeader(oldTimestamp) });

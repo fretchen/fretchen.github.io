@@ -6,8 +6,11 @@ import {
   createFacilitatorClient,
   getBatchSettlementNetworks,
   getFacilitatorFeeConfig,
+  useEnhancedRefundRequirements,
   type FacilitatorFeeConfig,
 } from "./x402_server.js";
+import { resyncChannelState } from "./x402_channel_sync.js";
+import type { Channel } from "@x402/evm/batch-settlement/server";
 import type { ScwEvent } from "./types.js";
 
 const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
@@ -37,13 +40,57 @@ function isHexAddress(addr: unknown): addr is `0x${string}` {
   return typeof addr === "string" && /^0x[a-fA-F0-9]{40}$/.test(addr);
 }
 
+/**
+ * How long a channel must sit untouched before the cooperative refund sweep returns its
+ * unspent escrow to the payer.
+ *
+ * Kept below WITHDRAW_DELAY_SECONDS (86400) on purpose: the buyers page promises escrow is
+ * "withdrawable after ~24 hours", and that unilateral exit should be the worst case, not the
+ * only way out. Sweeping at 6h means a channel that goes quiet is normally refunded long
+ * before anyone needs to wait out the delay themselves.
+ */
+const REFUND_IDLE_SECS = Number(process.env.LLM_REFUND_IDLE_SECONDS ?? "21600");
+
 interface NetworkResult {
   network: string;
   claims?: number;
   settled?: boolean;
+  /** Idle channels cooperatively refunded this run. */
+  refunds?: number;
+  /** Set when the refund sweep failed; never masks an otherwise successful claim. */
+  refundError?: string;
   /** How many more claims the current fee approval covers, when it could be read. */
   feeAllowanceClaimsLeft?: number;
+  /** Cached channel records that disagreed with the chain and were corrected. Reported, not
+   *  escalated: the repair is the design, but drift means something upstream is wrong. */
+  driftCorrected?: number;
+  /** Escrow this network's channels still hold (deposits minus what has been claimed out), in
+   *  USDC atomic units. Context for the check below, not a condition of its own. */
+  escrowHeld?: string;
+  /** Channels that should have been refunded by now and were not — see assertSweptClean. */
+  stuckChannels?: string[];
   error?: string;
+}
+
+/**
+ * The sweep's own post-condition: after a run, no channel idle past `REFUND_IDLE_SECS` should
+ * still be holding refundable escrow.
+ *
+ * This is the check that would have caught the incident this file's comments describe, and it
+ * would have caught it without anyone knowing what was wrong. Refunds failed for four unrelated
+ * reasons over the same period — a stale cached `balance`, a stale `refundNonce`, a
+ * `refund_transaction_failed` on Base, a `withdraw_delay_mismatch` on Base Sepolia — and every one
+ * of them presents identically here: escrow that should have gone home and did not. A check
+ * written against the *outcome* survives the causes.
+ *
+ * Deliberately binary, with no threshold to tune: either the sweep did its job or it did not.
+ */
+function findStuckChannels(channels: Channel[]): string[] {
+  const idleBefore = Date.now() - REFUND_IDLE_SECS * 1000;
+  return channels
+    .filter((c) => c.lastRequestTimestamp < idleBefore)
+    .filter((c) => BigInt(c.balance) > BigInt(c.chargedCumulativeAmount))
+    .map((c) => c.channelId);
 }
 
 /**
@@ -106,9 +153,9 @@ export async function handle(
     };
   }
 
-  let scheme: ReturnType<typeof createLLMResourceServer>["scheme"];
+  let schemeFor: ReturnType<typeof createLLMResourceServer>["schemeFor"];
   try {
-    ({ scheme } = createLLMResourceServer(receiverAddress));
+    ({ schemeFor } = createLLMResourceServer(receiverAddress));
   } catch (err) {
     logger.error({ err }, "Failed to configure batch-settlement resource server");
     return {
@@ -160,6 +207,9 @@ export async function handle(
     }
 
     try {
+      // Per-network scheme: its storage is scoped to this network's S3 prefix, so
+      // `list()` cannot hand another chain's channels to this chain's claim batch.
+      const scheme = schemeFor(network);
       const manager = scheme.createChannelManager(
         facilitatorClient,
         network as `${string}:${string}`,
@@ -167,11 +217,81 @@ export async function handle(
       );
       const { claims, settle } = await manager.claimAndSettle();
       logger.info({ network, claims, settle }, "claimAndSettle completed");
+
+      // Cooperative refund of channels that have gone quiet, after the claim so the two
+      // stay independent: refunding a channel with outstanding vouchers would otherwise be
+      // submitted as an enriched refund (multicall([claim, refund])) and tangle the fee
+      // accounting. `refundIdleChannels` calls `storage.list()` itself, which is safe only
+      // because the storage is network-scoped — on a shared store it would sweep every
+      // chain's channels into this chain's refunds. Its own try/catch, so a refund failure
+      // never hides a good claim.
+      let refunds: number | undefined;
+      let refundError: string | undefined;
+      let driftCorrected: number | undefined;
+      try {
+        // The SDK builds a refund entirely from the stored record — amount, candidate filter and
+        // signing nonce — and all three are caches that have gone stale in production. A stale
+        // `balance` skips a funded channel or computes a negative amount; a stale `refundNonce`
+        // signs against a nonce the chain already consumed, which reverts and, because the SDK's
+        // refund loop has no per-channel catch, blocks every other refund in the sweep behind it.
+        // 2.08 USDC accumulated that way. See resyncChannelState.
+        const synced = await resyncChannelState(scheme.getStorage(), network);
+        driftCorrected = synced.filter((s) => s.corrected).length;
+        if (driftCorrected > 0) {
+          // Warn, not info: the repair working is the design, but a record that disagreed with
+          // the chain means something upstream wrote it wrong. The stale refundNonce was being
+          // corrected on every run, at info level, while refunds failed for weeks.
+          logger.warn(
+            { network, driftCorrected, of: synced.length },
+            "Cached channel state had drifted from the chain and was corrected",
+          );
+        }
+        // The SDK builds refund requirements with `extra: {}`, which the facilitator rejects
+        // as receiver_authorizer_mismatch. Applied after the claim so claim/settle are
+        // untouched. See useEnhancedRefundRequirements.
+        await useEnhancedRefundRequirements(scheme, manager, {
+          network,
+          asset: usdcAddress,
+          payTo: receiverAddress,
+        });
+        refunds = (await manager.refundIdleChannels({ idleSecs: REFUND_IDLE_SECS })).length;
+        logger.info({ network, refunds }, "Refund sweep completed");
+      } catch (err) {
+        refundError = (err as Error).message;
+        logger.error({ err, network }, "Refund sweep failed");
+      }
+
+      // The sweep's post-condition, checked against storage as it now stands. Runs even when the
+      // refund step threw: a failed sweep is exactly when escrow is most likely left behind.
+      const remaining = await scheme.getStorage().list();
+      // `balance` is cumulative DEPOSITS — claims do not decrement it, they move funds out via
+      // `totalClaimed` (the SDK validates a voucher's cumulative maxClaimable against `balance`,
+      // so it has to keep growing). Summing `balance` alone therefore reports money that has
+      // already been collected as still at risk, in the field printed next to the stuck-escrow
+      // error. Clamped at zero so a record caught mid-drift reads as nothing held rather than a
+      // negative total.
+      const escrowHeld = remaining.reduce((sum, c) => {
+        const held = BigInt(c.balance) - BigInt(c.totalClaimed);
+        return sum + (held > 0n ? held : 0n);
+      }, 0n);
+      const stuckChannels = findStuckChannels(remaining);
+      if (stuckChannels.length > 0) {
+        logger.error(
+          { network, stuckChannels, escrowHeld: escrowHeld.toString() },
+          "Channels are past the refund threshold and still hold escrow — the sweep did not do its job",
+        );
+      }
+
       results.push({
         network,
         claims: claims.length,
         settled: settle !== undefined,
+        ...(refunds !== undefined && { refunds }),
+        ...(refundError !== undefined && { refundError }),
+        ...(driftCorrected !== undefined && { driftCorrected }),
         ...(claimsLeft !== null && { feeAllowanceClaimsLeft: claimsLeft }),
+        escrowHeld: escrowHeld.toString(),
+        ...(stuckChannels.length > 0 && { stuckChannels }),
       });
     } catch (err) {
       logger.error({ err, network }, "claimAndSettle failed");
@@ -183,7 +303,17 @@ export async function handle(
     }
   }
 
-  const hasErrors = results.some((r) => r.error !== undefined);
+  // Every way this run can have failed, not just the one that throws.
+  //
+  // `refundError` used to be invisible here: it is a different key from `error`, so a run that
+  // claimed correctly and refunded nothing returned 200 and Scaleway recorded a successful
+  // invocation. That is how a broken refund sweep ran twice a day for weeks without anyone
+  // noticing. `stuckChannels` is the outcome-level version of the same signal, and catches the
+  // cases where nothing threw at all.
+  const hasErrors = results.some(
+    (r) =>
+      r.error !== undefined || r.refundError !== undefined || (r.stuckChannels?.length ?? 0) > 0,
+  );
   return {
     statusCode: hasErrors ? 500 : 200,
     headers,

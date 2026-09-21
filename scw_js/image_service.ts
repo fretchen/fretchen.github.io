@@ -125,6 +125,19 @@ async function generateImageBFL(
   }
   const { id: requestId, polling_url } = submit.data;
 
+  // The poll below sends our API key as `x-key`, and this URL comes out of BFL's response body —
+  // `z.url()` only proves it parses, not where it points. Pin the host so a redirect or a
+  // compromised response cannot walk the key off to a third party. Mirrors the metadata-URL host
+  // check the caller already does (see generateImage in genimg_x402_token.ts).
+  //
+  // Suffix match, not equality against config.endpoint's host: BFL answers from regional poll
+  // hosts (api.eu.bfl.ai, api.us1.bfl.ai), so pinning to the exact submit host would break the
+  // real API.
+  const pollHost = new URL(polling_url).hostname;
+  if (pollHost !== "bfl.ai" && !pollHost.endsWith(".bfl.ai")) {
+    throw new Error(`Untrusted BFL polling URL: ${polling_url}`);
+  }
+
   console.log(`BFL request started with ID: ${requestId}`);
 
   const maxAttempts = 60;

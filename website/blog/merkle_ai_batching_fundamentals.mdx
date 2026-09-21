@@ -7,58 +7,9 @@ secondaryCategory: "ai"
 description: "I explore the fundamentals of Merkle trees for efficient LLM batching. Learn cryptographic proofs, batch verification, and AI service settlement optimization."
 ---
 
-import MermaidDiagram from "../components/MermaidDiagram";
+import { MerkleTreeDiagram } from "../components/blog/MerkleTreeDiagram";
 import BatchCreator from "../components/blog/BatchCreator";
 import ProofDemo from "../components/blog/ProofDemo";
-
-export const merkleTreeMathDiagram = `graph TD
-    R1["R₁<br/>(Request 1)"] --> H1["H₁ = hash(R₁)"]
-    R2["R₂<br/>(Request 2)"] --> H2["H₂ = hash(R₂)"]
-    R3["R₃<br/>(Request 3)"] --> H3["H₃ = hash(R₃)"]
-    R4["R₄<br/>(Request 4)"] --> H4["H₄ = hash(R₄)"]
-
-    H1 --> H12["H₁₂ = hash(H₁ + H₂)"]
-    H2 --> H12
-    H3 --> H34["H₃₄ = hash(H₃ + H₄)"]
-    H4 --> H34
-
-    H12 --> ROOT["ROOT<br/>hash(H₁₂ + H₃₄)"]
-    H34 --> ROOT
-
-    classDef requestNode fill:#f8fafc,stroke:#64748b,stroke-width:1px
-    classDef hashNode fill:#f1f5f9,stroke:#475569,stroke-width:1px
-    classDef rootNode fill:#f7f7f7,stroke:#374151,stroke-width:2px
-
-    class R1,R2,R3,R4 requestNode
-    class H1,H2,H3,H4,H12,H34 hashNode
-    class ROOT rootNode`;
-
-export const merkleProofPathDiagram = `graph TD
-    R1["R₁<br/>(Request 1)"] --> H1["H₁ = hash(R₁)"]
-    R2["R₂<br/>(Request 2)"] --> H2["H₂ = hash(R₂)"]
-    R3["R₃<br/>(Request 3)"] --> H3["H₃ = hash(R₃)"]
-    R4["R₄<br/>(Request 4)"] --> H4["H₄ = hash(R₄)"]
-
-    H1 --> H12["H₁₂ = hash(H₁ + H₂)"]
-    H2 --> H12
-    H3 --> H34["H₃₄ = hash(H₃ + H₄)"]
-    H4 --> H34
-
-    H12 --> ROOT["ROOT<br/>hash(H₁₂ + H₃₄)"]
-    H34 --> ROOT
-
-    classDef requestNode fill:#f8fafc,stroke:#64748b,stroke-width:1px
-    classDef hashNode fill:#f1f5f9,stroke:#475569,stroke-width:1px
-    classDef rootNode fill:#f7f7f7,stroke:#374151,stroke-width:2px
-    classDef proofPath fill:#fef3c7,stroke:#f59e0b,stroke-width:3px
-    classDef proofNode fill:#ecfdf5,stroke:#10b981,stroke-width:2px
-
-    class R1,R2,R4 requestNode
-    class H1,H2 hashNode
-    class ROOT rootNode
-    class R3 proofPath
-    class H3,H34 proofPath
-    class H4,H12 proofNode`;
 
 **Update on 2025-08-26: I substantially overhauled this blog post to improve clarity and focus on the Merkle tree topic.**
 
@@ -108,7 +59,7 @@ A Merkle tree is then built up step by step. Let&apos;s say we have 4 LLM reques
 
 Here&apos;s what this tree-building process looks like visually:
 
-<MermaidDiagram definition={merkleTreeMathDiagram} title="Merkle Tree Mathematical Foundation" />
+<MerkleTreeDiagram />
 
 As you can see in the diagram above, the ROOT hash represents all 4 requests in a single value. This means instead of needing 4 separate blockchain transactions (one for each request), we need just 1 transaction to register the entire batch. The ROOT hash enables us to register thousands of LLM requests with just one blockchain transaction while maintaining cryptographic proof of each individual request.
 
@@ -118,15 +69,11 @@ Now that we&apos;ve seen how to batch LLM requests into a Merkle tree, there is 
 
 A Merkle proof is a cryptographic proof that allows the user, we name her Alice, to demonstrate that her transaction is included in the Merkle tree without revealing any other transactions. To prove that Alice&apos;s transaction R<sub>3</sub> is in the tree, she provides a &quot;proof path&quot; - the minimum set of hash values needed to reconstruct the path from her leaf to the root:
 
-<figure>
-  <MermaidDiagram definition={merkleProofPathDiagram} title="🔍 Merkle Proof Path for Request 3 (R₃)" />
-  <figcaption>
-    Visualization of the Merkle proof for R<sub>3</sub>: Alice needs to provide the request and proof siblings that are
-    highlighted in green. The hashes that are highlighted in orange can be calculated from the information. Finally, she
-    can verify if the calculated root is the same as the root she was provided. If they are the same, her request is
-    stored in the merkle tree.
-  </figcaption>
-</figure>
+<MerkleTreeDiagram
+  proofPathNodes={["R3", "H3", "H34"]}
+  proofSiblingNodes={["H4", "H12"]}
+  caption="Visualization of the Merkle proof for R₃: Alice needs to provide the request and proof siblings that are highlighted in green. The hashes that are highlighted in orange can be calculated from the information. Finally, she can verify if the calculated root is the same as the root she was provided. If they are the same, her request is stored in the merkle tree."
+/>
 
 This elegant mathematical verification proves Alice&apos;s transaction is authentic without revealing any other transaction details. In the little demonstrator below, you can test in a simple example how the proof can be generated and validated.
 

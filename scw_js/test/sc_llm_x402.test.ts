@@ -219,6 +219,13 @@ describe("sc_llm_x402", () => {
       expect(res.headers["Access-Control-Allow-Methods"]).toContain("GET");
     });
 
+    it("exposes Payment-Response on the OPTIONS preflight", async () => {
+      // Without this the browser cannot read the settlement header, the client SDK's cached
+      // channel balance never advances, and every message signs a fresh $0.50 deposit.
+      const res = await handle(makeEvent({ httpMethod: "OPTIONS" }) as never, {});
+      expect(res.headers["Access-Control-Expose-Headers"]).toContain("Payment-Response");
+    });
+
     it("returns 400 for a non-POST method", async () => {
       const res = await handle(makeEvent({ httpMethod: "GET" }) as never, {});
       expect(res.statusCode).toBe(400);
@@ -753,6 +760,66 @@ describe("sc_llm_x402", () => {
       });
     });
 
+    describe("messages are capped by serialized size", () => {
+      // The same reasoning as the tools cap above, applied to the far larger input: conversation
+      // turns are input tokens billed on every hop, while the charge is capped at a fixed
+      // per-message ceiling. Without this, one request filling the model's context window cost
+      // several times what it settled for, repeatably.
+      function messagesEvent(messages: unknown) {
+        return makeEvent({
+          body: JSON.stringify({ model: TEST_MODEL, messages }),
+        }) as never;
+      }
+
+      it("rejects a conversation over the byte cap before any payment is verified", async () => {
+        const res = await handle(
+          messagesEvent([{ role: "user", content: "x".repeat(70_000) }]),
+          {},
+        );
+
+        expect(res.statusCode).toBe(400);
+        expect(JSON.parse(res.body).error.param).toBe("messages");
+        expect(JSON.parse(res.body).error.message).toMatch(/ceiling/i);
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
+        expect(mockCallLLMAPI).not.toHaveBeenCalled();
+        expect(mockSettlePayment).not.toHaveBeenCalled();
+      });
+
+      it("counts the whole conversation, not the largest single turn", async () => {
+        // Twenty turns, each comfortably small on its own, summing to over the cap.
+        const messages = Array.from({ length: 20 }, () => ({
+          role: "user",
+          content: "y".repeat(4_000),
+        }));
+        const res = await handle(messagesEvent(messages), {});
+
+        expect(res.statusCode).toBe(400);
+        expect(JSON.parse(res.body).error.param).toBe("messages");
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
+      });
+
+      it("measures the cap in UTF-8 bytes, not UTF-16 code units", async () => {
+        // ~30k three-byte chars: ~30k UTF-16 units (under the 65536 cap by that measure) but
+        // ~90k UTF-8 bytes (over it). Billed by byte, so it must be rejected.
+        const res = await handle(
+          messagesEvent([{ role: "user", content: "あ".repeat(30_000) }]),
+          {},
+        );
+
+        expect(res.statusCode).toBe(400);
+        expect(JSON.parse(res.body).error.param).toBe("messages");
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
+      });
+
+      it("accepts a conversation just under the cap", async () => {
+        const res = await handle(
+          messagesEvent([{ role: "user", content: "z".repeat(60_000) }]),
+          {},
+        );
+        expect(res.statusCode).toBe(200);
+      });
+    });
+
     describe("tool_choice is restricted to the published enum", () => {
       function toolChoiceEvent(tool_choice: unknown) {
         return makeEvent({
@@ -886,12 +953,54 @@ describe("sc_llm_x402", () => {
         expect(res.statusCode).toBe(400);
         expect(mockVerifyPayment).not.toHaveBeenCalled();
       });
+
+      it("still rejects an explicit tool_calls: null with no content", async () => {
+        const res = await handle(
+          makeEvent({
+            body: JSON.stringify({
+              model: TEST_MODEL,
+              messages: [{ role: "assistant", content: null, tool_calls: null }],
+            }),
+          }) as never,
+          {},
+        );
+
+        expect(res.statusCode).toBe(400);
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
+      });
+
+      it("accepts a replayed assistant turn with content and an explicit tool_calls: null", async () => {
+        // Real-world shape: an llm/v1 caller that forwards an upstream's own message verbatim
+        // gets tool_calls: null (not omitted) on a plain turn — see upstream_schemas.ts for the
+        // production incident. The published request schema must accept the same thing it just
+        // learned to accept from the upstream, or a well-behaved caller gets a 400 for it.
+        const res = await handle(
+          makeEvent({
+            body: JSON.stringify({
+              model: TEST_MODEL,
+              messages: [
+                { role: "user", content: "draw a cat" },
+                { role: "assistant", content: "Here you go!", tool_calls: null },
+                { role: "user", content: "thanks" },
+              ],
+            }),
+          }) as never,
+          {},
+        );
+
+        expect(res.statusCode).toBe(200);
+      });
     });
 
-    it("returns 401 when the LLM API token is missing", async () => {
-      mockCallLLMAPI.mockRejectedValue(new Error("API Token nicht gefunden"));
+    it("does not settle when the LLM API token is missing", async () => {
+      // Our own misconfiguration, not the caller's fault: a 500, and above all no charge.
+      mockCallLLMAPI.mockRejectedValue(
+        new Error(
+          "API token not found. Please configure the MISTRAL_API_KEY environment variable.",
+        ),
+      );
       const res = await handle(makeEvent() as never, {});
-      expect(res.statusCode).toBe(401);
+      expect(res.statusCode).toBe(500);
       expect(mockSettlePayment).not.toHaveBeenCalled();
     });
 
@@ -983,6 +1092,21 @@ describe("sc_llm_x402", () => {
   describe("settlement", () => {
     beforeEach(() => {
       mockExtractPaymentPayload.mockReturnValue(samplePaymentPayload);
+    });
+
+    /**
+     * The regression that cost ~$7.40 of locked escrow: the settled 200 sent
+     * `Payment-Response` but never exposed it, so cross-origin browsers read null, the
+     * client SDK's cached channel record never advanced, and each message re-deposited
+     * $0.50. Asserting only the OPTIONS preflight would have passed the whole time — the
+     * settled 200 builds its headers from CORS_HEADERS separately, and that is the path
+     * that was broken. Assert the header is BOTH present and readable.
+     */
+    it("exposes Payment-Response on the settled 200, not just sends it", async () => {
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(200);
+      expect(res.headers["Payment-Response"]).toBe("encoded");
+      expect(res.headers["Access-Control-Expose-Headers"]).toContain("Payment-Response");
     });
 
     it("returns 200 with the LLM response and settlement headers on success", async () => {

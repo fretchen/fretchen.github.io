@@ -4,6 +4,11 @@ website/public/amo
 website/public/blog
 website/public/quantum
 
+# Build output that has to live in an input directory: generateSitemap.ts writes it here so the
+# dev server can serve the page list /assistent's get_page tool reads. The deployed copy is the
+# one written straight into build/.
+website/public/content-index.json
+
 *blogs.json
 
 # ignore the books folder

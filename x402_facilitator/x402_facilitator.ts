@@ -294,7 +294,10 @@ async function handlePaymentRequest(
           success: false,
           errorReason: result.errorReason,
           payer: result.payer,
-          transaction: "",
+          // Forwarded, not blanked: settlePayment already returns "" for every terminal failure
+          // and the broadcast hash for settlement_pending — the one failure a caller can
+          // reconcile on chain instead of retrying a transaction that may have confirmed.
+          transaction: result.transaction ?? "",
           network: result.network,
         };
         return {
@@ -318,6 +321,10 @@ async function handlePaymentRequest(
         ...(result.remainingSettlements !== undefined && {
           remainingSettlements: result.remainingSettlements,
         }),
+        // Must be forwarded, not summarised: the seller writes its cached channel record
+        // straight from this, and a missing `extra` makes it cache zeros rather than leave
+        // the record alone. See VerifyResponseSchema.extra. /settle already does this.
+        ...(result.extra !== undefined && { extra: result.extra }),
       };
       return {
         statusCode: 200,

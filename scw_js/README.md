@@ -15,6 +15,7 @@ Serverless functions for AI image generation and LLM services with blockchain in
 | LLM Chat         | `llmx402`         | x402 batch-settlement LLM chat (USDC payment channels) |
 | LLM Claim/Settle | `llmx402cron`     | Claims and settles accumulated LLM channels every 12h  |
 | Growth API       | `growthapi`       | Draft approval API for Growth Agent (wallet auth)      |
+| Web access       | `searchapi`       | Brave search + web fetch (x402)                        |
 
 ## Functions
 
@@ -122,6 +123,44 @@ LLM chat paid via x402 batch-settlement USDC payment channels — no bearer toke
 
 **`llm/v1` contract.** [`openapi.llm.json`](./openapi.llm.json) declares `x-service-type: "llm/v1"` — the interchangeable-agent contract. It is defined entirely by that document: the request/response body is the **OpenAI chat-completions shape** (`{ model, messages }` in → an OpenAI `chat.completion` object out — `LLMChatRequest`/`LLMChatResponse`), plus the `x-interop-floor` (a compatible agent must advertise ≥1 `accepts[]` entry with USDC on Optimism `eip155:10` or Base `eip155:8453`, scheme `batch-settlement`). Payment stays x402 batch-settlement, so the OpenAI shape is for **body legibility, not drop-in OpenAI-SDK use** — a stock SDK sends `Authorization: Bearer` and can't satisfy the 402. Streaming is not supported. `model` is validated against the advertised id(s) (`mistral-large-latest`; more can be added later).
 
+### `search_api.ts` - Web Access for /assistent (x402)
+
+The assistant's two web tools, sold per call. `search_service.ts` proxies Brave's LLM Context API; `web_fetch_service.ts` retrieves one arbitrary page.
+
+**Endpoint:** GET to `web-agent.fretchen.eu` — named for what it does rather than for `searchapi`, which is only half of it, and carrying the `-agent` suffix that marks the paid sellers. The generated Scaleway hostname still answers; this is the identity the 402 advertises and the one discovery lists.
+
+| Method | Path      | Price       | Atomic units |
+| ------ | --------- | ----------- | ------------ |
+| GET    | `/search` | $0.01 USDC  | `10000`      |
+| GET    | `/fetch`  | $0.001 USDC | `1000`       |
+
+**One way in: everybody pays.** There was an owner-signature path that served for free, justified as what let server-side callers work without a funded wallet. It was removed once that proved to name a consumer that does not exist — `growth-agent` never called this endpoint, the frontend stopped using it when the assistant's tools moved to paid fetch, and the buyer notebook's owner cell was a demonstration. `genimg` and `llmx402` never had such a path. The consequence, accepted deliberately: there is no free path and no testnet, so exercising these routes costs real money — the same trade `genimg` already makes.
+
+**Payment is x402 batch-settlement on the chat's channel.** `createLLMResourceServer` is shared with `sc_llm_x402.ts`, giving both the same receiver, receiver authorizer, token and withdraw delay — the tuple `computeChannelId` hashes. A tool call from `/assistent` therefore bills onto the channel the chat already funded, with no second deposit, and `llmx402cron` claims it unchanged. The exact scheme could not be used at these prices: the facilitator's flat 0.01 USDC per settlement is the entire price of a search.
+
+**Mainnet only** (`eip155:10`, `eip155:8453`), unlike the chat. Testnet USDC is free and both routes spend real money — Brave bills per query, `/fetch` is egress — so a testnet offer would hand out a metered API for nothing.
+
+**Settlement follows success.** Verify → run → settle, so an upstream failure or a refused URL costs the caller nothing. The advertised `maxTimeoutSeconds` is 30 rather than the chat's 120, because a lock orphaned that way sits on the shared channel and would block the user's next chat message.
+
+**The SSRF defence is unchanged by payment.** A payment authorises a fetch, not a fetch of `169.254.169.254`. See the header comment of [`web_fetch_service.ts`](./web_fetch_service.ts).
+
+**Refunds, and the one exercise that tests them.** Cooperative refunds are the seller's job (`llmx402cron`, or `scripts/recover_channels.ts` on demand), and the SDK builds each one entirely from the **stored** channel record — the amount from `balance - chargedCumulativeAmount`, the candidate filter from `balance !== 0`, and the signature from `refundNonce`. All three are caches of chain state, and all three have gone stale in production. `resyncChannelState` re-reads them before every sweep, which is the only thing standing between a working refund and a permanently broken one.
+
+The failure mode that hid for months: a successful refund **deletes** the channel record, and a later deposit with the same voucher signer recreates it with `refundNonce: 0` while the chain has moved on. Every later refund is then signed against a consumed nonce and reverts (`0x164f1afe`) — and because the SDK's refund loop has no per-channel catch, one such channel blocks the whole sweep. 2.08 USDC accumulated behind it.
+
+No unit test can catch that: every test here replaces the chain with a mock that agrees with the local record by construction. The exercise that _would_ catch it needs a real chain, and it must **refund the same channel twice** — a single refund passes and proves nothing, because the nonce only goes stale after the first one. On Base Sepolia (free USDC, and the escrow contract is deployed there):
+
+```bash
+# 1. buyer: open a channel and spend on it — scw_js/notebooks/sc_llm_x402_buyer.ipynb (USE_BASE, testnet)
+# 2. seller: claim what is owed, then refund the rest
+npx tsx scripts/recover_channels.ts eip155:84532 --apply
+# 3. buyer: run the notebook again — same voucher signer, so the SAME channelId is re-funded
+# 4. seller: refund a second time. THIS is the step that used to revert.
+npx tsx scripts/recover_channels.ts eip155:84532 --apply
+```
+
+Run it before touching the refund path. It is deliberately not in CI: it needs a funded key and a network, and CI stays hermetic.
+
 ### `growth_api.ts` - Growth Agent Draft Approval
 
 API for reviewing, editing, and approving AI-generated social media drafts. Used by the Growth Agent notebooks and cron job.
@@ -184,6 +223,66 @@ npm run dev:growth
 npm run dev:llmx402
 npm run dev:llmx402cron
 ```
+
+## Reading the logs
+
+Not the Scaleway console, and not Grafana — both show nothing useful here. `scripts/logs.ts` queries
+Cockpit's Loki API directly:
+
+```bash
+npx tsx scripts/logs.ts                                      # which functions are logging
+npx tsx scripts/logs.ts facilitator --since 36h --grep "Settlement failed"
+npx tsx scripts/logs.ts llmx402cron --since 48h --grep "Refund sweep"
+```
+
+**It reads the whole Scaleway project, not just this package** — Cockpit is scoped per project, so
+the facilitator, analytics and comment-service logs come out of the same command. The script lives
+here only because this is where the operational scripts live.
+
+Needs `SCW_COCKPIT_LOGS_URL` and `SCW_COCKPIT_LOGS_TOKEN` in `.env`. That token is a **Cockpit**
+token with `read_only_logs` scope — `SCW_SECRET_KEY` is rejected with a 403 — created with
+`scw cockpit token create name=<name> token-scopes.0=read_only_logs region=fr-par`. Its secret is
+shown once, so save it immediately: a token whose secret is lost can only be deleted.
+
+Worth knowing before an incident: a function that has not run inside the `--since` window does not
+appear in the discovery listing at all, so widen the window before concluding anything is missing.
+
+## Alerting on log content
+
+Scaleway's built-in alerts are metric-based, and the failure that motivated this section produced no
+error metric at all — the facilitator answered HTTP 200 with `success: false` and the revert reason
+buried in the body. That is only ever visible as text in a log line, so `alerts/payments.yaml`
+defines Loki ruler rules that watch for it directly.
+
+```bash
+npx tsx scripts/alerts.ts                  # list the rule groups currently on the ruler
+npx tsx scripts/alerts.ts --push           # push alerts/payments.yaml
+npx tsx scripts/alerts.ts --delete payments
+```
+
+Needs `SCW_COCKPIT_RULES_TOKEN` in `.env` — a **separate** Cockpit token from the read-only one
+above, scoped `full_access_logs_rules`:
+`scw cockpit token create name=<name> token-scopes.0=full_access_logs_rules region=fr-par`. Kept
+separate because `logs.ts` is run casually and often and should only ever be able to read; this one
+can write and delete alerting rules.
+
+Four rules, deliberately few — see the comments at the top of `alerts/payments.yaml` for the
+reasoning on which four and why the rest were left out. One constraint worth knowing before writing
+a fifth: **Scaleway's Loki ruler caps a range-vector window at 1h.** `llmx402cron` runs every 12h,
+so a rule cannot stay pinned "firing" across the gap between runs the way a naive `[13h]` window
+would suggest — that gets rejected outright. Every rule here uses `[1h]`, which resolves after an
+hour and re-fires on the next cron run if the problem persists. Read a resolved notification as "no
+new occurrence in the last hour", not as "fixed".
+
+Push is a manual, explicit step — never wired into deploy. Alerting rules changing as a side effect
+of shipping code is its own kind of surprise, and a rule silently dropped by a deploy looks
+identical to a system that is simply quiet.
+
+**A rule that has never fired is not known to work.** Before trusting a new one, push a throwaway
+group matching a log line that occurs on every routine run (e.g. `"claimAndSettle completed"`),
+confirm the email arrives with the summary/description actually populated, then
+`--delete` it. This is exactly how `PaymentCronFailed` was proven to work in practice — pushing a
+test rule surfaced a real, previously-unnoticed `withdraw_delay_mismatch` failure on Base Sepolia.
 
 ## Deployment
 

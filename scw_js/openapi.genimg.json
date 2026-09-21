@@ -209,7 +209,7 @@
               "status": {
                 "type": "string",
                 "enum": ["minted", "mint_failed"],
-                "description": "'minted': the NFT exists and belongs to the payer. 'mint_failed': the image was generated and is yours, but the on-chain mint did not complete — no payment was settled in that case."
+                "description": "'minted': the NFT exists and belongs to the payer. 'mint_failed': the image was generated and is yours, but the on-chain mint did not complete. The payment settled in that case — settlement precedes the mint, so a failed mint means you were charged for the generation you received, not for the token."
               },
               "token_id": {
                 "description": "Token id of the minted NFT.",

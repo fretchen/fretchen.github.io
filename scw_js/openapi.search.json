@@ -1,0 +1,203 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Fretchen Web Access Service",
+    "description": "Web search and single-page fetch for agents, paid per call via x402 batch-settlement USDC payment channels.",
+    "version": "1.0.0",
+    "x-guidance": "GET /search?q=... or GET /fetch?url=... with no payment header to receive a 402 carrying x402 batch-settlement payment requirements (accepts[]). Open or top up a payment channel per those requirements, retry with the payment header, and the service returns JSON. Payment travels in the header only — these are GET routes, so there is no body fallback. Both routes bill onto the SAME channel as llm-agent.fretchen.eu when the payer, voucher signer and receiver match, so an agent already chatting there pays for web access without a second deposit. Prices are fixed per route and settled only when the call succeeds: an upstream failure returns 500 and takes no money. Mainnet only — testnet USDC is free and these routes spend real money on the caller's behalf.",
+    "contact": {
+      "name": "fretchen",
+      "url": "https://www.fretchen.eu",
+      "email": "fretchen.dev@proton.me"
+    }
+  },
+  "x-discovery": {
+    "ownershipProofs": [
+      "0xb73eb61a6660f671483c3ce7f1faebd7490af0db5dbcbdb3a38d8f9e6c0a14aa781437e9bd3ef56edcc6bc1b063cdff844c18fe05307afb2198c5b3774208e4b1b"
+    ]
+  },
+  "x-service-type": "web/v1",
+  "x-interop-floor": "A compatible web/v1 agent MUST offer GET /search taking a q query parameter, MUST offer GET /fetch taking an https url query parameter, MUST return JSON, and MUST advertise at least one accepts[] entry with asset USDC on network Optimism (eip155:10) or Base (eip155:8453), scheme batch-settlement. Request shapes are defined by this document's SearchQuery/FetchQuery. Sharing a payment channel with a chat agent is NOT part of the floor — it follows from the channel id being a hash of payer, authorizers, receiver, token and withdraw delay, so any agent configured alike shares one. See README.md.",
+  "servers": [
+    {
+      "url": "https://web-agent.fretchen.eu"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Web",
+      "description": "Search and single-page retrieval for agents"
+    },
+    {
+      "name": "x402",
+      "description": "Paid via x402 batch-settlement USDC payment channels"
+    }
+  ],
+  "paths": {
+    "/search": {
+      "get": {
+        "operationId": "searchWeb",
+        "summary": "Web search with extracted page content (Brave LLM Context API) (x402 USDC payment)",
+        "description": "Proxies Brave's LLM Context API and returns search results with extracted page content. The cost knobs (result count, tokens per page, number of pages fetched) are pinned server-side and ignored if passed — the budget is the proxy's, not the caller's.",
+        "tags": ["Web", "x402"],
+        "security": [],
+        "x-payment-info": {
+          "protocols": ["x402"],
+          "price": {
+            "mode": "fixed",
+            "currency": "USD",
+            "amount": "0.01"
+          }
+        },
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "description": "The search query. Result count and token budgets are fixed server-side.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 600
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Web search with extracted page content (Brave LLM Context API)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchQueryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The query parameters did not validate. Body is { error } with a message the caller can correct from."
+          },
+          "402": {
+            "description": "Payment required. Body and the Payment-Required header carry the x402 batch-settlement requirements to satisfy and retry with."
+          },
+          "404": {
+            "description": "No such route. Returned before any price is advertised — a resource that does not exist has no price."
+          },
+          "500": {
+            "description": "The upstream failed. Nothing is settled in this case: the payment is verified before the work and settled only after it succeeds."
+          }
+        }
+      }
+    },
+    "/fetch": {
+      "get": {
+        "operationId": "fetchUrl",
+        "summary": "The readable text of one public web page (x402 USDC payment)",
+        "description": "Retrieves one public web page and returns its readable text. Only https is accepted, and every resolved address is checked: a payment authorises a fetch, not a fetch of an internal address. Redirects are followed with per-hop re-validation, and size and content-type are capped.",
+        "tags": ["Web", "x402"],
+        "security": [],
+        "x-payment-info": {
+          "protocols": ["x402"],
+          "price": {
+            "mode": "fixed",
+            "currency": "USD",
+            "amount": "0.001"
+          }
+        },
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": true,
+            "description": "Absolute https URL. Other schemes and non-public hosts are rejected with 400.",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The readable text of one public web page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FetchQueryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The query parameters did not validate. Body is { error } with a message the caller can correct from."
+          },
+          "402": {
+            "description": "Payment required. Body and the Payment-Required header carry the x402 batch-settlement requirements to satisfy and retry with."
+          },
+          "404": {
+            "description": "No such route. Returned before any price is advertised — a resource that does not exist has no price."
+          },
+          "500": {
+            "description": "The upstream failed. Nothing is settled in this case: the payment is verified before the work and settled only after it succeeds."
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "operationId": "openapiSpec",
+        "summary": "This document",
+        "tags": ["x402"],
+        "responses": {
+          "200": {
+            "description": "This OpenAPI document.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "SearchQuery": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 600,
+            "description": "The search query. Result count and token budgets are fixed server-side."
+          }
+        },
+        "required": ["q"],
+        "additionalProperties": {}
+      },
+      "FetchQuery": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Absolute https URL. Other schemes and non-public hosts are rejected with 400."
+          }
+        },
+        "required": ["url"],
+        "additionalProperties": {}
+      },
+      "SearchQueryResponse": {
+        "type": "object",
+        "description": "Brave LLM Context results. Shape is the provider's and is validated but not re-modelled here; see search_service.ts.",
+        "additionalProperties": true
+      },
+      "FetchQueryResponse": {
+        "type": "object",
+        "description": "The page's readable text and the metadata extracted alongside it.",
+        "additionalProperties": true
+      }
+    }
+  }
+}

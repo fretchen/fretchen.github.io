@@ -140,39 +140,33 @@ describe("getChain.js - Chain Configuration Tests", () => {
   });
 
   describe("validatePaymentNetwork()", () => {
+    // Checks one thing: is this a chain where GenImNFT is deployed. It is NOT a production/test
+    // boundary — see the function's own comment for why the cross-mode branches it used to carry
+    // were unreachable from the only caller.
     test("should reject missing network", () => {
-      const result = validatePaymentNetwork(undefined, false);
+      const result = validatePaymentNetwork(undefined);
       expect(result.valid).toBe(false);
       expect(result.reason).toBe("missing_network");
     });
 
-    test("should accept correct network for production", () => {
-      const result = validatePaymentNetwork("eip155:10", false);
-      expect(result.valid).toBe(true);
+    test("should accept Optimism", () => {
+      expect(validatePaymentNetwork("eip155:10").valid).toBe(true);
     });
 
-    test("should accept correct network for test mode", () => {
-      const result = validatePaymentNetwork("eip155:11155420", true);
-      expect(result.valid).toBe(true);
+    test("should accept Base", () => {
+      expect(validatePaymentNetwork("eip155:8453").valid).toBe(true);
     });
 
-    test("should reject wrong network for production", () => {
-      const result = validatePaymentNetwork("eip155:11155420", false);
+    test("should accept a testnet the contract is deployed on", () => {
+      expect(validatePaymentNetwork("eip155:11155420").valid).toBe(true);
+    });
+
+    test("should reject a chain the contract is not deployed on", () => {
+      const result = validatePaymentNetwork("eip155:84532"); // Base Sepolia — no GenImNFT
       expect(result.valid).toBe(false);
-      expect(result.reason).toBe("invalid_network_for_production");
-      expect(result.expected).toEqual(["eip155:10", "eip155:8453"]);
-      expect(result.received).toBe("eip155:11155420");
-    });
-
-    test("should accept Base network for production", () => {
-      const result = validatePaymentNetwork("eip155:8453", false);
-      expect(result.valid).toBe(true);
-    });
-
-    test("should reject wrong network for test mode", () => {
-      const result = validatePaymentNetwork("eip155:10", true);
-      expect(result.valid).toBe(false);
-      expect(result.reason).toBe("invalid_network_for_test_mode");
+      expect(result.reason).toBe("unsupported_network");
+      expect(result.expected).toEqual(["eip155:10", "eip155:8453", "eip155:11155420"]);
+      expect(result.received).toBe("eip155:84532");
     });
   });
 });

@@ -46,11 +46,9 @@ invalid `site`/`path`, `405` on any method other than `POST`/`OPTIONS`.
 ### `OPTIONS /hit`
 
 CORS preflight. Origin whitelist (`https://www.fretchen.eu`,
-`http://localhost:3000`), falling back to the canonical origin — matching
-`comment_service`. Note this is consistency/defence-in-depth, not a spam
-control: CORS is browser-enforced only, and the pageview beacon is a
-`sendBeacon` simple request that triggers no preflight at all. Write abuse is
-bounded by path validation and the 200-entry `pages` cap instead.
+`http://localhost:3000`), falling back to the canonical origin. This is
+defence-in-depth, not a spam control — write abuse is bounded by path
+validation and the 200-entry `pages` cap.
 
 ### `GET /stats`
 
@@ -76,11 +74,9 @@ Both halves of that scheme — building the message and verifying it — live in
 
 **No range parameter, by design.** The endpoint always returns the trailing
 year, and `days` is sparse — a day with no traffic is absent, not a zero row.
-Measured against real data that is ~25KB, about 3KB gzipped, so windowing the
-response server-side bought nothing and cost a round trip per view. The
-dashboard fetches once and slices client-side
-(`website/utils/analyticsBuckets.ts` owns the totals, the top-pages list and
-the daily/weekly/monthly bucketing).
+On real data that is ~25KB (~3KB gzipped), so server-side windowing buys
+nothing and costs a round trip per view. The dashboard fetches once and slices
+client-side (`website/utils/analyticsBuckets.ts`).
 
 For a token from the terminal:
 
@@ -114,52 +110,28 @@ rollup/{site}/{YYYY-MM}.json
     "2026-03-04": { "hits": 18, "pages": { "/": 9 }, "source": "umami" } } }
 ```
 
-The rollup layer exists because reads can't use the hourly one. `listObjects`
-(`shared/s3-utils`) issues a single un-paginated ListObjectsV2 — max 1000 keys,
-silently truncated — and hourly objects accrue at 8760/year; a 30-day window
-would also mean 720 sequential GETs. Rollup keys are **computed** from a date
-range rather than listed, so there is no ceiling and a month costs one GET.
+Reads can't use the hourly layer: `listObjects` caps at 1000 keys and hourly
+objects accrue at 8760/year. Rollup keys are **computed** from a date range
+rather than listed, so a month costs one GET.
 
 **Hourly buckets are the source of truth and are never deleted.** The `rollup`
 cron is a compaction step, and `GET /stats` falls back to the hourly buckets
-for recent days that aren't rolled up yet. That is what makes a weekly cadence
-safe: a late or missed run changes what a query costs, never what it returns.
-
-Two things keep that fallback cheap, because rebuilding a day costs 24 GETs:
-
-- **Only days after the newest compacted one are probed.** Compaction runs in
-  date order, so everything up to that point is settled — present means
-  traffic, absent means none. Without this, every quiet day inside the window
-  would be re-read on every load. `HOURLY_FALLBACK_DAYS` (14) still caps it for
-  a cold start.
-- **`/stats` writes back what it rebuilds.** A complete day reconstructed from
-  hourly buckets is stored via the same CAS `writeDay` the cron uses, so the
-  next load reads it as one rollup GET. Today is never written back — it is
-  still being counted. Write failures are swallowed: warming a cache must not
-  fail a read.
-
-In practice a warm load is **37 GETs** — 13 monthly rollups plus today's 24
-hours — regardless of which range the dashboard is showing.
-
-**Nothing deletes the hourly buckets, but they can stop being reachable.** The
-bucket has no lifecycle configuration and no code path deletes under `counts/`
-(the only S3 deletes in the repo are scoped to `channels/` and `growth-agent`),
-so the objects are permanent — ~9MB/year, never listed, so no truncation limit
-applies. What _is_ lossy is visibility: if the cron stops for longer than
-`HOURLY_FALLBACK_DAYS`, `/stats` stops probing those days and renders them as
-no-traffic while the data sits there intact. To pull such a gap back in, set
-`ROLLUP_WINDOW_DAYS` wide enough to cover it and invoke `rollup` once.
+for recent days that aren't rolled up yet (capped by `HOURLY_FALLBACK_DAYS`,
+14), writing back what it rebuilds. That is what makes a weekly cadence safe: a
+late or missed run changes what a query costs, never what it returns.
 
 `source` is per day, not per month, because the changeover month holds both
-kinds and they are not the same measurement: Umami filtered bots and
-sessionised, the beacon counts every hydration and client-side navigation.
+kinds. A second seam is *not* marked by `source`: since the dwell gate shipped
+(Sept 2026 — `git log website/utils/hitTracker.ts` for the date), a page counts
+only after 3s of dwell, so the beacon records engaged views rather than raw
+pageviews. Both sides carry `source: "beacon"`, so the step-down there is a
+definition change, not lost traffic.
 
-**Path form.** `pageContext.urlPathname` is what the beacon sends, and Vike
-derives it from `urlLogical` — set by `website/pages/+onBeforeRoute.ts`. So
-recorded paths are in canonical `sitemap.xml` form: locale prefix stripped,
-trailing slash on every non-root path, no query, no fragment. One consequence:
-German pages are indistinguishable from their English counterparts, since the
-beacon never sees the locale.
+**Path form.** The beacon sends `pageContext.urlPathname`, which Vike derives
+from `urlLogical` (`website/pages/+onBeforeRoute.ts`), so recorded paths are in
+canonical `sitemap.xml` form: locale prefix stripped, trailing slash on every
+non-root path, no query, no fragment. German pages are therefore
+indistinguishable from their English counterparts.
 
 ## Reading the data
 
@@ -230,11 +202,6 @@ After deploying, paste the `analytics` function's URL into the fallback in
 `website/utils/analyticsApi.ts` — one string, shared by the beacon and the
 dashboard. That fallback is what production uses: `.github/workflows/pages.yml`
 sets no `PUBLIC_ENV__*` variables, so there is no CI mechanism to swap it.
-
-**Then delete the old `hit` function in the Scaleway Console.** It predates the
-merge into `analytics` and `serverless deploy` does not remove functions that
-have been dropped from the config, so it would otherwise keep running (and
-keep collecting beacons from any stale client) forever.
 
 ## Environment variables
 

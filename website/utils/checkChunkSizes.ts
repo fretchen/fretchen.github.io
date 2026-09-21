@@ -1,9 +1,8 @@
 /**
  * Postbuild guard against bundle-size regressions.
  *
- * Fails the build if any client JS chunk exceeds MAX_CHUNK_SIZE_GZIP, unless
- * its content matches a known-large allowlisted signature. This keeps the
- * "one 1.6 MB chunk bundles every blog post" class of regression from
+ * Fails the build if any client JS chunk exceeds MAX_CHUNK_SIZE_GZIP. This keeps
+ * the "one 1.6 MB chunk bundles every blog post" class of regression from
  * reappearing silently (Vite only warns; this errors).
  *
  * Measured in gzip size, not raw bytes — what a browser actually transfers.
@@ -26,19 +25,11 @@ import * as zlib from "zlib";
 
 const CHUNKS_DIR = "./build/assets/chunks";
 // 150 kB gzip. Comfortably above every legitimate chunk observed when this was set: KaTeX
-// output (23-30 kB gzip), chart.js (~25 kB), @openzeppelin/merkle-tree (~42 kB), even
-// mermaid's chevrotain parser un-allowlisted (~142 kB) — while still far below what a real
-// "whole site in one chunk" regression produces even after compression (that historical bug
-// was 1.6 MB raw; genuine diverse JS doesn't compress anywhere near KaTeX's repetition rate).
+// output (23-30 kB gzip), chart.js (~25 kB), @openzeppelin/merkle-tree (~42 kB) — while still
+// far below what a real "whole site in one chunk" regression produces even after compression
+// (that historical bug was 1.6 MB raw; genuine diverse JS doesn't compress anywhere near
+// KaTeX's repetition rate).
 const MAX_CHUNK_SIZE_GZIP = 150 * 1024;
-
-// Signatures of third-party libraries that are inherently large but already
-// lazy-loaded on demand (not part of any page's initial bundle) — each still has
-// its own (larger, explicit) ceiling, so an allowlisted chunk can't grow without
-// bound and still slip past this guard silently.
-const ALLOWLIST_SIGNATURES: Record<string, number> = {
-  chevrotain: 220 * 1024, // mermaid's parser, ~142 kB gzip measured when this was set
-};
 
 const chunkFiles = fs.readdirSync(CHUNKS_DIR).filter((file) => file.endsWith(".js"));
 
@@ -50,21 +41,6 @@ for (const file of chunkFiles) {
   const gzipSize = zlib.gzipSync(buffer).length;
 
   if (gzipSize <= MAX_CHUNK_SIZE_GZIP) continue;
-
-  const content = buffer.toString("utf-8");
-  const allowlisted = Object.entries(ALLOWLIST_SIGNATURES).find(([signature]) => content.includes(signature));
-
-  if (allowlisted) {
-    const [signature, ceiling] = allowlisted;
-    if (gzipSize <= ceiling) {
-      console.log(`[ChunkSizes] ${file} is ${(gzipSize / 1024).toFixed(0)} kB gzip — allowlisted (${signature})`);
-      continue;
-    }
-    violations.push(
-      `${file}: ${(gzipSize / 1024).toFixed(0)} kB gzip — exceeds even its "${signature}" allowlist ceiling (${(ceiling / 1024).toFixed(0)} kB)`,
-    );
-    continue;
-  }
 
   violations.push(
     `${file}: ${(gzipSize / 1024).toFixed(0)} kB gzip (limit ${(MAX_CHUNK_SIZE_GZIP / 1024).toFixed(0)} kB)`,

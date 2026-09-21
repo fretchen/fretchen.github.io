@@ -482,9 +482,7 @@ async function handle(
       : undefined;
   console.log(`🌐 Payment payload network: ${clientNetwork}`);
 
-  const clientIsTestnet = clientNetwork ? isTestnet(clientNetwork) : false;
-
-  const networkValidation = validatePaymentNetwork(clientNetwork, clientIsTestnet);
+  const networkValidation = validatePaymentNetwork(clientNetwork);
   if (!networkValidation.valid) {
     console.error(`❌ Network validation failed: ${networkValidation.reason}`);
     return paymentError(networkValidation.reason, {
@@ -578,6 +576,32 @@ async function handle(
       provider,
     );
 
+    // Collect BEFORE the irreversible on-chain mint. This used to run fire-and-forget AFTER the
+    // mint and only log on failure, which let a payer cancel their EIP-3009 authorization (or
+    // simply move the balance) during the generation window — minutes, since BFL polls up to
+    // 60x5s — and keep both the image and an NFT whose mintPrice and gas we paid. Awaiting here
+    // caps the cost of a failed settlement at one BFL generation: nothing is minted, and the S3
+    // URL is unguessable (getRandomString in image_service.ts), so the caller receives nothing.
+    let settlement: Awaited<ReturnType<typeof resourceServer.settlePayment>>;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      settlement = await resourceServer.settlePayment(paymentPayload as any, paymentRequirements);
+    } catch (error) {
+      console.error(`❌ Settlement error:`, error);
+      return paymentError("settlement_failed", { details: (error as Error).message });
+    }
+    if (!settlement.success) {
+      console.error(`❌ Settlement failed:`, settlement);
+      return paymentError("settlement_failed", { details: settlement.errorReason });
+    }
+    console.log(`✅ Payment settled:`, settlement);
+
+    const settlementHeaders = createSettlementHeaders({
+      success: true,
+      payer: clientAddress,
+      network: clientNetwork,
+    });
+
     let mintResult: MintResult;
     try {
       mintResult = await mintNFTToClient(
@@ -594,11 +618,9 @@ async function handle(
       // The image exists and the caller can use it, so a 5xx would be a lie. Return 200 with
       // the URL and report the chain-side failure in the extension.
       //
-      // Nothing is settled here, and no settlement headers are attached — a Payment-Response
-      // would assert a settlement that never happened. This preserves the money behaviour
-      // exactly as it has always been: settlePayment only ever ran after a successful mint, so
-      // a failed mint was never charged. It is the one place this endpoint answers 200 while
-      // no payment settled.
+      // The payment HAS settled by this point — settlement deliberately precedes the mint, see
+      // above — so the settlement headers are attached here too. The caller paid for a
+      // generation they received; what they did not get is the NFT.
       console.error(`❌ Mint failed after successful generation:`, mintError);
       return {
         body: JSON.stringify(
@@ -613,26 +635,10 @@ async function handle(
             },
           }),
         ),
-        headers: CORS_HEADERS,
+        headers: { ...CORS_HEADERS, ...settlementHeaders },
         statusCode: 200,
       };
     }
-
-    resourceServer
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .settlePayment(paymentPayload as any, paymentRequirements)
-      .then((settlement) => {
-        console.log(`✅ Payment settled:`, settlement);
-      })
-      .catch((error: unknown) => {
-        console.error(`⚠️ Settlement failed (non-critical): ${(error as Error).message}`);
-      });
-
-    const settlementHeaders = createSettlementHeaders({
-      success: true,
-      payer: clientAddress,
-      network: clientNetwork,
-    });
 
     return {
       body: JSON.stringify(

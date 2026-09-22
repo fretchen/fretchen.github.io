@@ -130,6 +130,9 @@ describe("fetchBraveContext", () => {
     expect(url.searchParams.get("maximum_number_of_urls")).toBe("5");
     expect(url.searchParams.get("maximum_number_of_tokens_per_url")).toBe("512");
     expect(url.searchParams.get("count")).toBe("10");
+    // Unset means no filtering at all, which is why this is asserted rather than left to the
+    // constant: the value is a decision, and a silent drop back to Brave's nothing is invisible.
+    expect(url.searchParams.get("safesearch")).toBe("moderate");
   });
 
   test("sends the key in the header Brave expects, and nowhere else", async () => {

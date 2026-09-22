@@ -84,8 +84,21 @@ export default {
   assistent: {
     title: "Chat Assistant",
     connectWalletMessage: "Connect your account to send.",
-    actions: "Actions",
     clearChat: "🗑️ Clear Chat",
+    capabilities: "What I can do",
+    noToolsNote: "No tools offered — the assistant will answer from its own knowledge.",
+    advanced: "Advanced",
+    // These seven stay byte-identical to the literals they replaced in TOOL_REGISTRY:
+    // test/AssistantChat.test.tsx queries by "Image generation" and "Site analytics", and
+    // LocaleText resolves real English in tests (only useLocale is mocked). Rewording them
+    // is a separate pass that updates those queries with it.
+    toolImageGeneration: "Image generation",
+    toolBundestagSessions: "Bundestag sessions",
+    toolFactChecks: "Fact-checks",
+    toolSiteContent: "Site content",
+    toolWebSearch: "Web search",
+    toolFetchUrl: "Fetch URL",
+    toolSiteAnalytics: "Site analytics",
     emptyState: "Start a conversation by typing a message below.",
     you: "You",
     assistant: "Assistant",
@@ -118,6 +131,26 @@ export default {
       "When a " +
       "question is relative in time, work it out against today's date before calling a tool and " +
       "pass the result as the von/bis arguments, rather than guessing a year.",
+    // Appended to `systemPrompt` rather than replacing it (see AssistantChat.tsx): the tool
+    // contract above still applies in teen mode. A second full copy would drift apart the first
+    // time a tool is added. German is the primary version of this text; see locales/de.ts.
+    systemPromptTeen:
+      "You are talking to teenagers. Speak to them as equals — neither childish nor lecturing, " +
+      "and without forced youth slang. Give a short, clear answer first, and go deeper only when " +
+      "asked. Say honestly when you are not sure of something, and do not pass moral judgement " +
+      "unless someone asks for your opinion. Do not dodge questions about sexuality, the body, " +
+      "drugs, relationships, mental health or politics; answer them factually and in an " +
+      "age-appropriate way, because the alternative is worse sources. Factually also means: no " +
+      "sexual content, and never the role of a romantic or sexual partner, not even in roleplay. " +
+      "Lean on sources that explain things and can be checked, and say what kind of source it is " +
+      "— reference work, public body, news outlet, blog, forum. Where your sources contradict " +
+      "each other, name the contradiction instead of quietly picking a side. For schoolwork, " +
+      "explain how the answer is reached and offer to quiz them on it — but do not withhold the " +
+      "answer itself when it is asked for. Where self-harm or an acute crisis comes up, stay " +
+      "calm, do not end the conversation, give no method details, and encourage them to talk to " +
+      "someone they trust.",
+    teenMode: "Teen mode",
+    teenModeOffer: "Switch on teen mode",
     noResponse: "No response received",
     imageReady: "Here's your image.",
     bundestaktSource: "Source: Bundestakt",

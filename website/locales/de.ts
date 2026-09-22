@@ -84,8 +84,21 @@ export default {
   assistent: {
     title: "Chat-Assistent",
     connectWalletMessage: "Verbinde dein Konto, um zu starten",
-    actions: "Aktionen",
     clearChat: "🗑️ Chat löschen",
+    // Überschrift über der Werkzeugliste. Sie beschreibt, was der Assistent kann — dass man
+    // die Punkte auch abschalten kann, ist der Nebenzweck, nicht die Überschrift wert.
+    capabilities: "Was ich kann",
+    noToolsNote: "Nichts ausgewählt — ich antworte nur aus meinem eigenen Wissen.",
+    advanced: "Erweitert",
+    // Die Werkzeugnamen. Stehen hier statt in TOOL_REGISTRY, damit sie übersetzt werden
+    // können; dort steht nur noch der Schlüssel.
+    toolImageGeneration: "Bilder machen",
+    toolBundestagSessions: "Bundestagssitzungen",
+    toolFactChecks: "Faktenchecks",
+    toolSiteContent: "Seiten dieser Website",
+    toolWebSearch: "Im Web suchen",
+    toolFetchUrl: "Links öffnen",
+    toolSiteAnalytics: "Website-Statistik",
     emptyState: "Starte eine Unterhaltung, indem du unten eine Nachricht eingibst.",
     you: "Du",
     assistant: "Assistent",
@@ -121,6 +134,27 @@ export default {
       "Wenn eine Frage zeitlich relativ ist, rechne sie gegen das " +
       "heutige Datum aus, bevor du ein Tool aufrufst, und übergib das Ergebnis als von/bis — rate " +
       "kein Jahr.",
+    // Wird an `systemPrompt` angehängt, nicht an dessen Stelle gesetzt (siehe AssistantChat.tsx):
+    // der Tool-Vertrag oben gilt im Teen-Modus unverändert weiter. Eine zweite Vollfassung würde
+    // beim nächsten neuen Tool auseinanderlaufen.
+    systemPromptTeen:
+      "Du sprichst mit Jugendlichen. Antworte auf Augenhöhe — weder kindlich noch belehrend, und " +
+      "ohne aufgesetzte Jugendsprache. Gib zuerst eine kurze, klare Antwort und vertiefe erst, " +
+      "wenn danach gefragt wird. Sag ehrlich, wenn du etwas nicht sicher weißt, und bewerte nicht " +
+      "moralisch, solange niemand nach deiner Meinung fragt. Weiche Fragen zu Sexualität, Körper, " +
+      "Drogen, Beziehungen, psychischer Gesundheit oder Politik nicht aus, sondern beantworte sie " +
+      "sachlich und altersgerecht — die Alternative sind schlechtere Quellen. Sachlich heißt auch: " +
+      "keine sexuellen Inhalte, und nie die Rolle eines romantischen oder sexuellen Gegenübers, " +
+      "auch nicht im Rollenspiel. Stütz dich bevorzugt auf Quellen, die etwas erklären und " +
+      "nachprüfbar sind, und sag dazu, um was für eine Quelle es sich handelt — Nachschlagewerk, " +
+      "Behörde, Nachrichtenmedium, Blog, Forum. Widersprechen sich deine Quellen, benenne den " +
+      "Widerspruch, statt still eine Seite zu wählen. Bei Schulaufgaben erkläre den Lösungsweg und " +
+      "biete an, den Stoff abzufragen — die Lösung selbst verweigerst du aber nicht, wenn sie " +
+      "verlangt wird. Wenn es um Selbstverletzung oder eine akute Krise geht, bleib ruhig, brich " +
+      "das Gespräch nicht ab, nenne keine Methoden und ermutige dazu, mit einer Vertrauensperson " +
+      "zu sprechen.",
+    teenMode: "Teen-Modus",
+    teenModeOffer: "Teen-Modus einschalten",
     noResponse: "Keine Antwort erhalten",
     imageReady: "Hier ist dein Bild.",
     bundestaktSource: "Quelle: Bundestakt",

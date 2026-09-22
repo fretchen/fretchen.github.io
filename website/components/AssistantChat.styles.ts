@@ -1,4 +1,4 @@
-import { css } from "../styled-system/css";
+import { css, cva } from "../styled-system/css";
 
 /**
  * Styles for the x402 chat assistant (components/AssistantChat.tsx).
@@ -6,6 +6,22 @@ import { css } from "../styled-system/css";
  * Colocated here because nothing else uses them. The `mobile*` names are kept: they
  * distinguish the mobile header/actions from the desktop sidebar, which is real
  * information, not the namespace-avoidance prefixing the old shared file needed.
+ */
+
+/**
+ * Teen mode's styling is expressed as `cva` variants rather than a second `css({})` object per
+ * element.
+ *
+ * An earlier pass wrote each teen surface as a full hand-copy of its base — `sidebarTeen`
+ * restated all 26 of `sidebar`'s properties to change a border — which nothing in the suite
+ * would have kept in step: `test/styleConventions.test.ts` rule 6 guards *recipe* variants, and
+ * two unrelated `css({})` calls are not that. A variant makes the pair structurally one thing.
+ *
+ * `cva` and not a recipe in `panda.config.ts`: these styles belong to one component, and the
+ * config is for what the whole site shares (`button`, `sectionRule`) — see README, "Where styles
+ * live". `cva` is the atomic form, so Panda reads the variants off the definition here and needs
+ * no `staticCss` entry, and its runtime merges base with variant into one style object before
+ * emitting classes, so there is no cascade race between the two.
  */
 
 // Single consolidated width definition for assistant page
@@ -38,30 +54,38 @@ export const gridMobile = css({
 });
 
 // Sidebar styles
-export const sidebar = css({
-  backgroundColor: "surface",
-  borderRadius: "sm",
-  padding: "md",
-  display: "flex",
-  flexDirection: "column",
-  gap: "md",
-  borderLeft: "1px solid",
-  borderColor: "border",
-  boxShadow: "sm",
-  // On desktop, fix the sidebar to the left edge of the viewport
-  position: "fixed",
-  left: 0,
-  top: "var(--header-height, 64px)",
-  width: "240px",
-  height: "calc(100vh - var(--header-height, 64px) - var(--footer-height, 60px))",
-  overflow: "auto",
-  zIndex: 40,
-  // Keep the same visual when narrow screens use the inline sidebar
-  "@media (max-width: 768px)": {
-    position: "relative",
-    width: "100%",
-    left: "auto",
-    top: "auto",
+/** In teen mode the panel's existing left edge carries the hue: the controls are yours. */
+export const sidebar = cva({
+  base: {
+    backgroundColor: "surface",
+    borderRadius: "sm",
+    padding: "md",
+    display: "flex",
+    flexDirection: "column",
+    gap: "md",
+    borderLeft: "1px solid",
+    borderColor: "border",
+    boxShadow: "sm",
+    // On desktop, fix the sidebar to the left edge of the viewport
+    position: "fixed",
+    left: 0,
+    top: "var(--header-height, 64px)",
+    width: "240px",
+    height: "calc(100vh - var(--header-height, 64px) - var(--footer-height, 60px))",
+    overflow: "auto",
+    zIndex: 40,
+    // Keep the same visual when narrow screens use the inline sidebar
+    "@media (max-width: 768px)": {
+      position: "relative",
+      width: "100%",
+      left: "auto",
+      top: "auto",
+    },
+  },
+  variants: {
+    teen: {
+      true: { borderLeft: "3px solid", borderColor: "teen" },
+    },
   },
 });
 
@@ -69,6 +93,28 @@ export const sidebarSection = css({
   display: "flex",
   flexDirection: "column",
   gap: "sm",
+});
+
+/**
+ * The advanced disclosure: payment network, agent provenance, bring-your-own-agent.
+ *
+ * A native <details> rather than a component — no state to persist, keyboard and screen-reader
+ * behaviour for free, and nothing to mismatch between the server render and the first client
+ * one. It is closed for everyone, owner included: one click is cheaper than a stored preference.
+ */
+export const advancedSummary = css({
+  margin: 0,
+  fontSize: "sm",
+  fontWeight: "semibold",
+  color: "text",
+  cursor: "pointer",
+});
+
+export const advancedBody = css({
+  display: "flex",
+  flexDirection: "column",
+  gap: "md",
+  marginTop: "sm",
 });
 
 export const sidebarHeading = css({
@@ -132,15 +178,24 @@ export const mobileActions = css({
   alignItems: "center",
 });
 
-export const messagesContainer = css({
-  flex: "1 1 auto", // Allow grow, shrink, and base on content
-  overflow: "auto",
-  border: "1px solid",
-  borderColor: "border",
-  borderRadius: "xs",
-  padding: "md",
-  backgroundColor: "background",
-  minHeight: 0, // Allow flex item to shrink below content size
+/** In teen mode the conversation's frame takes the hue — one border, and the whole area reads
+ *  as changed. */
+export const messagesContainer = cva({
+  base: {
+    flex: "1 1 auto", // Allow grow, shrink, and base on content
+    overflow: "auto",
+    border: "1px solid",
+    borderColor: "border",
+    borderRadius: "xs",
+    padding: "md",
+    backgroundColor: "background",
+    minHeight: 0, // Allow flex item to shrink below content size
+  },
+  variants: {
+    teen: {
+      true: { borderColor: "teen" },
+    },
+  },
 });
 
 export const emptyState = css({
@@ -150,10 +205,22 @@ export const emptyState = css({
   fontSize: "sm",
 });
 
-// Message bubbles
-export const messageContainer = css({
-  marginY: "md",
-  display: "flex",
+/** Spacing for the teen-mode offer under the empty-state line. */
+export const emptyStateOffer = css({
+  marginTop: "md",
+});
+
+/** Message bubbles. Teen mode's share of the change here is air: more room between turns. */
+export const messageContainer = cva({
+  base: {
+    marginY: "md",
+    display: "flex",
+  },
+  variants: {
+    teen: {
+      true: { marginY: "lg" },
+    },
+  },
 });
 
 export const messageContainerUser = css({
@@ -171,9 +238,27 @@ export const messageBubble = css({
   maxWidth: "80%",
 });
 
-export const messageBubbleUser = css({
-  backgroundColor: "text",
-  color: "light",
+/**
+ * Teen mode's biggest visual move: your own messages are filled in the mode's hue instead of
+ * near-black.
+ *
+ * The rule the whole treatment follows is that magenta marks what is *yours* — your messages,
+ * your controls, your frame — while the assistant's replies stay on the neutral ground they are
+ * read from. So the page carries more of the hue the longer you talk, rather than announcing
+ * itself once and then sitting there. `messageBubbleAssistant` is deliberately untouched: it is
+ * the one surface here you read rather than operate, and a tint under serif prose is both harder
+ * to read and the "reads as dirty" failure IDENTITY.md names.
+ */
+export const messageBubbleUser = cva({
+  base: {
+    backgroundColor: "text",
+    color: "light",
+  },
+  variants: {
+    teen: {
+      true: { backgroundColor: "teen" },
+    },
+  },
 });
 
 export const messageBubbleAssistant = css({
@@ -211,6 +296,11 @@ export const messageContentReading = css({
   fontFamily: "reading",
   lineHeight: "relaxed",
 });
+
+// Teen mode deliberately does NOT enlarge this. A size bump with no other change reads as an
+// accessibility setting rather than a different place — it was tried, and "zoomed in for old
+// people" is what it looked like. The hue does that work now; the extra air between turns
+// (messageContainerTeen) is kept, because air is not zoom.
 
 /**
  * Attribution under an answer that a Bundestakt lookup fed. CC BY 4.0 requires naming and
@@ -262,21 +352,29 @@ export const inputArea = css({
   alignItems: "flex-end", // keep button visually aligned to input
 });
 
-export const messageInput = css({
-  flex: 1,
-  padding: "md",
-  border: "1px solid",
-  borderColor: "border",
-  borderRadius: "xs",
-  resize: "vertical",
-  minHeight: "60px",
-  maxHeight: "120px",
-  fontSize: "sm",
-  lineHeight: "normal",
-  outline: "none",
-  backgroundColor: "background",
-  _focus: {
-    borderColor: "brand",
+/** In teen mode the composer's focus ring is the mode's hue, because typing is yours. */
+export const messageInput = cva({
+  base: {
+    flex: 1,
+    padding: "md",
+    border: "1px solid",
+    borderColor: "border",
+    borderRadius: "xs",
+    resize: "vertical",
+    minHeight: "60px",
+    maxHeight: "120px",
+    fontSize: "sm",
+    lineHeight: "normal",
+    outline: "none",
+    backgroundColor: "background",
+    _focus: {
+      borderColor: "brand",
+    },
+    minWidth: 0, // allow flexbox shrink on small screens
   },
-  minWidth: 0, // allow flexbox shrink on small screens
+  variants: {
+    teen: {
+      true: { _focus: { borderColor: "teen" } },
+    },
+  },
 });

@@ -113,7 +113,7 @@ type ToolSource = "bundestakt" | "analytics" | "brave";
 export const TOOL_REGISTRY = [
   {
     tool: generateImageTool,
-    label: "Image generation",
+    label: "assistent.toolImageGeneration",
     ownerScope: null,
     defaultAgentOnly: false,
     paid: false,
@@ -121,7 +121,7 @@ export const TOOL_REGISTRY = [
   },
   {
     tool: getSitzungenTool,
-    label: "Bundestag sessions",
+    label: "assistent.toolBundestagSessions",
     ownerScope: null,
     defaultAgentOnly: false,
     paid: false,
@@ -129,19 +129,26 @@ export const TOOL_REGISTRY = [
   },
   {
     tool: searchClaimsTool,
-    label: "Fact-checks",
+    label: "assistent.toolFactChecks",
     ownerScope: null,
     defaultAgentOnly: false,
     paid: false,
     source: "bundestakt",
   },
-  { tool: getPageTool, label: "Site content", ownerScope: null, defaultAgentOnly: false, paid: false, source: null },
+  {
+    tool: getPageTool,
+    label: "assistent.toolSiteContent",
+    ownerScope: null,
+    defaultAgentOnly: false,
+    paid: false,
+    source: null,
+  },
   // Open to anyone — the visitor pays $0.01 per search from the channel their chat already
   // funded — but never offered to a third-party agent, which would be spending someone else's
   // escrow on prompts of its own choosing.
   {
     tool: searchWebTool,
-    label: "Web search",
+    label: "assistent.toolWebSearch",
     ownerScope: null,
     defaultAgentOnly: true,
     paid: true,
@@ -149,10 +156,17 @@ export const TOOL_REGISTRY = [
   },
   // Same terms as search, at a tenth the price. `source: null` because the citation *is* the url,
   // which the result carries and the prompt already requires the answer to link.
-  { tool: fetchUrlTool, label: "Fetch URL", ownerScope: null, defaultAgentOnly: true, paid: true, source: null },
+  {
+    tool: fetchUrlTool,
+    label: "assistent.toolFetchUrl",
+    ownerScope: null,
+    defaultAgentOnly: true,
+    paid: true,
+    source: null,
+  },
   {
     tool: getAnalyticsTool,
-    label: "Site analytics",
+    label: "assistent.toolSiteAnalytics",
     ownerScope: "analytics",
     defaultAgentOnly: true,
     paid: false,
@@ -160,7 +174,12 @@ export const TOOL_REGISTRY = [
   },
 ] as const satisfies readonly {
   tool: X402Tool;
-  /** Shown in the ToolSelector. Required, so a new tool cannot arrive without a readable name. */
+  /**
+   * Locale key for the name shown in the ToolSelector, resolved there with `LocaleText`.
+   * Required, so a new tool cannot arrive without a readable name — a key rather than a literal
+   * because this list is read by visitors as "what I can do", and that has to be German on the
+   * German routes. Metadata beside the tool, never on the wire.
+   */
   label: string;
   ownerScope: OwnerScope | null;
   /** Withheld while a custom agent is selected, whoever the user is. */
@@ -270,6 +289,25 @@ const readStoredDisabledTools = (): string => disabledToolsStore.read() ?? "";
 
 const storeDisabledTools = (names: ReadonlySet<string>): void => disabledToolsStore.write([...names].join(","));
 
+/**
+ * Teen mode: a tone-and-behaviour profile, chosen by whoever is using the chat.
+ *
+ * A feature, not a parental control — nothing enforces it, and it is deliberately not tied to the
+ * wallet, the payment or any notion of identity. It therefore needs nothing more than a stored
+ * boolean: everything it changes lives in the appended system prompt (`assistent.systemPromptTeen`),
+ * so there is no server-side profile to keep honest and no request parameter a browser could lie
+ * about anyway.
+ *
+ * The stored value is the string "on" or nothing at all, mirroring the two preferences above.
+ */
+const TEEN_MODE_KEY = "x402-chat-teen-mode";
+
+const teenModeStore = createLocalStorageStore(TEEN_MODE_KEY);
+
+const readStoredTeenMode = (): string => teenModeStore.read() ?? "";
+
+const storeTeenMode = (enabled: boolean): void => teenModeStore.write(enabled ? "on" : "");
+
 /** Build a block-explorer tx link for the given CAIP-2 network via its viem chain config. */
 function explorerTxUrl(network: string, txHash: string): string | null {
   if (!txHash) return null;
@@ -291,6 +329,9 @@ export function AssistantChat() {
 
   // Localized messages (reuse the existing assistent.* namespace)
   const systemPromptMessage = useLocale({ label: "assistent.systemPrompt" });
+  const teenPromptMessage = useLocale({ label: "assistent.systemPromptTeen" });
+  const teenModeLabel = useLocale({ label: "assistent.teenMode" });
+  const teenModeOfferLabel = useLocale({ label: "assistent.teenModeOffer" });
   const noResponseMessage = useLocale({ label: "assistent.noResponse" });
   const imageReadyMessage = useLocale({ label: "assistent.imageReady" });
   const bundestaktSourceLabel = useLocale({ label: "assistent.bundestaktSource" });
@@ -309,7 +350,7 @@ export function AssistantChat() {
   const unknownErrorLabel = useLocale({ label: "assistent.unknownError" });
   const typingLabel = useLocale({ label: "assistent.typing" });
   const toppingUpLabel = useLocale({ label: "assistent.toppingUp" });
-  const actionsLabel = useLocale({ label: "assistent.actions" });
+  const advancedLabel = useLocale({ label: "assistent.advanced" });
   const clearChatLabel = useLocale({ label: "assistent.clearChat" });
   const titleLabel = useLocale({ label: "assistent.title" });
   const emptyStateLabel = useLocale({ label: "assistent.emptyState" });
@@ -345,6 +386,10 @@ export function AssistantChat() {
     [disabledToolsRaw],
   );
 
+  // Server snapshot is "" — off — so the SSR markup and the first client render agree about an
+  // unchecked box, and localStorage takes over only once it exists.
+  const teenMode = useSyncExternalStore(teenModeStore.subscribe, readStoredTeenMode, () => "") === "on";
+
   // A custom agent, once one has been pre-checked and accepted. Null = the default agent.
   // Declared above `availableTools` because the owner-scope gate below reads it.
   const [customUrl, setCustomUrl] = useState<string | null>(null);
@@ -379,6 +424,35 @@ export function AssistantChat() {
   /** Rendered in two places (sidebar and mobile footer) with identical props — computed once so
    *  the two can't quietly drift. */
   const toolSelectorOptions = availableTools.map((entry) => ({ name: entry.tool.function.name, label: entry.label }));
+
+  /**
+   * Built once for the same reason as `toolSelectorOptions`: it renders in the sidebar and in the
+   * mobile footer, and the two must not drift.
+   *
+   * Sits at the *top* of the panel, above the agent and the tools, because it is a mode rather
+   * than a tool — it governs everything below it. It spent a version under the tool checkboxes,
+   * where it read as a sixth tool and nobody would ever have scrolled to it.
+   *
+   * A native checkbox on purpose: keyboard behaviour, focus and screen-reader semantics come
+   * free, and `accentColor` is all it takes to put it in the mode's hue.
+   */
+  const teenToggle = (
+    <label
+      className={css({
+        display: "flex",
+        alignItems: "center",
+        gap: "2",
+        fontSize: "sm",
+        fontWeight: "semibold",
+        color: "text",
+        cursor: "pointer",
+        accentColor: "teen",
+      })}
+    >
+      <input type="checkbox" checked={teenMode} onChange={(event) => storeTeenMode(event.target.checked)} />
+      <span>{teenModeLabel}</span>
+    </label>
+  );
 
   const toggleTool = (name: string, enabled: boolean) => {
     const next = new Set(disabledTools);
@@ -780,8 +854,19 @@ export function AssistantChat() {
           role: "system",
           // Read at send time, not at render time: `sendMessage` is an event handler, so there is
           // no server/client clock mismatch to hydrate, and a session left open over midnight
-          // picks up the new date by itself on the next message.
-          content: `${systemPromptMessage}\n\n${formatDateContext(new Date(), Intl.DateTimeFormat().resolvedOptions().timeZone)}`,
+          // picks up the new date by itself on the next message. Teen mode is read here for the
+          // same reason, so toggling it mid-conversation takes effect on the very next message.
+          //
+          // Appended, never substituted: the base prompt is this chat's tool contract — the
+          // get_sitzungen slug flow, get_page truncation, the fetch_url injection defence — and a
+          // parallel teen copy of all that would drift the first time a tool is added.
+          content: [
+            systemPromptMessage,
+            teenMode ? teenPromptMessage : null,
+            formatDateContext(new Date(), Intl.DateTimeFormat().resolvedOptions().timeZone),
+          ]
+            .filter(Boolean)
+            .join("\n\n"),
         },
         ...messages.map((msg) => ({ role: msg.role, content: msg.content })),
         { role: "user", content: userMessage.trim() },
@@ -861,69 +946,83 @@ export function AssistantChat() {
 
   const receiptUrl = paymentReceipt ? explorerTxUrl(paymentReceipt.network, paymentReceipt.transaction) : null;
 
+  /**
+   * The side panel's contents, built once and rendered in both the desktop sidebar and the mobile
+   * footer — they showed the same controls in the same order before, as two copies that had to be
+   * kept in step by hand.
+   *
+   * Ordered by the questions someone actually asks, in that order: how do I want it to talk to me,
+   * what can it do, and only then how the thing works underneath. The last group is behind a
+   * disclosure because a payment network and a bring-your-own-agent URL are machinery — but a
+   * reachable one, since `/agent-onboarding` invites people to plug in their own agent and
+   * hiding that behind an owner check would quietly withdraw the invitation.
+   *
+   * Clear chat is deliberately absent: it is an action, not a setting, and it lives in the title
+   * row next to the conversation it clears.
+   */
+  const sidebarBlocks = (
+    <>
+      <div className={chat.sidebarSection}>{teenToggle}</div>
+
+      <div className={chat.sidebarSection}>
+        <ToolSelector options={toolSelectorOptions} disabled={disabledTools} onToggle={toggleTool} />
+      </div>
+
+      <details className={chat.sidebarSection}>
+        <summary className={chat.advancedSummary}>{advancedLabel}</summary>
+        <div className={chat.advancedBody}>
+          <div className={chat.sidebarSection}>
+            <h4 className={chat.sidebarHeading}>{networkLabel}</h4>
+            <div className={chat.networkOptions}>
+              {CHAT_NETWORKS.map((option) => {
+                const selected = paymentNetwork === option;
+                return (
+                  <button
+                    key={option}
+                    onClick={() => storeNetwork(option)}
+                    aria-pressed={selected}
+                    aria-label={getChainName(option)}
+                    className={button({ visual: "secondary", size: "sm", active: selected })}
+                  >
+                    <span className={selected ? undefined : chat.networkOptionMuted}>
+                      <ChainBadge network={option} size="sm" position="inline" />
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            {/* Only surfaced when the agent forced our hand — otherwise the buttons speak
+                for themselves and a permanent caption would just be noise. */}
+            {paymentNetwork !== desiredNetwork && (
+              <p className={chat.networkNote}>
+                {networkFallbackLabel} <ChainBadge network={paymentNetwork} size="sm" position="inline" />.
+              </p>
+            )}
+          </div>
+
+          <div className={chat.sidebarSection}>
+            <h4 className={chat.sidebarHeading}>Agent</h4>
+            <AgentInfoPanel service="llm" variant="sidebar" agentCard={activeCard} />
+            <AgentSelector
+              customUrlInput={customUrlInput}
+              onCustomUrlInputChange={setCustomUrlInput}
+              customCard={customCard}
+              checkState={checkState}
+              checkError={checkError}
+              onTryCustomAgent={() => void tryCustomAgent()}
+              onUseDefaultAgent={useDefaultAgent}
+            />
+          </div>
+        </div>
+      </details>
+    </>
+  );
+
   return (
     <div className={chat.pageContainer}>
       <div className={`${chat.grid} ${isMobile ? chat.gridMobile : chat.gridDesktop}`}>
         {/* Sidebar - desktop only */}
-        {!isMobile && (
-          <div className={chat.sidebar}>
-            {/* Actions Section */}
-            <div className={chat.sidebarSection}>
-              <h4 className={chat.sidebarHeading}>{actionsLabel}</h4>
-              <div className={chat.actionsContainer}>
-                <button onClick={clearChat} className={button({ visual: "ghost", size: "sm" })}>
-                  {clearChatLabel}
-                </button>
-              </div>
-            </div>
-
-            {/* Network Section */}
-            <div className={chat.sidebarSection}>
-              <h4 className={chat.sidebarHeading}>{networkLabel}</h4>
-              <div className={chat.networkOptions}>
-                {CHAT_NETWORKS.map((option) => {
-                  const selected = paymentNetwork === option;
-                  return (
-                    <button
-                      key={option}
-                      onClick={() => storeNetwork(option)}
-                      aria-pressed={selected}
-                      aria-label={getChainName(option)}
-                      className={button({ visual: "secondary", size: "sm", active: selected })}
-                    >
-                      <span className={selected ? undefined : chat.networkOptionMuted}>
-                        <ChainBadge network={option} size="sm" position="inline" />
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              {/* Only surfaced when the agent forced our hand — otherwise the buttons speak
-                  for themselves and a permanent caption would just be noise. */}
-              {paymentNetwork !== desiredNetwork && (
-                <p className={chat.networkNote}>
-                  {networkFallbackLabel} <ChainBadge network={paymentNetwork} size="sm" position="inline" />.
-                </p>
-              )}
-            </div>
-
-            {/* Agent Info Section */}
-            <div className={chat.sidebarSection}>
-              <h4 className={chat.sidebarHeading}>Agent</h4>
-              <AgentInfoPanel service="llm" variant="sidebar" agentCard={activeCard} />
-              <AgentSelector
-                customUrlInput={customUrlInput}
-                onCustomUrlInputChange={setCustomUrlInput}
-                customCard={customCard}
-                checkState={checkState}
-                checkError={checkError}
-                onTryCustomAgent={() => void tryCustomAgent()}
-                onUseDefaultAgent={useDefaultAgent}
-              />
-              <ToolSelector options={toolSelectorOptions} disabled={disabledTools} onToggle={toggleTool} />
-            </div>
-          </div>
-        )}
+        {!isMobile && <div className={chat.sidebar({ teen: teenMode })}>{sidebarBlocks}</div>}
 
         {/* Chat Area */}
         <div className={chat.chatArea}>
@@ -934,32 +1033,53 @@ export function AssistantChat() {
               beside it, which is what the old mobile-only header existed for. */}
           <div className={chat.titleRow}>
             <div>
-              <PageHeader title={titleLabel} territory="explore" />
+              {/* Teen mode repaints the rule, which is the only place this site expresses
+                  "you are somewhere else". The route is still the lab, so utils/territory.ts
+                  is untouched — `teen` is a variant of the rule, not a territory. */}
+              <PageHeader title={titleLabel} territory={teenMode ? "teen" : "explore"} />
             </div>
-            {isMobile && (
-              <div className={chat.mobileActions}>
-                <button onClick={clearChat} className={button({ visual: "secondary", size: "sm" })} title="Clear Chat">
-                  🗑️
-                </button>
-              </div>
-            )}
+            {/* Both viewports: clearing the chat is an action on the conversation, so it sits
+                beside it rather than in the settings panel, which used to carry a whole
+                "Actions" section for this one button. */}
+            <div className={chat.mobileActions}>
+              <button
+                onClick={clearChat}
+                className={button({ visual: "secondary", size: "sm" })}
+                title={clearChatLabel}
+                aria-label={clearChatLabel}
+              >
+                🗑️
+              </button>
+            </div>
           </div>
 
           {/* Messages Container */}
-          <div className={chat.messagesContainer}>
+          <div className={chat.messagesContainer({ teen: teenMode })}>
             {messages.length === 0 ? (
-              <div className={chat.emptyState}>{emptyStateLabel}</div>
+              <div className={chat.emptyState}>
+                {emptyStateLabel}
+                {/* The one moment someone is looking at the middle of an empty screen with
+                    nothing to read. Offered here rather than only in the sidebar, which is
+                    the difference between a mode that exists and one anybody finds. */}
+                {!teenMode && (
+                  <div className={chat.emptyStateOffer}>
+                    <button onClick={() => storeTeenMode(true)} className={button({ visual: "secondary", size: "sm" })}>
+                      {teenModeOfferLabel}
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               messages.map((message, index) => (
                 <div
                   key={index}
-                  className={`${chat.messageContainer} ${
+                  className={`${chat.messageContainer({ teen: teenMode })} ${
                     message.role === "user" ? chat.messageContainerUser : chat.messageContainerAssistant
                   }`}
                 >
                   <div
                     className={`${chat.messageBubble} ${
-                      message.role === "user" ? chat.messageBubbleUser : chat.messageBubbleAssistant
+                      message.role === "user" ? chat.messageBubbleUser({ teen: teenMode }) : chat.messageBubbleAssistant
                     }`}
                   >
                     <div className={chat.messageRole}>{message.role === "user" ? youLabel : assistantLabel}</div>
@@ -1041,7 +1161,7 @@ export function AssistantChat() {
               onKeyPress={handleKeyPress}
               placeholder={placeholderLabel}
               disabled={isLoading}
-              className={chat.messageInput}
+              className={chat.messageInput({ teen: teenMode })}
             />
             <button
               onClick={handleSendClick}
@@ -1051,28 +1171,14 @@ export function AssistantChat() {
                 }
               }}
               disabled={isLoading || (!isConnected ? false : !currentInput.trim())}
-              className={button()}
+              className={button({ visual: teenMode ? "teen" : "primary" })}
             >
               {getButtonText(buttonState)}
             </button>
           </div>
 
-          {/* Agent Info - Mobile Footer */}
-          {isMobile && (
-            <>
-              <AgentInfoPanel service="llm" variant="sidebar" agentCard={activeCard} />
-              <AgentSelector
-                customUrlInput={customUrlInput}
-                onCustomUrlInputChange={setCustomUrlInput}
-                customCard={customCard}
-                checkState={checkState}
-                checkError={checkError}
-                onTryCustomAgent={() => void tryCustomAgent()}
-                onUseDefaultAgent={useDefaultAgent}
-              />
-              <ToolSelector options={toolSelectorOptions} disabled={disabledTools} onToggle={toggleTool} />
-            </>
-          )}
+          {/* The same panel as the desktop sidebar, below the composer rather than beside it. */}
+          {isMobile && sidebarBlocks}
         </div>
       </div>
     </div>

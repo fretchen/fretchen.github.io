@@ -11,11 +11,15 @@
  */
 import React from "react";
 import { css } from "../styled-system/css";
+import { LocaleText } from "./LocaleText";
 
 export interface ToolSelectorOption {
   /** The tool's wire name, e.g. `generate_image` — also the key used for persistence. */
   name: string;
-  /** Short human label; falls back to the wire name when absent. */
+  /**
+   * Locale key for the human label (`LocaleText` falls back to rendering it verbatim, so a
+   * plain string still works). Falls back to the wire name when absent entirely.
+   */
   label?: string;
 }
 
@@ -45,8 +49,13 @@ export function ToolSelector({ options, disabled, onToggle }: ToolSelectorProps)
   const activeCount = options.filter((option) => !disabled.has(option.name)).length;
 
   return (
-    <div className={css({ mt: "3" })}>
-      <div className={headingStyle}>Tools</div>
+    <div>
+      {/* "What I can do" rather than "Tools": for a first-time visitor this list is the readable
+          answer to what the assistant is able to do. Switching an entry off is the secondary
+          use, so it does not get to name the section. */}
+      <div className={headingStyle}>
+        <LocaleText label="assistent.capabilities" />
+      </div>
       <div className={listStyle}>
         {options.map((option) => (
           <label key={option.name} className={rowStyle}>
@@ -55,12 +64,15 @@ export function ToolSelector({ options, disabled, onToggle }: ToolSelectorProps)
               checked={!disabled.has(option.name)}
               onChange={(event) => onToggle(option.name, event.target.checked)}
             />
-            <span>{option.label ?? option.name}</span>
+            {/* LocaleText, not useLocale: a hook cannot be called once per item in a map. */}
+            <span>{option.label ? <LocaleText label={option.label} /> : option.name}</span>
           </label>
         ))}
       </div>
       {activeCount === 0 && (
-        <div className={noteStyle}>No tools offered — the assistant will answer from its own knowledge.</div>
+        <div className={noteStyle}>
+          <LocaleText label="assistent.noToolsNote" />
+        </div>
       )}
     </div>
   );

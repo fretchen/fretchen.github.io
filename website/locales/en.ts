@@ -84,8 +84,21 @@ export default {
   assistent: {
     title: "Chat Assistant",
     connectWalletMessage: "Connect your account to send.",
-    actions: "Actions",
     clearChat: "🗑️ Clear Chat",
+    capabilities: "What I can do",
+    noToolsNote: "No tools offered — the assistant will answer from its own knowledge.",
+    advanced: "Advanced",
+    // These seven stay byte-identical to the literals they replaced in TOOL_REGISTRY:
+    // test/AssistantChat.test.tsx queries by "Image generation" and "Site analytics", and
+    // LocaleText resolves real English in tests (only useLocale is mocked). Rewording them
+    // is a separate pass that updates those queries with it.
+    toolImageGeneration: "Image generation",
+    toolBundestagSessions: "Bundestag sessions",
+    toolFactChecks: "Fact-checks",
+    toolSiteContent: "Site content",
+    toolWebSearch: "Web search",
+    toolFetchUrl: "Fetch URL",
+    toolSiteAnalytics: "Site analytics",
     emptyState: "Start a conversation by typing a message below.",
     you: "You",
     assistant: "Assistant",

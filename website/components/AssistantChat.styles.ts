@@ -100,6 +100,28 @@ export const sidebarSection = css({
   gap: "sm",
 });
 
+/**
+ * The advanced disclosure: payment network, agent provenance, bring-your-own-agent.
+ *
+ * A native <details> rather than a component — no state to persist, keyboard and screen-reader
+ * behaviour for free, and nothing to mismatch between the server render and the first client
+ * one. It is closed for everyone, owner included: one click is cheaper than a stored preference.
+ */
+export const advancedSummary = css({
+  margin: 0,
+  fontSize: "sm",
+  fontWeight: "semibold",
+  color: "text",
+  cursor: "pointer",
+});
+
+export const advancedBody = css({
+  display: "flex",
+  flexDirection: "column",
+  gap: "md",
+  marginTop: "sm",
+});
+
 export const sidebarHeading = css({
   margin: 0,
   fontSize: "sm",

@@ -84,8 +84,21 @@ export default {
   assistent: {
     title: "Chat-Assistent",
     connectWalletMessage: "Verbinde dein Konto, um zu starten",
-    actions: "Aktionen",
     clearChat: "🗑️ Chat löschen",
+    // Überschrift über der Werkzeugliste. Sie beschreibt, was der Assistent kann — dass man
+    // die Punkte auch abschalten kann, ist der Nebenzweck, nicht die Überschrift wert.
+    capabilities: "Was ich kann",
+    noToolsNote: "Nichts ausgewählt — ich antworte nur aus meinem eigenen Wissen.",
+    advanced: "Erweitert",
+    // Die Werkzeugnamen. Stehen hier statt in TOOL_REGISTRY, damit sie übersetzt werden
+    // können; dort steht nur noch der Schlüssel.
+    toolImageGeneration: "Bilder machen",
+    toolBundestagSessions: "Bundestagssitzungen",
+    toolFactChecks: "Faktenchecks",
+    toolSiteContent: "Seiten dieser Website",
+    toolWebSearch: "Im Web suchen",
+    toolFetchUrl: "Links öffnen",
+    toolSiteAnalytics: "Website-Statistik",
     emptyState: "Starte eine Unterhaltung, indem du unten eine Nachricht eingibst.",
     you: "Du",
     assistant: "Assistent",

@@ -137,6 +137,7 @@ export default {
       "calm, do not end the conversation, give no method details, and encourage them to talk to " +
       "someone they trust.",
     teenMode: "Teen mode",
+    teenModeOffer: "Switch on teen mode",
     noResponse: "No response received",
     imageReady: "Here's your image.",
     bundestaktSource: "Source: Bundestakt",

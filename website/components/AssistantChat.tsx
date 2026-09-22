@@ -312,6 +312,7 @@ export function AssistantChat() {
   const systemPromptMessage = useLocale({ label: "assistent.systemPrompt" });
   const teenPromptMessage = useLocale({ label: "assistent.systemPromptTeen" });
   const teenModeLabel = useLocale({ label: "assistent.teenMode" });
+  const teenModeOfferLabel = useLocale({ label: "assistent.teenModeOffer" });
   const noResponseMessage = useLocale({ label: "assistent.noResponse" });
   const imageReadyMessage = useLocale({ label: "assistent.imageReady" });
   const bundestaktSourceLabel = useLocale({ label: "assistent.bundestaktSource" });
@@ -405,18 +406,28 @@ export function AssistantChat() {
    *  the two can't quietly drift. */
   const toolSelectorOptions = availableTools.map((entry) => ({ name: entry.tool.function.name, label: entry.label }));
 
-  /** Built once for the same reason as `toolSelectorOptions`: it renders in the sidebar and in the
-   *  mobile footer, and the two must not drift. Styled to match a ToolSelector row. */
+  /**
+   * Built once for the same reason as `toolSelectorOptions`: it renders in the sidebar and in the
+   * mobile footer, and the two must not drift.
+   *
+   * Sits at the *top* of the panel, above the agent and the tools, because it is a mode rather
+   * than a tool — it governs everything below it. It spent a version under the tool checkboxes,
+   * where it read as a sixth tool and nobody would ever have scrolled to it.
+   *
+   * A native checkbox on purpose: keyboard behaviour, focus and screen-reader semantics come
+   * free, and `accentColor` is all it takes to put it in the mode's hue.
+   */
   const teenToggle = (
     <label
       className={css({
         display: "flex",
         alignItems: "center",
         gap: "2",
-        fontSize: "xs",
+        fontSize: "sm",
+        fontWeight: "semibold",
         color: "text",
         cursor: "pointer",
-        mt: "3",
+        accentColor: "teen",
       })}
     >
       <input type="checkbox" checked={teenMode} onChange={(event) => storeTeenMode(event.target.checked)} />
@@ -921,7 +932,11 @@ export function AssistantChat() {
       <div className={`${chat.grid} ${isMobile ? chat.gridMobile : chat.gridDesktop}`}>
         {/* Sidebar - desktop only */}
         {!isMobile && (
-          <div className={chat.sidebar}>
+          <div className={teenMode ? chat.sidebarTeen : chat.sidebar}>
+            {/* The mode switch leads the panel: it governs the agent, the tools and the look of
+                everything below it. */}
+            <div className={chat.sidebarSection}>{teenToggle}</div>
+
             {/* Actions Section */}
             <div className={chat.sidebarSection}>
               <h4 className={chat.sidebarHeading}>{actionsLabel}</h4>
@@ -976,7 +991,6 @@ export function AssistantChat() {
                 onUseDefaultAgent={useDefaultAgent}
               />
               <ToolSelector options={toolSelectorOptions} disabled={disabledTools} onToggle={toggleTool} />
-              {teenToggle}
             </div>
           </div>
         )}
@@ -990,7 +1004,10 @@ export function AssistantChat() {
               beside it, which is what the old mobile-only header existed for. */}
           <div className={chat.titleRow}>
             <div>
-              <PageHeader title={titleLabel} territory="explore" />
+              {/* Teen mode repaints the rule, which is the only place this site expresses
+                  "you are somewhere else". The route is still the lab, so utils/territory.ts
+                  is untouched — `teen` is a variant of the rule, not a territory. */}
+              <PageHeader title={titleLabel} territory={teenMode ? "teen" : "explore"} />
             </div>
             {isMobile && (
               <div className={chat.mobileActions}>
@@ -1002,20 +1019,36 @@ export function AssistantChat() {
           </div>
 
           {/* Messages Container */}
-          <div className={chat.messagesContainer}>
+          <div className={teenMode ? chat.messagesContainerTeen : chat.messagesContainer}>
             {messages.length === 0 ? (
-              <div className={chat.emptyState}>{emptyStateLabel}</div>
+              <div className={chat.emptyState}>
+                {emptyStateLabel}
+                {/* The one moment someone is looking at the middle of an empty screen with
+                    nothing to read. Offered here rather than only in the sidebar, which is
+                    the difference between a mode that exists and one anybody finds. */}
+                {!teenMode && (
+                  <div className={chat.emptyStateOffer}>
+                    <button onClick={() => storeTeenMode(true)} className={button({ visual: "secondary", size: "sm" })}>
+                      {teenModeOfferLabel}
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               messages.map((message, index) => (
                 <div
                   key={index}
-                  className={`${chat.messageContainer} ${
+                  className={`${teenMode ? chat.messageContainerTeen : chat.messageContainer} ${
                     message.role === "user" ? chat.messageContainerUser : chat.messageContainerAssistant
                   }`}
                 >
                   <div
                     className={`${chat.messageBubble} ${
-                      message.role === "user" ? chat.messageBubbleUser : chat.messageBubbleAssistant
+                      message.role === "user"
+                        ? teenMode
+                          ? chat.messageBubbleUserTeen
+                          : chat.messageBubbleUser
+                        : chat.messageBubbleAssistant
                     }`}
                   >
                     <div className={chat.messageRole}>{message.role === "user" ? youLabel : assistantLabel}</div>
@@ -1097,7 +1130,7 @@ export function AssistantChat() {
               onKeyPress={handleKeyPress}
               placeholder={placeholderLabel}
               disabled={isLoading}
-              className={chat.messageInput}
+              className={teenMode ? chat.messageInputTeen : chat.messageInput}
             />
             <button
               onClick={handleSendClick}
@@ -1107,7 +1140,7 @@ export function AssistantChat() {
                 }
               }}
               disabled={isLoading || (!isConnected ? false : !currentInput.trim())}
-              className={button()}
+              className={button({ visual: teenMode ? "teen" : "primary" })}
             >
               {getButtonText(buttonState)}
             </button>
@@ -1116,6 +1149,8 @@ export function AssistantChat() {
           {/* Agent Info - Mobile Footer */}
           {isMobile && (
             <>
+              {/* Leads this block for the same reason it leads the desktop sidebar. */}
+              {teenToggle}
               <AgentInfoPanel service="llm" variant="sidebar" agentCard={activeCard} />
               <AgentSelector
                 customUrlInput={customUrlInput}
@@ -1127,7 +1162,6 @@ export function AssistantChat() {
                 onUseDefaultAgent={useDefaultAgent}
               />
               <ToolSelector options={toolSelectorOptions} disabled={disabledTools} onToggle={toggleTool} />
-              {teenToggle}
             </>
           )}
         </div>

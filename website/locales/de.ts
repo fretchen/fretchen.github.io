@@ -141,6 +141,7 @@ export default {
       "das Gespräch nicht ab, nenne keine Methoden und ermutige dazu, mit einer Vertrauensperson " +
       "zu sprechen.",
     teenMode: "Teen-Modus",
+    teenModeOffer: "Teen-Modus einschalten",
     noResponse: "Keine Antwort erhalten",
     imageReady: "Hier ist dein Bild.",
     bundestaktSource: "Quelle: Bundestakt",

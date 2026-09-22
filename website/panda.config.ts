@@ -48,6 +48,25 @@ const button = defineRecipe({
         },
         _disabled: { backgroundColor: "gray.300", color: "gray.500" },
       },
+      // `primary` while teen mode is on. Same shape in every respect — only the fill moves to
+      // the mode's hue, so the button you press is part of the environment you switched into.
+      // White on #c2007a is 5.87:1.
+      teen: {
+        backgroundColor: "teen",
+        color: "light",
+        border: "none",
+        boxShadow: "sm",
+        _hover: {
+          backgroundColor: "teenHover",
+          transform: "translateY(-1px)",
+          boxShadow: "md",
+        },
+        _active: {
+          transform: "translateY(0)",
+          boxShadow: "sm",
+        },
+        _disabled: { backgroundColor: "gray.300", color: "gray.500" },
+      },
       // Bordered and unfilled: the lower-emphasis choice next to a primary.
       secondary: {
         backgroundColor: "transparent",
@@ -177,6 +196,10 @@ const sectionRule = defineRecipe({
     territory: {
       voice: { backgroundColor: "brand" },
       explore: { backgroundColor: "explore" },
+      // A mode rather than a route: /assistent stays `explore` in utils/territory.ts, and only
+      // the page's own rule repaints while teen mode is on. Kept here rather than in the
+      // territory map so nav and route resolution are untouched.
+      teen: { backgroundColor: "teen" },
     },
   },
   defaultVariants: { territory: "voice" },
@@ -253,6 +276,15 @@ export default defineConfig({
           // tying prose to chart. Read from JS via token("colors.explore") — see
           // components/blog/palette.ts.
           explore: { value: "#7b3fa0" },
+
+          // Teen mode on /assistent. Not a territory — the route is still the lab — but the
+          // 48px rule is the one channel this system has for "you are somewhere else", so the
+          // mode borrows it rather than inventing a second signal. Saturated rather than pink:
+          // pastel is what reads childish. 5.87:1 on white, and clear of all five spoken-for
+          // hues — brand blue, explore purple, support orange, and the status green/red/amber.
+          teen: { value: "#c2007a" },
+          // Hover step for the teen send button, as brandHover is to brand. 7.64:1 on white.
+          teenHover: { value: "#a30066" },
 
           // ─── Status ───────────────────────────────────────────────────────────
           // Reserved. Never decorative, and never carried by colour alone.
@@ -391,6 +423,10 @@ export default defineConfig({
   staticCss: {
     recipes: {
       sectionRule: [{ territory: ["*"] }],
+      // Same reason: AssistantChat picks the send button's visual with a ternary on teen mode,
+      // which Panda cannot resolve statically either. Rule 6 in test/styleConventions.test.ts
+      // checks call sites against this list.
+      button: [{ visual: ["*"] }],
     },
   },
 

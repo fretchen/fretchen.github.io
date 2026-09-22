@@ -65,6 +65,35 @@ export const sidebar = css({
   },
 });
 
+/**
+ * The sidebar's existing left edge, repainted. The controls are yours, so the panel holding
+ * them carries the hue — on the border it already has, not as a fill.
+ */
+export const sidebarTeen = css({
+  backgroundColor: "surface",
+  borderRadius: "sm",
+  padding: "md",
+  display: "flex",
+  flexDirection: "column",
+  gap: "md",
+  borderLeft: "3px solid",
+  borderColor: "teen",
+  boxShadow: "sm",
+  position: "fixed",
+  left: 0,
+  top: "var(--header-height, 64px)",
+  width: "240px",
+  height: "calc(100vh - var(--header-height, 64px) - var(--footer-height, 60px))",
+  overflow: "auto",
+  zIndex: 40,
+  "@media (max-width: 768px)": {
+    position: "relative",
+    width: "100%",
+    left: "auto",
+    top: "auto",
+  },
+});
+
 export const sidebarSection = css({
   display: "flex",
   flexDirection: "column",
@@ -143,6 +172,18 @@ export const messagesContainer = css({
   minHeight: 0, // Allow flex item to shrink below content size
 });
 
+/** The conversation's frame in the mode's hue — one border, and the whole area reads as changed. */
+export const messagesContainerTeen = css({
+  flex: "1 1 auto",
+  overflow: "auto",
+  border: "1px solid",
+  borderColor: "teen",
+  borderRadius: "xs",
+  padding: "md",
+  backgroundColor: "background",
+  minHeight: 0,
+});
+
 export const emptyState = css({
   textAlign: "center",
   color: "textMuted",
@@ -150,9 +191,24 @@ export const emptyState = css({
   fontSize: "sm",
 });
 
+/** Spacing for the teen-mode offer under the empty-state line. */
+export const emptyStateOffer = css({
+  marginTop: "md",
+});
+
 // Message bubbles
 export const messageContainer = css({
   marginY: "md",
+  display: "flex",
+});
+
+/**
+ * Teen mode's share of the visual change: more air between turns. A separate class rather than
+ * a variable margin, because Panda resolves `css({})` at build time and a JS value emits nothing
+ * (website/CLAUDE.md rule 1).
+ */
+export const messageContainerTeen = css({
+  marginY: "lg",
   display: "flex",
 });
 
@@ -173,6 +229,22 @@ export const messageBubble = css({
 
 export const messageBubbleUser = css({
   backgroundColor: "text",
+  color: "light",
+});
+
+/**
+ * Teen mode's biggest visual move: your own messages are filled in the mode's hue instead of
+ * near-black.
+ *
+ * The rule the whole treatment follows is that magenta marks what is *yours* — your messages,
+ * your controls, your frame — while the assistant's replies stay on the neutral ground they are
+ * read from. So the page carries more of the hue the longer you talk, rather than announcing
+ * itself once and then sitting there. `messageBubbleAssistant` is deliberately untouched: it is
+ * the one surface here you read rather than operate, and a tint under serif prose is both harder
+ * to read and the "reads as dirty" failure IDENTITY.md names.
+ */
+export const messageBubbleUserTeen = css({
+  backgroundColor: "teen",
   color: "light",
 });
 
@@ -211,6 +283,11 @@ export const messageContentReading = css({
   fontFamily: "reading",
   lineHeight: "relaxed",
 });
+
+// Teen mode deliberately does NOT enlarge this. A size bump with no other change reads as an
+// accessibility setting rather than a different place — it was tried, and "zoomed in for old
+// people" is what it looked like. The hue does that work now; the extra air between turns
+// (messageContainerTeen) is kept, because air is not zoom.
 
 /**
  * Attribution under an answer that a Bundestakt lookup fed. CC BY 4.0 requires naming and
@@ -279,4 +356,24 @@ export const messageInput = css({
     borderColor: "brand",
   },
   minWidth: 0, // allow flexbox shrink on small screens
+});
+
+/** The composer in teen mode: the focus ring is the mode's hue, because typing is yours. */
+export const messageInputTeen = css({
+  flex: 1,
+  padding: "md",
+  border: "1px solid",
+  borderColor: "border",
+  borderRadius: "xs",
+  resize: "vertical",
+  minHeight: "60px",
+  maxHeight: "120px",
+  fontSize: "sm",
+  lineHeight: "normal",
+  outline: "none",
+  backgroundColor: "background",
+  _focus: {
+    borderColor: "teen",
+  },
+  minWidth: 0,
 });

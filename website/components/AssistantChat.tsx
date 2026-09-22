@@ -270,6 +270,25 @@ const readStoredDisabledTools = (): string => disabledToolsStore.read() ?? "";
 
 const storeDisabledTools = (names: ReadonlySet<string>): void => disabledToolsStore.write([...names].join(","));
 
+/**
+ * Teen mode: a tone-and-behaviour profile, chosen by whoever is using the chat.
+ *
+ * A feature, not a parental control — nothing enforces it, and it is deliberately not tied to the
+ * wallet, the payment or any notion of identity. It therefore needs nothing more than a stored
+ * boolean: everything it changes lives in the appended system prompt (`assistent.systemPromptTeen`),
+ * so there is no server-side profile to keep honest and no request parameter a browser could lie
+ * about anyway.
+ *
+ * The stored value is the string "on" or nothing at all, mirroring the two preferences above.
+ */
+const TEEN_MODE_KEY = "x402-chat-teen-mode";
+
+const teenModeStore = createLocalStorageStore(TEEN_MODE_KEY);
+
+const readStoredTeenMode = (): string => teenModeStore.read() ?? "";
+
+const storeTeenMode = (enabled: boolean): void => teenModeStore.write(enabled ? "on" : "");
+
 /** Build a block-explorer tx link for the given CAIP-2 network via its viem chain config. */
 function explorerTxUrl(network: string, txHash: string): string | null {
   if (!txHash) return null;
@@ -291,6 +310,8 @@ export function AssistantChat() {
 
   // Localized messages (reuse the existing assistent.* namespace)
   const systemPromptMessage = useLocale({ label: "assistent.systemPrompt" });
+  const teenPromptMessage = useLocale({ label: "assistent.systemPromptTeen" });
+  const teenModeLabel = useLocale({ label: "assistent.teenMode" });
   const noResponseMessage = useLocale({ label: "assistent.noResponse" });
   const imageReadyMessage = useLocale({ label: "assistent.imageReady" });
   const bundestaktSourceLabel = useLocale({ label: "assistent.bundestaktSource" });
@@ -345,6 +366,10 @@ export function AssistantChat() {
     [disabledToolsRaw],
   );
 
+  // Server snapshot is "" — off — so the SSR markup and the first client render agree about an
+  // unchecked box, and localStorage takes over only once it exists.
+  const teenMode = useSyncExternalStore(teenModeStore.subscribe, readStoredTeenMode, () => "") === "on";
+
   // A custom agent, once one has been pre-checked and accepted. Null = the default agent.
   // Declared above `availableTools` because the owner-scope gate below reads it.
   const [customUrl, setCustomUrl] = useState<string | null>(null);
@@ -379,6 +404,25 @@ export function AssistantChat() {
   /** Rendered in two places (sidebar and mobile footer) with identical props — computed once so
    *  the two can't quietly drift. */
   const toolSelectorOptions = availableTools.map((entry) => ({ name: entry.tool.function.name, label: entry.label }));
+
+  /** Built once for the same reason as `toolSelectorOptions`: it renders in the sidebar and in the
+   *  mobile footer, and the two must not drift. Styled to match a ToolSelector row. */
+  const teenToggle = (
+    <label
+      className={css({
+        display: "flex",
+        alignItems: "center",
+        gap: "2",
+        fontSize: "xs",
+        color: "text",
+        cursor: "pointer",
+        mt: "3",
+      })}
+    >
+      <input type="checkbox" checked={teenMode} onChange={(event) => storeTeenMode(event.target.checked)} />
+      <span>{teenModeLabel}</span>
+    </label>
+  );
 
   const toggleTool = (name: string, enabled: boolean) => {
     const next = new Set(disabledTools);
@@ -780,8 +824,19 @@ export function AssistantChat() {
           role: "system",
           // Read at send time, not at render time: `sendMessage` is an event handler, so there is
           // no server/client clock mismatch to hydrate, and a session left open over midnight
-          // picks up the new date by itself on the next message.
-          content: `${systemPromptMessage}\n\n${formatDateContext(new Date(), Intl.DateTimeFormat().resolvedOptions().timeZone)}`,
+          // picks up the new date by itself on the next message. Teen mode is read here for the
+          // same reason, so toggling it mid-conversation takes effect on the very next message.
+          //
+          // Appended, never substituted: the base prompt is this chat's tool contract — the
+          // get_sitzungen slug flow, get_page truncation, the fetch_url injection defence — and a
+          // parallel teen copy of all that would drift the first time a tool is added.
+          content: [
+            systemPromptMessage,
+            teenMode ? teenPromptMessage : null,
+            formatDateContext(new Date(), Intl.DateTimeFormat().resolvedOptions().timeZone),
+          ]
+            .filter(Boolean)
+            .join("\n\n"),
         },
         ...messages.map((msg) => ({ role: msg.role, content: msg.content })),
         { role: "user", content: userMessage.trim() },
@@ -921,6 +976,7 @@ export function AssistantChat() {
                 onUseDefaultAgent={useDefaultAgent}
               />
               <ToolSelector options={toolSelectorOptions} disabled={disabledTools} onToggle={toggleTool} />
+              {teenToggle}
             </div>
           </div>
         )}
@@ -1071,6 +1127,7 @@ export function AssistantChat() {
                 onUseDefaultAgent={useDefaultAgent}
               />
               <ToolSelector options={toolSelectorOptions} disabled={disabledTools} onToggle={toggleTool} />
+              {teenToggle}
             </>
           )}
         </div>

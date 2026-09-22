@@ -40,6 +40,12 @@ export const MAX_QUERY_CHARS = 600;
  * so accepting Brave's defaults would mean paying for ~8x more context than an answer needs, again
  * and again within one turn. Half the reason this proxy is ours is that these cannot be overridden
  * from the browser.
+ *
+ * `safesearch` is the one entry here that costs nothing; it sits with the others because it is
+ * pinned for the same reason — the browser does not get to choose it. Brave applies no filtering
+ * at all when it is unset, which is not a default anyone picked: results are stated back to the
+ * user as fact by a model that cannot decline to read them. `moderate` is the setting, for every
+ * caller; `off` and `strict` are the other two values Brave accepts.
  */
 const CONTEXT_LIMITS: Record<string, string> = {
   count: "10",
@@ -48,6 +54,7 @@ const CONTEXT_LIMITS: Record<string, string> = {
   maximum_number_of_tokens_per_url: "512",
   maximum_number_of_snippets_per_url: "3",
   context_threshold_mode: "balanced",
+  safesearch: "moderate",
 };
 
 /** Second line of defence behind CONTEXT_LIMITS: Brave's caps are a request, these are a promise. */

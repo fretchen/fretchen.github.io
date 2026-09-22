@@ -17,5 +17,9 @@ export function LocaleText({ label, locale }: { label?: string; locale?: string 
   // the component form of one lookup, and without this an unresolvable key renders nothing at
   // all — invisible rather than obviously wrong. Callers that pass a literal instead of a key
   // (test fixtures, and anything not yet localised) therefore still render it.
-  return <span data-locale={usedLocale}>{(translatedLabel as string) || label}</span>;
+  //
+  // `typeof`, not a cast: a path that stops one segment short of a leaf ("assistent") resolves to
+  // the namespace *object*, which is truthy, so `(x as string) || label` would hand React an
+  // object to render and throw rather than fall back.
+  return <span data-locale={usedLocale}>{typeof translatedLabel === "string" ? translatedLabel : label}</span>;
 }

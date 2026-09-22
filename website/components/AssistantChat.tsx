@@ -1022,7 +1022,7 @@ export function AssistantChat() {
     <div className={chat.pageContainer}>
       <div className={`${chat.grid} ${isMobile ? chat.gridMobile : chat.gridDesktop}`}>
         {/* Sidebar - desktop only */}
-        {!isMobile && <div className={teenMode ? chat.sidebarTeen : chat.sidebar}>{sidebarBlocks}</div>}
+        {!isMobile && <div className={chat.sidebar({ teen: teenMode })}>{sidebarBlocks}</div>}
 
         {/* Chat Area */}
         <div className={chat.chatArea}>
@@ -1054,7 +1054,7 @@ export function AssistantChat() {
           </div>
 
           {/* Messages Container */}
-          <div className={teenMode ? chat.messagesContainerTeen : chat.messagesContainer}>
+          <div className={chat.messagesContainer({ teen: teenMode })}>
             {messages.length === 0 ? (
               <div className={chat.emptyState}>
                 {emptyStateLabel}
@@ -1073,17 +1073,13 @@ export function AssistantChat() {
               messages.map((message, index) => (
                 <div
                   key={index}
-                  className={`${teenMode ? chat.messageContainerTeen : chat.messageContainer} ${
+                  className={`${chat.messageContainer({ teen: teenMode })} ${
                     message.role === "user" ? chat.messageContainerUser : chat.messageContainerAssistant
                   }`}
                 >
                   <div
                     className={`${chat.messageBubble} ${
-                      message.role === "user"
-                        ? teenMode
-                          ? chat.messageBubbleUserTeen
-                          : chat.messageBubbleUser
-                        : chat.messageBubbleAssistant
+                      message.role === "user" ? chat.messageBubbleUser({ teen: teenMode }) : chat.messageBubbleAssistant
                     }`}
                   >
                     <div className={chat.messageRole}>{message.role === "user" ? youLabel : assistantLabel}</div>
@@ -1165,7 +1161,7 @@ export function AssistantChat() {
               onKeyPress={handleKeyPress}
               placeholder={placeholderLabel}
               disabled={isLoading}
-              className={teenMode ? chat.messageInputTeen : chat.messageInput}
+              className={chat.messageInput({ teen: teenMode })}
             />
             <button
               onClick={handleSendClick}

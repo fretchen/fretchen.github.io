@@ -76,3 +76,27 @@ body.page-is-transitioning #page-content {
     opacity: 1;
   }
 }
+
+/* Typing indicator (AssistantChat) — three dots, each delayed a third of the cycle so they
+   ripple rather than blink together. The chat status word already says *what* is happening;
+   this only carries *that* something is still happening, which a static label does not. */
+@keyframes typingDot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+/* First reduced-motion guard in this file. An infinite animation is exactly the case that
+   needs one: unlike a one-shot transition, it runs for as long as the page is open. */
+@media (prefers-reduced-motion: reduce) {
+  .typing-dot {
+    animation: none !important;
+  }
+}

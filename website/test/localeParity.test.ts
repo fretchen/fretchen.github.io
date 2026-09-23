@@ -59,15 +59,20 @@ function sourceFiles(dir: string, out: string[] = []): string[] {
 /**
  * Every locale key written as a literal in the source, with the file it came from.
  *
- * Three forms, because a key reaches the lookup three ways: the `useLocale` hook, the
- * `LocaleText` component, and `TOOL_REGISTRY`'s `label`, which holds a key rather than a
- * human string so the tool list can read as German. A key built at runtime is invisible
- * to this scan by construction — that is the argument for keeping them literal.
+ * Five forms, because a key reaches the lookup five ways: the `useLocale` hook, the
+ * `LocaleText` component, and `TOOL_REGISTRY`'s `label`, `description` and `group` fields, which
+ * hold keys rather than human strings so the tool list can read as German. A key built at
+ * runtime is invisible to this scan by construction — that is the argument for keeping them
+ * literal. `ToolSelector` reads `description`/`group`/`label` through `<LocaleText
+ * label={option.x}>`, a JS variable the second pattern below cannot see — this file has to
+ * follow the value back to where *that* is a literal, which is `TOOL_REGISTRY` itself.
  */
 const KEY_PATTERNS = [
   /useLocale\(\{\s*label:\s*"([^"]+)"/g,
   /<LocaleText\s+label="([^"]+)"/g,
   /\blabel:\s*"(assistent\.[^"]+)"/g,
+  /\bdescription:\s*"(assistent\.[^"]+)"/g,
+  /\bgroup:\s*"(assistent\.[^"]+)"/g,
 ];
 
 function referencedKeys(): { key: string; file: string }[] {

@@ -916,8 +916,11 @@ describe("AssistantChat", () => {
     it("switching a tool off in the panel persists and reaches the next request", async () => {
       renderWithQuery(<AssistantChat />);
 
-      fireEvent.click(screen.getAllByLabelText("Bundestag sessions")[0]);
-      expect(window.localStorage.getItem("x402-chat-disabled-tools")).toBe("get_sitzungen");
+      // get_sitzungen and search_claims present as one merged "Bundestag" row (see
+      // TOOL_REGISTRY's `group`), so one click switches off both wire names at once — the
+      // selector's whole point is that this is one decision, not two.
+      fireEvent.click(screen.getAllByLabelText("Bundestag")[0]);
+      expect(window.localStorage.getItem("x402-chat-disabled-tools")).toBe("get_sitzungen,search_claims");
 
       sendUserMessage("Hi");
       await waitFor(() => expect(mockSendMessage).toHaveBeenCalledOnce());
@@ -925,6 +928,7 @@ describe("AssistantChat", () => {
         (t) => t.function.name,
       );
       expect(names).not.toContain("get_sitzungen");
+      expect(names).not.toContain("search_claims");
     });
 
     it("does not list an owner-only tool in the panel for a visitor", () => {

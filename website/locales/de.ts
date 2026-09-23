@@ -99,6 +99,22 @@ export default {
     toolWebSearch: "Im Web suchen",
     toolFetchUrl: "Links öffnen",
     toolSiteAnalytics: "Website-Statistik",
+    // Eine Zeile pro Fähigkeit — der Anlass war ein Test, in dem jemand nicht wusste, was
+    // "Bundestagssitzungen" bedeutet. Kurz und konkret, keine Fachbegriffe ohne Erklärung.
+    toolImageGenerationDesc: "Erstellt ein Bild aus deiner Beschreibung.",
+    // Diese hier ist die, die tatsächlich angezeigt wird: die Zeile für die zusammengefasste
+    // Bundestag-Zeile in ToolSelector kommt vom ersten Eintrag der Gruppe (siehe TOOL_REGISTRY),
+    // und das ist dieser.
+    toolBundestagSessionsDesc: "Was im Bundestag gesagt oder beschlossen wurde – und ob eine Aussage stimmt.",
+    toolFactChecksDesc: "Prüft, ob eine Aussage einer Abgeordneten stimmt.",
+    toolSiteContentDesc: "Was auf dieser Website selbst steht, zum Beispiel ein Blogbeitrag.",
+    toolWebSearchDesc: "Sucht aktuelle Informationen im Internet.",
+    toolFetchUrlDesc: "Liest eine Seite, die du verlinkst.",
+    toolSiteAnalyticsDesc: "Wie oft diese Website besucht wird.",
+    // Zeilentitel für die zusammengefasste Zeile in ToolSelector (get_sitzungen +
+    // search_claims). Eigener Name statt "Bundestagssitzungen": kurz, ein Eigenname, den
+    // niemand nachschlagen muss — die Beschreibung darunter erklärt, was es tut.
+    capBundestag: "Bundestag",
     emptyState: "Starte eine Unterhaltung, indem du unten eine Nachricht eingibst.",
     you: "Du",
     assistant: "Assistent",
@@ -153,8 +169,12 @@ export default {
       "verlangt wird. Wenn es um Selbstverletzung oder eine akute Krise geht, bleib ruhig, brich " +
       "das Gespräch nicht ab, nenne keine Methoden und ermutige dazu, mit einer Vertrauensperson " +
       "zu sprechen.",
-    teenMode: "Teen-Modus",
-    teenModeOffer: "Teen-Modus einschalten",
+    // "Jugendmodus", not a translation of "Teen mode" — testers with the actual audience found
+    // "Teen-Modus" strange. The English string and every `teen*` identifier in the code
+    // (the colour token, `teenMode` state, the `x402-chat-teen-mode` storage key) stay as they
+    // are: this was reported and fixed as a German-wording issue, not a concept rename.
+    teenMode: "Jugendmodus",
+    teenModeOffer: "Jugendmodus einschalten",
     noResponse: "Keine Antwort erhalten",
     imageReady: "Hier ist dein Bild.",
     bundestaktSource: "Quelle: Bundestakt",

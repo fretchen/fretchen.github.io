@@ -341,6 +341,31 @@ export const loadingBubble = css({
   border: "1px solid",
   borderColor: "border",
   fontStyle: "italic",
+  display: "flex",
+  alignItems: "center",
+  gap: "1",
+});
+
+/**
+ * Three dots that ripple while a turn is in flight — the universal chat idiom, so it reads as
+ * "alive" rather than as decoration. The status word beside them still says *what* is happening
+ * (typing, topping up, running a tool); the dots only say *that* something still is.
+ *
+ * `typingDot` is a plain `@keyframes` name in `layouts/style.css`, not a Panda token — animation
+ * shorthand is a literal string here (rule 1 is about JS *variables*, not any non-token value),
+ * and the name has to live somewhere Panda's build-time extraction can't hash it away, since the
+ * reduced-motion override below needs a stable selector to turn it off.
+ */
+export const typingDots = css({ display: "inline-flex", gap: "1" });
+
+/** Paired with the literal `typing-dot` className (not a Panda class) so the global
+ *  `prefers-reduced-motion` rule in layouts/style.css can address it. */
+export const typingDot = css({
+  width: "6px",
+  height: "6px",
+  borderRadius: "full",
+  backgroundColor: "textMuted",
+  animation: "typingDot 1.2s ease-in-out infinite",
 });
 
 // Input area

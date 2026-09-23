@@ -99,6 +99,16 @@ export default {
     toolWebSearch: "Web search",
     toolFetchUrl: "Fetch URL",
     toolSiteAnalytics: "Site analytics",
+    toolImageGenerationDesc: "Creates a picture from your description.",
+    // The one actually shown: the grouped Bundestag row's description comes from the first
+    // entry in that group (see TOOL_REGISTRY), and that is this one.
+    toolBundestagSessionsDesc: "What was said or decided in the Bundestag — and whether a statement is true.",
+    toolFactChecksDesc: "Checks whether something a member of parliament said is true.",
+    toolSiteContentDesc: "What this website itself says, like a blog post.",
+    toolWebSearchDesc: "Looks up current information on the web.",
+    toolFetchUrlDesc: "Reads a page you link.",
+    toolSiteAnalyticsDesc: "How often this website is visited.",
+    capBundestag: "Bundestag",
     emptyState: "Start a conversation by typing a message below.",
     you: "You",
     assistant: "Assistant",

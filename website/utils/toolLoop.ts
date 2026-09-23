@@ -59,6 +59,15 @@ export interface ToolTurnResult<S extends string> {
   sources: S[];
 }
 
+/**
+ * What the loop is doing right now, for a caller that wants to show it. Structured, never a
+ * display string: this file "knows nothing about cards, messages or locale strings" (see the
+ * module doc above), and a phase name is as close to that line as this gets — `name` is the
+ * tool's wire name, e.g. `search_web`, and turning that into a sentence a person reads is the
+ * caller's job, same as every other piece of text in this loop.
+ */
+export type LoopPhase = { kind: "waiting" } | { kind: "tool"; name: string };
+
 export interface ToolLoopDeps {
   /** Called once per hop before paying. Throws if the wallet cannot proceed — the message is the
    *  caller's, so chain names and translations stay out of this file. */
@@ -66,6 +75,9 @@ export interface ToolLoopDeps {
   payAndSend: (convo: X402ChatMessage[], options: { tools?: X402Tool[] }) => Promise<X402ChatResponse>;
   runToolCall: (call: X402ToolCall) => Promise<ToolRunResult>;
   maxHops?: number;
+  /** Fired before each wait-on-the-model span and before each individual tool call. Optional and
+   *  side-effect only — the loop's own control flow never reads it back. */
+  onPhase?: (phase: LoopPhase) => void;
 }
 
 /**
@@ -81,7 +93,7 @@ export async function runToolLoop<S extends string>(
   offeredTools: readonly OfferedTool<S>[],
   deps: ToolLoopDeps,
 ): Promise<ToolTurnResult<S>> {
-  const { ensureReady, payAndSend, runToolCall, maxHops = MAX_HOPS } = deps;
+  const { ensureReady, payAndSend, runToolCall, maxHops = MAX_HOPS, onPhase } = deps;
 
   let finalContent: string | null = null;
   let finalImageUrl: string | undefined;
@@ -110,6 +122,7 @@ export async function runToolLoop<S extends string>(
       .filter((entry) => !entry.paid || paidCalls < MAX_PAID_CALLS)
       .map((entry) => entry.tool);
 
+    onPhase?.({ kind: "waiting" });
     const data = await payAndSend(convo, {
       // `[]` is truthy, and useX402Chat spreads `tools` in on truthiness — an empty array would be
       // sent as `tools: []`. `undefined` drops the key (and tool_choice with it), which is what
@@ -154,6 +167,7 @@ export async function runToolLoop<S extends string>(
         }
         paidCalls++;
       }
+      onPhase?.({ kind: "tool", name: call.function.name });
       const { result, imageUrl, recoverable } = await runToolCall(call);
       if (imageUrl) finalImageUrl = imageUrl;
       // Only a real failure withdraws the tool for the rest of the turn. Which non-`ok` statuses

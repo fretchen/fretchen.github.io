@@ -11,6 +11,7 @@ import remarkGfm from "remark-gfm";
 import { AgentInfoPanel } from "./AgentInfoPanel";
 import { AgentSelector } from "./AgentSelector";
 import { ToolSelector } from "./ToolSelector";
+import { LocaleText } from "./LocaleText";
 import { ToolConfirmCard, type ToolSize } from "./ToolConfirmCard";
 import * as chat from "./AssistantChat.styles";
 import { useLocale } from "../hooks/useLocale";
@@ -71,7 +72,7 @@ import { paymentFailed } from "../tools/failure";
 import { useWalletAuth } from "../hooks/useWalletAuth";
 import { isOwnerAddress, type OwnerScope } from "../utils/getChain";
 import type { X402ChatMessage, X402Tool, X402ToolCall } from "../types/x402";
-import { runToolLoop, type ToolRunResult } from "../utils/toolLoop";
+import { runToolLoop, type ToolRunResult, type LoopPhase } from "../utils/toolLoop";
 import { formatDateContext } from "../utils/dateContext";
 import { createLocalStorageStore } from "../utils/localStorageStore";
 import { useQueryClient } from "@tanstack/react-query";
@@ -114,14 +115,29 @@ export const TOOL_REGISTRY = [
   {
     tool: generateImageTool,
     label: "assistent.toolImageGeneration",
+    description: "assistent.toolImageGenerationDesc",
+    // Explicit `undefined`, not simply omitted: `as const satisfies` keeps each entry's own
+    // literal shape rather than widening to the shared type, so an optional field present on
+    // only some entries stops TypeScript narrowing `TOOL_REGISTRY[number].group` at all — every
+    // entry states the key so the union stays uniform.
+    group: undefined,
     ownerScope: null,
     defaultAgentOnly: false,
     paid: false,
     source: null,
   },
+  // Two distinct tools and schemas — the model still calls them separately, and each still goes
+  // on the wire as its own entry — but one UX decision: a visitor does not experience "sessions"
+  // and "fact-checks" as different capabilities, they experience "Bundestakt". `group` collapses
+  // them to one row in the selector without collapsing them for the model. The row's own label
+  // and description come from the *first* member in registry order — see `toolSelectorOptions` —
+  // so `getSitzungenTool`'s pair below is written to stand for the pair together; the second
+  // member keeps its own, honest description in case the two are ever split again.
   {
     tool: getSitzungenTool,
     label: "assistent.toolBundestagSessions",
+    description: "assistent.toolBundestagSessionsDesc",
+    group: "assistent.capBundestag",
     ownerScope: null,
     defaultAgentOnly: false,
     paid: false,
@@ -130,6 +146,8 @@ export const TOOL_REGISTRY = [
   {
     tool: searchClaimsTool,
     label: "assistent.toolFactChecks",
+    description: "assistent.toolFactChecksDesc",
+    group: "assistent.capBundestag",
     ownerScope: null,
     defaultAgentOnly: false,
     paid: false,
@@ -138,6 +156,8 @@ export const TOOL_REGISTRY = [
   {
     tool: getPageTool,
     label: "assistent.toolSiteContent",
+    description: "assistent.toolSiteContentDesc",
+    group: undefined,
     ownerScope: null,
     defaultAgentOnly: false,
     paid: false,
@@ -149,6 +169,8 @@ export const TOOL_REGISTRY = [
   {
     tool: searchWebTool,
     label: "assistent.toolWebSearch",
+    description: "assistent.toolWebSearchDesc",
+    group: undefined,
     ownerScope: null,
     defaultAgentOnly: true,
     paid: true,
@@ -159,6 +181,8 @@ export const TOOL_REGISTRY = [
   {
     tool: fetchUrlTool,
     label: "assistent.toolFetchUrl",
+    description: "assistent.toolFetchUrlDesc",
+    group: undefined,
     ownerScope: null,
     defaultAgentOnly: true,
     paid: true,
@@ -167,6 +191,8 @@ export const TOOL_REGISTRY = [
   {
     tool: getAnalyticsTool,
     label: "assistent.toolSiteAnalytics",
+    description: "assistent.toolSiteAnalyticsDesc",
+    group: undefined,
     ownerScope: "analytics",
     defaultAgentOnly: true,
     paid: false,
@@ -181,6 +207,18 @@ export const TOOL_REGISTRY = [
    * German routes. Metadata beside the tool, never on the wire.
    */
   label: string;
+  /**
+   * Locale key for the one-line explanation shown under the label — what "Bundestagssitzungen"
+   * means to someone who has never heard the word. Required for the same reason `label` is: a
+   * tool that arrives unexplained is exactly the confusion a tester ran into.
+   */
+  description: string;
+  /**
+   * Locale key that rows sharing it collapse under in the selector — the presentation grouping
+   * from the comment above `getSitzungenTool`. Absent means "its own row", keyed by `label`.
+   * Never reaches the wire: each tool is still offered to the model individually.
+   */
+  group?: string;
   ownerScope: OwnerScope | null;
   /** Withheld while a custom agent is selected, whoever the user is. */
   defaultAgentOnly: boolean;
@@ -192,6 +230,15 @@ export const TOOL_REGISTRY = [
 // Hoisted so the array identity is stable across renders. Mainnet-only on purpose — see the
 // useAutoNetwork call in the component for why a testnet entry here would be a real hazard.
 const IMAGE_TOOL_NETWORKS = getGenAiNFTMainnetNetworks();
+
+/**
+ * Wire tool name → the same locale key `ToolSelector` shows for it, so the loading bubble can
+ * say "Im Web suchen …" while `search_web` runs instead of a generic "typing". Built from the
+ * full registry rather than from `availableTools`: the loop can only ever be running a tool that
+ * was offered, so every name it reports is a real key here regardless of which subset a given
+ * render offered.
+ */
+const TOOL_LABEL_BY_NAME = new Map(TOOL_REGISTRY.map((entry) => [entry.tool.function.name, entry.label]));
 
 /**
  * The execution half of the tool contract. `TOOL_REGISTRY` above says what exists and who may use
@@ -326,6 +373,10 @@ export function AssistantChat() {
   const [currentInput, setCurrentInput] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  // What the loop is doing right now, for the loading bubble. Cleared in `sendMessage`'s
+  // `finally` alongside `isLoading` — a phase from a finished turn must never survive into the
+  // next one's "waiting" moment before the loop has had a chance to set its own first phase.
+  const [loopPhase, setLoopPhase] = useState<LoopPhase | null>(null);
 
   // Localized messages (reuse the existing assistent.* namespace)
   const systemPromptMessage = useLocale({ label: "assistent.systemPrompt" });
@@ -423,7 +474,22 @@ export function AssistantChat() {
 
   /** Rendered in two places (sidebar and mobile footer) with identical props — computed once so
    *  the two can't quietly drift. */
-  const toolSelectorOptions = availableTools.map((entry) => ({ name: entry.tool.function.name, label: entry.label }));
+  /**
+   * `availableTools` in registry order, collapsed onto `group ?? label`. A `Map` keyed that way
+   * preserves first-seen order and first-seen `description`, which is what makes the comment on
+   * `getSitzungenTool` true: the row's label and description are simply whichever member's the
+   * `Map` saw first, no separate "pick a representative" step needed.
+   */
+  const toolSelectorOptions = useMemo(() => {
+    const rows = new Map<string, { names: string[]; label: string; description: string }>();
+    for (const entry of availableTools) {
+      const key = entry.group ?? entry.label;
+      const row = rows.get(key);
+      if (row) row.names.push(entry.tool.function.name);
+      else rows.set(key, { names: [entry.tool.function.name], label: key, description: entry.description });
+    }
+    return [...rows.values()];
+  }, [availableTools]);
 
   /**
    * Built once for the same reason as `toolSelectorOptions`: it renders in the sidebar and in the
@@ -454,10 +520,15 @@ export function AssistantChat() {
     </label>
   );
 
-  const toggleTool = (name: string, enabled: boolean) => {
+  // Takes every wire name a row stands for, not one — a grouped row toggles all its members
+  // together, since the visitor never chose to have two checkboxes for "Bundestakt" in the
+  // first place. A single-tool row just passes an array of one.
+  const toggleTool = (names: string[], enabled: boolean) => {
     const next = new Set(disabledTools);
-    if (enabled) next.delete(name);
-    else next.add(name);
+    for (const name of names) {
+      if (enabled) next.delete(name);
+      else next.add(name);
+    }
     storeDisabledTools(next);
   };
 
@@ -888,6 +959,7 @@ export function AssistantChat() {
         },
         payAndSend,
         runToolCall,
+        onPhase: setLoopPhase,
       });
 
       const assistantMsg: ChatMessage = {
@@ -910,6 +982,7 @@ export function AssistantChat() {
     } finally {
       setToolCard(null);
       setIsLoading(false);
+      setLoopPhase(null);
     }
   };
 
@@ -1060,10 +1133,14 @@ export function AssistantChat() {
                 {emptyStateLabel}
                 {/* The one moment someone is looking at the middle of an empty screen with
                     nothing to read. Offered here rather than only in the sidebar, which is
-                    the difference between a mode that exists and one anybody finds. */}
+                    the difference between a mode that exists and one anybody finds.
+                    `visual: "teen"`, not "secondary": this is the one place the mode's hue is
+                    allowed to advertise rather than mark — everywhere else magenta means "this
+                    is yours" once the mode is already on, but a closed door needs to show the
+                    colour of the room before anyone has opened it. */}
                 {!teenMode && (
                   <div className={chat.emptyStateOffer}>
-                    <button onClick={() => storeTeenMode(true)} className={button({ visual: "secondary", size: "sm" })}>
+                    <button onClick={() => storeTeenMode(true)} className={button({ visual: "teen", size: "sm" })}>
                       {teenModeOfferLabel}
                     </button>
                   </div>
@@ -1126,9 +1203,25 @@ export function AssistantChat() {
 
             {isLoading && (
               <div className={chat.loadingMessage}>
-                {/* A drained channel tops itself up mid-send (see useX402Chat). Saying so keeps
-                    the wallet signature that follows from arriving unexplained. */}
-                <div className={chat.loadingBubble}>{chatStatus === "topping-up" ? toppingUpLabel : typingLabel}</div>
+                <div className={chat.loadingBubble}>
+                  {/* Three states, in the order they actually happen within one turn: a drained
+                      channel tops itself up first (see useX402Chat) — saying so keeps the wallet
+                      signature that follows from arriving unexplained; then the model runs a
+                      tool, named from the same key ToolSelector shows for it, so "running" and
+                      "offered" always agree; otherwise it is just thinking. */}
+                  {chatStatus === "topping-up" ? (
+                    toppingUpLabel
+                  ) : loopPhase?.kind === "tool" ? (
+                    <LocaleText label={TOOL_LABEL_BY_NAME.get(loopPhase.name) ?? "assistent.typing"} />
+                  ) : (
+                    typingLabel
+                  )}
+                  <span className={chat.typingDots} aria-hidden="true">
+                    <span className={`${chat.typingDot} typing-dot`} style={{ animationDelay: "0s" }} />
+                    <span className={`${chat.typingDot} typing-dot`} style={{ animationDelay: "0.2s" }} />
+                    <span className={`${chat.typingDot} typing-dot`} style={{ animationDelay: "0.4s" }} />
+                  </span>
+                </div>
               </div>
             )}
 

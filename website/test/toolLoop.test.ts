@@ -4,7 +4,7 @@
  * the UI: hop exhaustion, which tools stay on offer, and what counts as a contributing source.
  */
 import { describe, it, expect, vi } from "vitest";
-import { runToolLoop, MAX_HOPS, MAX_PAID_CALLS, type OfferedTool } from "../utils/toolLoop";
+import { runToolLoop, MAX_HOPS, MAX_PAID_CALLS, type OfferedTool, type LoopPhase } from "../utils/toolLoop";
 import type { X402ChatMessage, X402Tool } from "../types/x402";
 
 type Source = "alpha" | "beta";
@@ -199,6 +199,20 @@ describe("runToolLoop", () => {
 
     expect(result.finalImageUrl).toBe("https://x/y.png");
     expect(JSON.stringify(messages)).not.toContain("https://x/y.png");
+  });
+
+  // `onPhase` is the loop's one hook for a caller that wants to show progress. Optional, so every
+  // test above that omits it still exercises the real code path unchanged; this is the only test
+  // that reads it, and it checks the *shape* the phases arrive in — structured, not strings — since
+  // that is the contract the module doc makes explicit.
+  it("reports waiting before each hop and the tool name before each call", async () => {
+    const payAndSend = vi.fn().mockResolvedValueOnce(toolCallTurn("alpha_tool")).mockResolvedValueOnce(textTurn("ok"));
+    const runToolCall = vi.fn().mockResolvedValue({ result: { status: "ok" } });
+    const phases: LoopPhase[] = [];
+
+    await runToolLoop<Source>(convo(), OFFERED, { ...deps(payAndSend, runToolCall), onPhase: (p) => phases.push(p) });
+
+    expect(phases).toEqual([{ kind: "waiting" }, { kind: "tool", name: "alpha_tool" }, { kind: "waiting" }]);
   });
 
   it("checks readiness before every hop, and lets a refusal abort the turn", async () => {

@@ -1860,9 +1860,6 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       const mockTokenId = 88;
       setupSuccessfulMintingFlow(mockTokenId);
 
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-      const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-
       const event = {
         httpMethod: "POST",
         headers: {
@@ -1894,15 +1891,11 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
       // Verify settlement actually resolved successfully, not just that the facilitator was
       // called. Catches schema drift in the settle response (e.g. a required field missing from
-      // the mock).
-      expect(consoleErrorSpy).not.toHaveBeenCalled();
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        "✅ Payment settled:",
-        expect.objectContaining({ success: true, transaction: "0xsettlement" }),
-      );
-
-      consoleErrorSpy.mockRestore();
-      consoleLogSpy.mockRestore();
+      // the mock): a settle failure returns 402 with no Payment-Response header (see the next
+      // test), so a 200 carrying that header already proves settlement succeeded and the NFT
+      // flow ran on top of it.
+      expect(response.headers["Payment-Response"]).toBeDefined();
+      expect(JSON.parse(response.body).x_nft.status).toBe("minted");
     });
 
     test("should answer 402 and never mint when settlement fails", async () => {
@@ -1912,7 +1905,6 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       // an NFT whose mintPrice and gas we already paid.
       const mockTokenId = 91;
       setupSuccessfulMintingFlow(mockTokenId);
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       // Same verify + metadata fixtures, but the facilitator refuses to settle.
       global.fetch = vi
@@ -1944,8 +1936,6 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       // The whole point: no NFT was minted and nothing was transferred.
       expect(mockContract.write.safeMint).not.toHaveBeenCalled();
       expect(mockContract.write.safeTransferFrom).not.toHaveBeenCalled();
-
-      consoleErrorSpy.mockRestore();
     });
   });
 });

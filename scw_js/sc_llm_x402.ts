@@ -561,10 +561,12 @@ if (process.env.NODE_ENV === "test" && !process.env.CI) {
 
           fastify.listen({ port: 8085, host: "0.0.0.0" }, (err: unknown, address: string) => {
             if (err) {
-              console.error("Failed to start server:", err);
+              // Local dev only — never deployed. Same phrase the other packages' local server
+              // bootstraps use; see EXEMPT in test/alert_coverage.test.ts.
+              logger.error({ err }, "Error starting local server");
               process.exit(1);
             }
-            console.log(`🚀 LLM x402 batch-settlement Local Server listening at ${address}`);
+            logger.info({ address }, "Local server listening");
           });
         });
       });

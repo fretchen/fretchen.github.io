@@ -47,10 +47,12 @@ rules:
   #
   # Only the LLM provider logs its own line ("LLM API error", which carries the HTTP status).
   # Brave and BFL throw instead, so their text is matched where it actually appears — inside the
-  # serialized `err` of whichever handler caught it.
+  # serialized `err` of whichever handler caught it. "Upstream returned a completion we cannot
+  # bill from" is the fourth member: not an HTTP failure, but the LLM answering with a shape we
+  # cannot compute usage/cost from — equally an upstream problem, not the caller's.
   - alert: UpstreamProviderFailing
     expr: |
-      sum(count_over_time({resource_name=~".+(llmx402|searchapi|genimgx402token)"} |~ "LLM API error|Could not reach Brave|Could not reach BFL" [1h])) > 0
+      sum(count_over_time({resource_name=~".+(llmx402|searchapi|genimgx402token)"} |~ "LLM API error|Could not reach Brave|Could not reach BFL|Upstream returned a completion we cannot bill from" [1h])) > 0
     for: 0m
     labels:
       severity: critical
@@ -85,9 +87,13 @@ rules:
   # The function cannot sell at all: either the x402 seller could not be constructed, or an address
   # it needs is missing, or the image wallet has run out of gas. Every one of these returns 500 to
   # every buyer, so none of them is survivable.
+  #
+  # Two wallet-key phrases, deliberately both here: NFT_WALLET_PUBLIC_KEY (searchapi's llmx402cron
+  # fee receiver) and NFT_WALLET_PRIVATE_KEY (genimg's minting wallet) are different env vars for
+  # different purposes — dropping either would leave that function's misconfiguration unalertable.
   - alert: PaidPathBroken
     expr: |
-      sum(count_over_time({resource_name=~".+(llmx402|searchapi|genimgx402token|growthapi)"} |~ "Failed to configure batch-settlement resource server|NFT_WALLET_PUBLIC_KEY not configured|OWNER_ETH_ADDRESS not configured|Pre-flight check failed:" [1h])) > 0
+      sum(count_over_time({resource_name=~".+(llmx402|searchapi|genimgx402token|growthapi)"} |~ "Failed to configure batch-settlement resource server|NFT_WALLET_PUBLIC_KEY not configured|NFT_WALLET_PRIVATE_KEY not configured|OWNER_ETH_ADDRESS not configured|Pre-flight check failed" [1h])) > 0
     for: 0m
     labels:
       severity: critical
@@ -105,7 +111,7 @@ rules:
   # customer is owed something specific and identifiable.
   - alert: PaidButUndelivered
     expr: |
-      sum(count_over_time({resource_name=~".+genimgx402token"} |= "Mint failed after successful generation:" [1h])) > 0
+      sum(count_over_time({resource_name=~".+genimgx402token"} |= "Mint failed after successful generation" [1h])) > 0
     for: 0m
     labels:
       severity: critical
@@ -122,15 +128,18 @@ rules:
   # ours or something nobody anticipated. That is the whole point: the specific rules above only
   # catch causes already thought of.
   #
-  # The upstream strings are excluded so a Brave or BFL outage pages once, through the rule that
-  # names it, rather than twice.
+  # The upstream strings are excluded so a Brave, BFL or LLM outage pages once, through the rule
+  # that names it, rather than twice. One combined `!~`, not three `!=`: the earlier per-string
+  # `!=` form only drops a line matching that EXACT phrase, whereas "LLM API error" belongs to a
+  # different log line than "Error during answer generation" — the exclusion never applied to it
+  # in the first place. A single `!~` alternation reads as what it's actually for either way.
   #
   # Expect to tune this one: odd input that escapes classification lands here too, and /fetch is
   # about to be public. If it fires on something that turns out to be a caller's fault, classify
   # that input properly in search_api.ts — do not delete the rule.
   - alert: ServiceUnhandledError
     expr: |
-      sum(count_over_time({resource_name=~".+(llmx402|searchapi|genimgx402token|growthapi)"} |~ "Request handler error|Paid request handler error|Error during operation:" != "Could not reach Brave" != "Could not reach BFL" != "API token not found" [1h])) > 0
+      sum(count_over_time({resource_name=~".+(llmx402|searchapi|genimgx402token|growthapi)"} |~ "Request handler error|Paid request handler error|Error during operation|Auth verification failed|Error during answer generation" !~ "Could not reach|API token not found|LLM API returned an incomplete" [1h])) > 0
     for: 0m
     labels:
       severity: warning
@@ -141,3 +150,23 @@ rules:
         The outer catch. Bad input already returned 400/404 before this point, so this is a bug, an
         upstream nobody has a rule for yet, or S3 failing. The cause is in the serialized err.
         Investigate: cd scw_js && npx tsx scripts/logs.ts searchapi --since 6h --grep "handler error"
+
+  # Our own call TO the facilitator (verify or settle) throwing, or the facilitator explicitly
+  # rejecting a settlement. A warning, not critical, because a caller's malformed payload can make
+  # the facilitator itself return a 400 that the SDK surfaces as "Payment verification error" here
+  # — this is not exclusively ours the way FacilitatorBroken (payments.yaml) is. If the facilitator
+  # is actually down, that rule already pages critically on its own logs.
+  - alert: SellerPaymentFailing
+    expr: |
+      sum(count_over_time({resource_name=~".+(llmx402|searchapi|genimgx402token)"} |~ "Payment verification error|Settlement error|Settlement failed" [1h])) > 0
+    for: 0m
+    labels:
+      severity: warning
+      area: services
+    annotations:
+      summary: "A seller's own call to the facilitator failed"
+      description: >-
+        verifyPayment or settlePayment threw, or the facilitator returned success:false. Check
+        whether this correlates with a facilitator-side alert (payments.yaml) — if so, that is the
+        root cause; if not, the payload or network config is off for this seller specifically.
+        Investigate: cd scw_js && npx tsx scripts/logs.ts llmx402 --since 6h --grep "Settlement"

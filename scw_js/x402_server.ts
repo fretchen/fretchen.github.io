@@ -5,6 +5,9 @@ import { getUSDCConfig, loadPrivateKey } from "@fretchen/chain-utils";
 import { privateKeyToAccount } from "viem/accounts";
 import { S3ChannelStorage } from "./x402_channel_storage.js";
 import { EXPOSED_X402_HEADERS } from "./utils.js";
+import pino from "pino";
+
+const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 
 const FACILITATOR_URL = process.env.FACILITATOR_URL ?? "https://facilitator.fretchen.eu";
 
@@ -102,6 +105,9 @@ export async function getFacilitatorFeeConfig(): Promise<FacilitatorFeeConfig | 
       signal: AbortSignal.timeout(FEE_CONFIG_FETCH_TIMEOUT_MS),
     });
     if (!res.ok) {
+      // Still advisory-only (returns null, same as every other branch here) — this just stops
+      // the facilitator being unreachable from being completely silent.
+      logger.warn({ status: res.status }, "Could not read facilitator fee config");
       return null;
     }
     const body: unknown = await res.json();
@@ -116,7 +122,8 @@ export async function getFacilitatorFeeConfig(): Promise<FacilitatorFeeConfig | 
       return null;
     }
     return { recipient: fees.recipient as `0x${string}`, flatFee };
-  } catch {
+  } catch (err) {
+    logger.warn({ err }, "Could not read facilitator fee config");
     return null;
   }
 }
@@ -434,7 +441,8 @@ export function extractPaymentPayload(
       const decoded = Buffer.from(v2Header, "base64").toString("utf-8");
       return JSON.parse(decoded) as Record<string, unknown>;
     } catch {
-      console.error("Failed to parse PAYMENT-SIGNATURE header");
+      // The caller's fault (malformed header), not ours — warn, not error.
+      logger.warn("Failed to parse PAYMENT-SIGNATURE header");
       return null;
     }
   }
@@ -444,7 +452,7 @@ export function extractPaymentPayload(
     try {
       return JSON.parse(v1Header) as Record<string, unknown>;
     } catch {
-      console.error("Failed to parse X-PAYMENT header");
+      logger.warn("Failed to parse X-PAYMENT header");
       return null;
     }
   }

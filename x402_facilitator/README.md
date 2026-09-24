@@ -14,6 +14,11 @@ A production-ready x402 v2 Facilitator for Optimism, enabling EIP-3009 USDC paym
 > One Cockpit token covers the whole project, so the script reads this function from there. The
 > `errorMessage` field on a failed settle carries the decoded EVM revert — deliberately logged
 > only, never returned over HTTP.
+>
+> **Alerting.** `logger.error` in this package means "ours, and should page" (a caller's fault is
+> `logger.warn`); `scw_js/alerts/payments.yaml` emails on the resulting phrases, and
+> `test/alert_coverage.test.ts` fails CI if a new `logger.error` call has no matching rule. See
+> `scw_js/README.md` → _Alerting on log content_.
 
 ## Overview
 

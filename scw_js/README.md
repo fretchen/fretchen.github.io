@@ -266,9 +266,14 @@ above, scoped `full_access_logs_rules`:
 separate because `logs.ts` is run casually and often and should only ever be able to read; this one
 can write and delete alerting rules.
 
-Four rules, deliberately few — see the comments at the top of `alerts/payments.yaml` for the
-reasoning on which four and why the rest were left out. One constraint worth knowing before writing
-a fifth: **Scaleway's Loki ruler caps a range-vector window at 1h.** `llmx402cron` runs every 12h,
+Seven rules in `payments.yaml`, deliberately few — see the comments at the top of that file for the
+reasoning on which ones and why the rest were left out. In `x402_facilitator`, `logger.error` means
+"ours, and should be alertable" (a caller's fault is `logger.warn`), and
+`x402_facilitator/test/alert_coverage.test.ts` enforces that every `logger.error` call in that
+package is matched by a rule here, so the gap that motivated this whole section cannot quietly
+reopen. That test does not yet cover scw_js's other functions (`services.yaml`) — a manual read is
+still the only check there. One constraint worth knowing before writing a new rule:
+**Scaleway's Loki ruler caps a range-vector window at 1h.** `llmx402cron` runs every 12h,
 so a rule cannot stay pinned "firing" across the gap between runs the way a naive `[13h]` window
 would suggest — that gets rejected outright. Every rule here uses `[1h]`, which resolves after an
 hour and re-fires on the next cron run if the problem persists. Read a resolved notification as "no

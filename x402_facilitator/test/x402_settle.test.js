@@ -520,7 +520,12 @@ describe("x402_settle with mocked facilitator", () => {
     expect(result.transaction).toBe("");
   });
 
-  it("extracts insufficient_funds error reason from exception", async () => {
+  it("falls back to settlement_failed for our own wallet running out of gas", async () => {
+    // Regression guard: "insufficient" used to map to insufficient_funds, which reported OUR
+    // wallet running dry as the CALLER's fault. There is no dedicated reason for this today —
+    // it falls through to the generic bucket, which alerts via FacilitatorNeedsAttention's
+    // `_transaction_failed` match on the SDK-returned (not thrown) case; a thrown one like this
+    // reaches "Settlement threw" instead. See x402_settle.ts's settlePayment catch block.
     vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
       isValid: true,
       payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
@@ -533,7 +538,7 @@ describe("x402_settle with mocked facilitator", () => {
     const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
 
     expect(result.success).toBe(false);
-    expect(result.errorReason).toBe("insufficient_funds");
+    expect(result.errorReason).toBe("settlement_failed");
   });
 
   it("extracts authorization_already_used error reason from nonce error", async () => {

@@ -3,7 +3,7 @@
 # Pushed with `npx tsx scripts/alerts.ts --push`; never on deploy. Alerting config that changes as
 # a side effect of shipping code is its own kind of surprise.
 #
-# ── Why these four and not more ────────────────────────────────────────────────────────────────
+# ── Why these seven and not more ───────────────────────────────────────────────────────────────
 # Each rule has to mean "a human needs to do something". The failure mode of alerting is not
 # missing an alert, it is sending enough useless ones that people stop reading — which is how the
 # refund bug survived for weeks in a log line that was printed every 12 hours.
@@ -11,6 +11,14 @@
 # So: no rule on `"Settlement failed"` as a whole, because most of those are a caller's bad
 # signature or their own empty allowance, not our problem. No rule on
 # `"Cached channel state had drifted"`, because the repair working is the design.
+#
+# ── The `logger.error` convention ─────────────────────────────────────────────────────────────
+# In `x402_facilitator`, `logger.error` means "ours, and should be alertable"; a caller's fault
+# (bad signature, malformed request, their own insufficient allowance) is `logger.warn`.
+# `x402_facilitator/test/alert_coverage.test.ts` asserts every `logger.error` call in that package
+# is matched by a rule here (or is on that test's small, reasoned exemption list) — so a phrase
+# added there without a matching rule fails CI instead of silently going unwatched. That test does
+# not (yet) cover scw_js's other functions; see the README's "Alerting on log content" section.
 #
 # ── Why the windows are [1h] ───────────────────────────────────────────────────────────────────
 # Scaleway's Loki ruler caps a range-vector window at 1h — a rule written as `[13h]` is rejected
@@ -66,9 +74,15 @@ rules:
   # then paged nothing until the 12-hourly cron tripped RefundEscrowStuck. withdraw_delay_mismatch
   # stays out deliberately — it is a channel-config disagreement a buyer can cause, and the outcome
   # rule above already catches the version of it that costs anyone money.
+  #
+  # `_transaction_failed|_rpc_read_failed` covers both schemes' on-chain-execution reasons
+  # (invalid_exact_evm_transaction_failed, invalid_batch_settlement_evm_*_transaction_failed,
+  # invalid_batch_settlement_evm_rpc_read_failed) — the SDK RETURNS these rather than throwing
+  # (see x402/evm's parseEip3009TransferError), so they never reach x402_settle.ts's own catch
+  # and its "Settlement threw" line. Our hot wallet running out of gas surfaces exactly this way.
   - alert: FacilitatorNeedsAttention
     expr: |
-      sum(count_over_time({resource_name=~".+facilitator"} |= "Settlement failed" |~ "refund_[a-z_]*failed|insufficient_fee_allowance|settlement_pending" [1h])) > 0
+      sum(count_over_time({resource_name=~".+facilitator"} |= "Settlement failed" |~ "refund_[a-z_]*failed|insufficient_fee_allowance|settlement_pending|_transaction_failed|_rpc_read_failed" [1h])) > 0
     for: 0m
     labels:
       severity: critical
@@ -76,10 +90,51 @@ rules:
     annotations:
       summary: "Facilitator settlement needs attention (not a caller error)"
       description: >-
-        One of: a refund simulation reverted, our fee allowance ran out, or a settlement was
-        broadcast but never confirmed (settlement_pending carries a tx hash to reconcile).
-        The decoded EVM revert is in errorMessage, which is logged and never returned over HTTP.
+        One of: a refund simulation reverted, our fee allowance ran out, a settlement was
+        broadcast but never confirmed (settlement_pending carries a tx hash to reconcile), an
+        on-chain transaction reverted or failed to broadcast (e.g. the hot wallet out of gas), or
+        an RPC read failed. The decoded EVM revert is in errorMessage, which is logged and never
+        returned over HTTP.
         Investigate: cd scw_js && npx tsx scripts/logs.ts facilitator --since 2h --grep "Settlement failed"
+
+  # Everything that is not a specific, already-classified caller or settlement failure: an
+  # unhandled exception in the /verify or /settle handler, the facilitator wallet or address
+  # missing entirely (facilitator_not_configured — every settlement fails identically until
+  # this is fixed), or the weekly wallet report cron unable to run at all. The last one matters
+  # because a report that never sends looks identical, from the inbox, to a week with nothing to
+  # report — see wallet_report_cron.ts's sendReport/handle.
+  - alert: FacilitatorBroken
+    expr: |
+      sum(count_over_time({resource_name=~".+(facilitator|walletreportcron)"} |~ "Settlement threw|Unexpected error in handler|Unexpected error during payment verification|FACILITATOR_WALLET_PRIVATE_KEY not configured|facilitator address not configured|Email report failed|Email API returned" [1h])) > 0
+    for: 0m
+    labels:
+      severity: critical
+      area: payments
+    annotations:
+      summary: "The facilitator hit an unclassified error, or the wallet report could not send"
+      description: >-
+        An exception outside the SDK's own error classification, a missing wallet key/address
+        (every settlement fails until this is fixed), or the weekly wallet report cron failed
+        before or while sending its email.
+        Investigate: cd scw_js && npx tsx scripts/logs.ts facilitator --since 2h --grep "error"
+        For the cron: npx tsx scripts/logs.ts walletreportcron --since 8d
+
+  # At 0.01 USDC per settlement the fee itself is not retried — see collectAndReportFee's
+  # comment — but a run of these means real, accumulating revenue is being left on the table,
+  # distinct from FacilitatorNeedsAttention because settlement itself still succeeded.
+  - alert: FacilitatorFeeCollectionFailed
+    expr: |
+      sum(count_over_time({resource_name=~".+facilitator"} |~ "Fee collection failed|Fee transaction reverted" [1h])) > 0
+    for: 0m
+    labels:
+      severity: warning
+      area: payments
+    annotations:
+      summary: "Facilitator fee collection failed after a successful settlement"
+      description: >-
+        The buyer's payment settled; collecting our flat fee from the merchant afterwards did
+        not. Not retried — see collectAndReportFee. The error is in the log line.
+        Investigate: cd scw_js && npx tsx scripts/logs.ts facilitator --since 2h --grep "Fee"
 
   # Days of lead time. claim/settle skip /verify, so this path gets no `remainingSettlements`
   # warning from the facilitator — without this the approval simply runs out one day.

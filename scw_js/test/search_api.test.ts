@@ -444,7 +444,7 @@ describe("discovery", () => {
 
     const spec = JSON.parse(res.body) as Record<
       string,
-      Record<string, Record<string, Record<string, Record<string, string>>>>
+      Record<string, Record<string, Record<string, Record<string, Record<string, string>>>>>
     >;
     expect(spec["paths"]["/search"]["get"]["x-payment-info"]["price"]["amount"]).toBe("0.01");
     expect(spec["paths"]["/fetch"]["get"]["x-payment-info"]["price"]["amount"]).toBe("0.001");

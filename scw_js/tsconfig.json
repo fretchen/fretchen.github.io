@@ -11,6 +11,6 @@
     "declaration": false,
     "noEmit": true
   },
-  "include": ["*.ts", "scripts/**/*.ts"],
+  "include": ["*.ts", "scripts/**/*.ts", "test/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

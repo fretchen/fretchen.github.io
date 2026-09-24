@@ -22,7 +22,11 @@ import {
   http,
   parseEther,
   type PublicClient,
+  type WalletClient,
   type Chain,
+  type Account,
+  type Transport,
+  type GetContractReturnType,
 } from "viem";
 import { generateAndUploadImage, JSON_BASE_PATH, type Provider } from "./image_service.js";
 import { privateKeyToAccount } from "viem/accounts";
@@ -32,6 +36,8 @@ import {
   create402Response,
   extractPaymentPayload,
   createSettlementHeaders,
+  type SdkPaymentPayload,
+  type SdkPaymentRequirements,
 } from "./x402_server.js";
 import { validatePaymentNetwork, getExpectedNetworks } from "./getChain.js";
 import type { ScwEvent } from "./types.js";
@@ -170,9 +176,19 @@ interface MintResult {
   transferTxHash: `0x${string}`;
 }
 
+/** What `getContract({ abi: nftAbi, client: { public, wallet } })` in handle() actually returns —
+ *  named here so mintNFTToClient can be typed against it instead of `any`. The wallet client's
+ *  account/chain must be narrowed away from their `| undefined` defaults (matching the real
+ *  `createWalletClient({ account, chain, transport })` call in handle()), or viem's generated
+ *  `write.*` actions can't tell an account/chain is already bound and demand them again as
+ *  call-site arguments. */
+type NftContract = GetContractReturnType<
+  typeof nftAbi,
+  { public: PublicClient; wallet: WalletClient<Transport, Chain, Account> }
+>;
+
 async function mintNFTToClient(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  contract: any,
+  contract: NftContract,
   publicClient: PublicClient,
   clientAddress: string,
   metadataUrl: string,
@@ -489,10 +505,7 @@ async function handle(
   const networkValidation = validatePaymentNetwork(clientNetwork);
   if (!networkValidation.valid) {
     // The caller's fault (wrong/missing network), not ours — warn, not error.
-    logger.warn(
-      { reason: networkValidation.reason, clientNetwork },
-      "Network validation failed",
-    );
+    logger.warn({ reason: networkValidation.reason, clientNetwork }, "Network validation failed");
     return paymentError(networkValidation.reason, {
       expected: networkValidation.expected,
       received: networkValidation.received,
@@ -504,10 +517,9 @@ async function handle(
   logger.debug({ network: usdcConfig.name, clientNetwork }, "Client selected network");
 
   // Single-network requirements object for the x402 verify/settle calls
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const paymentRequirements: any = {
+  const paymentRequirements: SdkPaymentRequirements = {
     scheme: "exact",
-    network: clientNetwork!,
+    network: clientNetwork! as `${string}:${string}`,
     amount: USDC_PAYMENT_AMOUNT,
     asset: usdcConfig.address,
     payTo: serverWallet,
@@ -517,8 +529,13 @@ async function handle(
 
   let verification: { isValid: boolean; invalidReason?: string; payer?: string };
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    verification = await resourceServer.verifyPayment(paymentPayload as any, paymentRequirements);
+    // paymentPayload is trusted-shape here, not validated against SdkPaymentPayload — the SDK's
+    // own verify() is what actually checks it; this cast just names the boundary instead of
+    // leaving it untyped.
+    verification = await resourceServer.verifyPayment(
+      paymentPayload as SdkPaymentPayload,
+      paymentRequirements,
+    );
   } catch (error) {
     // Our call to the facilitator threw — see alerts/services.yaml's SellerPaymentFailing,
     // which this phrase (shared with llmx402/searchapi) is matched by.
@@ -604,8 +621,10 @@ async function handle(
     // URL is unguessable (getRandomString in image_service.ts), so the caller receives nothing.
     let settlement: Awaited<ReturnType<typeof resourceServer.settlePayment>>;
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      settlement = await resourceServer.settlePayment(paymentPayload as any, paymentRequirements);
+      settlement = await resourceServer.settlePayment(
+        paymentPayload as SdkPaymentPayload,
+        paymentRequirements,
+      );
     } catch (error) {
       // See SellerPaymentFailing — same phrase as llmx402/searchapi's settle-call catch.
       logger.error({ err: error }, "Settlement error");

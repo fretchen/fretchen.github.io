@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, afterEach } from "vitest";
+import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 
 // Import common setup
 import {
@@ -12,7 +12,7 @@ import {
 // Setup global mocks
 setupGlobalMocks();
 
-import { callLLMAPI, convertTokensToUsdcCost } from "../llm_service.js";
+import { callLLMAPI, convertTokensToUsdcCost, type LLMMessage } from "../llm_service.js";
 
 describe("llm_service.js", () => {
   beforeEach(() => {
@@ -59,9 +59,16 @@ describe("llm_service.js", () => {
   });
 
   test("wirft Fehler, wenn kein Prompt übergeben wird", async () => {
-    await expect(callLLMAPI("")).rejects.toThrow("No prompt provided.");
-    await expect(callLLMAPI(null)).rejects.toThrow("No prompt provided.");
-    await expect(callLLMAPI(undefined)).rejects.toThrow("No prompt provided.");
+    // Deliberately violating the LLMMessage[] signature: the runtime guard in callLLMAPI
+    // (`!prompt || !prompt.length`) is defense-in-depth against a malformed caller, not
+    // something the type system should be able to rule out here.
+    await expect(callLLMAPI("" as unknown as LLMMessage[])).rejects.toThrow("No prompt provided.");
+    await expect(callLLMAPI(null as unknown as LLMMessage[])).rejects.toThrow(
+      "No prompt provided.",
+    );
+    await expect(callLLMAPI(undefined as unknown as LLMMessage[])).rejects.toThrow(
+      "No prompt provided.",
+    );
   });
 
   test("wirft Fehler, wenn kein API-Token gesetzt ist", async () => {
@@ -73,17 +80,17 @@ describe("llm_service.js", () => {
   });
 
   test("wirft Fehler bei API-Fehler (z.B. 401)", async () => {
-    global.fetch.mockResolvedValueOnce({
+    vi.mocked(global.fetch).mockResolvedValueOnce({
       ok: false,
       status: 401,
       statusText: "Unauthorized",
-    });
+    } as Response);
     const prompt = [{ role: "user", content: "Test" }];
     await expect(callLLMAPI(prompt)).rejects.toThrow("Could not reach Mistral: 401 Unauthorized");
   });
 
   test("wirft Fehler bei Netzwerkproblemen", async () => {
-    global.fetch.mockRejectedValueOnce(new Error("Network timeout"));
+    vi.mocked(global.fetch).mockRejectedValueOnce(new Error("Network timeout"));
     const prompt = [{ role: "user", content: "Test" }];
     await expect(callLLMAPI(prompt)).rejects.toThrow("Network timeout");
   });

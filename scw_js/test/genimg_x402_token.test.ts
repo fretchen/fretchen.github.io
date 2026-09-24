@@ -50,10 +50,10 @@ const paidRequestPaymentHeader = {
 };
 
 describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
-  let handle;
-  let create402Response;
-  let createPaymentRequirements;
-  let mockContract;
+  let handle: (typeof import("../genimg_x402_token.js"))["handle"];
+  let create402Response: (typeof import("../genimg_x402_token.js"))["create402Response"];
+  let createPaymentRequirements: (typeof import("../x402_server.js"))["createPaymentRequirements"];
+  let mockContract: ReturnType<typeof createMockContract>;
 
   beforeAll(async () => {
     // Create mock contract
@@ -1058,10 +1058,15 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(response.statusCode).toBe(200);
 
       // Verify facilitator was called with correct network
-      const verifyCall = global.fetch.mock.calls.find((call) => call[0].includes("/verify"));
+      const verifyCall = vi
+        .mocked(global.fetch)
+        .mock.calls.find((call) => String(call[0]).includes("/verify"));
+      if (!verifyCall) {
+        throw new Error("verify call not found");
+      }
       expect(verifyCall).toBeDefined();
 
-      const verifyBody = JSON.parse(verifyCall[1].body);
+      const verifyBody = JSON.parse(String(verifyCall[1]?.body));
       expect(verifyBody.paymentRequirements.network).toBe("eip155:10");
       expect(verifyBody.paymentRequirements.asset).toBe(
         "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
@@ -1122,10 +1127,15 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(response.statusCode).toBe(200);
 
       // Verify facilitator was called with correct network
-      const verifyCall = global.fetch.mock.calls.find((call) => call[0].includes("/verify"));
+      const verifyCall = vi
+        .mocked(global.fetch)
+        .mock.calls.find((call) => String(call[0]).includes("/verify"));
+      if (!verifyCall) {
+        throw new Error("verify call not found");
+      }
       expect(verifyCall).toBeDefined();
 
-      const verifyBody = JSON.parse(verifyCall[1].body);
+      const verifyBody = JSON.parse(String(verifyCall[1]?.body));
       expect(verifyBody.paymentRequirements.network).toBe("eip155:11155420");
       expect(verifyBody.paymentRequirements.asset).toBe(
         "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
@@ -1613,7 +1623,9 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
       const result = extractPaymentPayload(headers);
 
-      expect(result).not.toBeNull();
+      if (!result) {
+        throw new Error("expected a decoded payload");
+      }
       expect(result.scheme).toBe("exact");
       expect(result.network).toBe("eip155:11155420");
     });
@@ -1635,7 +1647,9 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
       const result = extractPaymentPayload(headers);
 
-      expect(result).not.toBeNull();
+      if (!result) {
+        throw new Error("expected a decoded payload");
+      }
       expect(result.network).toBe("eip155:11155420");
     });
   });
@@ -1727,6 +1741,9 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       // Find mainnet and sepolia accepts
       const mainnetAccept = requirements.accepts.find((a) => a.network === "eip155:10");
       const sepoliaAccept = requirements.accepts.find((a) => a.network === "eip155:11155420");
+      if (!mainnetAccept || !sepoliaAccept) {
+        throw new Error("expected both a mainnet and a sepolia accept entry");
+      }
 
       // Verify extra field contains correct EIP-712 domain info
       expect(mainnetAccept.extra).toEqual({

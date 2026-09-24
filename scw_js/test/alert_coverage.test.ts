@@ -125,9 +125,7 @@ function isCovered(message: string): boolean {
     if (!first) {
       return false;
     }
-    return first.op === "="
-      ? message.includes(first.value)
-      : new RegExp(first.value).test(message);
+    return first.op === "=" ? message.includes(first.value) : new RegExp(first.value).test(message);
   });
 }
 

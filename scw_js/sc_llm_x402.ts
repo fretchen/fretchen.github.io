@@ -26,6 +26,8 @@ import {
   getBatchSettlementNetworks,
   formatUsdcAtomicAsDecimalUsd,
   LLM_MAX_TIMEOUT_SECONDS,
+  type SdkPaymentPayload,
+  type SdkPaymentRequirements,
 } from "./x402_server.js";
 import type { ScwEvent } from "./types.js";
 import openapiSpec from "./openapi.llm.json" with { type: "json" };
@@ -363,9 +365,9 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
   const useMock = useDummyData === true || isTestnet(clientNetwork);
 
   const usdcConfig = getUSDCConfig(clientNetwork);
-  const baseRequirements = {
+  const baseRequirements: SdkPaymentRequirements = {
     scheme: "batch-settlement",
-    network: clientNetwork,
+    network: clientNetwork as `${string}:${string}`,
     amount: USDC_MAX_PRICE_PER_MESSAGE,
     asset: usdcConfig.address,
     payTo: receiverAddress,
@@ -380,8 +382,7 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
   // deposit with receiver_authorizer_mismatch, since it treats a missing extra field as a
   // mismatch rather than "not required". Confirmed via a real Base Sepolia run.
   const paymentRequirements = await scheme.enhancePaymentRequirements(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    baseRequirements as any,
+    baseRequirements,
     {
       x402Version: 2,
       scheme: "batch-settlement",
@@ -399,8 +400,7 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
   };
   try {
     verification = await resourceServer.verifyPayment(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      paymentPayload as any,
+      paymentPayload as SdkPaymentPayload,
       paymentRequirements,
     );
   } catch (error) {
@@ -435,8 +435,7 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
       verification.invalidReason,
       verification.payer ? { payer: verification.payer } : undefined,
       undefined,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      paymentPayload as any,
+      paymentPayload as SdkPaymentPayload,
     );
     return create402Response(paymentRequired);
   }
@@ -482,8 +481,7 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
 
   try {
     const settlement = await resourceServer.settlePayment(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      paymentPayload as any,
+      paymentPayload as SdkPaymentPayload,
       settleRequirements,
     );
     if (!settlement.success) {

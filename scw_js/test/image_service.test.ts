@@ -17,8 +17,21 @@ vi.mock("@fretchen/s3-utils", () => {
 // Mock für fetch (global)
 global.fetch = vi.fn();
 
+/**
+ * Registers a fetch mock implementation whose branches return duck-typed fake Response objects
+ * (only the members these tests actually read: ok/status/json/text/arrayBuffer), not real
+ * Response instances — real ones need many more members these tests never construct. One cast
+ * here, rather than one at every fake response object below.
+ */
+function mockFetchImpl(
+  impl: (url: string | URL | Request, init?: RequestInit) => Promise<unknown>,
+) {
+  vi.mocked(global.fetch).mockImplementation(impl as unknown as typeof fetch);
+}
+
 describe("image_service.js Tests", () => {
-  let uploadToS3, generateAndUploadImage;
+  let uploadToS3: (typeof import("../image_service.js"))["uploadToS3"];
+  let generateAndUploadImage: (typeof import("../image_service.js"))["generateAndUploadImage"];
 
   beforeAll(async () => {
     // Dynamischer Import nach Mock-Setup
@@ -147,8 +160,14 @@ describe("image_service.js Tests", () => {
     const IMAGE_URL = "https://delivery.bfl.ai/req-1/sample.jpg";
     const IMAGE_BYTES = Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46]);
 
-    function mockBfl({ pollStatus = "Ready", submit = { ok: true } } = {}) {
-      global.fetch.mockImplementation((url) => {
+    function mockBfl({
+      pollStatus = "Ready",
+      submit = { ok: true },
+    }: {
+      pollStatus?: string;
+      submit?: { ok: boolean; status?: number; statusText?: string };
+    } = {}) {
+      mockFetchImpl((url) => {
         const u = String(url);
         if (u === BFL_ENDPOINT) {
           return Promise.resolve({
@@ -174,8 +193,11 @@ describe("image_service.js Tests", () => {
 
     /** The submit call's parsed body — what BFL was actually asked to generate. */
     function submitBody() {
-      const call = global.fetch.mock.calls.find((c) => String(c[0]) === BFL_ENDPOINT);
-      return JSON.parse(call[1].body);
+      const call = vi.mocked(global.fetch).mock.calls.find((c) => String(c[0]) === BFL_ENDPOINT);
+      if (!call) {
+        throw new Error("no submit call found");
+      }
+      return JSON.parse(String(call[1]?.body));
     }
 
     beforeEach(() => {
@@ -217,13 +239,15 @@ describe("image_service.js Tests", () => {
     });
 
     test("sollte Fehler werfen wenn kein Prompt bereitgestellt wird", async () => {
+      // Deliberately violating the `prompt: string` signature — same defense-in-depth rationale
+      // as llm_service.test.ts's equivalent case.
       await expect(generateAndUploadImage("", "123", "bfl")).rejects.toThrow("No prompt provided.");
-      await expect(generateAndUploadImage(null, "123", "bfl")).rejects.toThrow(
+      await expect(generateAndUploadImage(null as unknown as string, "123", "bfl")).rejects.toThrow(
         "No prompt provided.",
       );
-      await expect(generateAndUploadImage(undefined, "123", "bfl")).rejects.toThrow(
-        "No prompt provided.",
-      );
+      await expect(
+        generateAndUploadImage(undefined as unknown as string, "123", "bfl"),
+      ).rejects.toThrow("No prompt provided.");
     });
 
     test("sollte Fehler werfen wenn BFL API Token fehlt", async () => {
@@ -252,13 +276,15 @@ describe("image_service.js Tests", () => {
         /BFL generation failed/,
       );
       // One submit + exactly one poll: no retry storm.
-      expect(global.fetch.mock.calls.filter((c) => String(c[0]) === POLL_URL)).toHaveLength(1);
+      expect(
+        vi.mocked(global.fetch).mock.calls.filter((c) => String(c[0]) === POLL_URL),
+      ).toHaveLength(1);
     });
 
     test("fails immediately when the submit response carries no polling_url", async () => {
       // A missing polling_url used to become fetch(undefined) in the poll loop, get swallowed as
       // a transient blip, and fail five minutes later as a *timeout*. No poll should go out.
-      global.fetch.mockImplementation((url) => {
+      mockFetchImpl((url) => {
         if (String(url) === BFL_ENDPOINT) {
           return Promise.resolve({ ok: true, json: () => Promise.resolve({ id: "req-1" }) });
         }
@@ -268,13 +294,13 @@ describe("image_service.js Tests", () => {
       await expect(generateAndUploadImage("test prompt", "123", "bfl")).rejects.toThrow(
         /unusable submit response/,
       );
-      expect(global.fetch.mock.calls).toHaveLength(1);
+      expect(vi.mocked(global.fetch).mock.calls).toHaveLength(1);
     });
 
     test("refuses to poll a polling_url pointing off the BFL domain", async () => {
       // The poll carries our BFL_API_TOKEN in the `x-key` header, so an off-domain polling_url
       // would hand the key to whoever it points at. No poll should go out.
-      global.fetch.mockImplementation((url) => {
+      mockFetchImpl((url) => {
         if (String(url) === BFL_ENDPOINT) {
           return Promise.resolve({
             ok: true,
@@ -288,14 +314,14 @@ describe("image_service.js Tests", () => {
       await expect(generateAndUploadImage("test prompt", "123", "bfl")).rejects.toThrow(
         /Untrusted BFL polling URL/,
       );
-      expect(global.fetch.mock.calls).toHaveLength(1);
+      expect(vi.mocked(global.fetch).mock.calls).toHaveLength(1);
     });
 
     test("accepts a regional BFL polling host", async () => {
       // BFL answers from api.eu.bfl.ai / api.us1.bfl.ai, so the pin is a suffix match on the
       // domain, not equality with the submit host.
       const REGIONAL_POLL = "https://api.eu.bfl.ai/v1/get_result?id=req-1";
-      global.fetch.mockImplementation((url) => {
+      mockFetchImpl((url) => {
         const u = String(url);
         if (u === BFL_ENDPOINT) {
           return Promise.resolve({
@@ -326,7 +352,7 @@ describe("image_service.js Tests", () => {
     test("fails immediately when BFL reports Ready with no result", async () => {
       // Was `pollData.result!.sample`, whose TypeError landed in the image download's catch and
       // was retried. A Ready without a URL is not a CDN blip.
-      global.fetch.mockImplementation((url) => {
+      mockFetchImpl((url) => {
         const u = String(url);
         if (u === BFL_ENDPOINT) {
           return Promise.resolve({
@@ -343,14 +369,16 @@ describe("image_service.js Tests", () => {
       await expect(generateAndUploadImage("test prompt", "123", "bfl")).rejects.toThrow(
         /Ready without a result URL/,
       );
-      expect(global.fetch.mock.calls.filter((c) => String(c[0]) === POLL_URL)).toHaveLength(1);
+      expect(
+        vi.mocked(global.fetch).mock.calls.filter((c) => String(c[0]) === POLL_URL),
+      ).toHaveLength(1);
     });
 
     test("keeps polling through a Pending poll whose result is null", async () => {
       // BFL sends `result: null` on every poll before the job finishes, and `.optional()` alone
       // rejects an explicit null — so generation died on poll 1 of 60 while merely Pending.
       let polls = 0;
-      global.fetch.mockImplementation((url) => {
+      mockFetchImpl((url) => {
         const u = String(url);
         if (u === BFL_ENDPOINT) {
           return Promise.resolve({
@@ -399,7 +427,7 @@ describe("image_service.js Tests", () => {
       // have removed retry tolerance for a transient failure fetching BFL's delivery CDN, which
       // used to self-heal on the next 5s poll cycle rather than aborting the whole request.
       let imageFetchAttempts = 0;
-      global.fetch.mockImplementation((url) => {
+      mockFetchImpl((url) => {
         const u = String(url);
         if (u === BFL_ENDPOINT) {
           return Promise.resolve({
@@ -451,6 +479,9 @@ describe("image_service.js Tests", () => {
       const metadataCall = mockPutS3Object.mock.calls.find((call) =>
         call[0].startsWith("metadata/"),
       );
+      if (!metadataCall) {
+        throw new Error("no metadata upload call found");
+      }
 
       expect(metadataCall).toBeDefined();
 
@@ -494,6 +525,9 @@ describe("image_service.js Tests", () => {
       const imageCall = mockPutS3Object.mock.calls.find(
         (call) => call[0].startsWith("images/") && call[2].contentType === "image/jpeg",
       );
+      if (!imageCall) {
+        throw new Error("no image upload call found");
+      }
 
       expect(imageCall).toBeDefined();
       expect(Buffer.isBuffer(imageCall[1])).toBe(true);
@@ -509,12 +543,15 @@ describe("image_service.js Tests", () => {
       const metadataCall = mockPutS3Object.mock.calls.find((call) =>
         call[0].startsWith("metadata/"),
       );
+      if (!metadataCall) {
+        throw new Error("no metadata upload call found");
+      }
       const metadata = JSON.parse(metadataCall[1]);
       expect(metadata.name).toBe("AI Generated Art #unknown");
     });
 
     test("sollte Netzwerk-Timeouts handhaben", async () => {
-      global.fetch.mockRejectedValue(new Error("Network timeout"));
+      vi.mocked(global.fetch).mockRejectedValue(new Error("Network timeout"));
 
       await expect(generateAndUploadImage("test prompt", "123", "bfl")).rejects.toThrow(
         "Network timeout",
@@ -573,9 +610,12 @@ describe("image_service.js Tests", () => {
       const metadataCall = mockPutS3Object.mock.calls.find((call) =>
         call[0].startsWith("metadata/"),
       );
+      if (!metadataCall) {
+        throw new Error("no metadata upload call found");
+      }
       expect(metadataCall).toBeDefined();
       const sizeAttribute = JSON.parse(metadataCall[1]).attributes.find(
-        (attr) => attr.trait_type === "Image Size",
+        (attr: { trait_type: string }) => attr.trait_type === "Image Size",
       );
       expect(sizeAttribute.value).toBe("1024x1024");
 
@@ -588,8 +628,11 @@ describe("image_service.js Tests", () => {
       const metadataCall2 = mockPutS3Object.mock.calls.find((call) =>
         call[0].startsWith("metadata/"),
       );
+      if (!metadataCall2) {
+        throw new Error("no metadata upload call found");
+      }
       const sizeAttribute2 = JSON.parse(metadataCall2[1]).attributes.find(
-        (attr) => attr.trait_type === "Image Size",
+        (attr: { trait_type: string }) => attr.trait_type === "Image Size",
       );
       expect(sizeAttribute2.value).toBe("1792x1024");
     });

@@ -20,6 +20,8 @@ import {
   createLLMResourceServer,
   createSettlementHeaders,
   extractPaymentPayload,
+  type SdkPaymentPayload,
+  type SdkPaymentRequirements,
 } from "./x402_server.js";
 
 /**
@@ -194,9 +196,9 @@ async function servePaid(
   }
 
   const usdcConfig = getUSDCConfig(network);
-  const baseRequirements = {
+  const baseRequirements: SdkPaymentRequirements = {
     scheme: "batch-settlement",
-    network,
+    network: network as `${string}:${string}`,
     amount: PRICE_ATOMIC[route],
     asset: usdcConfig.address,
     payTo: receiverAddress,
@@ -207,8 +209,7 @@ async function servePaid(
   // missing `extra.receiverAuthorizer` as a mismatch rather than as "not required", so a raw object
   // here makes every deposit fail with receiver_authorizer_mismatch. Same trap as sc_llm_x402.ts.
   const paymentRequirements = await scheme.enhancePaymentRequirements(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    baseRequirements as any,
+    baseRequirements,
     {
       x402Version: 2,
       scheme: "batch-settlement",
@@ -226,8 +227,7 @@ async function servePaid(
   };
   try {
     verification = await resourceServer.verifyPayment(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      payload as any,
+      payload as SdkPaymentPayload,
       paymentRequirements,
     );
   } catch (err) {
@@ -253,8 +253,7 @@ async function servePaid(
       verification.invalidReason,
       verification.payer ? { payer: verification.payer } : undefined,
       undefined,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      payload as any,
+      payload as SdkPaymentPayload,
     );
     return create402Response(paymentRequired);
   }
@@ -272,8 +271,7 @@ async function servePaid(
   let settlement: Record<string, unknown> & { success: boolean; errorReason?: string };
   try {
     settlement = await resourceServer.settlePayment(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      payload as any,
+      payload as SdkPaymentPayload,
       paymentRequirements,
     );
   } catch (err) {

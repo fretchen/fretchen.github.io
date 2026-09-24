@@ -17,7 +17,7 @@ export default tseslint.config(
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
-  // TypeScript source files (excluded from tsconfig: test files use non-type-aware rules below)
+  // TypeScript source files (test files get their own vitest-globals block below)
   {
     files: ["*.ts"],
     languageOptions: {
@@ -57,12 +57,14 @@ export default tseslint.config(
       "object-shorthand": "error",
     },
   },
-  // Test files: non-type-aware (not in tsconfig), vitest globals
+  // Test files: type-aware like the rest of the package (now in tsconfig's `include`), plus
+  // vitest globals.
   {
     files: ["test/**/*.ts", "**/*.test.ts"],
     languageOptions: {
       parserOptions: {
-        project: false,
+        project: true,
+        tsconfigRootDir: import.meta.dirname,
       },
       globals: {
         describe: "readonly",

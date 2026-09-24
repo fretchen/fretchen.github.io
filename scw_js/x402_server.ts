@@ -1,6 +1,10 @@
 import { x402ResourceServer, HTTPFacilitatorClient } from "@x402/core/server";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
-import { BatchSettlementEvmScheme } from "@x402/evm/batch-settlement/server";
+import {
+  BatchSettlementEvmScheme,
+  type AuthorizerSigner,
+  type BatchSettlementChannelManager,
+} from "@x402/evm/batch-settlement/server";
 import { getUSDCConfig, loadPrivateKey } from "@fretchen/chain-utils";
 import { privateKeyToAccount } from "viem/accounts";
 import { S3ChannelStorage } from "./x402_channel_storage.js";
@@ -128,6 +132,21 @@ export async function getFacilitatorFeeConfig(): Promise<FacilitatorFeeConfig | 
   }
 }
 
+/**
+ * The SDK's own per-request payload/requirements types, read off its public method signatures
+ * rather than hand-copied — `@x402/core` uses both throughout its API (verify/settle,
+ * enhancePaymentRequirements, ...) but does not export either from any of its public entry
+ * points (`.`, `/client`, `/server`, `/facilitator` all checked). This is the stable way to name
+ * them without depending on the internal, hash-named chunk file they actually live in, and it
+ * stays correct across an SDK version bump since it reads whatever the installed `.d.ts` says.
+ *
+ * Named distinctly from this file's own `PaymentRequirements` below, which is the *whole* 402
+ * challenge document (`{ x402Version, resource, accepts: [...] }`) — confusingly similar name,
+ * different shape: the SDK's type here is what one entry of that `accepts` array looks like.
+ */
+export type SdkPaymentPayload = Parameters<x402ResourceServer["verifyPayment"]>[0];
+export type SdkPaymentRequirements = Parameters<x402ResourceServer["verifyPayment"]>[1];
+
 export function createResourceServer(): x402ResourceServer {
   const server = new x402ResourceServer(createFacilitatorClient());
   for (const network of getSupportedNetworks()) {
@@ -167,10 +186,16 @@ export function createLLMResourceServer(receiverAddress: `0x${string}`): LLMReso
   const resourceServer = new x402ResourceServer(createFacilitatorClient());
 
   const authorizerAccount = privateKeyToAccount(loadPrivateKey("RECEIVER_AUTHORIZER_PRIVATE_KEY"));
-  const receiverAuthorizerSigner = {
+  const receiverAuthorizerSigner: AuthorizerSigner = {
     address: authorizerAccount.address,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    signTypedData: (params: any) => authorizerAccount.signTypedData(params),
+    signTypedData: (params) =>
+      // AuthorizerSigner's own params shape (domain/types/message as Record<string, unknown>)
+      // is looser than viem's TypedDataDefinition — the two libraries just don't share one
+      // canonical typed-data type. Safe: viem validates the real EIP-712 structure at runtime
+      // regardless of how loosely this bridge sees it.
+      authorizerAccount.signTypedData(
+        params as Parameters<typeof authorizerAccount.signTypedData>[0],
+      ),
   };
 
   const schemes = new Map<string, BatchSettlementEvmScheme>();
@@ -224,12 +249,12 @@ export function createLLMResourceServer(receiverAddress: `0x${string}`): LLMReso
  */
 export async function useEnhancedRefundRequirements(
   scheme: BatchSettlementEvmScheme,
-  manager: object,
+  manager: BatchSettlementChannelManager,
   opts: { network: string; asset: string; payTo: string },
 ): Promise<void> {
-  const base = {
+  const base: SdkPaymentRequirements = {
     scheme: "batch-settlement",
-    network: opts.network,
+    network: opts.network as `${string}:${string}`,
     asset: opts.asset,
     amount: "0",
     payTo: opts.payTo,
@@ -237,8 +262,7 @@ export async function useEnhancedRefundRequirements(
     extra: {},
   };
   const enhanced = await scheme.enhancePaymentRequirements(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    base as any,
+    base,
     {
       x402Version: 2,
       scheme: "batch-settlement",
@@ -272,8 +296,8 @@ export async function useEnhancedRefundRequirements(
   const { withdrawDelay: _configuredDelay, ...extraWithoutDelay } = enhancedExtra;
   const refundRequirements = { ...enhanced, extra: extraWithoutDelay };
 
-  (manager as { buildPaymentRequirements: () => unknown }).buildPaymentRequirements = () =>
-    refundRequirements;
+  (manager as unknown as { buildPaymentRequirements: () => unknown }).buildPaymentRequirements =
+    () => refundRequirements;
 }
 
 export interface BatchSettlementPaymentRequirementsOptions {
@@ -316,9 +340,9 @@ export async function createBatchSettlementPaymentRequirements({
   const accepts = await Promise.all(
     networks.map(async (network) => {
       const config = getUSDCConfig(network);
-      const base = {
+      const base: SdkPaymentRequirements = {
         scheme: "batch-settlement",
-        network,
+        network: network as `${string}:${string}`,
         amount,
         asset: config.address,
         payTo,
@@ -326,8 +350,7 @@ export async function createBatchSettlementPaymentRequirements({
         extra: { name: config.usdcName, version: config.usdcVersion },
       };
       return scheme.enhancePaymentRequirements(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        base as any,
+        base,
         {
           x402Version: 2,
           scheme: "batch-settlement",

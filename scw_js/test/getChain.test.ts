@@ -15,7 +15,7 @@
  * - Mismatch causes settlement to fail AFTER expensive operations complete
  */
 import { describe, test, expect } from "vitest";
-import { createPublicClient, http } from "viem";
+import { createPublicClient, http, type Chain } from "viem";
 import { optimism, optimismSepolia, base, baseSepolia } from "viem/chains";
 
 // Import functions under test
@@ -145,6 +145,9 @@ describe("getChain.js - Chain Configuration Tests", () => {
     // were unreachable from the only caller.
     test("should reject missing network", () => {
       const result = validatePaymentNetwork(undefined);
+      if (result.valid) {
+        throw new Error("expected an invalid result");
+      }
       expect(result.valid).toBe(false);
       expect(result.reason).toBe("missing_network");
     });
@@ -163,6 +166,9 @@ describe("getChain.js - Chain Configuration Tests", () => {
 
     test("should reject a chain the contract is not deployed on", () => {
       const result = validatePaymentNetwork("eip155:84532"); // Base Sepolia — no GenImNFT
+      if (result.valid) {
+        throw new Error("expected an invalid result");
+      }
       expect(result.valid).toBe(false);
       expect(result.reason).toBe("unsupported_network");
       expect(result.expected).toEqual(["eip155:10", "eip155:8453", "eip155:11155420"]);
@@ -192,7 +198,7 @@ describe("EIP-712 Domain Validation (On-Chain)", () => {
    * Helper to wait for a specified time
    * @param {number} ms - Milliseconds to wait
    */
-  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
   /**
    * Helper to retry an async function with exponential backoff
@@ -201,15 +207,16 @@ describe("EIP-712 Domain Validation (On-Chain)", () => {
    * @param {number} maxRetries - Maximum number of retries
    * @param {number} baseDelay - Base delay in ms (doubles each retry)
    */
-  async function withRetry(fn, maxRetries = 3, baseDelay = 1000) {
-    let lastError;
+  async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3, baseDelay = 1000): Promise<T> {
+    let lastError: unknown;
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         return await fn();
       } catch (error) {
         lastError = error;
         // Check if it's a rate limit error (429)
-        if (error.message?.includes("429") || error.message?.includes("rate limit")) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (message.includes("429") || message.includes("rate limit")) {
           if (attempt < maxRetries) {
             const waitTime = baseDelay * Math.pow(2, attempt);
             await delay(waitTime);
@@ -228,7 +235,7 @@ describe("EIP-712 Domain Validation (On-Chain)", () => {
    * @param {string} contractAddress
    * @returns {Promise<{name: string, version: string}>}
    */
-  async function readOnChainDomain(chain, contractAddress) {
+  async function readOnChainDomain(chain: Chain, contractAddress: `0x${string}`) {
     // Uses RPC_URL_<NETWORK> when configured (see getRpcUrl in @fretchen/chain-utils)
     // instead of viem's public default. This is the actual, concrete verification
     // that a dedicated RPC provider (e.g. Alchemy) works end-to-end: set
@@ -344,7 +351,7 @@ describe("EIP-712 Domain Validation (On-Chain)", () => {
         } catch (error) {
           results.push({
             network,
-            error: error.message,
+            error: error instanceof Error ? error.message : String(error),
             valid: false,
           });
         }

@@ -4,11 +4,11 @@ A production-ready x402 v2 Facilitator for Optimism, enabling EIP-3009 USDC paym
 
 **Production Endpoint:** https://facilitator.fretchen.eu
 
-> **Logs.** This function's logs are read with `scw_js/scripts/logs.ts`, not from the Scaleway
-> console or Grafana:
+> **Logs.** This function's logs are read with `observability/scripts/logs.ts`, not from the
+> Scaleway console or Grafana:
 >
 > ```bash
-> cd ../scw_js && npx tsx scripts/logs.ts facilitator --since 24h --grep "Settlement failed"
+> cd ../observability && npx tsx scripts/logs.ts facilitator --since 24h --grep "Settlement failed"
 > ```
 >
 > One Cockpit token covers the whole project, so the script reads this function from there. The
@@ -16,9 +16,9 @@ A production-ready x402 v2 Facilitator for Optimism, enabling EIP-3009 USDC paym
 > only, never returned over HTTP.
 >
 > **Alerting.** `logger.error` in this package means "ours, and should page" (a caller's fault is
-> `logger.warn`); `scw_js/alerts/payments.yaml` emails on the resulting phrases, and
+> `logger.warn`); `observability/alerts/payments.yaml` emails on the resulting phrases, and
 > `test/alert_coverage.test.ts` fails CI if a new `logger.error` call has no matching rule. See
-> `scw_js/README.md` → _Alerting on log content_.
+> [`observability/README.md`](../observability/README.md).
 
 ## Overview
 

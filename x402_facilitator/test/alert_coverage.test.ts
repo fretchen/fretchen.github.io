@@ -2,11 +2,9 @@ import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-// Crosses the package boundary the same way this file's own ALERTS_DIR already does (below) —
-// reading scw_js/alerts/*.yaml by relative path. tsconfig.json's `rootDir` had to be dropped for
-// this: with `noEmit: true` it served no purpose (nothing is emitted) except making `tsc` refuse
-// to type-check a source file living outside this package (TS6059), which is exactly what this
-// import needs to do.
+// tsconfig.json deliberately sets no `rootDir`: with `noEmit: true` it served no purpose except
+// making `tsc` refuse to type-check a source file outside this package (TS6059), which is exactly
+// what this import is.
 import {
   sourceFiles,
   stripStringLiterals,
@@ -14,23 +12,23 @@ import {
   extractRules,
   rulesForFunctions,
   isCovered,
-} from "../../scw_js/test/lib/alertCoverageLib.js";
+} from "../../observability/alertCoverage.js";
 
 /**
  * Coverage guard for the "logger.error means ours, and should page" convention — see
- * scw_js/alerts/payments.yaml's "The `logger.error` convention" section and this package's
+ * observability/alerts/payments.yaml's "The `logger.error` convention" section and this package's
  * README "Alerting" note. The parsing logic is shared with
- * scw_js/test/alert_coverage.test.ts via `scw_js/test/lib/alertCoverageLib.ts`; see that file's
- * header for the fuller rationale (#683) and its documented limits.
+ * scw_js/test/alert_coverage.test.ts via `observability/alertCoverage.ts`; see that file's
+ * header for its documented limits.
  *
  * Why this exists: #683 was a batch of deep x402 bugs that ran silently for weeks because
- * nothing alerted on the log lines that recorded them. The fix was `scw_js/alerts/*.yaml`, but a
- * yaml file with rules only helps for the failures someone remembered to write a rule for. This
- * test makes that pairing an assertion instead of a habit.
+ * nothing alerted on the log lines that recorded them. The fix was
+ * `observability/alerts/*.yaml`, but a yaml file with rules only helps for the failures someone
+ * remembered to write a rule for. This test makes that pairing an assertion instead of a habit.
  *
  * Two assertions, same shape as scw_js's copy:
  *   1. Every `logger.error(...)` call site in this package's root `.ts` files is matched by some
- *      rule's filter in `scw_js/alerts/*.yaml`, or is named in EXEMPT with a reason.
+ *      rule's filter in `observability/alerts/*.yaml`, or is named in EXEMPT with a reason.
  *   2. No root `.ts` file calls `console.*` at all. This package was already console-free when
  *      this check was added — it exists so it stays that way, since a `console.*` regression
  *      here would be just as unwatchable by Loki as it was for genimg before scw_js's own copy
@@ -39,7 +37,7 @@ import {
 
 const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = path.join(TEST_DIR, "..");
-const ALERTS_DIR = path.join(TEST_DIR, "../../scw_js/alerts");
+const ALERTS_DIR = path.join(TEST_DIR, "../../observability/alerts");
 
 /** Messages that deliberately have no alert rule, and why. */
 const EXEMPT: Record<string, string> = {
@@ -87,7 +85,7 @@ describe("facilitator alert coverage", () => {
       expect(
         isCovered(facilitatorRules, message),
         `logger.error("${message}") in ${file} is not matched by any rule's first filter in ` +
-          `scw_js/alerts/*.yaml, and is not in this test's EXEMPT map. Either add/extend a rule ` +
+          `observability/alerts/*.yaml, and is not in this test's EXEMPT map. Either add/extend a rule ` +
           `there, or add this message to EXEMPT with a reason.`,
       ).toBe(true);
     });

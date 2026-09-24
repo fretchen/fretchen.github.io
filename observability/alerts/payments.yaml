@@ -1,6 +1,6 @@
 # Loki alerting rules for the x402 payment path.
 #
-# Pushed with `npx tsx scripts/alerts.ts --push`; never on deploy. Alerting config that changes as
+# Pushed from observability/ with `npx tsx scripts/alerts.ts --push`; never on deploy. Alerting config that changes as
 # a side effect of shipping code is its own kind of surprise.
 #
 # ── Why these six and not more ────────────────────────────────────────────────────────────────
@@ -16,7 +16,7 @@
 # In both `x402_facilitator` and `scw_js`, `logger.error` means "ours, and should be alertable";
 # a caller's fault (bad signature, malformed request, their own insufficient allowance) is
 # `logger.warn`. Each package's own `test/alert_coverage.test.ts` asserts every `logger.error`
-# call in that package is matched by a rule in its `alerts/*.yaml` (or is on that test's small,
+# call in that package is matched by a rule in these `alerts/*.yaml` (or is on that test's small,
 # reasoned exemption list) — so a phrase added there without a matching rule fails CI instead of
 # silently going unwatched, the way the original incident did.
 #
@@ -49,8 +49,8 @@ rules:
       description: >-
         The refund sweep ran and left money behind. This fires on the outcome, so the cause is
         open — read the run before assuming which one it is.
-        Investigate: cd scw_js && npx tsx scripts/logs.ts llmx402cron --since 24h --grep "still hold escrow"
-        Then: npx tsx scripts/recover_channels.ts eip155:10   (dry run; --apply to recover)
+        Investigate: cd observability && npx tsx scripts/logs.ts llmx402cron --since 24h --grep "still hold escrow"
+        Then: cd scw_js && npx tsx scripts/recover_channels.ts eip155:10   (dry run; --apply to recover)
 
   # The cron's own failures. Always ours, never a caller's. "Failed to configure batch-settlement
   # resource server" is the cron's own copy of the same startup check llmx402/searchapi have — the
@@ -68,7 +68,7 @@ rules:
       description: >-
         Claims or refunds threw, or the cron's resource server could not be configured at all
         (every network fails identically until that's fixed). The error reason is in the log line.
-        Investigate: cd scw_js && npx tsx scripts/logs.ts llmx402cron --since 24h --grep "failed"
+        Investigate: cd observability && npx tsx scripts/logs.ts llmx402cron --since 24h --grep "failed"
 
   # Only the subset of settle failures that are OUR problem. A bad signature or a caller's empty
   # allowance is their business and must not page us.
@@ -99,7 +99,7 @@ rules:
         on-chain transaction reverted or failed to broadcast (e.g. the hot wallet out of gas), or
         an RPC read failed. The decoded EVM revert is in errorMessage, which is logged and never
         returned over HTTP.
-        Investigate: cd scw_js && npx tsx scripts/logs.ts facilitator --since 2h --grep "Settlement failed"
+        Investigate: cd observability && npx tsx scripts/logs.ts facilitator --since 2h --grep "Settlement failed"
 
   # Everything that is not a specific, already-classified caller or settlement failure: an
   # unhandled exception in the /verify or /settle handler, the facilitator wallet or address
@@ -120,7 +120,7 @@ rules:
         An exception outside the SDK's own error classification, a missing wallet key/address
         (every settlement fails until this is fixed), or the weekly wallet report cron failed
         before or while sending its email.
-        Investigate: cd scw_js && npx tsx scripts/logs.ts facilitator --since 2h --grep "error"
+        Investigate: cd observability && npx tsx scripts/logs.ts facilitator --since 2h --grep "error"
         For the cron: npx tsx scripts/logs.ts walletreportcron --since 8d
 
   # At 0.01 USDC per settlement the fee itself is not retried — see collectAndReportFee's
@@ -138,7 +138,7 @@ rules:
       description: >-
         The buyer's payment settled; collecting our flat fee from the merchant afterwards did
         not. Not retried — see collectAndReportFee. The error is in the log line.
-        Investigate: cd scw_js && npx tsx scripts/logs.ts facilitator --since 2h --grep "Fee"
+        Investigate: cd observability && npx tsx scripts/logs.ts facilitator --since 2h --grep "Fee"
 
   # Days of lead time. claim/settle skip /verify, so this path gets no `remainingSettlements`
   # warning from the facilitator — without this the approval simply runs out one day.
@@ -154,4 +154,4 @@ rules:
       description: >-
         Claims will start failing with insufficient_fee_allowance once it runs out. Re-approve USDC
         for the facilitator's spender address from the receiver wallet.
-        Investigate: cd scw_js && npx tsx scripts/logs.ts llmx402cron --since 24h --grep "allowance"
+        Investigate: cd observability && npx tsx scripts/logs.ts llmx402cron --since 24h --grep "allowance"

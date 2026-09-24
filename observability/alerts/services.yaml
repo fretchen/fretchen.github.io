@@ -1,7 +1,8 @@
 # Loki alerting rules for the scw_js service functions.
 #
-# Pushed with `npx tsx scripts/alerts.ts --push alerts/services.yaml`; never on deploy. A separate
-# group from `payments.yaml` in the same namespace — pushing one leaves the other alone.
+# Pushed from observability/ with `npx tsx scripts/alerts.ts --push alerts/services.yaml`; never
+# on deploy. A separate group from `payments.yaml` in the same namespace — pushing one leaves the
+# other alone.
 #
 # Covers llmx402, searchapi, genimgx402token and growthapi. The claim/refund cron is NOT here;
 # `payments.yaml` owns llmx402cron and the facilitator.
@@ -62,7 +63,7 @@ rules:
       description: >-
         401 means the key was revoked or rotated, 429 means the quota is spent, 5xx is their
         outage. The provider and status are on the log line.
-        Investigate: cd scw_js && npx tsx scripts/logs.ts searchapi --since 6h --grep "Could not reach"
+        Investigate: cd observability && npx tsx scripts/logs.ts searchapi --since 6h --grep "Could not reach"
         Also try: npx tsx scripts/logs.ts llmx402 --since 6h --grep "LLM API error"
 
   # Disjoint from the rule above, and worth its own alert because the fix is different: this one
@@ -82,7 +83,7 @@ rules:
         The env var named in the log line is unset on the deployed function. Secrets come from
         scw_js/.env via serverless.yml, and an unset one deploys as an EMPTY secret rather than
         failing the deploy — so this survives a successful-looking deployment.
-        Investigate: cd scw_js && npx tsx scripts/logs.ts searchapi --since 6h --grep "API token not found"
+        Investigate: cd observability && npx tsx scripts/logs.ts searchapi --since 6h --grep "API token not found"
 
   # The function cannot sell at all: either the x402 seller could not be constructed, or an address
   # it needs is missing, or the image wallet has run out of gas. Every one of these returns 500 to
@@ -103,7 +104,7 @@ rules:
       description: >-
         Either a secret/address is missing on the deployed function, or genimg's wallet is out of
         native gas for minting. Both return 500 to every buyer.
-        Investigate: cd scw_js && npx tsx scripts/logs.ts searchapi --since 6h --grep "not configured"
+        Investigate: cd observability && npx tsx scripts/logs.ts searchapi --since 6h --grep "not configured"
         For genimg: npx tsx scripts/logs.ts genimgx402token --since 6h --grep "Pre-flight"
 
   # The only rule here where money actually moved. The payment settled and the image was delivered,
@@ -121,7 +122,7 @@ rules:
       description: >-
         Settlement succeeded and the response was 200, so this is invisible to the buyer until they
         look for the token. The mint error and the recipient are on the log line.
-        Investigate: cd scw_js && npx tsx scripts/logs.ts genimgx402token --since 24h --grep "Mint failed"
+        Investigate: cd observability && npx tsx scripts/logs.ts genimgx402token --since 24h --grep "Mint failed"
 
   # The outcome-level net — the RefundEscrowStuck lesson applied here. These are the outer catch
   # blocks, and caller faults are split off to 400/404 BEFORE reaching them, so what lands here is
@@ -149,7 +150,7 @@ rules:
       description: >-
         The outer catch. Bad input already returned 400/404 before this point, so this is a bug, an
         upstream nobody has a rule for yet, or S3 failing. The cause is in the serialized err.
-        Investigate: cd scw_js && npx tsx scripts/logs.ts searchapi --since 6h --grep "handler error"
+        Investigate: cd observability && npx tsx scripts/logs.ts searchapi --since 6h --grep "handler error"
 
   # Our own call TO the facilitator (verify or settle) throwing, or the facilitator explicitly
   # rejecting a settlement. A warning, not critical, because a caller's malformed payload can make
@@ -169,4 +170,4 @@ rules:
         verifyPayment or settlePayment threw, or the facilitator returned success:false. Check
         whether this correlates with a facilitator-side alert (payments.yaml) — if so, that is the
         root cause; if not, the payload or network config is off for this seller specifically.
-        Investigate: cd scw_js && npx tsx scripts/logs.ts llmx402 --since 6h --grep "Settlement"
+        Investigate: cd observability && npx tsx scripts/logs.ts llmx402 --since 6h --grep "Settlement"

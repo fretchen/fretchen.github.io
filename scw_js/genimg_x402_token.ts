@@ -394,8 +394,8 @@ async function handle(
   try {
     account = privateKeyToAccount(loadPrivateKey("NFT_WALLET_PRIVATE_KEY"));
   } catch (err) {
-    // Every request fails identically until this is fixed — see alerts/services.yaml's
-    // PaidPathBroken, which this phrase is matched by.
+    // Every request fails identically until this is fixed — see
+    // observability/alerts/services.yaml's PaidPathBroken, which this phrase is matched by.
     logger.error({ err }, "NFT_WALLET_PRIVATE_KEY not configured or invalid");
     return errorResponse(500, `Server configuration error: ${(err as Error).message}`);
   }
@@ -535,8 +535,8 @@ async function handle(
       paymentRequirements,
     );
   } catch (error) {
-    // Our call to the facilitator threw — see alerts/services.yaml's SellerPaymentFailing,
-    // which this phrase (shared with llmx402/searchapi) is matched by.
+    // Our call to the facilitator threw — see observability/alerts/services.yaml's
+    // SellerPaymentFailing, which this phrase (shared with llmx402/searchapi) is matched by.
     logger.error({ err: error }, "Payment verification error");
     return paymentError("facilitator_error", { details: (error as Error).message });
   }
@@ -584,7 +584,8 @@ async function handle(
     );
 
     if (!preFlightResult.success) {
-      // Our wallet or our RPC, never the caller's — see alerts/services.yaml's PaidPathBroken.
+      // Our wallet or our RPC, never the caller's — see observability/alerts/services.yaml's
+      // PaidPathBroken.
       logger.error(
         { reason: preFlightResult.error, details: preFlightResult.details },
         "Pre-flight check failed",
@@ -662,8 +663,8 @@ async function handle(
       //
       // The payment HAS settled by this point — settlement deliberately precedes the mint, see
       // above — so the settlement headers are attached here too. The caller paid for a
-      // generation they received; what they did not get is the NFT. See alerts/services.yaml's
-      // PaidButUndelivered.
+      // generation they received; what they did not get is the NFT. See
+      // observability/alerts/services.yaml's PaidButUndelivered.
       logger.error(
         { err: mintError, payer: clientAddress, network: clientNetwork },
         "Mint failed after successful generation",
@@ -710,7 +711,7 @@ async function handle(
     };
   } catch (error) {
     // The outer catch: a bug, an upstream nobody has a rule for yet, or S3 failing. See
-    // alerts/services.yaml's ServiceUnhandledError.
+    // observability/alerts/services.yaml's ServiceUnhandledError.
     logger.error({ err: error }, "Error during operation");
     return errorResponse(500, `Operation failed: ${(error as Error).message}`);
   }

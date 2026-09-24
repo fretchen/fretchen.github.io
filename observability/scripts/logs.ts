@@ -9,12 +9,11 @@
  *
  * **One token, the whole project.** Cockpit is scoped to the Scaleway *project*, not to a service,
  * so this reads every function in the account — `facilitator`, `llmx402`, `llmx402cron`,
- * `searchapi`, `genimgx402token`, `growthapi`, comments — even though the script lives in `scw_js`.
- * It is here because this package already holds the operational scripts; it is not about scw_js.
- * Do NOT copy it per package: that would mean the same secret in five gitignored files with no way
+ * `searchapi`, `genimgx402token`, `growthapi`, comments. That is why it lives in `observability/`,
+ * which belongs to no single service. Do NOT copy it per package: that would mean the same secret in five gitignored files with no way
  * to rotate them together.
  *
- * Needs `SCW_COCKPIT_LOGS_URL` and `SCW_COCKPIT_LOGS_TOKEN` in `scw_js/.env`. The token is a
+ * Needs `SCW_COCKPIT_LOGS_URL` and `SCW_COCKPIT_LOGS_TOKEN` in `observability/.env`. The token is a
  * **Cockpit** token (`read_only_logs` scope) — a different credential type from `SCW_SECRET_KEY`,
  * which is rejected here with a 403. Create one with:
  *
@@ -23,7 +22,7 @@
  * Its secret is shown exactly once, so save it immediately; a token whose secret is lost cannot be
  * used or audited, only deleted.
  *
- * Usage (from scw_js/):
+ * Usage (from observability/):
  *   npx tsx scripts/logs.ts                                    # what can I query? (labels + names)
  *   npx tsx scripts/logs.ts facilitator                        # last hour, by name fragment
  *   npx tsx scripts/logs.ts facilitator --since 36h --grep "Settlement failed"
@@ -38,7 +37,7 @@ const TOKEN = process.env.SCW_COCKPIT_LOGS_TOKEN;
 
 if (!URL_BASE || !TOKEN) {
   console.error(
-    "Missing SCW_COCKPIT_LOGS_URL / SCW_COCKPIT_LOGS_TOKEN in scw_js/.env — see this file's header.",
+    "Missing SCW_COCKPIT_LOGS_URL / SCW_COCKPIT_LOGS_TOKEN in observability/.env — see this file's header.",
   );
   process.exit(1);
 }
@@ -61,7 +60,9 @@ function flag(name: string, fallback?: string): string | undefined {
 
 const RAW = process.argv.includes("--raw");
 const positional = process.argv.slice(2).filter((a, i, all) => {
-  if (a.startsWith("--")) return false;
+  if (a.startsWith("--")) {
+    return false;
+  }
   return !all[i - 1]?.startsWith("--") || all[i - 1] === "--raw";
 });
 
@@ -75,7 +76,9 @@ async function loki(
   params: Record<string, string> = {},
 ): Promise<Record<string, unknown>> {
   const url = new global.URL(`${URL_BASE}${path}`);
-  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+  for (const [k, v] of Object.entries(params)) {
+    url.searchParams.set(k, v);
+  }
   const res = await fetch(url, { headers: { "X-Token": TOKEN! } });
   if (!res.ok) {
     // Never echo the token, not even truncated — this output gets pasted into issues.
@@ -101,7 +104,9 @@ async function describe(): Promise<void> {
     await loki("/loki/api/v1/label/resource_name/values", { start: ns(start), end: ns(end) })
   ).data as string[];
   console.log(`functions logging in the last ${flag("since", "1h")}:`);
-  for (const name of names ?? []) console.log(`  ${name}`);
+  for (const name of names ?? []) {
+    console.log(`  ${name}`);
+  }
   console.log(`\nQuery one with:  npx tsx scripts/logs.ts <fragment of the name> --since 6h`);
 }
 
@@ -140,7 +145,9 @@ async function query(target: string): Promise<void> {
     let text = line;
     try {
       const parsed = JSON.parse(line) as { message?: string };
-      if (typeof parsed.message === "string") text = parsed.message;
+      if (typeof parsed.message === "string") {
+        text = parsed.message;
+      }
     } catch {
       /* not JSON — print the raw line */
     }

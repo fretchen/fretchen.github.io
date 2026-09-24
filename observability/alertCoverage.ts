@@ -2,13 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 
 /**
- * Shared parser behind both packages' alert_coverage.test.ts — this package's own
- * (`scw_js/test/alert_coverage.test.ts`) and `x402_facilitator/test/alert_coverage.test.ts`, which
- * imports this file by relative path across the package boundary. That boundary was already being
- * crossed one-way (the facilitator's test reads this package's `alerts/*.yaml` by relative path);
- * this just crosses it for the parsing code too, instead of hand-copying it. The two copies had
- * already drifted once before this file existed — this package's console.* check didn't exist in
- * the facilitator's copy.
+ * Shared parser behind `scw_js/test/alert_coverage.test.ts` and
+ * `x402_facilitator/test/alert_coverage.test.ts`. Both import it by relative path and read the
+ * rules next to it in `alerts/`, so neither service owns the alerting setup. It replaced two
+ * hand-copied versions of this parser, which had already drifted once (only one of them had the
+ * console.* check).
+ *
+ * **Node built-ins only.** Those two packages' CI jobs never run `npm install` here, so an import
+ * from this package's own node_modules would work locally and break in CI.
  *
  * Deliberately a light regex scan over source text, not a TS/YAML parser — same spirit as
  * website/test/styleConventions.test.ts. Known limits, both acceptable for a guard whose job is
@@ -21,7 +22,7 @@ import path from "node:path";
  *     rule "counts" for a package if its resource_name selector text mentions any of that
  *     package's function names, without attributing which message came from which deployed
  *     function. Real Loki ANDs every filter and anchors the selector per function (see
- *     scw_js/alerts/services.yaml's header on `.+llmx402` never matching `…llmx402cron`), so this
+ *     alerts/services.yaml's header on `.+llmx402` never matching `…llmx402cron`), so this
  *     is more permissive than the deployed rules. That direction of error is the safe one: it can
  *     under-report a genuine gap far less easily than it can wrongly flag a covered message. The
  *     one place this repo has hit the imprecision in practice — PaidPathBroken's selector textually
@@ -108,8 +109,6 @@ export function isCovered(rules: Rule[], message: string): boolean {
     if (!first) {
       return false;
     }
-    return first.op === "="
-      ? message.includes(first.value)
-      : new RegExp(first.value).test(message);
+    return first.op === "=" ? message.includes(first.value) : new RegExp(first.value).test(message);
   });
 }

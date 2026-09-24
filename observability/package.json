@@ -1,0 +1,29 @@
+{
+  "name": "observability",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Project-wide Loki alert rules, the log/alert CLIs, and the alert-coverage helper both service packages test against",
+  "type": "module",
+  "scripts": {
+    "logs": "tsx scripts/logs.ts",
+    "alerts": "tsx scripts/alerts.ts",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "tsc --noEmit && npm run lint && npm run format:check && npm test"
+  },
+  "dependencies": {
+    "dotenv": "^18.0.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.0",
+    "@types/node": "^26.1.0",
+    "eslint": "^10.0.0",
+    "prettier": "^3.6.2",
+    "tsx": "^4.23.12",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.58.2",
+    "vitest": "^4.1.11"
+  }
+}

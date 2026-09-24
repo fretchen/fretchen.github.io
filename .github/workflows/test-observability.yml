@@ -1,0 +1,42 @@
+name: Test Observability
+
+permissions:
+    contents: read
+
+on:
+    pull_request:
+        paths:
+            - "observability/**"
+            - ".github/workflows/test-observability.yml"
+    push:
+        branches:
+            - main
+        paths:
+            - "observability/**"
+
+jobs:
+    test-observability:
+        runs-on: ubuntu-latest
+
+        defaults:
+            run:
+                working-directory: ./observability
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v6
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v6
+              with:
+                  node-version: "24"
+                  cache: "npm"
+                  cache-dependency-path: observability/package-lock.json
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Run quality checks (typecheck + lint + format + test)
+              run: npm run check
+              env:
+                  CI: true

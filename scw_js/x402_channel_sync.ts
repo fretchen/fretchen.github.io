@@ -1,9 +1,7 @@
 import { createPublicClient, http } from "viem";
 import { getViemChain, getRpcUrl } from "@fretchen/chain-utils";
 import type { Channel, ChannelStorage } from "@x402/evm/batch-settlement/server";
-import pino from "pino";
-
-const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
+import { logger } from "./logger.js";
 
 /** Canonical CREATE2 address of the x402BatchSettlement escrow, same on every chain. */
 const BATCH_SETTLEMENT_ADDRESS = "0x4020074e9dF2ce1deE5A9C1b5c3f541D02a10003" as const;

@@ -180,15 +180,15 @@ This runs all daily tasks (analytics, publish, pipeline refill) and weekly tasks
 ### 4. Inspect logs
 
 Grafana/Cockpit dashboards have not worked for this account — they render empty. Read the logs
-through Cockpit's Loki API instead, with the script in `scw_js`:
+through Cockpit's Loki API instead, with the script in `observability/`:
 
 ```bash
-cd ../scw_js && npx tsx scripts/logs.ts growth --since 24h
+cd ../observability && npx tsx scripts/logs.ts growth --since 24h
 ```
 
 One Cockpit token covers the whole Scaleway project, so that command reads this container's logs as
 well as every serverless function's. Setup and caveats are in
-[`scw_js/README.md`](../scw_js/README.md) → _Reading the logs_.
+[`observability/README.md`](../observability/README.md).
 
 ### Common issues
 

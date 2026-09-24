@@ -1,11 +1,15 @@
+import { logger } from "./logger.js";
+
 if (process.env.NODE_ENV === "test" && !process.env.CI) {
   try {
     await import("dotenv").then((dotenv) => {
       dotenv.config();
-      console.log("Environment variables loaded from .env");
+      logger.debug("Environment variables loaded from .env");
     });
   } catch (error) {
-    console.error("Error loading dotenv:", error);
+    // Local dev only, and dotenv itself still works without a .env file — warn, not error;
+    // nothing here decides a response or needs paging.
+    logger.warn({ err: error }, "Could not load .env in local dev");
   }
 }
 
@@ -66,10 +70,12 @@ export async function uploadToS3(
       acl: "public-read",
       cacheControl: "public, max-age=31536000, immutable",
     });
-    console.log(`Successfully uploaded ${fileName}`);
+    logger.debug({ fileName }, "Uploaded to S3");
     return `${JSON_BASE_PATH}${fileName}`;
   } catch (error) {
-    console.error(`Error uploading file: ${error}`);
+    // Rethrown — the caller's own catch (genimg_x402_token.ts's outer "Error during operation")
+    // is what's alert-covered, so this is diagnostic detail, not a second alert.
+    logger.warn({ err: error, fileName }, "S3 upload failed");
     throw error;
   }
 }
@@ -89,7 +95,7 @@ async function generateImageBFL(
     );
   }
 
-  console.log(`Sending BFL image generation request in ${mode} mode...`);
+  logger.debug({ mode }, "Sending BFL image generation request");
 
   const requestBody: Record<string, unknown> = {
     prompt,
@@ -99,7 +105,7 @@ async function generateImageBFL(
 
   if (mode === "edit" && referenceImageBase64) {
     requestBody["input_image"] = referenceImageBase64;
-    console.log("Reference image added for editing");
+    logger.debug("Reference image added for editing");
   }
 
   const response = await fetch(config.endpoint, {
@@ -138,13 +144,13 @@ async function generateImageBFL(
     throw new Error(`Untrusted BFL polling URL: ${polling_url}`);
   }
 
-  console.log(`BFL request started with ID: ${requestId}`);
+  logger.debug({ requestId }, "BFL request started");
 
   const maxAttempts = 60;
   const pollInterval = 5000;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    console.log(`Polling attempt ${attempt + 1}/${maxAttempts}...`);
+    logger.debug({ attempt: attempt + 1, maxAttempts }, "Polling attempt");
 
     if (attempt > 0) {
       await new Promise((resolve) => setTimeout(resolve, pollInterval));
@@ -158,7 +164,7 @@ async function generateImageBFL(
       });
 
       if (!pollResponse.ok) {
-        console.warn(`Poll request failed: ${pollResponse.status}`);
+        logger.warn({ status: pollResponse.status }, "Poll request failed");
         continue;
       }
 
@@ -166,7 +172,7 @@ async function generateImageBFL(
     } catch (error) {
       // Only transport-level failures are retried. A transient network blip on one poll is
       // worth another attempt; a generation the API has already declared failed is not.
-      console.warn(`Polling error (attempt ${attempt + 1}):`, (error as Error).message);
+      logger.warn({ err: error, attempt: attempt + 1 }, "Polling error");
       continue;
     }
 
@@ -180,7 +186,7 @@ async function generateImageBFL(
     }
     const pollData = poll.data;
 
-    console.log(`Poll status: ${pollData.status}`);
+    logger.debug({ status: pollData.status }, "Poll status");
 
     // Deliberately outside the try above. These used to be thrown inside it and caught by its
     // own catch, so a generation BFL had reported as Failed was swallowed and retried for the
@@ -198,7 +204,7 @@ async function generateImageBFL(
       if (!imageUrl) {
         throw new Error(`BFL reported Ready without a result URL: ${JSON.stringify(rawPoll)}`);
       }
-      console.log("Downloading image from:", imageUrl);
+      logger.debug({ imageUrl }, "Downloading image");
 
       // Its own try/catch, separate from the Error/Failed check above: a transient failure
       // fetching the delivery CDN (a fresh URL that has not necessarily propagated yet) is
@@ -215,7 +221,7 @@ async function generateImageBFL(
         const imageBuffer = await imageResponse.arrayBuffer();
         return Buffer.from(imageBuffer).toString("base64");
       } catch (error) {
-        console.warn(`Image download error (attempt ${attempt + 1}):`, (error as Error).message);
+        logger.warn({ err: error, attempt: attempt + 1 }, "Image download error");
         continue;
       }
     }
@@ -263,7 +269,7 @@ export async function generateAndUploadImage(
     mode,
     referenceImageBase64,
   );
-  console.log("Image received from", provider, "in", mode, "mode");
+  logger.debug({ provider, mode }, "Image received from provider");
 
   const imageFileName = `images/image_${tokenId}_${getRandomString()}.jpg`;
   const imageBuffer = base64ToBuffer(imageBase64);
@@ -283,6 +289,6 @@ export async function generateAndUploadImage(
   };
 
   const metadataUrl = await uploadToS3(metadata, metadataFileName);
-  console.log(`Image and metadata uploaded successfully for token ${tokenId}`);
+  logger.info({ tokenId }, "Image and metadata uploaded successfully");
   return metadataUrl;
 }

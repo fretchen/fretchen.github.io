@@ -1,8 +1,6 @@
 import { getS3Object, putS3Object } from "@fretchen/s3-utils";
-import pino from "pino";
+import { logger } from "./logger.js";
 import { parseOwnerAddresses, verifySignedMessage } from "@fretchen/chain-utils";
-
-const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
 const STATE_PREFIX = "growth-agent/";
 // ===== TypeScript interfaces mirroring Python Pydantic models =====

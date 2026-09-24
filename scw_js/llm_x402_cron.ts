@@ -1,4 +1,4 @@
-import pino from "pino";
+import { logger } from "./logger.js";
 import { createPublicClient, http } from "viem";
 import { getUSDCConfig, getViemChain, getRpcUrl } from "@fretchen/chain-utils";
 import {
@@ -12,8 +12,6 @@ import {
 import { resyncChannelState } from "./x402_channel_sync.js";
 import type { Channel } from "@x402/evm/batch-settlement/server";
 import type { ScwEvent } from "./types.js";
-
-const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 
 const ERC20_ALLOWANCE_ABI = [
   {

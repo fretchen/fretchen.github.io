@@ -1,4 +1,4 @@
-import pino from "pino";
+import { logger } from "./logger.js";
 import { z } from "zod";
 
 /**
@@ -15,8 +15,6 @@ import { z } from "zod";
  * Split the same way as `image_service.ts` / `llm_service.ts`: this module owns the upstream call
  * and the projection, the handler owns auth, routing and HTTP shape.
  */
-
-const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
 const BRAVE_ENDPOINT = "https://api.search.brave.com/res/v1/llm/context";
 

@@ -261,6 +261,10 @@ export async function handle(_: ScalewayEvent, _context: unknown): Promise<Scale
 
   const facilitator = getFacilitatorAddress();
   if (!facilitator) {
+    // Logged, not just returned: this run produces no email at all, which would otherwise
+    // look identical to a week with nothing to report. The phrase matches FacilitatorBroken
+    // in observability/alerts/payments.yaml.
+    logger.error("Cannot send wallet report: FACILITATOR_WALLET_PRIVATE_KEY not configured");
     return {
       statusCode: 500,
       headers,

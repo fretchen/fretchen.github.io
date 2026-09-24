@@ -1064,7 +1064,6 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       if (!verifyCall) {
         throw new Error("verify call not found");
       }
-      expect(verifyCall).toBeDefined();
 
       const verifyBody = JSON.parse(String(verifyCall[1]?.body));
       expect(verifyBody.paymentRequirements.network).toBe("eip155:10");
@@ -1133,7 +1132,6 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       if (!verifyCall) {
         throw new Error("verify call not found");
       }
-      expect(verifyCall).toBeDefined();
 
       const verifyBody = JSON.parse(String(verifyCall[1]?.body));
       expect(verifyBody.paymentRequirements.network).toBe("eip155:11155420");

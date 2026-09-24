@@ -9,9 +9,7 @@ import { getUSDCConfig, loadPrivateKey } from "@fretchen/chain-utils";
 import { privateKeyToAccount } from "viem/accounts";
 import { S3ChannelStorage } from "./x402_channel_storage.js";
 import { EXPOSED_X402_HEADERS } from "./utils.js";
-import pino from "pino";
-
-const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
+import { logger } from "./logger.js";
 
 const FACILITATOR_URL = process.env.FACILITATOR_URL ?? "https://facilitator.fretchen.eu";
 

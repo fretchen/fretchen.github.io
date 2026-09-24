@@ -38,7 +38,6 @@ describe("NFT ABI Tests", () => {
         throw new Error("ownerOf not found in ABI");
       }
 
-      expect(ownerOfFunction).toBeDefined();
       expect(ownerOfFunction.inputs).toHaveLength(1);
       expect(ownerOfFunction.inputs[0]!.type).toBe("uint256");
       expect(ownerOfFunction.outputs).toHaveLength(1);
@@ -51,7 +50,6 @@ describe("NFT ABI Tests", () => {
         throw new Error("requestImageUpdate not found in ABI");
       }
 
-      expect(requestImageUpdateFunction).toBeDefined();
       expect(requestImageUpdateFunction.inputs).toHaveLength(2);
       expect(requestImageUpdateFunction.inputs[0]!.type).toBe("uint256");
       expect(requestImageUpdateFunction.inputs[1]!.type).toBe("string");

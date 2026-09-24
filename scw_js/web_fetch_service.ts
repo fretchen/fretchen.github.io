@@ -1,5 +1,5 @@
 import { lookup } from "node:dns/promises";
-import pino from "pino";
+import { logger } from "./logger.js";
 
 /**
  * Fetches an arbitrary web page on behalf of /assistent's `fetch_url` tool.
@@ -26,8 +26,6 @@ import pino from "pino";
  * agent/lookup, which is disproportionate here. Everything else — scheme, address space, each
  * redirect hop, body size, content type, time — is enforced.
  */
-
-const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 
 /** Redirects followed before giving up. Each hop is re-validated; see `fetchExternalHtml`. */
 const MAX_REDIRECTS = 3;

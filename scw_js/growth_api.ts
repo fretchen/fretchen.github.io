@@ -1,4 +1,4 @@
-import pino from "pino";
+import { logger } from "./logger.js";
 import {
   getContentQueue,
   getInsights,
@@ -13,8 +13,6 @@ import {
 } from "./growth_service.js";
 import { parseBearerToken } from "@fretchen/chain-utils";
 import { parseJsonBody } from "./utils.js";
-
-const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
 const HEADERS = {
   "Access-Control-Allow-Origin": "*",

@@ -44,9 +44,7 @@ import type { ScwEvent } from "./types.js";
 import openapiSpec from "./openapi.genimg.json" with { type: "json" };
 import { faviconBase64, faviconContentType } from "./favicon.js";
 import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
-import pino from "pino";
-
-const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
+import { logger } from "./logger.js";
 
 // Re-export for backward compatibility with tests
 export { handle, create402Response };

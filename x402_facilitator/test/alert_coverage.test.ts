@@ -2,31 +2,39 @@ import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+// Crosses the package boundary the same way this file's own ALERTS_DIR already does (below) —
+// reading scw_js/alerts/*.yaml by relative path. tsconfig.json's `rootDir` had to be dropped for
+// this: with `noEmit: true` it served no purpose (nothing is emitted) except making `tsc` refuse
+// to type-check a source file living outside this package (TS6059), which is exactly what this
+// import needs to do.
+import {
+  sourceFiles,
+  stripStringLiterals,
+  extractLoggerErrorMessages,
+  extractRules,
+  rulesForFunctions,
+  isCovered,
+} from "../../scw_js/test/lib/alertCoverageLib.js";
 
 /**
  * Coverage guard for the "logger.error means ours, and should page" convention — see
  * scw_js/alerts/payments.yaml's "The `logger.error` convention" section and this package's
- * README "Alerting" note.
+ * README "Alerting" note. The parsing logic is shared with
+ * scw_js/test/alert_coverage.test.ts via `scw_js/test/lib/alertCoverageLib.ts`; see that file's
+ * header for the fuller rationale (#683) and its documented limits.
  *
  * Why this exists: #683 was a batch of deep x402 bugs that ran silently for weeks because
  * nothing alerted on the log lines that recorded them. The fix was `scw_js/alerts/*.yaml`, but a
  * yaml file with rules only helps for the failures someone remembered to write a rule for. This
- * test makes that pairing an assertion instead of a habit: every `logger.error(...)` call site in
- * this package must be matched by some rule's filter, or be named in EXEMPT with a reason. Add a
- * new logger.error with no matching rule (or delete a rule a message still depends on) and this
- * test fails, in this package, before it reaches production.
+ * test makes that pairing an assertion instead of a habit.
  *
- * Deliberately a light regex scan over source text, not a TS/YAML parser — same spirit as
- * website/test/styleConventions.test.ts. Known limits, both acceptable for a guard whose job is
- * to catch an *omission*, not to fully model Loki:
- *   - The message is taken as the LAST string/template literal in a logger.error(...) call's
- *     argument list. True for every call in this package today, because the merging object
- *     (`{ err, network }`, ...) never itself contains a quoted string value. A call that broke
- *     this assumption would still be scanned, just possibly mismatched.
- *   - Only a rule's FIRST `|=`/`|~` log-line filter is checked. Real Loki ANDs every filter on a
- *     rule (see FacilitatorNeedsAttention, which also requires "Settlement failed"), so this is
- *     more permissive than the deployed rule. That direction of error is the safe one here: it
- *     can under-report a genuine gap far less easily than it can wrongly flag a covered message.
+ * Two assertions, same shape as scw_js's copy:
+ *   1. Every `logger.error(...)` call site in this package's root `.ts` files is matched by some
+ *      rule's filter in `scw_js/alerts/*.yaml`, or is named in EXEMPT with a reason.
+ *   2. No root `.ts` file calls `console.*` at all. This package was already console-free when
+ *      this check was added — it exists so it stays that way, since a `console.*` regression
+ *      here would be just as unwatchable by Loki as it was for genimg before scw_js's own copy
+ *      of this test gained the same check.
  */
 
 const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -42,81 +50,13 @@ const EXEMPT: Record<string, string> = {
     "so it already reaches an inbox without a Loki rule",
 };
 
-interface LoggedMessage {
-  file: string;
-  message: string;
-}
-
-function extractLoggerErrorMessages(): LoggedMessage[] {
-  const files = fs
-    .readdirSync(PACKAGE_ROOT)
-    .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"));
-
-  const messages: LoggedMessage[] = [];
-  for (const file of files) {
-    const text = fs.readFileSync(path.join(PACKAGE_ROOT, file), "utf8");
-    for (const call of text.matchAll(/logger\.error\(([\s\S]*?)\);/g)) {
-      const args = call[1];
-      // The message is the last string/template literal in the call's argument list.
-      const literals = [...args.matchAll(/"(?:[^"\\]|\\.)*"|`(?:[^`\\]|\\.)*`/g)];
-      if (literals.length === 0) {
-        continue; // e.g. a bare logger.error(err) — none exist today
-      }
-      const raw = literals[literals.length - 1][0];
-      const message = raw.startsWith("`")
-        ? raw.slice(1, -1).split("${")[0] // static prefix of a template literal
-        : raw.slice(1, -1);
-      messages.push({ file, message });
-    }
-  }
-  return messages;
-}
-
-interface Rule {
-  alert: string;
-  selector: string;
-  filters: { op: "=" | "~"; value: string }[];
-}
-
-function extractRules(): Rule[] {
-  const rules: Rule[] = [];
-  for (const yamlFile of fs.readdirSync(ALERTS_DIR).filter((f) => f.endsWith(".yaml"))) {
-    const text = fs.readFileSync(path.join(ALERTS_DIR, yamlFile), "utf8");
-    // Every rule is a "  - alert: Name" list item at the same indent; split on that marker.
-    const chunks = text.split(/\n(?= {2}- alert: )/).slice(1);
-    for (const chunk of chunks) {
-      const alert = /- alert: (\S+)/.exec(chunk)?.[1];
-      const selector = /resource_name=~?"((?:[^"\\]|\\.)*)"/.exec(chunk)?.[1];
-      if (!alert || !selector) {
-        continue;
-      }
-      const filters = [...chunk.matchAll(/\|([=~]) "((?:[^"\\]|\\.)*)"/g)].map((m) => ({
-        op: m[1] as "=" | "~",
-        value: m[2],
-      }));
-      rules.push({ alert, selector, filters });
-    }
-  }
-  return rules;
-}
-
-const messages = extractLoggerErrorMessages();
-const rules = extractRules();
 // Only rules whose selector names this package's two deployed functions — a rule scoped to
 // llmx402cron or searchapi says nothing about whether the facilitator itself is covered.
-const facilitatorRules = rules.filter(
-  (r) => r.selector.includes("facilitator") || r.selector.includes("walletreportcron"),
-);
+const FACILITATOR_FUNCTIONS = ["facilitator", "walletreportcron"];
 
-function isCovered(message: string): boolean {
-  return facilitatorRules.some((rule) => {
-    const first = rule.filters[0];
-    if (!first) {
-      return false;
-    }
-    return first.op === "=" ? message.includes(first.value) : new RegExp(first.value).test(message);
-  });
-}
+const messages = extractLoggerErrorMessages(PACKAGE_ROOT);
+const rules = extractRules(ALERTS_DIR);
+const facilitatorRules = rulesForFunctions(rules, FACILITATOR_FUNCTIONS);
 
 describe("facilitator alert coverage", () => {
   it("found a realistic number of logger.error call sites", () => {
@@ -145,11 +85,24 @@ describe("facilitator alert coverage", () => {
         return;
       }
       expect(
-        isCovered(message),
+        isCovered(facilitatorRules, message),
         `logger.error("${message}") in ${file} is not matched by any rule's first filter in ` +
           `scw_js/alerts/*.yaml, and is not in this test's EXEMPT map. Either add/extend a rule ` +
           `there, or add this message to EXEMPT with a reason.`,
       ).toBe(true);
+    });
+  }
+
+  for (const file of sourceFiles(PACKAGE_ROOT)) {
+    it(`${file} does not call console.*`, () => {
+      const text = fs.readFileSync(path.join(PACKAGE_ROOT, file), "utf8");
+      const withoutStrings = stripStringLiterals(text);
+      const match = /console\.\w+\(/.exec(withoutStrings);
+      expect(
+        match,
+        `${file} calls ${match?.[0] ?? "console.*"} — use the file's pino \`logger\` instead, ` +
+          `so the call can be alert-covered like every other logger.error in this package.`,
+      ).toBeNull();
     });
   }
 });

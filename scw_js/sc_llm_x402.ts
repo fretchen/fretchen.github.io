@@ -16,7 +16,7 @@ import {
   MAX_MESSAGES_BYTES,
 } from "./llm_schemas.js";
 import { getUSDCConfig, isTestnet } from "@fretchen/chain-utils";
-import pino from "pino";
+import { logger } from "./logger.js";
 import {
   createLLMResourceServer,
   createBatchSettlementPaymentRequirements,
@@ -42,8 +42,6 @@ interface ScwResponse {
   headers: Record<string, string>;
   isBase64Encoded?: boolean;
 }
-
-const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 
 // Ceiling price per message, in USDC atomic units (6 decimals) — the *maximum* a message
 // can cost, not what it actually costs. This is what the 402 advertises and what the

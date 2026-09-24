@@ -483,8 +483,6 @@ describe("image_service.js Tests", () => {
         throw new Error("no metadata upload call found");
       }
 
-      expect(metadataCall).toBeDefined();
-
       const metadata = JSON.parse(metadataCall[1]);
       expect(metadata).toEqual({
         name: `AI Generated Art #${tokenId}`,
@@ -529,7 +527,6 @@ describe("image_service.js Tests", () => {
         throw new Error("no image upload call found");
       }
 
-      expect(imageCall).toBeDefined();
       expect(Buffer.isBuffer(imageCall[1])).toBe(true);
       // Round-trips the downloaded bytes rather than just being non-empty.
       expect(Uint8Array.from(imageCall[1])).toEqual(IMAGE_BYTES);
@@ -613,7 +610,6 @@ describe("image_service.js Tests", () => {
       if (!metadataCall) {
         throw new Error("no metadata upload call found");
       }
-      expect(metadataCall).toBeDefined();
       const sizeAttribute = JSON.parse(metadataCall[1]).attributes.find(
         (attr: { trait_type: string }) => attr.trait_type === "Image Size",
       );

@@ -148,7 +148,6 @@ describe("getChain.js - Chain Configuration Tests", () => {
       if (result.valid) {
         throw new Error("expected an invalid result");
       }
-      expect(result.valid).toBe(false);
       expect(result.reason).toBe("missing_network");
     });
 
@@ -169,7 +168,6 @@ describe("getChain.js - Chain Configuration Tests", () => {
       if (result.valid) {
         throw new Error("expected an invalid result");
       }
-      expect(result.valid).toBe(false);
       expect(result.reason).toBe("unsupported_network");
       expect(result.expected).toEqual(["eip155:10", "eip155:8453", "eip155:11155420"]);
       expect(result.received).toBe("eip155:84532");

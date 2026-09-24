@@ -1,4 +1,4 @@
-import pino from "pino";
+import { logger } from "./logger.js";
 import { getUSDCConfig } from "@fretchen/chain-utils";
 import { searchWeb, QueryError } from "./search_service.js";
 import { fetchExternalHtml, FetchUrlError, parseHttpsUrl } from "./web_fetch_service.js";
@@ -55,8 +55,6 @@ import {
  * settlement, which is the whole price of a search and ten times the price of a fetch. Batch
  * settlement pays that fee once per claim instead.
  */
-
-const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
 /**
  * Mainnet only, unlike the chat, which also accepts Base Sepolia.

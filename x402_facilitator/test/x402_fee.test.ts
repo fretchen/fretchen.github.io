@@ -44,6 +44,10 @@ vi.mock("viem/accounts", () => ({
   }),
 }));
 
+// The fee is charged in the settled token, so every fee call names one.
+const OP_SEPOLIA_USDC = "0x5fd84259d66Cd46123540766Be93DFE6D43130D7";
+const BASE_EURC = "0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42";
+
 describe("x402_fee", () => {
   const originalEnv = { ...process.env };
   const VALID_PRIVATE_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
@@ -155,7 +159,7 @@ describe("x402_fee", () => {
         }),
       );
 
-      const result = await checkMerchantAllowance(merchant, "eip155:11155420");
+      const result = await checkMerchantAllowance(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
 
       expect(result.status).toBe("ok");
       expect(result.allowance).toBe(100000n);
@@ -172,7 +176,7 @@ describe("x402_fee", () => {
         }),
       );
 
-      const result = await checkMerchantAllowance(merchant, "eip155:11155420");
+      const result = await checkMerchantAllowance(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
 
       expect(result.status).toBe("insufficient");
       expect(result.allowance).toBe(0n);
@@ -189,7 +193,7 @@ describe("x402_fee", () => {
         }),
       );
 
-      const result = await checkMerchantAllowance(merchant, "eip155:11155420");
+      const result = await checkMerchantAllowance(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
 
       expect(result.status).toBe("insufficient");
       expect(result.allowance).toBe(5000n);
@@ -198,7 +202,7 @@ describe("x402_fee", () => {
     it("returns status=ok when fee is 0 (fees disabled)", async () => {
       process.env.FACILITATOR_FEE_AMOUNT = "0";
 
-      const result = await checkMerchantAllowance(merchant, "eip155:11155420");
+      const result = await checkMerchantAllowance(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
 
       expect(result.status).toBe("ok");
       expect(result.remainingSettlements).toBe(Infinity);
@@ -207,7 +211,7 @@ describe("x402_fee", () => {
     it("returns insufficient when facilitator address not configured", async () => {
       delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
 
-      const result = await checkMerchantAllowance(merchant, "eip155:11155420");
+      const result = await checkMerchantAllowance(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
 
       expect(result.status).toBe("insufficient");
       expect(result.allowance).toBe(0n);
@@ -223,7 +227,7 @@ describe("x402_fee", () => {
         }),
       );
 
-      const result = await checkMerchantAllowance(merchant, "eip155:11155420");
+      const result = await checkMerchantAllowance(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
 
       // "unknown", not "insufficient": verify must not reject a valid payment over a
       // reading we could not take.
@@ -243,7 +247,7 @@ describe("x402_fee", () => {
         }),
       );
 
-      const result = await checkMerchantAllowance(merchant, "eip155:11155420");
+      const result = await checkMerchantAllowance(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
 
       expect(result.status).toBe("ok");
       expect(result.remainingSettlements).toBe(3); // Floor(35000 / 10000)
@@ -260,7 +264,7 @@ describe("x402_fee", () => {
     it("skips fee collection when fee is 0", async () => {
       process.env.FACILITATOR_FEE_AMOUNT = "0";
 
-      const result = await collectFee(merchant, "eip155:11155420");
+      const result = await collectFee(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
 
       expect(result.success).toBe(true);
       expect(result.txHash).toBeUndefined();
@@ -269,7 +273,7 @@ describe("x402_fee", () => {
     it("returns error when private key not configured", async () => {
       delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
 
-      const result = await collectFee(merchant, "eip155:11155420");
+      const result = await collectFee(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe("facilitator_not_configured");
@@ -296,7 +300,7 @@ describe("x402_fee", () => {
         }),
       );
 
-      const result = await collectFee(merchant, "eip155:11155420");
+      const result = await collectFee(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
 
       expect(result.success).toBe(true);
       expect(result.txHash).toBe(mockTxHash);
@@ -323,7 +327,7 @@ describe("x402_fee", () => {
         }),
       );
 
-      const result = await collectFee(merchant, "eip155:11155420");
+      const result = await collectFee(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
 
       expect(result.success).toBe(false);
       expect(result.txHash).toBe(mockTxHash);
@@ -351,7 +355,7 @@ describe("x402_fee", () => {
         }),
       );
 
-      const result = await collectFee(merchant, "eip155:11155420");
+      const result = await collectFee(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
 
       // Not "failed": the tx is still in flight and the hash must survive for
       // later reconciliation, otherwise a retry could double-charge the merchant.
@@ -381,7 +385,7 @@ describe("x402_fee", () => {
         }),
       );
 
-      await collectFee(merchant, "eip155:11155420");
+      await collectFee(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
 
       // Regression guard: an unbounded wait can outlive the settle handler's 60s
       // budget and cost the buyer their receipt for an already-settled payment.
@@ -408,7 +412,7 @@ describe("x402_fee", () => {
         }),
       );
 
-      const result = await collectFee(merchant, "eip155:11155420");
+      const result = await collectFee(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe("fee_collection_failed");
@@ -424,7 +428,7 @@ describe("x402_fee", () => {
         }),
       );
 
-      const result = await collectFee(merchant, "eip155:11155420");
+      const result = await collectFee(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe("insufficient_fee_allowance");
@@ -440,7 +444,7 @@ describe("x402_fee", () => {
         }),
       );
 
-      const result = await collectFee(merchant, "eip155:11155420");
+      const result = await collectFee(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe("insufficient_merchant_balance");
@@ -456,10 +460,27 @@ describe("x402_fee", () => {
         }),
       );
 
-      const result = await collectFee(merchant, "eip155:11155420");
+      const result = await collectFee(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe("fee_collection_failed");
+    });
+
+    it("charges the fee in the token it is given", async () => {
+      const { getContract, createPublicClient } = await import("viem");
+      vi.mocked(createPublicClient).mockReturnValue(
+        mockPublicClient({
+          waitForTransactionReceipt: vi.fn(async () => ({ status: "success" })),
+        }),
+      );
+      const transferFrom = vi.fn().mockResolvedValue("0xfee");
+      vi.mocked(getContract).mockReturnValue(mockContract({ write: { transferFrom } }));
+
+      const result = await collectFee(merchant, "eip155:8453", BASE_EURC);
+
+      expect(result.success).toBe(true);
+      expect(vi.mocked(getContract).mock.calls[0][0].address).toBe(BASE_EURC);
+      expect(transferFrom).toHaveBeenCalledWith([merchant, expect.any(String), 10000n]);
     });
   });
 
@@ -487,7 +508,7 @@ describe("x402_fee", () => {
       process.env.FACILITATOR_FEE_AMOUNT = "0";
       const { getContract } = await import("viem");
 
-      const gate = await evaluateFeeGate(merchant, "eip155:11155420");
+      const gate = await evaluateFeeGate(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
 
       expect(gate.kind).toBe("no_fee");
       // Nothing to collect means nothing to check — no RPC round-trip.
@@ -497,7 +518,7 @@ describe("x402_fee", () => {
     it("rejects with facilitator_not_configured when no facilitator key is set", async () => {
       delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
 
-      const gate = await evaluateFeeGate(merchant, "eip155:11155420");
+      const gate = await evaluateFeeGate(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
 
       expect(gate).toEqual({ kind: "reject", reason: "facilitator_not_configured" });
     });
@@ -505,7 +526,7 @@ describe("x402_fee", () => {
     it("rejects with insufficient_fee_allowance when the allowance is too low", async () => {
       await mockAllowance(5000n);
 
-      const gate = await evaluateFeeGate(merchant, "eip155:11155420");
+      const gate = await evaluateFeeGate(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
 
       // Only the reason travels — the allowance detail behind it is logged, not returned.
       expect(gate).toEqual({ kind: "reject", reason: "insufficient_fee_allowance" });
@@ -514,7 +535,7 @@ describe("x402_fee", () => {
     it("charges, and reports remaining settlements, when the allowance covers the fee", async () => {
       await mockAllowance(100000n);
 
-      const gate = await evaluateFeeGate(merchant, "eip155:11155420");
+      const gate = await evaluateFeeGate(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
 
       expect(gate).toEqual({ kind: "charge", remainingSettlements: 10 });
     });
@@ -527,11 +548,53 @@ describe("x402_fee", () => {
         }),
       );
 
-      const gate = await evaluateFeeGate(merchant, "eip155:11155420");
+      const gate = await evaluateFeeGate(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
 
       // Fails OPEN: a reading we could not take must not block a valid payment, and
       // remainingSettlements stays undefined rather than being reported as 0.
       expect(gate).toEqual({ kind: "charge", remainingSettlements: undefined });
+    });
+
+    it("gates EURC on Base against the EURC allowance", async () => {
+      await mockAllowance(100000n);
+      const { getContract } = await import("viem");
+
+      const gate = await evaluateFeeGate(merchant, "eip155:8453", BASE_EURC);
+
+      expect(gate).toEqual({ kind: "charge", remainingSettlements: 10 });
+      expect(vi.mocked(getContract).mock.calls[0][0].address).toBe(BASE_EURC);
+    });
+
+    it("rejects with unsupported_fee_asset for a token that is not USDC or EURC", async () => {
+      const { getContract } = await import("viem");
+
+      const gate = await evaluateFeeGate(
+        merchant,
+        "eip155:8453",
+        "0x0000000000000000000000000000000000000001",
+      );
+
+      expect(gate).toEqual({ kind: "reject", reason: "unsupported_fee_asset" });
+      expect(getContract).not.toHaveBeenCalled();
+    });
+
+    it("rejects EURC on a network where it is not the registered EURC", async () => {
+      // Base's EURC address means nothing on Optimism, which has no EURC.
+      const gate = await evaluateFeeGate(merchant, "eip155:10", BASE_EURC);
+
+      expect(gate).toEqual({ kind: "reject", reason: "unsupported_fee_asset" });
+    });
+
+    it("does not vet the token when fees are disabled", async () => {
+      process.env.FACILITATOR_FEE_AMOUNT = "0";
+
+      const gate = await evaluateFeeGate(
+        merchant,
+        "eip155:8453",
+        "0x0000000000000000000000000000000000000001",
+      );
+
+      expect(gate.kind).toBe("no_fee");
     });
   });
 });

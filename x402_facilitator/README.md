@@ -57,8 +57,14 @@ The facilitator supports two x402 schemes on the same `/verify` and `/settle` en
 
 ### Recipient gating
 
-There is no whitelist. Both schemes gate recipients the same way: a flat USDC
-allowance the recipient has `approve()`d for the facilitator's wallet.
+There is no whitelist. Both schemes gate recipients the same way: an allowance the
+recipient has `approve()`d for the facilitator's wallet, **in the token the payment settles
+in** — USDC on any network, EURC on Base. The fee is charged in that same token (0.01 USDC or
+0.01 EURC), so a seller paid in both approves both. Any other token is refused with
+`unsupported_fee_asset`. For `exact` the token is `requirements.asset`; for batch-settlement
+it is the channel's token (`payload.token` for `settle`, the claims' channel token for
+`claim`, `channelConfig.token` for a claim-carrying refund), and a batch mixing tokens is
+refused.
 `checkMerchantAllowance()` (`x402_fee.ts`) reads that allowance; an under-approved
 recipient is rejected with `insufficient_fee_allowance` rather than settled for free.
 See _Fee model history_ below for how batch-settlement got here — it started
@@ -142,18 +148,18 @@ facilitator runs without a fee (no `FACILITATOR_WALLET_PRIVATE_KEY`, or fee amou
   "facilitatorFees": {
     "version": "1",
     "model": "flat",
-    "asset": "USDC",
+    "asset": "settled",
     "flatFee": "10000",
     "decimals": 6,
     "recipient": "0xFacilitatorAddress...",
     "networks": ["eip155:10", "eip155:8453", "eip155:11155420", "eip155:84532"],
     "fee": {
       "amount": "10000",
-      "description": "0.01 USDC per settlement",
+      "description": "0.01 of the settled token (USDC, or EURC on Base) per settlement",
       "collection": "post_settlement_transferFrom"
     },
     "setup": {
-      "description": "Recurring USDC approval. Call approve() on the USDC contract for the facilitator's address. The recommended amount is deliberately small: the spender is a hot wallet, so a large standing allowance is a standing risk. Re-approve when remainingSettlements (in the /verify response) runs low; revoke any time with approve(spender, 0).",
+      "description": "Recurring approval, one per token you are paid in: call approve() on the USDC contract (any network) and/or the EURC contract (Base) for the facilitator's address. The recommended amount is deliberately small: the spender is a hot wallet, so a large standing allowance is a standing risk. Re-approve when remainingSettlements (in the /verify response) runs low; revoke any time with approve(spender, 0).",
       "function": "approve(address spender, uint256 amount)",
       "spender": "0xFacilitatorAddress...",
       "recommended_amount": "1000000"
@@ -284,7 +290,9 @@ Error-reason strings come from the `@x402/evm` SDK and are prefixed by scheme (`
 | `invalid_batch_settlement_evm_insufficient_balance` | Channel balance too low for the voucher                                                                                                                         |
 | `invalid_batch_settlement_evm_payload_type`         | Payload type not verifiable via `/verify`, or (on `/settle`) a paying payload missing a usable receiver, naming more than one, or carrying a non-array `claims` |
 | `invalid_batch_settlement_evm_receiver_mismatch`    | A `refund`'s `claims[]` pay out to a receiver other than its own verified channel                                                                               |
-| `insufficient_fee_allowance`                        | Recipient's USDC allowance for the facilitator is too low — `exact`, or any `batch-settlement` payload that executes a claim                                    |
+| `invalid_batch_settlement_evm_token_mismatch`       | A `refund`'s `claims[]` are in a token other than its own verified channel's                                                                                    |
+| `insufficient_fee_allowance`                        | Recipient's allowance (in the settled token) for the facilitator is too low — `exact`, or any `batch-settlement` payload that executes a claim                  |
+| `unsupported_fee_asset`                             | The settled token is neither USDC nor (on Base) EURC, so no fee can be charged in it                                                                            |
 | `invalid_network`                                   | Network not supported                                                                                                                                           |
 | `invalid_payload`                                   | Malformed payload                                                                                                                                               |
 | `unexpected_verify_error`                           | Unexpected error                                                                                                                                                |
@@ -456,6 +464,13 @@ USDC addresses and EIP-712 domain names come from `@fretchen/chain-utils`; `chai
 | Optimism Sepolia | `eip155:11155420` | `0x5fd84259d66Cd46123540766Be93DFE6D43130D7` | `USDC`           | ❌ (no contract) |
 | Base Mainnet     | `eip155:8453`     | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` | `USD Coin`       | ✅               |
 | Base Sepolia     | `eip155:84532`    | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` | `USDC`           | ✅               |
+
+EURC (Circle) is deployed on Base only; the facilitator accepts it there alongside USDC.
+
+| Network      | CAIP-2         | EURC                                         | EURC domain name |
+| ------------ | -------------- | -------------------------------------------- | ---------------- |
+| Base Mainnet | `eip155:8453`  | `0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42` | `EURC`           |
+| Base Sepolia | `eip155:84532` | `0x808456652fdb597867f38412077A9182bf77359F` | `EURC`           |
 
 The canonical `batch-settlement` contract is deployed at the same address on every supported chain: `0x4020074e9dF2ce1deE5A9C1b5c3f541D02a10003`.
 

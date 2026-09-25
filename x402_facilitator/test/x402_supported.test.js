@@ -145,7 +145,10 @@ describe("x402 /supported endpoint", () => {
     expect(fees).toBeDefined();
     expect(fees.version).toBe("1");
     expect(fees.model).toBe("flat");
-    expect(fees.asset).toBe("USDC");
+    // The fee is charged in whichever token settles — USDC, or EURC on Base.
+    expect(fees.asset).toBe("settled");
+    expect(fees.fee.description).toContain("EURC");
+    expect(fees.setup.description).toContain("EURC");
     expect(fees.flatFee).toBe("10000");
     expect(fees.decimals).toBe(6);
     // Facilitator address (fee recipient / approval spender) lives here now, not in `extensions`.

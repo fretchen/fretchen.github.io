@@ -24,7 +24,6 @@ import {
 import type { Address } from "viem";
 import type { z } from "zod";
 import type { FeeStatusSchema, FacilitatorFeePaidSchema, SettleResponseBody } from "./x402_schemas";
-import { getChainConfig } from "./chain_utils";
 import { isTestWalletBypassed } from "./x402_whitelist";
 import pino from "pino";
 
@@ -73,47 +72,57 @@ export type SettleResult = SettleResponseBody & { errorMessage?: string };
 const SETTLEMENT_PENDING = "settlement_pending";
 
 /**
- * Derive the single receiver a batch-settlement claim/settle command pays out to.
+ * Return the one value every entry shares, or null when any is missing or they differ.
+ * Case-insensitive: addresses arrive in mixed EIP-55 checksum casing, so a raw string
+ * comparison would reject a legitimate batch.
+ */
+function singleAddress(values: Array<string | undefined>): string | null {
+  if (values.length === 0 || values.some((value) => !value)) {
+    return null;
+  }
+  const unique = new Set(values.map((value) => value!.toLowerCase()));
+  return unique.size === 1 ? values[0]! : null;
+}
+
+/**
+ * Derive the single receiver a batch-settlement claim/settle command pays out to, and the
+ * single token it pays out in — the token the fee is then charged in.
  *
  * Read straight from the payload because that is what the SDK acts on:
- * `executeSettle()` takes its target from `payload.receiver`, and
+ * `executeSettle()` takes its target from `payload.receiver` and `payload.token`, and
  * `executeClaimWithSignature()` builds its claim args solely from `payload.claims` —
- * neither reads `paymentRequirements.payTo`.
+ * neither reads `paymentRequirements.payTo` or `.asset`.
  *
  * A channel is a (payer, receiver, token, …) tuple, so a claim batch is one seller
  * sweeping many of its own payer channels: many vouchers, **one** receiver. The contract
  * would structurally accept a batch spanning channels with different receivers, but this
  * facilitator charges one flat fee against one allowance, so such a batch would let one
  * seller's allowance pay for another seller's payout. Reject it instead — returning null
- * here makes the caller refuse the command.
+ * here makes the caller refuse the command. The same holds for tokens: one flat fee is
+ * charged in one token, so a batch mixing USDC and EURC channels is refused too.
  *
- * Returns null when the payload carries no usable receiver, or when a claim batch names
- * more than one.
+ * Returns null when the payload carries no usable receiver or token, or when a claim batch
+ * names more than one of either.
  */
-function getBatchSettlementReceiver(payload: Record<string, unknown> | undefined): string | null {
+function getBatchSettlementTarget(
+  payload: Record<string, unknown> | undefined,
+): { receiver: string; token: string } | null {
   if (payload?.type === "settle") {
-    return (payload?.receiver as string | undefined) ?? null;
+    const receiver = payload?.receiver as string | undefined;
+    const token = payload?.token as string | undefined;
+    return receiver && token ? { receiver, token } : null;
   }
 
   const claims = payload?.claims as
-    | Array<{ voucher?: { channel?: { receiver?: string } } }>
+    | Array<{ voucher?: { channel?: { receiver?: string; token?: string } } }>
     | undefined;
-  if (!Array.isArray(claims) || claims.length === 0) {
+  if (!Array.isArray(claims)) {
     return null;
   }
 
-  const receivers = claims.map((claim) => claim?.voucher?.channel?.receiver);
-  if (receivers.some((receiver) => !receiver)) {
-    return null;
-  }
-
-  // Compare case-insensitively: addresses arrive in mixed EIP-55 checksum casing, so a
-  // raw string comparison would reject a legitimate single-seller batch.
-  const unique = new Set(receivers.map((receiver) => receiver!.toLowerCase()));
-  if (unique.size > 1) {
-    return null;
-  }
-  return receivers[0]!;
+  const receiver = singleAddress(claims.map((claim) => claim?.voucher?.channel?.receiver));
+  const token = singleAddress(claims.map((claim) => claim?.voucher?.channel?.token));
+  return receiver && token ? { receiver, token } : null;
 }
 
 /**
@@ -129,8 +138,8 @@ function getBatchSettlementReceiver(payload: Record<string, unknown> | undefined
  * - `reject`          — malformed, or claims that do not belong to the verified channel.
  */
 type BatchRoute =
-  | { kind: "command"; feeRecipient: string }
-  | { kind: "claiming-refund"; feeRecipient: string }
+  | { kind: "command"; feeRecipient: string; feeToken: string }
+  | { kind: "claiming-refund"; feeRecipient: string; feeToken: string }
   | { kind: "free" }
   | { kind: "reject"; errorReason: string };
 
@@ -149,9 +158,9 @@ type BatchRoute =
  */
 function classifyBatchSettlement(payload: Record<string, unknown> | undefined): BatchRoute {
   if (isBatchSettlementClaimPayload(payload) || isBatchSettlementSettlePayload(payload)) {
-    const feeRecipient = getBatchSettlementReceiver(payload);
-    return feeRecipient
-      ? { kind: "command", feeRecipient }
+    const target = getBatchSettlementTarget(payload);
+    return target
+      ? { kind: "command", feeRecipient: target.receiver, feeToken: target.token }
       : { kind: "reject", errorReason: "invalid_batch_settlement_evm_payload_type" };
   }
 
@@ -166,8 +175,8 @@ function classifyBatchSettlement(payload: Record<string, unknown> | undefined): 
       return { kind: "free" };
     }
 
-    const claimsReceiver = getBatchSettlementReceiver(payload);
-    if (!claimsReceiver) {
+    const claimsTarget = getBatchSettlementTarget(payload);
+    if (!claimsTarget) {
       return { kind: "reject", errorReason: "invalid_batch_settlement_evm_payload_type" };
     }
 
@@ -177,16 +186,23 @@ function classifyBatchSettlement(payload: Record<string, unknown> | undefined): 
     // caller could submit a perfectly valid refund for a channel it owns while smuggling
     // claims that pay out to arbitrary unrelated receivers, relayed by the facilitator's
     // hot wallet. Anchoring every claim to the one channel verify vouches for closes that.
-    const channelReceiver = (
-      (payload as Record<string, unknown>).channelConfig as { receiver?: string } | undefined
-    )?.receiver;
-    if (!channelReceiver || channelReceiver.toLowerCase() !== claimsReceiver.toLowerCase()) {
+    const channelConfig = (payload as Record<string, unknown>).channelConfig as
+      | { receiver?: string; token?: string }
+      | undefined;
+    const channelReceiver = channelConfig?.receiver;
+    if (!channelReceiver || channelReceiver.toLowerCase() !== claimsTarget.receiver.toLowerCase()) {
       return { kind: "reject", errorReason: "invalid_batch_settlement_evm_receiver_mismatch" };
     }
+    // Same anchoring for the token: the fee is charged in it, so claims in a token other
+    // than the verified channel's could otherwise pick which allowance pays.
+    const channelToken = channelConfig?.token;
+    if (!channelToken || channelToken.toLowerCase() !== claimsTarget.token.toLowerCase()) {
+      return { kind: "reject", errorReason: "invalid_batch_settlement_evm_token_mismatch" };
+    }
 
-    // Take the recipient from channelConfig, not from the claims: they are now proven
-    // equal, and this is the field verify() actually pins to requirements.payTo.
-    return { kind: "claiming-refund", feeRecipient: channelReceiver };
+    // Take recipient and token from channelConfig, not from the claims: they are now proven
+    // equal, and channelConfig is what verify() binds via computeChannelId.
+    return { kind: "claiming-refund", feeRecipient: channelReceiver, feeToken: channelToken };
   }
 
   // Labelled a command but failed the shape guard above — e.g. a `settle` with no
@@ -231,12 +247,13 @@ function feeStatusOf(result: FeeResult): FeeStatus {
 async function collectAndReportFee(
   recipient: Address,
   network: string,
+  token: Address,
 ): Promise<{
   fee: NonNullable<SettleResult["fee"]>;
   extensions: SettleResult["extensions"];
 }> {
   const feeAmount = getFeeAmount();
-  const feeResult = await collectFee(recipient, network);
+  const feeResult = await collectFee(recipient, network, token);
   const feeStatus = feeStatusOf(feeResult);
 
   if (feeStatus === "collected") {
@@ -254,7 +271,7 @@ async function collectAndReportFee(
     );
   } else {
     // Fee collection failed — settlement still succeeded. The fee is not retried:
-    // at 0.01 USDC the bookkeeping to recover it costs far more than the fee.
+    // at 0.01 of a stablecoin the bookkeeping to recover it costs far more than the fee.
     logger.warn(
       { recipient, network, feeError: feeResult.error },
       "Fee collection failed after successful settlement",
@@ -266,7 +283,6 @@ async function collectAndReportFee(
   // the payment actually cost and make the facilitator look cheaper than it is — the
   // worse distortion for a transparency extension. The outcome lives in
   // `collection.status` instead.
-  const chainConfig = getChainConfig(network);
   return {
     fee: {
       collected: feeStatus === "collected",
@@ -279,7 +295,7 @@ async function collectAndReportFee(
         info: {
           version: "1",
           facilitatorFeePaid: feeAmount.toString(),
-          asset: `${network}/erc20:${chainConfig.USDC_ADDRESS}`,
+          asset: `${network}/erc20:${token}`,
           model: "flat",
           collection: {
             status: feeStatus,
@@ -337,7 +353,7 @@ export async function settlePayment(
       // comment above), so this is the only gate they ever pass through. These are the
       // two payload types that actually realize a payment ("usage"), so — unlike
       // deposit/voucher/refund, which are open and fee-free — they carry the same flat
-      // fee `exact` charges, gated by the same USDC allowance check
+      // fee `exact` charges, gated by the same allowance check (in the channel's token)
       // (FEE_MODEL_PLAN.md Phase 3).
       //
       // The gate input must come from what the SDK actually executes on, never from
@@ -370,7 +386,7 @@ export async function settlePayment(
       // takes the same no-receipt path fees-disabled does.
       const gate: FeeGateDecision = isTestWalletBypassed(feeRecipient, network)
         ? { kind: "no_fee" }
-        : await evaluateFeeGate(feeRecipient as Address, network);
+        : await evaluateFeeGate(feeRecipient as Address, network, route.feeToken as Address);
 
       if (gate.kind === "reject") {
         return {
@@ -434,7 +450,11 @@ export async function settlePayment(
       }
 
       logger.info({ feeRecipient, network }, "Settlement succeeded, collecting fee");
-      const { fee, extensions } = await collectAndReportFee(feeRecipient as Address, network);
+      const { fee, extensions } = await collectAndReportFee(
+        feeRecipient as Address,
+        network,
+        route.feeToken as Address,
+      );
 
       return {
         success: true,
@@ -486,7 +506,11 @@ export async function settlePayment(
       // Same testnet test-wallet carve-out the claim/settle branch gets.
       refundGate = isTestWalletBypassed(route.feeRecipient, settleNetwork)
         ? { kind: "no_fee" }
-        : await evaluateFeeGate(route.feeRecipient as Address, settleNetwork);
+        : await evaluateFeeGate(
+            route.feeRecipient as Address,
+            settleNetwork,
+            route.feeToken as Address,
+          );
 
       if (refundGate.kind === "reject") {
         return {
@@ -535,12 +559,27 @@ export async function settlePayment(
     //  - exact: the onAfterVerify hook set feeRequired + recipient. The `!isBatchSettlement`
     //    guard keeps that arm off batch payloads entirely, so the two can never double-charge
     //    the same settlement even if the hook is later changed.
+    //  The exact fee is charged in `paymentRequirements.asset`: the requirements verify just
+    //  ran against, and the token the onAfterVerify gate checked the allowance of.
     const network = accepted?.network as string | undefined;
-    const chargeable: { recipient: Address; network: string } | undefined =
+    const exactAsset = paymentRequirements.asset as string | undefined;
+    const chargeable: { recipient: Address; network: string; token: Address } | undefined =
       route.kind === "claiming-refund" && refundGate?.kind === "charge" && settleNetwork
-        ? { recipient: route.feeRecipient as Address, network: settleNetwork }
-        : verifyResult.feeRequired && !isBatchSettlement && verifyResult.recipient && network
-          ? { recipient: verifyResult.recipient as Address, network }
+        ? {
+            recipient: route.feeRecipient as Address,
+            network: settleNetwork,
+            token: route.feeToken as Address,
+          }
+        : verifyResult.feeRequired &&
+            !isBatchSettlement &&
+            verifyResult.recipient &&
+            network &&
+            exactAsset
+          ? {
+              recipient: verifyResult.recipient as Address,
+              network,
+              token: exactAsset as Address,
+            }
           : undefined;
 
     if (chargeable) {
@@ -551,6 +590,7 @@ export async function settlePayment(
       const { fee, extensions } = await collectAndReportFee(
         chargeable.recipient,
         chargeable.network,
+        chargeable.token,
       );
 
       return {

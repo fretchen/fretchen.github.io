@@ -14,6 +14,7 @@ import { describe, test, expect, beforeEach, afterEach } from "vitest";
 import { verifyPayment } from "../../x402_verify.js";
 import { resetFacilitator } from "../../facilitator_instance.js";
 import { getChainConfig } from "../../chain_utils.js";
+import { EURC_ADDRESSES, findStablecoin } from "@fretchen/chain-utils";
 import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
 import { ExactEvmScheme } from "@x402/evm/exact/client";
 
@@ -148,5 +149,58 @@ describe("x402 Verify — real signature (integration, live RPC)", () => {
     }
 
     expect(paymentPayload.accepted.network).toBe("eip155:10");
+  });
+
+  /**
+   * EURC on Base Sepolia, signed with the domain from chain-utils' `findStablecoin`. A
+   * wrong domain name there would surface as invalid_exact_evm_signature; the negative
+   * control below shows this test can tell the two apart.
+   */
+  async function verifyEurcPayment(domainName) {
+    const payerAccount = privateKeyToAccount(generatePrivateKey());
+    const evmClient = new ExactEvmScheme({
+      address: payerAccount.address,
+      signTypedData: async (args) => payerAccount.signTypedData(args),
+    });
+
+    const network = "eip155:84532"; // Base Sepolia
+    const eurc = findStablecoin(network, EURC_ADDRESSES[network]);
+    const paymentRequirements = {
+      scheme: "exact",
+      network,
+      amount: "100000", // 0.10 EURC
+      asset: eurc.address,
+      payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+      maxTimeoutSeconds: 300,
+      extra: { name: domainName ?? eurc.name, version: eurc.version },
+    };
+
+    const partialPayload = await evmClient.createPaymentPayload(2, paymentRequirements);
+    const paymentPayload = {
+      x402Version: 2,
+      resource: {
+        url: "https://api.example.com/eurc-test",
+        description: "EURC signature validation test",
+        mimeType: "application/json",
+      },
+      accepted: paymentRequirements,
+      payload: partialPayload.payload,
+    };
+
+    return verifyPayment(paymentPayload, paymentRequirements);
+  }
+
+  test("validates a EURC signature on Base Sepolia", async () => {
+    const result = await verifyEurcPayment();
+
+    // The fresh wallet holds no EURC, so the signature passes and the balance check fails.
+    expect(result.invalidReason).toBe("invalid_exact_evm_insufficient_balance");
+  });
+
+  test("rejects a EURC signature made with the wrong domain name", async () => {
+    const result = await verifyEurcPayment("USDC");
+
+    expect(result.isValid).toBe(false);
+    expect(result.invalidReason).not.toBe("invalid_exact_evm_insufficient_balance");
   });
 });

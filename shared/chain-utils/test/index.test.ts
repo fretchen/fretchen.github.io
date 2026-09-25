@@ -32,6 +32,8 @@ import {
   MAINNET_EIP3009_SPLITTER_ADDRESSES,
   TESTNET_EIP3009_SPLITTER_ADDRESSES,
   USDC_ADDRESSES,
+  EURC_ADDRESSES,
+  findStablecoin,
 } from "../src/addresses";
 
 describe("@fretchen/chain-utils", () => {
@@ -275,6 +277,47 @@ describe("@fretchen/chain-utils", () => {
         // Testnets use "USDC"
         expect(getUSDCName("eip155:11155420")).toBe("USDC");
         expect(getUSDCName("eip155:84532")).toBe("USDC");
+      });
+    });
+
+    describe("findStablecoin()", () => {
+      const BASE_EURC = "0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42";
+
+      test("identifies EURC on Base with its on-chain EIP-712 domain", () => {
+        expect(findStablecoin("eip155:8453", BASE_EURC)).toEqual({
+          symbol: "EURC",
+          address: BASE_EURC,
+          name: "EURC",
+          version: "2",
+        });
+        expect(findStablecoin("eip155:84532", EURC_ADDRESSES["eip155:84532"])?.symbol).toBe("EURC");
+      });
+
+      test("identifies USDC with the network's own domain name", () => {
+        expect(findStablecoin("eip155:10", USDC_ADDRESSES["eip155:10"])).toMatchObject({
+          symbol: "USDC",
+          name: "USD Coin",
+        });
+        expect(findStablecoin("eip155:84532", USDC_ADDRESSES["eip155:84532"])).toMatchObject({
+          symbol: "USDC",
+          name: "USDC",
+        });
+      });
+
+      test("matches addresses case-insensitively", () => {
+        expect(findStablecoin("eip155:8453", BASE_EURC.toLowerCase())?.symbol).toBe("EURC");
+      });
+
+      test("returns null for EURC on a network without EURC", () => {
+        expect(EURC_ADDRESSES["eip155:10"]).toBeUndefined();
+        expect(findStablecoin("eip155:10", BASE_EURC)).toBeNull();
+      });
+
+      test("returns null for an unknown token or network", () => {
+        expect(
+          findStablecoin("eip155:8453", "0x0000000000000000000000000000000000000001")
+        ).toBeNull();
+        expect(findStablecoin("eip155:1", BASE_EURC)).toBeNull();
       });
     });
 

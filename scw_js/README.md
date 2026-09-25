@@ -369,6 +369,15 @@ USDC contracts use EIP-3009 (`transferWithAuthorization`) which requires EIP-712
 | Base Mainnet     | `eip155:8453`     | `USD Coin`  | `2`     | ✅ 2025-12-26 |
 | Base Sepolia     | `eip155:84532`    | `USDC`      | `2`     | ✅ 2025-12-26 |
 
+### Known EURC Domain Names
+
+EURC exists on Base only (Circle has no Optimism deployment). Unlike USDC, mainnet and testnet share one name.
+
+| Network      | CAIP-2 ID      | Address                                      | Domain Name | Version | Verified      |
+| ------------ | -------------- | -------------------------------------------- | ----------- | ------- | ------------- |
+| Base Mainnet | `eip155:8453`  | `0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42` | `EURC`      | `2`     | ✅ 2026-09-25 |
+| Base Sepolia | `eip155:84532` | `0x808456652fdb597867f38412077A9182bf77359F` | `EURC`      | `2`     | ✅ 2026-09-25 |
+
 > ⚠️ **Warning:** Mainnet and Testnet often have DIFFERENT domain names! Always verify.
 
 ---

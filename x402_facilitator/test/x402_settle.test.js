@@ -7,6 +7,9 @@ import * as verifyModule from "../x402_verify.js";
 import * as feeModule from "../x402_fee.js";
 import { SettleResponseSchema } from "../x402_schemas.js";
 
+const BASE_SEPOLIA_USDC = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
+const BASE_SEPOLIA_EURC = "0x808456652fdb597867f38412077A9182bf77359F";
+
 // Mock viem
 vi.mock("viem", async () => {
   const actual = await vi.importActual("viem");
@@ -635,6 +638,7 @@ describe("x402_settle with mocked facilitator", () => {
     expect(feeModule.collectFee).toHaveBeenCalledWith(
       "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
       "eip155:11155420",
+      "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
     );
   });
 
@@ -876,6 +880,7 @@ describe("x402_settle with mocked facilitator", () => {
               channel: {
                 payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
                 receiver: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+                token: BASE_SEPOLIA_USDC,
               },
               maxClaimableAmount: "12000",
             },
@@ -925,6 +930,7 @@ describe("x402_settle with mocked facilitator", () => {
     expect(feeModule.evaluateFeeGate).toHaveBeenCalledWith(
       "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
       "eip155:84532",
+      BASE_SEPOLIA_USDC,
     );
     expect(result.fee.collected).toBe(true);
     expect(result.extensions.facilitatorFees.info.facilitatorFeePaid).toBe("10000");
@@ -961,6 +967,7 @@ describe("x402_settle with mocked facilitator", () => {
     expect(feeModule.evaluateFeeGate).toHaveBeenCalledWith(
       "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
       "eip155:84532",
+      BASE_SEPOLIA_USDC,
     );
     expect(result.fee.collected).toBe(true);
   });
@@ -977,6 +984,7 @@ describe("x402_settle with mocked facilitator", () => {
               channel: {
                 payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
                 receiver: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+                token: BASE_SEPOLIA_USDC,
               },
               maxClaimableAmount: "12000",
             },
@@ -1034,6 +1042,7 @@ describe("x402_settle with mocked facilitator", () => {
               channel: {
                 payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
                 receiver: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+                token: BASE_SEPOLIA_USDC,
               },
             },
             signature: "0x" + "ab".repeat(65),
@@ -1143,7 +1152,11 @@ describe("x402_settle with mocked facilitator", () => {
 
     const result = await settlePayment(settlePayload, requirements);
 
-    expect(feeModule.evaluateFeeGate).toHaveBeenCalledWith(payloadReceiver, "eip155:84532");
+    expect(feeModule.evaluateFeeGate).toHaveBeenCalledWith(
+      payloadReceiver,
+      "eip155:84532",
+      BASE_SEPOLIA_USDC,
+    );
     expect(result.success).toBe(true);
   });
 
@@ -1160,6 +1173,7 @@ describe("x402_settle with mocked facilitator", () => {
               channel: {
                 payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
                 receiver: payloadReceiver,
+                token: BASE_SEPOLIA_USDC,
               },
               maxClaimableAmount: "12000",
             },
@@ -1183,7 +1197,11 @@ describe("x402_settle with mocked facilitator", () => {
 
     const result = await settlePayment(claimPayload, requirements);
 
-    expect(feeModule.evaluateFeeGate).toHaveBeenCalledWith(payloadReceiver, "eip155:84532");
+    expect(feeModule.evaluateFeeGate).toHaveBeenCalledWith(
+      payloadReceiver,
+      "eip155:84532",
+      BASE_SEPOLIA_USDC,
+    );
     expect(result.success).toBe(true);
   });
 
@@ -1204,6 +1222,7 @@ describe("x402_settle with mocked facilitator", () => {
               channel: {
                 payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
                 receiver: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+                token: BASE_SEPOLIA_USDC,
               },
               maxClaimableAmount: "12000",
             },
@@ -1216,6 +1235,7 @@ describe("x402_settle with mocked facilitator", () => {
                 payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
                 // A second, distinct seller riding along in the same batch.
                 receiver: "0x3333333333333333333333333333333333333333",
+                token: BASE_SEPOLIA_USDC,
               },
               maxClaimableAmount: "12000",
             },
@@ -1258,6 +1278,7 @@ describe("x402_settle with mocked facilitator", () => {
               channel: {
                 payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
                 receiver: mixedCase,
+                token: BASE_SEPOLIA_USDC,
               },
               maxClaimableAmount: "12000",
             },
@@ -1269,6 +1290,7 @@ describe("x402_settle with mocked facilitator", () => {
               channel: {
                 payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
                 receiver: mixedCase.toLowerCase(),
+                token: BASE_SEPOLIA_USDC,
               },
               maxClaimableAmount: "12000",
             },
@@ -1295,7 +1317,11 @@ describe("x402_settle with mocked facilitator", () => {
     expect(result.success).toBe(true);
     // One batch, one on-chain claim, one fee — charged against the single seller.
     expect(feeModule.evaluateFeeGate).toHaveBeenCalledTimes(1);
-    expect(feeModule.evaluateFeeGate).toHaveBeenCalledWith(mixedCase, "eip155:84532");
+    expect(feeModule.evaluateFeeGate).toHaveBeenCalledWith(
+      mixedCase,
+      "eip155:84532",
+      BASE_SEPOLIA_USDC,
+    );
     expect(feeModule.collectFee).toHaveBeenCalledTimes(1);
   });
 
@@ -1323,6 +1349,7 @@ describe("x402_settle with mocked facilitator", () => {
               channel: {
                 payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
                 receiver: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+                token: BASE_SEPOLIA_USDC,
               },
               maxClaimableAmount: "12000",
             },
@@ -1364,6 +1391,7 @@ describe("x402_settle with mocked facilitator", () => {
               channel: {
                 payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
                 receiver: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+                token: BASE_SEPOLIA_USDC,
               },
               maxClaimableAmount: "12000",
             },
@@ -1393,6 +1421,112 @@ describe("x402_settle with mocked facilitator", () => {
     expect(result.fee).toBeUndefined();
   });
 
+  /** A claim command on Base Sepolia whose channels are in the given tokens. */
+  const claimCommandIn = (...tokens) => ({
+    x402Version: 2,
+    accepted: { scheme: "batch-settlement", network: "eip155:84532" },
+    payload: {
+      type: "claim",
+      claims: tokens.map((token) => ({
+        voucher: {
+          channel: {
+            payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+            receiver: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+            token,
+          },
+          maxClaimableAmount: "12000",
+        },
+        signature: "0x" + "ab".repeat(65),
+        totalClaimed: "0",
+      })),
+      claimAuthorizerSignature: "0x" + "cd".repeat(65),
+    },
+  });
+  const claimCommandRequirements = {
+    scheme: "batch-settlement",
+    network: "eip155:84532",
+    payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+  };
+
+  it("gates and charges a EURC claim in EURC, and says so in the receipt", async () => {
+    const mockFacilitator = {
+      settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xclaimtxhash" }),
+    };
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(claimCommandIn(BASE_SEPOLIA_EURC), claimCommandRequirements);
+
+    expect(result.success).toBe(true);
+    expect(feeModule.evaluateFeeGate).toHaveBeenCalledWith(
+      "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+      "eip155:84532",
+      BASE_SEPOLIA_EURC,
+    );
+    expect(feeModule.collectFee).toHaveBeenCalledWith(
+      "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+      "eip155:84532",
+      BASE_SEPOLIA_EURC,
+    );
+    expect(result.extensions.facilitatorFees.info.asset).toBe(
+      `eip155:84532/erc20:${BASE_SEPOLIA_EURC}`,
+    );
+  });
+
+  it("rejects a claim batch that mixes tokens", async () => {
+    // One flat fee is charged in one token against one allowance, so a batch sweeping a
+    // USDC channel and a EURC channel together has no single token to charge.
+    const mockFacilitator = { settle: vi.fn() };
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(
+      claimCommandIn(BASE_SEPOLIA_USDC, BASE_SEPOLIA_EURC),
+      claimCommandRequirements,
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.errorReason).toBe("invalid_batch_settlement_evm_payload_type");
+    expect(mockFacilitator.settle).not.toHaveBeenCalled();
+    expect(feeModule.evaluateFeeGate).not.toHaveBeenCalled();
+  });
+
+  it("rejects a claim command whose channel names no token", async () => {
+    const mockFacilitator = { settle: vi.fn() };
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(claimCommandIn(undefined), claimCommandRequirements);
+
+    expect(result.success).toBe(false);
+    expect(result.errorReason).toBe("invalid_batch_settlement_evm_payload_type");
+    expect(mockFacilitator.settle).not.toHaveBeenCalled();
+  });
+
+  it("charges a settle command in payload.token", async () => {
+    const mockFacilitator = {
+      settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xsweeptxhash" }),
+    };
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+
+    const result = await settlePayment(
+      {
+        x402Version: 2,
+        accepted: { scheme: "batch-settlement", network: "eip155:84532" },
+        payload: {
+          type: "settle",
+          receiver: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+          token: BASE_SEPOLIA_EURC,
+        },
+      },
+      claimCommandRequirements,
+    );
+
+    expect(result.success).toBe(true);
+    expect(feeModule.evaluateFeeGate).toHaveBeenCalledWith(
+      "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+      "eip155:84532",
+      BASE_SEPOLIA_EURC,
+    );
+  });
+
   // ═══════════════════════════════════════════════════════════
   // Enriched refunds: the fee follows the claim, not the label
   //
@@ -1416,7 +1550,7 @@ describe("x402_settle with mocked facilitator", () => {
     accepted: { scheme: "batch-settlement", network: "eip155:84532" },
     payload: {
       type: "refund",
-      channelConfig: { payer, receiver: seller },
+      channelConfig: { payer, receiver: seller, token: BASE_SEPOLIA_USDC },
       // isVoucherFields() requires all three of these to be present.
       voucher: {
         channelId: "0x" + "11".repeat(32),
@@ -1432,7 +1566,10 @@ describe("x402_settle with mocked facilitator", () => {
   });
 
   const claimFor = (receiver) => ({
-    voucher: { channel: { payer, receiver }, maxClaimableAmount: "12000" },
+    voucher: {
+      channel: { payer, receiver, token: BASE_SEPOLIA_USDC },
+      maxClaimableAmount: "12000",
+    },
     signature: "0x" + "ab".repeat(65),
     totalClaimed: "0",
   });
@@ -1463,10 +1600,14 @@ describe("x402_settle with mocked facilitator", () => {
     expect(verifyModule.verifyPayment).toHaveBeenCalled();
     // Gated before settling, against the verified channel receiver.
     expect(feeModule.evaluateFeeGate).toHaveBeenCalledTimes(1);
-    expect(feeModule.evaluateFeeGate).toHaveBeenCalledWith(seller, "eip155:84532");
+    expect(feeModule.evaluateFeeGate).toHaveBeenCalledWith(
+      seller,
+      "eip155:84532",
+      BASE_SEPOLIA_USDC,
+    );
     // One claim, one flat fee.
     expect(feeModule.collectFee).toHaveBeenCalledTimes(1);
-    expect(feeModule.collectFee).toHaveBeenCalledWith(seller, "eip155:84532");
+    expect(feeModule.collectFee).toHaveBeenCalledWith(seller, "eip155:84532", BASE_SEPOLIA_USDC);
     expect(result.fee?.collected).toBe(true);
     expect(result.extensions?.facilitatorFees?.info?.facilitatorFeePaid).toBe("10000");
   });
@@ -1531,6 +1672,26 @@ describe("x402_settle with mocked facilitator", () => {
     expect(result.errorReason).toBe("invalid_batch_settlement_evm_receiver_mismatch");
     expect(mockFacilitator.settle).not.toHaveBeenCalled();
     // Rejected structurally, before any allowance RPC.
+    expect(feeModule.evaluateFeeGate).not.toHaveBeenCalled();
+  });
+
+  it("rejects a refund whose claims are in a token other than its own channel's", async () => {
+    // The fee is charged in the claims' token, so a claim in another token than the
+    // verified channel's could otherwise choose which allowance pays.
+    const verifySpy = vi
+      .spyOn(verifyModule, "verifyPayment")
+      .mockResolvedValue({ isValid: true, payer });
+    const mockFacilitator = { settle: vi.fn() };
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    const eurcClaim = claimFor(seller);
+    eurcClaim.voucher.channel.token = BASE_SEPOLIA_EURC;
+
+    const result = await settlePayment(enrichedRefundPayload([eurcClaim]), refundRequirements);
+
+    expect(result.success).toBe(false);
+    expect(result.errorReason).toBe("invalid_batch_settlement_evm_token_mismatch");
+    expect(mockFacilitator.settle).not.toHaveBeenCalled();
+    expect(verifySpy).not.toHaveBeenCalled();
     expect(feeModule.evaluateFeeGate).not.toHaveBeenCalled();
   });
 
@@ -1613,6 +1774,7 @@ describe("x402_settle with mocked facilitator", () => {
               channel: {
                 payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
                 receiver: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+                token: BASE_SEPOLIA_USDC,
               },
               maxClaimableAmount: "12000",
             },

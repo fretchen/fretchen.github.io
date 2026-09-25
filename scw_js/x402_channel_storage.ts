@@ -14,9 +14,7 @@ import {
   deleteS3Object,
   listObjects,
 } from "@fretchen/s3-utils";
-import pino from "pino";
-
-const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
+import { logger } from "./logger.js";
 
 const PREFIX = "channels/";
 const MAX_CAS_ATTEMPTS = 3;

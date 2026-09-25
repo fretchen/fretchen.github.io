@@ -15,6 +15,7 @@ Monorepo for a blockchain-based AI service platform. Each subdirectory is an ind
 | `comment_service/`    | Blog comment backend (Scaleway Functions)                   | [`README`](comment_service/README.md)                            |
 | `analytics/`          | Serverless pageview counter (Scaleway Functions, S3-backed) | [`README`](analytics/README.md)                                  |
 | `growth-agent/`       | AI growth agent cron container (Python, LangGraph)          | [`README`](growth-agent/README.md)                               |
+| `observability/`      | Log CLI + Loki alert rules for all Scaleway functions       | [`README`](observability/README.md)                              |
 | `shared/chain-utils/` | Shared blockchain utility library (Viem peer dep)           | —                                                                |
 | `notebooks/`          | Python Jupyter notebooks for analysis                       | [`README`](notebooks/README.md)                                  |
 

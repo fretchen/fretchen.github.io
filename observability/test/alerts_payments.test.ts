@@ -17,7 +17,9 @@ const yaml = readFileSync(
 function lineFilterOf(alertName: string): RegExp {
   const rule = yaml.slice(yaml.indexOf(`alert: ${alertName}`));
   const match = /\|~ "([^"]+)"/.exec(rule);
-  if (!match) throw new Error(`No |~ filter found for ${alertName}`);
+  if (!match) {
+    throw new Error(`No |~ filter found for ${alertName}`);
+  }
   return new RegExp(match[1]);
 }
 

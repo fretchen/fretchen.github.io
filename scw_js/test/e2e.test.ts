@@ -7,7 +7,7 @@ import { ImageGenerationResponseSchema } from "../genimg_schemas.js";
 import { errorResponse, openAiError } from "../utils.js";
 
 describe("End-to-End Mock Tests", () => {
-  let originalEnv;
+  let originalEnv: NodeJS.ProcessEnv;
 
   beforeAll(() => {
     // Sichere ursprüngliche Environment-Variablen

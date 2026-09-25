@@ -616,13 +616,20 @@ export async function settlePayment(
     };
   } catch (error) {
     const err = error as Error;
-    logger.error({ err }, "Settlement failed");
+    // Distinct phrase from the ordinary "Settlement failed" result below (a caller error,
+    // returned rather than thrown) so an alert rule can page on this one without also firing
+    // on every bad signature. The SDK returns transaction failures rather than throwing them
+    // (see x402/evm's parseEip3009TransferError), so reaching this catch at all means
+    // something outside the scheme's own validation broke — a hook abort, no scheme
+    // registered, or getFacilitator() itself failing.
+    logger.error({ err }, "Settlement threw");
 
-    // Try to extract meaningful error reason
+    // Try to extract meaningful error reason. No "insufficient" → insufficient_funds branch:
+    // that string also matches OUR wallet being out of gas ("insufficient funds for gas"),
+    // which is not the caller's fault and must not be reported to them as such. It falls
+    // through to the generic settlement_failed below instead.
     let errorReason = "settlement_failed";
-    if (err.message?.includes("insufficient")) {
-      errorReason = "insufficient_funds";
-    } else if (err.message?.includes("nonce")) {
+    if (err.message?.includes("nonce")) {
       errorReason = "authorization_already_used";
     } else if (err.message?.includes("expired")) {
       errorReason = "authorization_expired";

@@ -1,7 +1,5 @@
-import pino from "pino";
+import { logger } from "./logger.js";
 import { UpstreamChatCompletionSchema, flattenUpstreamContent } from "./upstream_schemas.js";
-
-const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 
 interface LLMProviderConfig {
   displayName: string; // for error messages/logs — e.g. "Could not reach Mistral: ..."

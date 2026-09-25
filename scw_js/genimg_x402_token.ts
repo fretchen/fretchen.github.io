@@ -22,7 +22,11 @@ import {
   http,
   parseEther,
   type PublicClient,
+  type WalletClient,
   type Chain,
+  type Account,
+  type Transport,
+  type GetContractReturnType,
 } from "viem";
 import { generateAndUploadImage, JSON_BASE_PATH, type Provider } from "./image_service.js";
 import { privateKeyToAccount } from "viem/accounts";
@@ -32,12 +36,15 @@ import {
   create402Response,
   extractPaymentPayload,
   createSettlementHeaders,
+  type SdkPaymentPayload,
+  type SdkPaymentRequirements,
 } from "./x402_server.js";
 import { validatePaymentNetwork, getExpectedNetworks } from "./getChain.js";
 import type { ScwEvent } from "./types.js";
 import openapiSpec from "./openapi.genimg.json" with { type: "json" };
 import { faviconBase64, faviconContentType } from "./favicon.js";
 import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
+import { logger } from "./logger.js";
 
 // Re-export for backward compatibility with tests
 export { handle, create402Response };
@@ -140,10 +147,13 @@ async function preFlightChecks(
       };
     }
 
-    console.log(`✅ Pre-flight checks passed on ${chainName}`);
+    logger.debug({ chain: chainName }, "Pre-flight checks passed");
     return { success: true };
   } catch (error) {
-    console.error(`❌ Pre-flight check error:`, error);
+    // Diagnostic detail only — the caller in handle() logs the authoritative, alert-covered
+    // "Pre-flight check failed" line for every failure branch of this function, this one
+    // included. Logging this one at `error` too would double the coverage burden for no signal.
+    logger.warn({ err: error, chain: chainName }, "Pre-flight check threw");
     return {
       success: false,
       error: "preflight_check_failed",
@@ -164,9 +174,19 @@ interface MintResult {
   transferTxHash: `0x${string}`;
 }
 
+/** What `getContract({ abi: nftAbi, client: { public, wallet } })` in handle() actually returns —
+ *  named here so mintNFTToClient can be typed against it instead of `any`. The wallet client's
+ *  account/chain must be narrowed away from their `| undefined` defaults (matching the real
+ *  `createWalletClient({ account, chain, transport })` call in handle()), or viem's generated
+ *  `write.*` actions can't tell an account/chain is already bound and demand them again as
+ *  call-site arguments. */
+type NftContract = GetContractReturnType<
+  typeof nftAbi,
+  { public: PublicClient; wallet: WalletClient<Transport, Chain, Account> }
+>;
+
 async function mintNFTToClient(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  contract: any,
+  contract: NftContract,
   publicClient: PublicClient,
   clientAddress: string,
   metadataUrl: string,
@@ -175,12 +195,10 @@ async function mintNFTToClient(
   mintPrice: bigint,
   isListed = false,
 ): Promise<MintResult> {
-  console.log(
-    `🎨 Minting NFT to server (isListed=${isListed}), then transferring to ${clientAddress}`,
-  );
+  logger.debug({ isListed, clientAddress }, "Minting NFT to server, then transferring to client");
 
   const mintTxHash = await contract.write.safeMint([metadataUrl, isListed], { value: mintPrice });
-  console.log(`📝 Mint transaction submitted: ${mintTxHash}`);
+  logger.debug({ mintTxHash }, "Mint transaction submitted");
 
   const mintReceipt = await publicClient.waitForTransactionReceipt({ hash: mintTxHash });
   if (mintReceipt.status !== "success") {
@@ -200,7 +218,7 @@ async function mintNFTToClient(
   }
 
   const tokenId = parseInt(mintLog.topics[3]!, 16);
-  console.log(`✅ NFT minted: tokenId=${tokenId}`);
+  logger.info({ tokenId, mintTxHash }, "NFT minted");
 
   const MAX_TRANSFER_RETRIES = 3;
   const RETRY_DELAY_MS = 2000;
@@ -209,13 +227,13 @@ async function mintNFTToClient(
 
   for (let attempt = 1; attempt <= MAX_TRANSFER_RETRIES; attempt++) {
     try {
-      console.log(`📤 Transfer attempt ${attempt}/${MAX_TRANSFER_RETRIES}...`);
+      logger.debug({ attempt, maxAttempts: MAX_TRANSFER_RETRIES }, "Transfer attempt");
       transferTxHash = await contract.write.safeTransferFrom([
         serverWallet as `0x${string}`,
         clientAddress as `0x${string}`,
         BigInt(tokenId),
       ]);
-      console.log(`📤 Transfer transaction submitted: ${transferTxHash}`);
+      logger.debug({ transferTxHash }, "Transfer transaction submitted");
       break;
     } catch (error) {
       lastError = error;
@@ -230,7 +248,7 @@ async function mintNFTToClient(
         short.includes("nonce too low");
 
       if ((isNonExistentToken || isNonce) && attempt < MAX_TRANSFER_RETRIES) {
-        console.log(`⏳ Retrying in ${RETRY_DELAY_MS}ms...`);
+        logger.warn({ tokenId, attempt, delayMs: RETRY_DELAY_MS }, "Transfer race, retrying");
         await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
         continue;
       }
@@ -247,7 +265,7 @@ async function mintNFTToClient(
     throw new Error("Transfer transaction failed");
   }
 
-  console.log(`✅ NFT transferred to client: tokenId=${tokenId}`);
+  logger.info({ tokenId, transferTxHash }, "NFT transferred to client");
   return { tokenId, mintTxHash, transferTxHash };
 }
 
@@ -270,15 +288,15 @@ async function generateImage(
   useMockImage = false,
   provider: Provider = "bfl",
 ): Promise<GeneratedImage> {
-  console.log(`🎨 Generating image: mode=${mode}, size=${size}, prompt="${prompt}"`);
+  // Prompt at debug, not info — mirrors llm_service.ts's "Generating answer for prompt".
+  logger.debug({ mode, size, prompt }, "Generating image");
 
   const tempTokenId = Date.now();
 
   if (useMockImage) {
-    console.log("🎭 Using mock image (test mode)");
+    logger.debug("Using mock image (test mode)");
     const imageUrl = "https://via.placeholder.com/1024x1024.png?text=Test+Image";
     const metadataUrl = `https://example.com/metadata/test_${tempTokenId}.json`;
-    console.log(`✅ Image mocked: ${imageUrl}`);
     return { metadataUrl, imageUrl };
   }
 
@@ -303,7 +321,7 @@ async function generateImage(
   }
 
   const metadata = (await metadataResponse.json()) as { image: string };
-  console.log(`✅ Image generated: ${metadata.image}`);
+  logger.info({ imageUrl: metadata.image }, "Image generated");
   return { metadataUrl, imageUrl: metadata.image };
 }
 
@@ -376,6 +394,9 @@ async function handle(
   try {
     account = privateKeyToAccount(loadPrivateKey("NFT_WALLET_PRIVATE_KEY"));
   } catch (err) {
+    // Every request fails identically until this is fixed — see
+    // observability/alerts/services.yaml's PaidPathBroken, which this phrase is matched by.
+    logger.error({ err }, "NFT_WALLET_PRIVATE_KEY not configured or invalid");
     return errorResponse(500, `Server configuration error: ${(err as Error).message}`);
   }
   const serverWallet = account.address;
@@ -386,7 +407,7 @@ async function handle(
 
   if (requestedNetwork) {
     const isTestnetMode = isTestnet(requestedNetwork);
-    console.log(`🌐 Network: ${requestedNetwork} (${isTestnetMode ? "testnet" : "mainnet"})`);
+    logger.debug({ network: requestedNetwork, testnet: isTestnetMode }, "Network requested");
   }
 
   // ─── Payment challenge comes BEFORE request validation ───
@@ -397,7 +418,7 @@ async function handle(
   // still runs the full validation below before any voucher is verified or settled, so a
   // malformed paid request is rejected without being charged.
   if (!paymentPayload) {
-    console.log("❌ No payment provided → Returning 402");
+    logger.debug("No payment provided, returning 402");
 
     // The one field validated before the challenge, because it is the one that *determines the
     // terms*: `network` decides what the 402 offers, and the exact scheme signs for whatever it
@@ -427,7 +448,7 @@ async function handle(
       // `network` is a vendor extension outside the interop floor.
       networks = getExpectedNetworks(false);
     }
-    console.log(`🌐 402 offering: ${networks.join(", ")}`);
+    logger.debug({ networks }, "402 offering networks");
 
     const paymentRequirements = createPaymentRequirements({
       resourceUrl: event.path ?? process.env.GENIMG_SERVICE_URL ?? "https://api.example.com/genimg",
@@ -452,8 +473,6 @@ async function handle(
   // `isListed` and its `x_nft.listed` alias mean the same thing; either being true is enough.
   const isListed = parsed.data.isListed === true || parsed.data.x_nft?.listed === true;
 
-  console.log(`📝 Prompt: "${prompt}"`);
-
   // Cross-field rule, deliberately outside the schema: JSON Schema cannot express
   // "required when another field has this value" without if/then, and `.refine()` is not
   // representable by z.toJSONSchema at all — it would silently vanish from the generated spec.
@@ -469,10 +488,10 @@ async function handle(
         "referenceImage",
       );
     }
-    console.log("🖼️  Reference image provided for editing");
+    logger.debug("Reference image provided for editing");
   }
 
-  console.log("🔍 Payment received, verifying...");
+  logger.debug("Payment received, verifying");
 
   const clientNetwork =
     (paymentPayload as Record<string, unknown>)?.["accepted"] !== undefined
@@ -480,11 +499,11 @@ async function handle(
           "network"
         ] as string | undefined)
       : undefined;
-  console.log(`🌐 Payment payload network: ${clientNetwork}`);
 
   const networkValidation = validatePaymentNetwork(clientNetwork);
   if (!networkValidation.valid) {
-    console.error(`❌ Network validation failed: ${networkValidation.reason}`);
+    // The caller's fault (wrong/missing network), not ours — warn, not error.
+    logger.warn({ reason: networkValidation.reason, clientNetwork }, "Network validation failed");
     return paymentError(networkValidation.reason, {
       expected: networkValidation.expected,
       received: networkValidation.received,
@@ -493,13 +512,12 @@ async function handle(
 
   const usdcConfig = getUSDCConfig(clientNetwork!);
   const contractAddress = getGenAiNFTAddress(clientNetwork!);
-  console.log(`📍 Client selected network: ${usdcConfig.name} (${clientNetwork})`);
+  logger.debug({ network: usdcConfig.name, clientNetwork }, "Client selected network");
 
   // Single-network requirements object for the x402 verify/settle calls
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const paymentRequirements: any = {
+  const paymentRequirements: SdkPaymentRequirements = {
     scheme: "exact",
-    network: clientNetwork!,
+    network: clientNetwork! as `${string}:${string}`,
     amount: USDC_PAYMENT_AMOUNT,
     asset: usdcConfig.address,
     payTo: serverWallet,
@@ -509,24 +527,35 @@ async function handle(
 
   let verification: { isValid: boolean; invalidReason?: string; payer?: string };
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    verification = await resourceServer.verifyPayment(paymentPayload as any, paymentRequirements);
+    // paymentPayload is trusted-shape here, not validated against SdkPaymentPayload — the SDK's
+    // own verify() is what actually checks it; this cast just names the boundary instead of
+    // leaving it untyped.
+    verification = await resourceServer.verifyPayment(
+      paymentPayload as SdkPaymentPayload,
+      paymentRequirements,
+    );
   } catch (error) {
-    console.error(`❌ Payment verification error:`, error);
+    // Our call to the facilitator threw — see observability/alerts/services.yaml's
+    // SellerPaymentFailing, which this phrase (shared with llmx402/searchapi) is matched by.
+    logger.error({ err: error }, "Payment verification error");
     return paymentError("facilitator_error", { details: (error as Error).message });
   }
 
   if (!verification.isValid) {
-    console.log(`❌ Payment verification failed: ${verification.invalidReason}`);
+    // The caller's fault (bad/expired signature, insufficient allowance, ...) — warn.
+    logger.warn(
+      { reason: verification.invalidReason, payer: verification.payer },
+      "Payment verification failed",
+    );
     return paymentError(verification.invalidReason, { payer: verification.payer });
   }
 
   const clientAddress = verification.payer!;
-  console.log(`✅ Payment verified for client: ${clientAddress}`);
+  logger.info({ clientAddress }, "Payment verified");
 
   try {
     const viemChain = getViemChain(clientNetwork!);
-    console.log(`🔗 Using chain: ${viemChain.name} (${clientNetwork})`);
+    logger.debug({ chain: viemChain.name, clientNetwork }, "Using chain");
 
     const chain = viemChain as unknown as Chain;
     // Falls back to the chain's public endpoint when unset — fine for testnets, but
@@ -542,9 +571,11 @@ async function handle(
     });
 
     const mintPrice = (await contract.read.mintPrice()) as bigint;
-    console.log(`💰 Mint price: ${(parseFloat(mintPrice.toString()) / 1e18).toFixed(6)} ETH`);
+    logger.debug(
+      { mintPriceEth: (parseFloat(mintPrice.toString()) / 1e18).toFixed(6) },
+      "Mint price",
+    );
 
-    console.log(`🔍 Running pre-flight checks...`);
     const preFlightResult = await preFlightChecks(
       publicClient,
       account.address,
@@ -553,7 +584,12 @@ async function handle(
     );
 
     if (!preFlightResult.success) {
-      console.error(`❌ Pre-flight check failed: ${preFlightResult.error}`);
+      // Our wallet or our RPC, never the caller's — see observability/alerts/services.yaml's
+      // PaidPathBroken.
+      logger.error(
+        { reason: preFlightResult.error, details: preFlightResult.details },
+        "Pre-flight check failed",
+      );
       return {
         statusCode: 500,
         headers: CORS_HEADERS,
@@ -584,17 +620,24 @@ async function handle(
     // URL is unguessable (getRandomString in image_service.ts), so the caller receives nothing.
     let settlement: Awaited<ReturnType<typeof resourceServer.settlePayment>>;
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      settlement = await resourceServer.settlePayment(paymentPayload as any, paymentRequirements);
+      settlement = await resourceServer.settlePayment(
+        paymentPayload as SdkPaymentPayload,
+        paymentRequirements,
+      );
     } catch (error) {
-      console.error(`❌ Settlement error:`, error);
+      // See SellerPaymentFailing — same phrase as llmx402/searchapi's settle-call catch.
+      logger.error({ err: error }, "Settlement error");
       return paymentError("settlement_failed", { details: (error as Error).message });
     }
     if (!settlement.success) {
-      console.error(`❌ Settlement failed:`, settlement);
+      // See SellerPaymentFailing — same phrase llmx402/searchapi use for a rejected settlement.
+      logger.error({ settlement }, "Settlement failed");
       return paymentError("settlement_failed", { details: settlement.errorReason });
     }
-    console.log(`✅ Payment settled:`, settlement);
+    logger.info(
+      { transaction: settlement.transaction, network: settlement.network },
+      "Payment settled",
+    );
 
     const settlementHeaders = createSettlementHeaders({
       success: true,
@@ -620,8 +663,12 @@ async function handle(
       //
       // The payment HAS settled by this point — settlement deliberately precedes the mint, see
       // above — so the settlement headers are attached here too. The caller paid for a
-      // generation they received; what they did not get is the NFT.
-      console.error(`❌ Mint failed after successful generation:`, mintError);
+      // generation they received; what they did not get is the NFT. See
+      // observability/alerts/services.yaml's PaidButUndelivered.
+      logger.error(
+        { err: mintError, payer: clientAddress, network: clientNetwork },
+        "Mint failed after successful generation",
+      );
       return {
         body: JSON.stringify(
           buildSuccessBody({
@@ -663,7 +710,9 @@ async function handle(
       statusCode: 200,
     };
   } catch (error) {
-    console.error(`❌ Error during operation: ${error}`);
+    // The outer catch: a bug, an upstream nobody has a rule for yet, or S3 failing. See
+    // observability/alerts/services.yaml's ServiceUnhandledError.
+    logger.error({ err: error }, "Error during operation");
     return errorResponse(500, `Operation failed: ${(error as Error).message}`);
   }
 }
@@ -732,10 +781,12 @@ if (process.env.NODE_ENV === "test" && !process.env.CI) {
 
           fastify.listen({ port: 8082, host: "0.0.0.0" }, (err: unknown, address: string) => {
             if (err) {
-              console.error("Failed to start server:", err);
+              // Local dev only — never deployed. Same phrase the other packages' local server
+              // bootstraps use; see EXEMPT in test/alert_coverage.test.ts.
+              logger.error({ err }, "Error starting local server");
               process.exit(1);
             }
-            console.log(`🚀 x402 v2 Token Payment Local Server listening at ${address}`);
+            logger.info({ address }, "Local server listening");
           });
         });
       });

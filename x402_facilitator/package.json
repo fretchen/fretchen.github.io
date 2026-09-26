@@ -7,6 +7,7 @@
   "scripts": {
     "generate:openapi": "tsx scripts/generate-openapi.ts && prettier --write --log-level warn openapi.json",
     "build": "npm run generate:openapi && tsup",
+    "predev": "npm run build",
     "dev": "NODE_ENV=test node dist/x402_facilitator.js",
     "test": "vitest run",
     "test:watch": "vitest",

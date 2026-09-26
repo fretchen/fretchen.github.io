@@ -51,7 +51,8 @@ export function getSupportedCapabilities(): SupportedCapabilities {
     supported.facilitatorFees = {
       version: "1",
       model: "flat",
-      asset: "USDC",
+      // Not a token: the fee is charged in whichever token the payment settles in.
+      asset: "settled",
       flatFee: feeAmount.toString(),
       decimals: 6,
       recipient: facilitatorAddress,
@@ -59,7 +60,8 @@ export function getSupportedCapabilities(): SupportedCapabilities {
       fee: {
         amount: feeAmount.toString(),
         description:
-          `${formatUnits(feeAmount, 6)} USDC per settlement (exact), or per on-chain claim ` +
+          `${formatUnits(feeAmount, 6)} of the settled token (USDC, or EURC on Base) per ` +
+          "settlement (exact), or per on-chain claim " +
           "or settle transaction (batch-settlement) — same flat amount either way. " +
           "batch-settlement charges whatever realizes a payment: claim, settle, and a refund " +
           "that carries claims (which settles them in the same transaction). Deposits, " +
@@ -68,9 +70,10 @@ export function getSupportedCapabilities(): SupportedCapabilities {
       },
       setup: {
         description:
-          "Recurring USDC approval. Call approve() on the USDC contract for the facilitator's address. " +
-          "Applies to both schemes: exact recipients and batch-settlement claim/settle recipients draw " +
-          "from the same allowance. The recommended amount is deliberately small: the spender is a hot " +
+          "Recurring approval, one per token you are paid in: call approve() on the USDC contract " +
+          "(any network) and/or the EURC contract (Base) for the facilitator's address. A settlement " +
+          "in a token you have not approved is refused. Applies to both schemes: exact recipients and " +
+          "batch-settlement claim/settle recipients draw from the same per-token allowance. The recommended amount is deliberately small: the spender is a hot " +
           "wallet, so a large standing allowance is a standing risk. Re-approve when remainingSettlements " +
           "(in the /verify response) runs low; revoke any time with approve(spender, 0).",
         function: "approve(address spender, uint256 amount)",
@@ -79,7 +82,7 @@ export function getSupportedCapabilities(): SupportedCapabilities {
         // (FACILITATOR_WALLET_PRIVATE_KEY, a hot secret), so this figure is the per-merchant
         // blast radius of a key compromise — not a convenience setting. Raise it only with
         // that tradeoff in mind; the test in x402_supported.test.js bounds it.
-        recommended_amount: "1000000", // 1 USDC = 100 settlements
+        recommended_amount: "1000000", // 1 token (6 decimals) = 100 settlements
       },
     };
   }

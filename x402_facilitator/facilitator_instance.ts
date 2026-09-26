@@ -193,7 +193,7 @@ export function createFacilitator(requirePrivateKey = true): InstanceType<typeof
     // The `exact` scheme accepts two payload shapes (@x402/evm ExactEvmPayloadV2):
     // EIP-3009 (`authorization`) and Permit2 (`permit2Authorization`). We only support
     // the EIP-3009 variant. Permit2 is unsupported on three independent axes:
-    //   1. the fee model below (post-settlement USDC transferFrom) was never designed
+    //   1. the fee model below (post-settlement token transferFrom) was never designed
     //      or tested for it — the recipient lives at permit2Authorization.witness.to,
     //      not authorization.to;
     //   2. the x402 Permit2 proxy is a single hardcoded address with no per-network
@@ -215,9 +215,12 @@ export function createFacilitator(requirePrivateKey = true): InstanceType<typeof
     // runs, so requirements.payTo is the same value, shape-independent, not client-set.
     const network = requirements?.network;
     const recipient = requirements?.payTo as string | undefined;
+    // The token transferWithAuthorization runs on, and so the one the fee is charged in.
+    // Requirements again, not the payload envelope: verify signed against this asset.
+    const asset = requirements?.asset as string | undefined;
 
-    if (!network || !recipient) {
-      logger.warn("Missing network or recipient after verification");
+    if (!network || !recipient || !asset) {
+      logger.warn("Missing network, recipient or asset after verification");
       result.isValid = false;
       result.invalidReason = "invalid_payload";
       return;
@@ -225,7 +228,7 @@ export function createFacilitator(requirePrivateKey = true): InstanceType<typeof
 
     // The same gate batch-settlement's claim/settle path runs (x402_fee.ts) — shared so
     // the two schemes cannot drift apart on when a fee is owed or when to fail closed.
-    const gate = await evaluateFeeGate(recipient as `0x${string}`, network);
+    const gate = await evaluateFeeGate(recipient as `0x${string}`, network, asset as `0x${string}`);
 
     if (gate.kind === "no_fee") {
       // Fees disabled — allow all recipients without fee

@@ -58,11 +58,20 @@ export function belongsToNetwork(channel: Channel, network: string): boolean {
  *
  * One instance per network — see `createLLMResourceServer`, which registers a separate scheme
  * per network so both the serving path and the claim cron reach the right prefix.
+ *
+ * USDC and EURC channels share a network's prefix (the token is part of `channelId`, so they
+ * never collide). The optional `token` makes `list()` a single-token view for the claim cron:
+ * the SDK's channel manager claims EVERY channel `list()` returns and settles them all in its
+ * one token, and the facilitator refuses a claim batch that mixes tokens — so an unfiltered
+ * list would fail every claim on a network with both. Reads and writes by id are unaffected.
  */
 export class S3ChannelStorage implements ChannelStorage {
   private readonly prefix: string;
 
-  constructor(private readonly network: string) {
+  constructor(
+    private readonly network: string,
+    private readonly token?: string,
+  ) {
     this.prefix = channelPrefix(network);
   }
 
@@ -94,6 +103,9 @@ export class S3ChannelStorage implements ChannelStorage {
           { key, network: this.network, channelId: channel.channelId },
           "Skipping channel filed under the wrong network prefix",
         );
+        continue;
+      }
+      if (this.token && channel.channelConfig.token.toLowerCase() !== this.token.toLowerCase()) {
         continue;
       }
       channels.push(channel);

@@ -14,7 +14,7 @@
  *
  * 1. `paths["/"].post["x-payment-info"].price.max` must stay present. `sc_llm_x402.ts` mutates it on
  *    a `structuredClone` at serve time, because the static value is a documentation-only baseline
- *    while `USDC_MAX_PRICE_PER_MESSAGE` is the real live ceiling. Removing the key, or changing the
+ *    while `MAX_PRICE_USD_ATOMIC` is the real live ceiling. Removing the key, or changing the
  *    shape so the imported JSON's inferred type no longer permits the assignment, breaks that line
  *    at compile time.
  * 2. `x-service-type` must remain exactly `"llm/v1"`. `precheckLlmV1Agent` and `checkLlmV1Agent` in
@@ -71,7 +71,8 @@ export function generateOpenApiSpec(): LlmSpec {
     openapi: "3.1.0",
     info: {
       title: "Fretchen AI Assistant (LLM) Service",
-      description: "AI chat assistant, paid via x402 batch-settlement USDC payment channels.",
+      description:
+        "AI chat assistant, paid via x402 batch-settlement payment channels in USDC (or EURC on Base).",
       version: "1.0.0",
       "x-guidance":
         "OpenAI chat-completions body. POST / with { model, messages: [{ role, content }, ...] } and no payment header to receive a 402 with x402 batch-settlement payment requirements (accepts[]). Open/top up a payment channel per the requirements, retry with the payment header, and the service returns a standard OpenAI chat.completion object. Streaming (stream: true) is not supported. Each message is metered and settled up to a per-message price ceiling; the real cost is usage-derived and typically lower. Other standard OpenAI chat params (temperature, top_p, stop, seed, the penalties, response_format) are forwarded to the upstream model and work as normal; they are not enumerated here because the upstream owns that contract. " +
@@ -98,15 +99,18 @@ export function generateOpenApiSpec(): LlmSpec {
     tags: [
       { name: "LLM", description: "AI chat assistant / text completion" },
       { name: "Chat", description: "Multi-turn conversational messages" },
-      { name: "x402", description: "Paid via x402 batch-settlement USDC payment channels" },
+      {
+        name: "x402",
+        description: "Paid via x402 batch-settlement payment channels in USDC, or EURC on Base",
+      },
     ],
     paths: {
       "/": {
         post: {
           operationId: "llmX402",
-          summary: "Chat with the AI assistant (x402 batch-settlement USDC payment)",
+          summary: "Chat with the AI assistant (x402 batch-settlement payment)",
           description:
-            "Sends a prompt to the LLM and returns its response. Payment is settled per message via an x402 batch-settlement USDC payment channel, capped at a per-message price ceiling.",
+            "Sends a prompt to the LLM and returns its response. Payment is settled per message via an x402 batch-settlement payment channel (USDC, or EURC on Base), capped at a per-message price ceiling.",
           tags: ["LLM", "Chat", "x402"],
           security: [],
           "x-payment-info": {

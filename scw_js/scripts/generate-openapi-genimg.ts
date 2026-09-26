@@ -46,10 +46,10 @@ export function generateOpenApiSpec(): GenimgSpec {
     info: {
       title: "Fretchen AI Image Generation Service",
       description:
-        "AI-powered image generation with NFT minting on Optimism/Base, paid via x402 USDC.",
+        "AI-powered image generation with NFT minting on Optimism/Base, paid via x402 in USDC (or EURC on Base).",
       version: "1.0.0",
       "x-guidance":
-        "OpenAI images-generation body. POST / with { prompt, size } and no payment header to receive a 402 with x402 v2 payment requirements (accepts[]). Pay in USDC on one of the offered networks, retry with the payment header, and the service returns { created, data: [{ url }], model } — data[0].url is the image. The mint recipient is derived from the payment payload, so there is no recipient field. Unknown request fields are rejected, not ignored. This agent also mints the image as an NFT and reports it under the x_nft response extension; that is a declared capability, not part of the images/v1 contract, and a client that only wants an image can ignore it. A 200 does not by itself mean the NFT was minted — check x_nft.status. Note: payment uses x402, so a stock OpenAI SDK cannot pay this endpoint — the OpenAI shape is for body legibility, not drop-in SDK use. Testnet networks return a placeholder image rather than a generated one.",
+        "OpenAI images-generation body. POST / with { prompt, size } and no payment header to receive a 402 with x402 v2 payment requirements (accepts[]). Pay with one of the offered entries — USDC on every network, EURC on Base where the 402 lists it — retry with the payment header, and the service returns { created, data: [{ url }], model } — data[0].url is the image. The mint recipient is derived from the payment payload, so there is no recipient field. Unknown request fields are rejected, not ignored. This agent also mints the image as an NFT and reports it under the x_nft response extension; that is a declared capability, not part of the images/v1 contract, and a client that only wants an image can ignore it. A 200 does not by itself mean the NFT was minted — check x_nft.status. Note: payment uses x402, so a stock OpenAI SDK cannot pay this endpoint — the OpenAI shape is for body legibility, not drop-in SDK use. Testnet networks return a placeholder image rather than a generated one.",
       contact: CONTACT,
     },
     "x-discovery": {
@@ -68,15 +68,15 @@ export function generateOpenApiSpec(): GenimgSpec {
     tags: [
       { name: "Image Generation", description: "AI text-to-image and image editing" },
       { name: "NFT", description: "Mints the result as an NFT on Optimism/Base" },
-      { name: "x402", description: "Paid via x402 USDC payments" },
+      { name: "x402", description: "Paid via x402 stablecoin payments (USDC, or EURC on Base)" },
     ],
     paths: {
       "/": {
         post: {
           operationId: "genimgX402Token",
-          summary: "Generate AI Image and Mint NFT (x402 USDC payment)",
+          summary: "Generate AI Image and Mint NFT (x402 stablecoin payment)",
           description:
-            "Generates an AI image using Black Forest Labs (BFL), uploads it to S3, mints an NFT on Optimism/Base, and transfers it to the payer. Requires x402 USDC payment. An unpaid request is answered with the 402 challenge whatever its body says, so a client can always discover the payment terms; a paid request is validated before anything is verified or settled.",
+            "Generates an AI image using Black Forest Labs (BFL), uploads it to S3, mints an NFT on Optimism/Base, and transfers it to the payer. Requires an x402 payment in USDC, or EURC on Base. An unpaid request is answered with the 402 challenge whatever its body says, so a client can always discover the payment terms; a paid request is validated before anything is verified or settled.",
           tags: ["Image Generation", "NFT", "x402"],
           security: [],
           "x-payment-info": {

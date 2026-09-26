@@ -196,6 +196,30 @@ Set a dedicated provider (e.g. Alchemy) as a Scaleway secret for production:
 - `RPC_URL_EIP155_11155420` — Optimism Sepolia
 - `RPC_URL_EIP155_84532` — Base Sepolia
 
+### Stablecoins and pricing (USDC, EURC)
+
+All three sellers (image, chat, search) take **USDC on every network and EURC on Base / Base
+Sepolia**. Circle has no EURC on Optimism. Prices are defined in USD; `stablecoin_pricing.ts` owns
+the rest:
+
+- **`EUR_PER_USD`** (serverless.yml, e.g. `"0.86"`) converts a USD price into EURC, rounded up so the
+  seller never receives less than the USD price. It is static and set by hand when the rate moves;
+  there is no oracle. A price committed in a 402 is honoured only while the rate is unchanged, so
+  change it rarely.
+- **Kill switch:** with `EUR_PER_USD` unset or invalid, no seller offers or accepts EURC, and USDC
+  is unaffected. The claim cron still claims and refunds existing EURC channels.
+- **Preference:** on Base the 402 lists EURC first (`STABLECOIN_PREFERENCE`). A stock x402 client
+  pays with the first entry its spend controls allow, and the SDK's built-in asset registry only
+  knows USDC, so a default client keeps paying USDC until it allowlists EURC.
+- **Facilitator fee:** charged in the token the payment settled in, so the seller wallet
+  (`NFT_WALLET_PUBLIC_KEY`) needs an `approve()` for the facilitator **in EURC as well as USDC**
+  on every network where it takes EURC. Without it every EURC settlement or claim fails with
+  `insufficient_fee_allowance`. The claim cron warns per token when an approval runs low.
+- **Channels:** USDC and EURC channels share each network's `channels/<network>/` prefix (the
+  token is part of the channel id). The cron claims one token at a time, because a claim batch
+  must not mix tokens. `scripts/recover_channels.ts` takes the token as an argument for the same
+  reason.
+
 ## 🗄️ S3 Storage Layout & Data Classification
 
 All functions share the `my-imagestore` bucket (region `nl-ams`). Access is controlled **per object** (object ACL), independent of the bucket ACL. When writing, only publish what is meant to be public — the table below is the source of truth for whether a prefix is public.

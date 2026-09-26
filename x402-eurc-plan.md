@@ -4,15 +4,29 @@
 
 **Decisions taken:**
 
-| Decision        | Choice                                                                                                                                                                 |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Chain coverage  | EURC on **Base** and **Base Sepolia** only. Circle has not deployed EURC on Optimism or OP Sepolia, so Optimism stays USDC-only.                                        |
-| Facilitator fee | Paid in the **settled asset**: a EURC settlement costs a EURC fee, a USDC settlement a USDC fee. Same nominal flat fee per token.                                        |
-| Pricing         | Prices stay defined in USD. EURC amounts are derived with one static constant (`EUR_PER_USD`) in `scw_js/serverless.yml`, rounded up. Updated by hand; no oracle.       |
-| Default         | EURC is chosen by the website (the buyer), not forced by the sellers. See _How EURC becomes the default_.                                                                |
+| Decision        | Choice                                                                                                                                                            |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Chain coverage  | EURC on **Base** and **Base Sepolia** only. Circle has not deployed EURC on Optimism or OP Sepolia, so Optimism stays USDC-only.                                  |
+| Facilitator fee | Paid in the **settled asset**: a EURC settlement costs a EURC fee, a USDC settlement a USDC fee. Same nominal flat fee per token.                                 |
+| Pricing         | Prices stay defined in USD. EURC amounts are derived with one static constant (`EUR_PER_USD`) in `scw_js/serverless.yml`, rounded up. Updated by hand; no oracle. |
+| Default         | EURC is chosen by the website (the buyer), not forced by the sellers. See _How EURC becomes the default_.                                                         |
 
 **Non-goals:** an FX oracle, EURC on Optimism (bridged or otherwise), any contract change, any
 token beyond these two.
+
+**Status:**
+
+- **PR 1 is merged (#690).** The shared API differs from section 3: the type is
+  `StablecoinSymbol`, the address lookup is `findStablecoin(network, address)`, and enumeration is
+  `getStablecoins(network)`. That last one was added with PR 2, because only a seller needs it.
+  `wallet_report_cron.ts` was also finished with PR 2.
+- **PR 2 is implemented, not yet deployed.** Two changes against section 4:
+  - `EUR_PER_USD` has no default and works as a kill switch (unset means no EURC).
+  - The claim cron works on a token-filtered view of each network's channel store. The SDK's
+    channel manager claims every stored channel in its one token, and the facilitator refuses
+    mixed-token batches, so an unfiltered store would fail every Base claim.
+
+  See `scw_js/README.md` → _Stablecoins and pricing_.
 
 ---
 

@@ -1,5 +1,9 @@
 import { logger } from "./logger.js";
-import { getUSDCConfig } from "@fretchen/chain-utils";
+import {
+  offeredStablecoins,
+  resolvePaidStablecoin,
+  usdAtomicToAsset,
+} from "./stablecoin_pricing.js";
 import { searchWeb, QueryError } from "./search_service.js";
 import { fetchExternalHtml, FetchUrlError, parseHttpsUrl } from "./web_fetch_service.js";
 import {
@@ -184,6 +188,17 @@ async function servePaid(
     });
   }
 
+  // Price the stablecoin the buyer's channel is in (see sc_llm_x402.ts) — checked before any
+  // server setup, since an unoffered asset is the caller's error, not ours.
+  const paidAsset = (payload["accepted"] as Record<string, unknown> | undefined)?.["asset"];
+  const coin = resolvePaidStablecoin(network, paidAsset);
+  if (!coin) {
+    return jsonResponse(402, {
+      error: `Unsupported payment asset on ${network}`,
+      accepted: offeredStablecoins(network).map((offered) => offered.address),
+    });
+  }
+
   let resourceServer: ReturnType<typeof createLLMResourceServer>["resourceServer"];
   let scheme: ReturnType<typeof createLLMResourceServer>["scheme"];
   try {
@@ -193,15 +208,14 @@ async function servePaid(
     return jsonResponse(500, { error: "Internal server error" });
   }
 
-  const usdcConfig = getUSDCConfig(network);
   const baseRequirements: SdkPaymentRequirements = {
     scheme: "batch-settlement",
     network: network as `${string}:${string}`,
-    amount: PRICE_ATOMIC[route],
-    asset: usdcConfig.address,
+    amount: usdAtomicToAsset(PRICE_ATOMIC[route], coin.symbol),
+    asset: coin.address,
     payTo: receiverAddress,
     maxTimeoutSeconds: MAX_TIMEOUT_SECONDS,
-    extra: { name: usdcConfig.usdcName, version: usdcConfig.usdcVersion },
+    extra: { name: coin.name, version: coin.version },
   };
   // The ENHANCED requirements, not the base ones: the facilitator's validateChannelConfig treats a
   // missing `extra.receiverAuthorizer` as a mismatch rather than as "not required", so a raw object
@@ -284,7 +298,10 @@ async function servePaid(
     });
   }
 
-  logger.info({ route, network, amount: PRICE_ATOMIC[route] }, "Served and settled");
+  logger.info(
+    { route, network, asset: coin.symbol, amount: baseRequirements.amount },
+    "Served and settled",
+  );
   return {
     statusCode: 200,
     headers: { ...CORS_HEADERS, ...createSettlementHeaders(settlement) },
@@ -308,7 +325,7 @@ async function challenge(route: Route, receiverAddress: `0x${string}`) {
     resourceUrl: `${SERVICE_URL}/${route}`,
     description: DESCRIPTION[route],
     mimeType: "application/json",
-    amount: PRICE_ATOMIC[route],
+    usdAmount: PRICE_ATOMIC[route],
     payTo: receiverAddress,
     scheme,
     networks: MAINNET_NETWORKS,

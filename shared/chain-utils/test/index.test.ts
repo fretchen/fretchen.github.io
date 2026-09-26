@@ -34,6 +34,7 @@ import {
   USDC_ADDRESSES,
   EURC_ADDRESSES,
   findStablecoin,
+  getStablecoins,
 } from "../src/addresses";
 
 describe("@fretchen/chain-utils", () => {
@@ -277,6 +278,36 @@ describe("@fretchen/chain-utils", () => {
         // Testnets use "USDC"
         expect(getUSDCName("eip155:11155420")).toBe("USDC");
         expect(getUSDCName("eip155:84532")).toBe("USDC");
+      });
+    });
+
+    describe("getStablecoins()", () => {
+      test("lists USDC and EURC on Base, in registry order", () => {
+        for (const network of ["eip155:8453", "eip155:84532"]) {
+          expect(getStablecoins(network).map((c) => c.symbol)).toEqual(["USDC", "EURC"]);
+        }
+      });
+
+      test("lists only USDC on Optimism, where Circle has no EURC", () => {
+        for (const network of ["eip155:10", "eip155:11155420"]) {
+          expect(getStablecoins(network).map((c) => c.symbol)).toEqual(["USDC"]);
+        }
+      });
+
+      test("carries each token's own EIP-712 domain", () => {
+        expect(getStablecoins("eip155:8453")).toEqual([
+          {
+            symbol: "USDC",
+            address: USDC_ADDRESSES["eip155:8453"],
+            name: "USD Coin",
+            version: "2",
+          },
+          { symbol: "EURC", address: EURC_ADDRESSES["eip155:8453"], name: "EURC", version: "2" },
+        ]);
+      });
+
+      test("is empty for an unknown network", () => {
+        expect(getStablecoins("eip155:1")).toEqual([]);
       });
     });
 

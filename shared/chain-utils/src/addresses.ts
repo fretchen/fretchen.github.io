@@ -139,21 +139,32 @@ export interface StablecoinInfo {
 }
 
 /**
+ * Every stablecoin this project accepts on `network`, in registry order (USDC, then EURC).
+ * Empty for an unknown network. Which one a seller *prefers* is the seller's decision — this
+ * list deliberately carries no preference order.
+ */
+export function getStablecoins(network: string): StablecoinInfo[] {
+  const candidates: Array<[StablecoinSymbol, `0x${string}` | undefined, string | undefined]> = [
+    ["USDC", USDC_ADDRESSES[network], USDC_NAMES[network]],
+    ["EURC", EURC_ADDRESSES[network], EURC_NAMES[network]],
+  ];
+  const coins: StablecoinInfo[] = [];
+  for (const [symbol, address, name] of candidates) {
+    if (address && name) {
+      coins.push({ symbol, address, name, version: "2" });
+    }
+  }
+  return coins;
+}
+
+/**
  * Identify a token address as one of the stablecoins this project accepts on `network`.
  * Case-insensitive, since addresses arrive in mixed EIP-55 casing.
  * @returns null for any other token, or for EURC on a network without EURC.
  */
 export function findStablecoin(network: string, address: string): StablecoinInfo | null {
-  const candidates: Array<[StablecoinSymbol, `0x${string}` | undefined, string | undefined]> = [
-    ["USDC", USDC_ADDRESSES[network], USDC_NAMES[network]],
-    ["EURC", EURC_ADDRESSES[network], EURC_NAMES[network]],
-  ];
-  for (const [symbol, tokenAddress, name] of candidates) {
-    if (tokenAddress && name && tokenAddress.toLowerCase() === address.toLowerCase()) {
-      return { symbol, address: tokenAddress, name, version: "2" };
-    }
-  }
-  return null;
+  const wanted = address.toLowerCase();
+  return getStablecoins(network).find((coin) => coin.address.toLowerCase() === wanted) ?? null;
 }
 
 // ═══════════════════════════════════════════════════════════════

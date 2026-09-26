@@ -145,7 +145,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "https://api.example.com/genimg",
         description: "AI Image Generation",
         mimeType: "application/json",
-        amount: "1000",
+        usdAmount: "1000",
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
       });
       const response = create402Response(paymentRequirements);
@@ -177,7 +177,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/genimg",
         description: "AI Image Generation",
         mimeType: "application/json",
-        amount: "1000",
+        usdAmount: "1000",
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
       });
       const response = create402Response(paymentRequirements);
@@ -207,7 +207,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/genimg",
         description: "AI Image Generation",
         mimeType: "application/json",
-        amount: "1000",
+        usdAmount: "1000",
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
       });
       const response = create402Response(paymentRequirements);
@@ -223,7 +223,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/genimg",
         description: "AI Image Generation",
         mimeType: "application/json",
-        amount: "1000",
+        usdAmount: "1000",
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
       });
       const response = create402Response(paymentRequirements);
@@ -241,7 +241,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/genimg",
         description: "AI Image Generation",
         mimeType: "application/json",
-        amount: "1000",
+        usdAmount: "1000",
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
         networks: ["eip155:11155420"], // Only Sepolia
       });
@@ -261,7 +261,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/genimg",
         description: "AI Image Generation",
         mimeType: "application/json",
-        amount: "1000",
+        usdAmount: "1000",
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
         networks: undefined, // Default: all networks
       });
@@ -1072,6 +1072,70 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       );
     });
 
+    describe("paid in EURC on Base", () => {
+      const BASE_EURC = "0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42";
+
+      function eurcEvent() {
+        const payment = {
+          x402Version: 2,
+          accepted: {
+            scheme: "exact",
+            network: "eip155:8453",
+            amount: "60200",
+            asset: BASE_EURC,
+            payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+          },
+          payload: {
+            authorization: {
+              from: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+              to: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+              value: "60200",
+            },
+          },
+        };
+        return {
+          httpMethod: "POST",
+          headers: { "x-payment": JSON.stringify(payment) },
+          body: JSON.stringify({ prompt: "Test EURC" }),
+          path: "/genimg",
+        };
+      }
+
+      afterEach(() => {
+        delete process.env.EUR_PER_USD;
+      });
+
+      test("verifies against EURC requirements at the converted price", async () => {
+        process.env.EUR_PER_USD = "0.86";
+        setupSuccessfulMintingFlow(102, "eip155:8453");
+
+        const response = await handle(eurcEvent(), {});
+        expect(response.statusCode).toBe(200);
+
+        const verifyCall = vi
+          .mocked(global.fetch)
+          .mock.calls.find((call) => String(call[0]).includes("/verify"));
+        const verifyBody = JSON.parse(String(verifyCall?.[1]?.body));
+        // 70000 USD-atomic (the default image price) × 0.86
+        expect(verifyBody.paymentRequirements).toMatchObject({
+          network: "eip155:8453",
+          asset: BASE_EURC,
+          amount: "60200",
+          extra: { name: "EURC", version: "2" },
+        });
+      });
+
+      test("refuses EURC before contacting the facilitator while EUR_PER_USD is unset", async () => {
+        global.fetch = vi.fn();
+
+        const response = await handle(eurcEvent(), {});
+
+        expect(response.statusCode).toBe(402);
+        expect(JSON.parse(response.body).reason).toBe("invalid_payment_asset");
+        expect(global.fetch).not.toHaveBeenCalled();
+      });
+    });
+
     test("should verify Optimism Sepolia payment (test mode)", async () => {
       const mockTokenId = 101;
       setupSuccessfulMintingFlow(mockTokenId, "eip155:11155420"); // Specify Sepolia network
@@ -1661,7 +1725,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/test",
         description: "Test Resource",
         mimeType: "application/json",
-        amount: "1000",
+        usdAmount: "1000",
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
       });
 
@@ -1732,7 +1796,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/test",
         description: "Test",
         mimeType: "application/json",
-        amount: "1000",
+        usdAmount: "1000",
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
       });
 
@@ -1752,6 +1816,44 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(sepoliaAccept.extra).toEqual({
         name: "USDC", // Different from mainnet!
         version: "2",
+      });
+    });
+
+    describe("with EURC priced (EUR_PER_USD set)", () => {
+      afterEach(() => {
+        delete process.env.EUR_PER_USD;
+      });
+
+      test("lists EURC before USDC on Base, and only USDC on Optimism", async () => {
+        process.env.EUR_PER_USD = "0.86";
+        const { createPaymentRequirements } = await import("../x402_server.js");
+
+        const { accepts } = createPaymentRequirements({
+          resourceUrl: "/test",
+          description: "Test",
+          mimeType: "application/json",
+          usdAmount: "1001",
+          payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+        });
+
+        const byNetwork = (network: string) =>
+          accepts.filter((a) => a.network === network).map((a) => a.extra.name);
+        // The order is the preference: a stock client pays with the first entry it allows.
+        expect(byNetwork("eip155:8453")).toEqual(["EURC", "USD Coin"]);
+        expect(byNetwork("eip155:84532")).toEqual(["EURC", "USDC"]);
+        expect(byNetwork("eip155:10")).toEqual(["USD Coin"]);
+        expect(byNetwork("eip155:11155420")).toEqual(["USDC"]);
+
+        const baseEurc = accepts.find(
+          (a) => a.network === "eip155:8453" && a.extra.name === "EURC",
+        );
+        const baseUsdc = accepts.find(
+          (a) => a.network === "eip155:8453" && a.extra.name === "USD Coin",
+        );
+        // 1001 × 0.86 = 860.86, rounded UP so the seller never receives less than the USD price.
+        expect(baseEurc?.amount).toBe("861");
+        expect(baseEurc?.asset).toBe("0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42");
+        expect(baseUsdc?.amount).toBe("1001");
       });
     });
   });

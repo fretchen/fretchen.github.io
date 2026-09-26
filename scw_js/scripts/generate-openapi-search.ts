@@ -102,7 +102,7 @@ const SCHEMA_NAME: Record<Route, string> = {
 function operationFor(route: Route) {
   return {
     operationId: route === "search" ? "searchWeb" : "fetchUrl",
-    summary: `${DESCRIPTION[route]} (x402 USDC payment)`,
+    summary: `${DESCRIPTION[route]} (x402 stablecoin payment)`,
     description: ROUTE_NOTES[route],
     tags: ["Web", "x402"],
     security: [] as const,
@@ -150,7 +150,7 @@ export function generateOpenApiSpec() {
     info: {
       title: "Fretchen Web Access Service",
       description:
-        "Web search and single-page fetch for agents, paid per call via x402 batch-settlement USDC payment channels.",
+        "Web search and single-page fetch for agents, paid per call via x402 batch-settlement payment channels in USDC (or EURC on Base).",
       version: "1.0.0",
       "x-guidance":
         "GET /search?q=... or GET /fetch?url=... with no payment header to receive a 402 carrying x402 batch-settlement payment requirements (accepts[]). Open or top up a payment channel per those requirements, retry with the payment header, and the service returns JSON. Payment travels in the header only — these are GET routes, so there is no body fallback. Both routes bill onto the SAME channel as llm-agent.fretchen.eu when the payer, voucher signer and receiver match, so an agent already chatting there pays for web access without a second deposit. Prices are fixed per route and settled only when the call succeeds: an upstream failure returns 500 and takes no money. Mainnet only — testnet USDC is free and these routes spend real money on the caller's behalf.",
@@ -169,7 +169,10 @@ export function generateOpenApiSpec() {
     servers: [{ url: ORIGIN }],
     tags: [
       { name: "Web", description: "Search and single-page retrieval for agents" },
-      { name: "x402", description: "Paid via x402 batch-settlement USDC payment channels" },
+      {
+        name: "x402",
+        description: "Paid via x402 batch-settlement payment channels in USDC, or EURC on Base",
+      },
     ],
     paths: {
       "/search": { get: operationFor("search") },

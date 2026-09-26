@@ -6,6 +6,7 @@ import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 // never have reached it anyway — and a hand-faked token would not prove the point, since the thing
 // being asserted is that even a CORRECT signature is ignored.
 import { privateKeyToAccount } from "viem/accounts";
+import { USDC_ADDRESSES, EURC_ADDRESSES } from "@fretchen/chain-utils";
 
 // DNS is stubbed so these stay hermetic: /fetch resolves every hostname before connecting, and a
 // test that needs a working resolver fails on an offline machine for reasons that have nothing to
@@ -15,7 +16,8 @@ vi.mock("node:dns/promises", () => ({ lookup: mockLookup }));
 
 // The x402 seller is mocked the way sc_llm_x402.test.ts mocks it: the SDK wants S3, a receiver
 // authorizer key and a chain, none of which belong in a unit test. `@fretchen/chain-utils` stays
-// REAL here — the signature checks above depend on it, and `getUSDCConfig` is a pure lookup.
+// REAL here — the signature checks above depend on it, and the stablecoin registry is a pure
+// lookup whose answer (which asset is priced how) is part of what these tests check.
 const {
   mockCreateLLMResourceServer,
   mockCreateBatchSettlementPaymentRequirements,
@@ -51,8 +53,8 @@ vi.mock("../x402_server.js", () => ({
 const RECEIVER = "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC";
 
 /** A payment payload, as the SDK would hand it over after decoding the header. */
-function payment(network = "eip155:10") {
-  return { accepted: { network }, payload: { voucher: "0xsigned" } };
+function payment(network = "eip155:10", asset: string = USDC_ADDRESSES[network]) {
+  return { accepted: { network, asset }, payload: { voucher: "0xsigned" } };
 }
 
 // Anvil account #0 — a well-known test key, never used for anything real.
@@ -139,7 +141,7 @@ beforeEach(async () => {
   mockCreateBatchSettlementPaymentRequirements.mockImplementation(
     (opts: {
       resourceUrl: string;
-      amount: string;
+      usdAmount: string;
       payTo: string;
       networks: string[];
       maxTimeoutSeconds: number;
@@ -148,7 +150,7 @@ beforeEach(async () => {
       resource: { url: opts.resourceUrl },
       accepts: opts.networks.map((network) => ({
         network,
-        amount: opts.amount,
+        amount: opts.usdAmount,
         payTo: opts.payTo,
         maxTimeoutSeconds: opts.maxTimeoutSeconds,
       })),
@@ -590,6 +592,57 @@ describe("the paid path", () => {
     await handle(makeEvent("GET", "search", { auth: null, query: { q: "x402" } }), {});
 
     expect(mockSettlePayment.mock.calls[0][1]).toEqual(mockVerifyPayment.mock.calls[0][1]);
+  });
+
+  describe("paid in EURC", () => {
+    const BASE_EURC = EURC_ADDRESSES["eip155:8453"];
+
+    afterEach(() => {
+      delete process.env.EUR_PER_USD;
+    });
+
+    test("prices the search in EURC at the converted, rounded-up amount", async () => {
+      process.env.EUR_PER_USD = "0.86";
+      mockExtractPaymentPayload.mockReturnValue(payment("eip155:8453", BASE_EURC));
+
+      const res = await handle(
+        makeEvent("GET", "search", { auth: null, query: { q: "x402" } }),
+        {},
+      );
+
+      expect(res.statusCode).toBe(200);
+      // 10000 USD-atomic × 0.86
+      expect(mockVerifyPayment.mock.calls[0][1]).toMatchObject({
+        asset: BASE_EURC,
+        amount: "8600",
+        extra: { name: "EURC", version: "2" },
+      });
+    });
+
+    test("refuses EURC while EUR_PER_USD is unset", async () => {
+      mockExtractPaymentPayload.mockReturnValue(payment("eip155:8453", BASE_EURC));
+
+      const res = await handle(
+        makeEvent("GET", "search", { auth: null, query: { q: "x402" } }),
+        {},
+      );
+
+      expect(res.statusCode).toBe(402);
+      expect(mockVerifyPayment).not.toHaveBeenCalled();
+    });
+
+    test("refuses EURC on a network where it does not exist", async () => {
+      process.env.EUR_PER_USD = "0.86";
+      mockExtractPaymentPayload.mockReturnValue(payment("eip155:10", BASE_EURC));
+
+      const res = await handle(
+        makeEvent("GET", "search", { auth: null, query: { q: "x402" } }),
+        {},
+      );
+
+      expect(res.statusCode).toBe(402);
+      expect(mockVerifyPayment).not.toHaveBeenCalled();
+    });
   });
 
   /** An upstream failure is not something to charge for. */

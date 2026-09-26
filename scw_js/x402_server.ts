@@ -5,11 +5,12 @@ import {
   type AuthorizerSigner,
   type BatchSettlementChannelManager,
 } from "@x402/evm/batch-settlement/server";
-import { getUSDCConfig, loadPrivateKey } from "@fretchen/chain-utils";
+import { loadPrivateKey } from "@fretchen/chain-utils";
 import { privateKeyToAccount } from "viem/accounts";
 import { S3ChannelStorage } from "./x402_channel_storage.js";
 import { EXPOSED_X402_HEADERS } from "./utils.js";
 import { logger } from "./logger.js";
+import { offeredStablecoins, usdAtomicToAsset } from "./stablecoin_pricing.js";
 
 const FACILITATOR_URL = process.env.FACILITATOR_URL ?? "https://facilitator.fretchen.eu";
 
@@ -80,7 +81,8 @@ export function createFacilitatorClient(): HTTPFacilitatorClient {
 export interface FacilitatorFeeConfig {
   /** Spender to approve — the facilitator wallet that runs `transferFrom`. */
   recipient: `0x${string}`;
-  /** Flat fee per settlement, in USDC atomic units. */
+  /** Flat fee per settlement, in the settled token's atomic units (the same nominal amount in
+   *  USDC and EURC — the facilitator charges the fee in whichever token the payment settles in). */
   flatFee: bigint;
 }
 
@@ -161,6 +163,12 @@ export interface LLMResourceServer {
    */
   schemeFor: (network: string) => BatchSettlementEvmScheme;
   /**
+   * A scheme whose storage lists only `token`'s channels on `network` — for the claim/settle
+   * cron, which must claim one token at a time (see S3ChannelStorage). Not registered with the
+   * resource server: serving keeps one scheme per network, writing both tokens to one prefix.
+   */
+  claimSchemeFor: (network: string, token: string) => BatchSettlementEvmScheme;
+  /**
    * Convenience handle for storage-independent work only — building the 402 `accepts`
    * array, where `enhancePaymentRequirements` just stamps on `receiverAuthorizer`,
    * `withdrawDelay` and the EIP-712 domain. Anything that reads or writes channels must
@@ -196,14 +204,17 @@ export function createLLMResourceServer(receiverAddress: `0x${string}`): LLMReso
       ),
   };
 
-  const schemes = new Map<string, BatchSettlementEvmScheme>();
-  for (const network of BATCH_SETTLEMENT_NETWORKS) {
-    const scheme = new BatchSettlementEvmScheme(receiverAddress, {
-      storage: new S3ChannelStorage(network),
+  const makeScheme = (storage: S3ChannelStorage) =>
+    new BatchSettlementEvmScheme(receiverAddress, {
+      storage,
       receiverAuthorizerSigner,
       onchainStateTtlMs: ONCHAIN_STATE_TTL_MS,
       withdrawDelay: WITHDRAW_DELAY_SECONDS,
     });
+
+  const schemes = new Map<string, BatchSettlementEvmScheme>();
+  for (const network of BATCH_SETTLEMENT_NETWORKS) {
+    const scheme = makeScheme(new S3ChannelStorage(network));
     schemes.set(network, scheme);
     resourceServer.register(network as `${string}:${string}`, scheme);
   }
@@ -219,7 +230,17 @@ export function createLLMResourceServer(receiverAddress: `0x${string}`): LLMReso
     return scheme;
   };
 
-  return { resourceServer, schemeFor, scheme: schemeFor(BATCH_SETTLEMENT_NETWORKS[0]) };
+  const claimSchemeFor = (network: string, token: string): BatchSettlementEvmScheme => {
+    schemeFor(network); // same unsupported-network error as the serving path
+    return makeScheme(new S3ChannelStorage(network, token));
+  };
+
+  return {
+    resourceServer,
+    schemeFor,
+    claimSchemeFor,
+    scheme: schemeFor(BATCH_SETTLEMENT_NETWORKS[0]),
+  };
 }
 
 /**
@@ -302,7 +323,8 @@ export interface BatchSettlementPaymentRequirementsOptions {
   resourceUrl: string;
   description: string;
   mimeType: string;
-  amount: string;
+  /** Price in USD atomic units (6 decimals). Converted per offered stablecoin. */
+  usdAmount: string;
   payTo: string;
   scheme: BatchSettlementEvmScheme;
   networks?: readonly string[];
@@ -316,16 +338,17 @@ export interface BatchSettlementPaymentRequirementsOptions {
 }
 
 /**
- * Builds the 402 `accepts` array for batch-settlement: each network's base requirements
- * must be run through the scheme's own `enhancePaymentRequirements` so the client
- * receives the `receiverAuthorizer`/`withdrawDelay`/EIP-712 domain fields it needs to
- * build a deposit payload (confirmed necessary in the B0 spike).
+ * Builds the 402 `accepts` array for batch-settlement: one entry per (network, offered
+ * stablecoin), most preferred coin first (see STABLECOIN_PREFERENCE). Each entry must be run
+ * through the scheme's own `enhancePaymentRequirements` so the client receives the
+ * `receiverAuthorizer`/`withdrawDelay`/EIP-712 domain fields it needs to build a deposit
+ * payload (confirmed necessary in the B0 spike).
  */
 export async function createBatchSettlementPaymentRequirements({
   resourceUrl,
   description,
   mimeType,
-  amount,
+  usdAmount,
   payTo,
   scheme,
   networks = BATCH_SETTLEMENT_NETWORKS,
@@ -336,28 +359,29 @@ export async function createBatchSettlementPaymentRequirements({
   accepts: unknown[];
 }> {
   const accepts = await Promise.all(
-    networks.map(async (network) => {
-      const config = getUSDCConfig(network);
-      const base: SdkPaymentRequirements = {
-        scheme: "batch-settlement",
-        network: network as `${string}:${string}`,
-        amount,
-        asset: config.address,
-        payTo,
-        maxTimeoutSeconds,
-        extra: { name: config.usdcName, version: config.usdcVersion },
-      };
-      return scheme.enhancePaymentRequirements(
-        base,
-        {
-          x402Version: 2,
+    networks.flatMap((network) =>
+      offeredStablecoins(network).map((coin) => {
+        const base: SdkPaymentRequirements = {
           scheme: "batch-settlement",
           network: network as `${string}:${string}`,
-          extra: base.extra,
-        },
-        [],
-      );
-    }),
+          amount: usdAtomicToAsset(usdAmount, coin.symbol),
+          asset: coin.address,
+          payTo,
+          maxTimeoutSeconds,
+          extra: { name: coin.name, version: coin.version },
+        };
+        return scheme.enhancePaymentRequirements(
+          base,
+          {
+            x402Version: 2,
+            scheme: "batch-settlement",
+            network: network as `${string}:${string}`,
+            extra: base.extra,
+          },
+          [],
+        );
+      }),
+    ),
   );
 
   return {
@@ -371,7 +395,8 @@ export interface PaymentRequirementsOptions {
   resourceUrl: string;
   description: string;
   mimeType: string;
-  amount: string;
+  /** Price in USD atomic units (6 decimals). Converted per offered stablecoin. */
+  usdAmount: string;
   payTo: string;
   networks?: readonly string[];
 }
@@ -390,29 +415,26 @@ export interface PaymentRequirements {
   }>;
 }
 
+/** The exact-scheme 402: one entry per (network, offered stablecoin), most preferred first. */
 export function createPaymentRequirements({
   resourceUrl,
   description,
   mimeType,
-  amount,
+  usdAmount,
   payTo,
   networks = getSupportedNetworks(),
 }: PaymentRequirementsOptions): PaymentRequirements {
-  const accepts = networks.map((network) => {
-    const config = getUSDCConfig(network);
-    return {
+  const accepts = networks.flatMap((network) =>
+    offeredStablecoins(network).map((coin) => ({
       scheme: "exact",
       network,
-      amount,
-      asset: config.address,
+      amount: usdAtomicToAsset(usdAmount, coin.symbol),
+      asset: coin.address,
       payTo,
       maxTimeoutSeconds: 60,
-      extra: {
-        name: config.usdcName,
-        version: config.usdcVersion,
-      },
-    };
-  });
+      extra: { name: coin.name, version: coin.version },
+    })),
+  );
 
   return {
     x402Version: 2,

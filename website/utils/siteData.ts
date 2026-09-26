@@ -12,8 +12,6 @@
  * @see https://schema.org/Person
  */
 
-// Import favicon for h-card u-photo
-import favicon from "../pages/image_3_1fc7cfc7b9e9.jpg";
 // Import core config (no image dependencies, usable in build scripts)
 import { SITE_CONFIG } from "./siteConfig";
 
@@ -23,7 +21,7 @@ import { SITE_CONFIG } from "./siteConfig";
  */
 export const SITE = {
   ...SITE_CONFIG,
-  photo: favicon, // u-photo for h-card (favicon/profile image)
+  photo: "/fretchen.svg", // u-photo for h-card (profile image, static asset in public/)
 } as const;
 
 /**

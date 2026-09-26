@@ -102,7 +102,9 @@ const SCHEMA_NAME: Record<Route, string> = {
 function operationFor(route: Route) {
   return {
     operationId: route === "search" ? "searchWeb" : "fetchUrl",
-    summary: `${DESCRIPTION[route]} (x402 stablecoin payment)`,
+    summary:
+      `${DESCRIPTION[route]} (x402: ${formatUsdcAtomicAsDecimalUsd(PRICE_ATOMIC[route].USDC)} USDC, ` +
+      `or ${formatUsdcAtomicAsDecimalUsd(PRICE_ATOMIC[route].EURC)} EURC on Base)`,
     description: ROUTE_NOTES[route],
     tags: ["Web", "x402"],
     security: [] as const,
@@ -111,7 +113,8 @@ function operationFor(route: Route) {
       price: {
         mode: "fixed" as const,
         currency: "USD" as const,
-        amount: formatUsdcAtomicAsDecimalUsd(PRICE_ATOMIC[route]),
+        // The discovery spec prices in USD, so this is the USDC list; EURC is in the summary.
+        amount: formatUsdcAtomicAsDecimalUsd(PRICE_ATOMIC[route].USDC),
       },
     },
     parameters: toQueryParameters(toComponentSchema(QUERY_SCHEMA_FOR[route])),

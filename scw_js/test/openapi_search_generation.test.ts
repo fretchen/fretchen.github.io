@@ -87,7 +87,9 @@ describe("openapi.search.json generation", () => {
       // Asserted as a relationship rather than two more literals, so the intent survives a
       // repricing: fetch is a tenth of search on purpose, to steer a model into searching once
       // and reading several results.
-      expect(BigInt(PRICE_ATOMIC.search)).toBe(BigInt(PRICE_ATOMIC.fetch) * 10n);
+      for (const token of ["USDC", "EURC"] as const) {
+        expect(BigInt(PRICE_ATOMIC.search[token])).toBe(BigInt(PRICE_ATOMIC.fetch[token]) * 10n);
+      }
     });
   });
 

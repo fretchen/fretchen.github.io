@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ===== Mocks (vi.hoisted ensures these are available when vi.mock factories run) =====
 
 const {
   mockCallLLMAPI,
-  mockConvertTokensToUsdcCost,
+  mockTokensToCost,
   mockCreateLLMResourceServer,
   mockCreateBatchSettlementPaymentRequirements,
   mockCreate402Response,
@@ -24,25 +24,30 @@ const {
   const mockEnhancePaymentRequirements = vi.fn().mockImplementation(async (base: unknown) => base);
   return {
     mockCallLLMAPI: vi.fn(),
-    // Real formula (matches llm_service.ts's actual convertTokensToUsdcCost: separate
+    // Real formula (matches llm_service.ts's actual tokensToCost: separate
     // input/output rates per provider — see LLM_PROVIDERS there), not a fixed stub — so
     // tests can verify the settlement amount actually tracks whatever usage callLLMAPI
     // returns, not just the flat ceiling. Called once at module load (for the ceiling,
-    // USDC_MAX_PRICE_PER_MESSAGE) — must work before beforeEach runs. Simplified to a
+    // MAX_PRICE_ATOMIC, one per currency) — must work before beforeEach runs. Simplified to a
     // single shared denominator (valid since both providers below have inDen === outDen
     // === 100n today; the real implementation cross-multiplies to not assume that).
-    mockConvertTokensToUsdcCost: vi.fn().mockImplementation(
+    mockTokensToCost: vi.fn().mockImplementation(
       (
         usage: {
           prompt_tokens: bigint | number | string;
           completion_tokens: bigint | number | string;
         },
         provider: string,
+        symbol: "USDC" | "EURC",
       ) => {
-        const RATES: Record<string, { in: bigint; out: bigint; den: bigint }> = {
-          mistral: { in: 50n, out: 150n, den: 100n },
+        // One rate card per currency, as in llm_service.ts: $0.50/$1.50 and €0.44/€1.50.
+        const RATES: Record<string, Record<string, { in: bigint; out: bigint; den: bigint }>> = {
+          mistral: {
+            USDC: { in: 50n, out: 150n, den: 100n },
+            EURC: { in: 44n, out: 150n, den: 100n },
+          },
         };
-        const rate = RATES[provider];
+        const rate = RATES[provider]?.[symbol];
         if (!rate) throw new Error(`Unknown LLM provider: ${provider}`);
         const p = BigInt(usage.prompt_tokens);
         const c = BigInt(usage.completion_tokens);
@@ -70,7 +75,7 @@ const {
 
 vi.mock("../llm_service.js", () => ({
   callLLMAPI: mockCallLLMAPI,
-  convertTokensToUsdcCost: mockConvertTokensToUsdcCost,
+  tokensToCost: mockTokensToCost,
   // Real, tiny implementations (keep in sync with llm_service.ts): the handler validates the
   // request `model` against these, so a mock that omitted them would fail every request.
   resolveModel: (modelId: string) =>
@@ -454,7 +459,12 @@ describe("sc_llm_x402", () => {
       // Ceiling: the whole 6000-token estimate priced as completion (output) tokens
       // at Mistral's $1.50/M rate — 6000 * 150 / 100 = 9000.
       expect(mockCreateBatchSettlementPaymentRequirements).toHaveBeenCalledWith(
-        expect.objectContaining({ payTo: VALID_ADDRESS, scheme: mockScheme, usdAmount: "9000" }),
+        expect.objectContaining({
+          payTo: VALID_ADDRESS,
+          scheme: mockScheme,
+          // 6000 tokens at the output rate: $1.50/M and €1.50/M both give 9000.
+          price: { USDC: "9000", EURC: "9000" },
+        }),
       );
       expect(mockCreate402Response).toHaveBeenCalled();
     });
@@ -1233,14 +1243,10 @@ describe("sc_llm_x402", () => {
       payload: { type: "voucher" },
     };
 
-    afterEach(() => {
-      delete process.env.EUR_PER_USD;
-    });
-
-    it("prices a EURC channel in EURC: converted ceiling, rounded up, EURC's own domain", async () => {
-      process.env.EUR_PER_USD = "0.86";
+    it("prices a EURC channel on the EUR rate card, with EURC's own domain", async () => {
       mockExtractPaymentPayload.mockReturnValue(eurcPayload);
-      // 200 prompt + 800 completion = 1300 USD-atomic, as in the settle tests above.
+      // 200 prompt + 800 completion: 1300 on the USD card (the settle tests above), 1288 on the
+      // EUR card (200 × €0.44/M + 800 × €1.50/M). Distinct on purpose — it shows which card priced it.
       mockCallLLMAPI.mockResolvedValue(
         openAiCompletion("answer", {
           prompt_tokens: 200,
@@ -1252,32 +1258,22 @@ describe("sc_llm_x402", () => {
       const res = await handle(makeEvent() as never, {});
       expect(res.statusCode).toBe(200);
 
-      // Ceiling 9000 × 0.86 = 7740; settle 1300 × 0.86 = 1118.
+      // Ceiling: 6000 tokens × €1.50/M = 9000. Settle: 88 + 1200 = 1288.
       expect(mockVerifyPayment).toHaveBeenCalledWith(
         eurcPayload,
         expect.objectContaining({
           asset: EURC,
-          amount: "7740",
+          amount: "9000",
           extra: expect.objectContaining({ name: "EURC" }),
         }),
       );
       expect(mockSettlePayment).toHaveBeenCalledWith(
         eurcPayload,
-        expect.objectContaining({ asset: EURC, amount: "1118" }),
+        expect.objectContaining({ asset: EURC, amount: "1288" }),
       );
     });
 
-    it("refuses EURC while EUR_PER_USD is unset — there is no price to verify against", async () => {
-      mockExtractPaymentPayload.mockReturnValue(eurcPayload);
-
-      const res = await handle(makeEvent() as never, {});
-
-      expect(res.statusCode).toBe(402);
-      expect(mockVerifyPayment).not.toHaveBeenCalled();
-    });
-
     it("refuses a token that is not a stablecoin on that network", async () => {
-      process.env.EUR_PER_USD = "0.86";
       mockExtractPaymentPayload.mockReturnValue({
         ...eurcPayload,
         accepted: { ...eurcPayload.accepted, asset: "0x0000000000000000000000000000000000000001" },

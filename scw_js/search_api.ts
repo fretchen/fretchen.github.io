@@ -1,9 +1,5 @@
 import { logger } from "./logger.js";
-import {
-  offeredStablecoins,
-  resolvePaidStablecoin,
-  usdAtomicToAsset,
-} from "./stablecoin_pricing.js";
+import { offeredStablecoins, resolvePaidStablecoin } from "./stablecoin_pricing.js";
 import { searchWeb, QueryError } from "./search_service.js";
 import { fetchExternalHtml, FetchUrlError, parseHttpsUrl } from "./web_fetch_service.js";
 import {
@@ -211,7 +207,7 @@ async function servePaid(
   const baseRequirements: SdkPaymentRequirements = {
     scheme: "batch-settlement",
     network: network as `${string}:${string}`,
-    amount: usdAtomicToAsset(PRICE_ATOMIC[route], coin.symbol),
+    amount: PRICE_ATOMIC[route][coin.symbol],
     asset: coin.address,
     payTo: receiverAddress,
     maxTimeoutSeconds: MAX_TIMEOUT_SECONDS,
@@ -325,7 +321,7 @@ async function challenge(route: Route, receiverAddress: `0x${string}`) {
     resourceUrl: `${SERVICE_URL}/${route}`,
     description: DESCRIPTION[route],
     mimeType: "application/json",
-    usdAmount: PRICE_ATOMIC[route],
+    price: PRICE_ATOMIC[route],
     payTo: receiverAddress,
     scheme,
     networks: MAINNET_NETWORKS,

@@ -19,10 +19,8 @@ provider:
     NFT_WALLET_PRIVATE_KEY: ${env:NFT_WALLET_PRIVATE_KEY}
     NFT_WALLET_PUBLIC_KEY: ${env:NFT_WALLET_PUBLIC_KEY}
     USDC_PAYMENT_AMOUNT: ${env:USDC_PAYMENT_AMOUNT, "70000"}
-    # EUR per 1 USD (e.g. "0.86"), set by hand from the current rate — prices stay defined in
-    # USD and EURC amounts are derived from this, rounded up. No default on purpose: unset,
-    # the sellers simply don't offer EURC (see stablecoin_pricing.ts), rather than misprice it.
-    EUR_PER_USD: ${env:EUR_PER_USD, ""}
+    # The image's EURC price — its own euro price, not a conversion of USDC_PAYMENT_AMOUNT.
+    EURC_PAYMENT_AMOUNT: ${env:EURC_PAYMENT_AMOUNT, "60000"}
     # One address, or several comma-separated — see parseOwnerAddresses in chain-utils.
     OWNER_ETH_ADDRESS: ${env:OWNER_ETH_ADDRESS}
     LLM_ESTIMATED_TOKENS_PER_MESSAGE: ${env:LLM_ESTIMATED_TOKENS_PER_MESSAGE, "6000"}

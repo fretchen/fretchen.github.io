@@ -173,8 +173,7 @@ export async function handle(
   // allowance to run out and the check below is skipped entirely.
   const feeConfig = await getFacilitatorFeeConfig();
 
-  // Every DEPLOYED stablecoin, not only the ones currently offered: channels opened before
-  // EURC was switched off (EUR_PER_USD unset) still hold escrow that must be claimed/refunded.
+  // Every stablecoin deployed on the network — each token's channels are claimed separately.
   for (const network of getBatchSettlementNetworks()) {
     for (const coin of getStablecoins(network)) {
       // Pass the token explicitly on EVERY network, not just Optimism. Omitting it makes

@@ -14,7 +14,7 @@
  *
  * 1. `paths["/"].post["x-payment-info"].price.max` must stay present. `sc_llm_x402.ts` mutates it on
  *    a `structuredClone` at serve time, because the static value is a documentation-only baseline
- *    while `MAX_PRICE_USD_ATOMIC` is the real live ceiling. Removing the key, or changing the
+ *    while `MAX_PRICE_ATOMIC.USDC` is the real live ceiling. Removing the key, or changing the
  *    shape so the imported JSON's inferred type no longer permits the assignment, breaks that line
  *    at compile time.
  * 2. `x-service-type` must remain exactly `"llm/v1"`. `precheckLlmV1Agent` and `checkLlmV1Agent` in

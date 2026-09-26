@@ -10,7 +10,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { S3ChannelStorage } from "./x402_channel_storage.js";
 import { EXPOSED_X402_HEADERS } from "./utils.js";
 import { logger } from "./logger.js";
-import { offeredStablecoins, usdAtomicToAsset } from "./stablecoin_pricing.js";
+import { offeredStablecoins, type PriceList } from "./stablecoin_pricing.js";
 
 const FACILITATOR_URL = process.env.FACILITATOR_URL ?? "https://facilitator.fretchen.eu";
 
@@ -323,8 +323,8 @@ export interface BatchSettlementPaymentRequirementsOptions {
   resourceUrl: string;
   description: string;
   mimeType: string;
-  /** Price in USD atomic units (6 decimals). Converted per offered stablecoin. */
-  usdAmount: string;
+  /** The price in each stablecoin's own atomic units — two parallel lists, no conversion. */
+  price: PriceList;
   payTo: string;
   scheme: BatchSettlementEvmScheme;
   networks?: readonly string[];
@@ -348,7 +348,7 @@ export async function createBatchSettlementPaymentRequirements({
   resourceUrl,
   description,
   mimeType,
-  usdAmount,
+  price,
   payTo,
   scheme,
   networks = BATCH_SETTLEMENT_NETWORKS,
@@ -364,7 +364,7 @@ export async function createBatchSettlementPaymentRequirements({
         const base: SdkPaymentRequirements = {
           scheme: "batch-settlement",
           network: network as `${string}:${string}`,
-          amount: usdAtomicToAsset(usdAmount, coin.symbol),
+          amount: price[coin.symbol],
           asset: coin.address,
           payTo,
           maxTimeoutSeconds,
@@ -395,8 +395,8 @@ export interface PaymentRequirementsOptions {
   resourceUrl: string;
   description: string;
   mimeType: string;
-  /** Price in USD atomic units (6 decimals). Converted per offered stablecoin. */
-  usdAmount: string;
+  /** The price in each stablecoin's own atomic units — two parallel lists, no conversion. */
+  price: PriceList;
   payTo: string;
   networks?: readonly string[];
 }
@@ -420,7 +420,7 @@ export function createPaymentRequirements({
   resourceUrl,
   description,
   mimeType,
-  usdAmount,
+  price,
   payTo,
   networks = getSupportedNetworks(),
 }: PaymentRequirementsOptions): PaymentRequirements {
@@ -428,7 +428,7 @@ export function createPaymentRequirements({
     offeredStablecoins(network).map((coin) => ({
       scheme: "exact",
       network,
-      amount: usdAtomicToAsset(usdAmount, coin.symbol),
+      amount: price[coin.symbol],
       asset: coin.address,
       payTo,
       maxTimeoutSeconds: 60,

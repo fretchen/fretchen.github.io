@@ -141,7 +141,7 @@ beforeEach(async () => {
   mockCreateBatchSettlementPaymentRequirements.mockImplementation(
     (opts: {
       resourceUrl: string;
-      usdAmount: string;
+      price: { USDC: string; EURC: string };
       payTo: string;
       networks: string[];
       maxTimeoutSeconds: number;
@@ -150,7 +150,7 @@ beforeEach(async () => {
       resource: { url: opts.resourceUrl },
       accepts: opts.networks.map((network) => ({
         network,
-        amount: opts.usdAmount,
+        amount: opts.price.USDC,
         payTo: opts.payTo,
         maxTimeoutSeconds: opts.maxTimeoutSeconds,
       })),
@@ -597,12 +597,15 @@ describe("the paid path", () => {
   describe("paid in EURC", () => {
     const BASE_EURC = EURC_ADDRESSES["eip155:8453"];
 
-    afterEach(() => {
-      delete process.env.EUR_PER_USD;
+    // Search costs 0.01 in both lists today, so a test with the real values could not tell which
+    // list was read. Give EURC a distinct price for the duration of the test. Imported here, after
+    // the outer beforeEach's resetModules + handler import, so it is the instance the handler reads.
+    beforeEach(async () => {
+      const { PRICE_ATOMIC } = await import("../search_schemas.js");
+      PRICE_ATOMIC.search.EURC = "9000";
     });
 
-    test("prices the search in EURC at the converted, rounded-up amount", async () => {
-      process.env.EUR_PER_USD = "0.86";
+    test("prices the search from the EURC price list", async () => {
       mockExtractPaymentPayload.mockReturnValue(payment("eip155:8453", BASE_EURC));
 
       const res = await handle(
@@ -611,28 +614,14 @@ describe("the paid path", () => {
       );
 
       expect(res.statusCode).toBe(200);
-      // 10000 USD-atomic × 0.86
       expect(mockVerifyPayment.mock.calls[0][1]).toMatchObject({
         asset: BASE_EURC,
-        amount: "8600",
+        amount: "9000",
         extra: { name: "EURC", version: "2" },
       });
     });
 
-    test("refuses EURC while EUR_PER_USD is unset", async () => {
-      mockExtractPaymentPayload.mockReturnValue(payment("eip155:8453", BASE_EURC));
-
-      const res = await handle(
-        makeEvent("GET", "search", { auth: null, query: { q: "x402" } }),
-        {},
-      );
-
-      expect(res.statusCode).toBe(402);
-      expect(mockVerifyPayment).not.toHaveBeenCalled();
-    });
-
     test("refuses EURC on a network where it does not exist", async () => {
-      process.env.EUR_PER_USD = "0.86";
       mockExtractPaymentPayload.mockReturnValue(payment("eip155:10", BASE_EURC));
 
       const res = await handle(

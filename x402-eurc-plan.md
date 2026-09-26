@@ -4,12 +4,12 @@
 
 **Decisions taken:**
 
-| Decision        | Choice                                                                                                                                                            |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Chain coverage  | EURC on **Base** and **Base Sepolia** only. Circle has not deployed EURC on Optimism or OP Sepolia, so Optimism stays USDC-only.                                  |
-| Facilitator fee | Paid in the **settled asset**: a EURC settlement costs a EURC fee, a USDC settlement a USDC fee. Same nominal flat fee per token.                                 |
-| Pricing         | Prices stay defined in USD. EURC amounts are derived with one static constant (`EUR_PER_USD`) in `scw_js/serverless.yml`, rounded up. Updated by hand; no oracle. |
-| Default         | EURC is chosen by the website (the buyer), not forced by the sellers. See _How EURC becomes the default_.                                                         |
+| Decision        | Choice                                                                                                                                                                                                                                     |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Chain coverage  | EURC on **Base** and **Base Sepolia** only. Circle has not deployed EURC on Optimism or OP Sepolia, so Optimism stays USDC-only.                                                                                                           |
+| Facilitator fee | Paid in the **settled asset**: a EURC settlement costs a EURC fee, a USDC settlement a USDC fee. Same nominal flat fee per token.                                                                                                          |
+| Pricing         | **Two parallel price lists** — every price is set in USDC and in EURC; nothing is converted. The LLM prices each channel on the provider's rate card in that channel's currency. (Replaces the original `EUR_PER_USD` design; see Status.) |
+| Default         | EURC is chosen by the website (the buyer), not forced by the sellers. See _How EURC becomes the default_.                                                                                                                                  |
 
 **Non-goals:** an FX oracle, EURC on Optimism (bridged or otherwise), any contract change, any
 token beyond these two.
@@ -21,7 +21,10 @@ token beyond these two.
   `getStablecoins(network)`. That last one was added with PR 2, because only a seller needs it.
   `wallet_report_cron.ts` was also finished with PR 2.
 - **PR 2 is implemented, not yet deployed.** Two changes against section 4:
-  - `EUR_PER_USD` has no default and works as a kill switch (unset means no EURC).
+  - **Pricing is two parallel lists, not a conversion.** The first cut derived EURC from USD
+    prices with a hand-set `EUR_PER_USD` rate, which also doubled as a kill switch. It was
+    reverted: unset, it silently stopped EURC being offered at all (which is how a local test
+    paid USDC), and a EURC price should be a euro price someone chose, not a converted one.
   - The claim cron works on a token-filtered view of each network's channel store. The SDK's
     channel manager claims every stored channel in its one token, and the facilitator refuses
     mixed-token batches, so an unfiltered store would fail every Base claim.
@@ -86,8 +89,9 @@ Covers all three sellers: `genimg_x402_token.ts`, `sc_llm_x402.ts`, `search_api.
 - `x402_server.ts`: `createPaymentRequirements` and `createBatchSettlementPaymentRequirements`
   emit one `accepts` entry per (network, stablecoin), EURC listed before USDC on Base. `extra`
   carries the token's own domain name and version.
-- Pricing: one helper `usdAtomicToAsset(amount, token)` applies `EUR_PER_USD` and rounds up.
-  Used for the image price, the LLM max price and settle amount, and the search prices.
+- ~~Pricing: one helper `usdAtomicToAsset(amount, token)` applies `EUR_PER_USD` and rounds up.~~
+  Reverted — see Status. Each price is now a per-token `PriceList`, and the LLM has a rate card
+  per currency.
 - `llm_x402_cron.ts`: loop over (network, token) pairs — channel manager, fee-allowance warning
   and claim/refund per token.
 - OpenAPI: regenerate; `x-payment-info.price` stays in decimal USD (the discovery spec requires

@@ -85,10 +85,10 @@ fallback (see `genimg_x402_token.ts`).
 - **The facilitator collects a fee** via `transferFrom(merchant, facilitator, fee)`, in the token
   the payment settled in — so the merchant needs one `approve()` **per token** it takes (USDC, and
   EURC on Base). Amounts live only in `website/pages/x402/sellers/`.
-- **Two stablecoins: USDC everywhere, EURC on Base and Base Sepolia only.** The sellers price in
-  USD and derive EURC with the static `EUR_PER_USD` (`scw_js/stablecoin_pricing.ts`); unset, no
-  EURC is offered. On Base the 402 lists EURC first. That order is the seller's preference; the
-  buyer's choice is made by its own selector and spend controls.
+- **Two stablecoins: USDC everywhere, EURC on Base and Base Sepolia only.** They are two parallel
+  price lists — every price is set in each token, never converted (see `scw_js/README.md` →
+  _Stablecoins and pricing_). On Base the 402 lists EURC first. That order is the seller's
+  preference; the buyer's choice is made by its own selector and spend controls.
 
 ## Writing about x402 on the site
 

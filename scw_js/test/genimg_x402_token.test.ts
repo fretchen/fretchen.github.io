@@ -145,7 +145,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "https://api.example.com/genimg",
         description: "AI Image Generation",
         mimeType: "application/json",
-        usdAmount: "1000",
+        price: { USDC: "1000", EURC: "900" },
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
       });
       const response = create402Response(paymentRequirements);
@@ -177,7 +177,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/genimg",
         description: "AI Image Generation",
         mimeType: "application/json",
-        usdAmount: "1000",
+        price: { USDC: "1000", EURC: "900" },
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
       });
       const response = create402Response(paymentRequirements);
@@ -207,7 +207,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/genimg",
         description: "AI Image Generation",
         mimeType: "application/json",
-        usdAmount: "1000",
+        price: { USDC: "1000", EURC: "900" },
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
       });
       const response = create402Response(paymentRequirements);
@@ -223,7 +223,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/genimg",
         description: "AI Image Generation",
         mimeType: "application/json",
-        usdAmount: "1000",
+        price: { USDC: "1000", EURC: "900" },
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
       });
       const response = create402Response(paymentRequirements);
@@ -241,7 +241,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/genimg",
         description: "AI Image Generation",
         mimeType: "application/json",
-        usdAmount: "1000",
+        price: { USDC: "1000", EURC: "900" },
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
         networks: ["eip155:11155420"], // Only Sepolia
       });
@@ -261,7 +261,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/genimg",
         description: "AI Image Generation",
         mimeType: "application/json",
-        usdAmount: "1000",
+        price: { USDC: "1000", EURC: "900" },
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
         networks: undefined, // Default: all networks
       });
@@ -358,9 +358,17 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
       // Default is production mode: Optimism + Base
       expect(body.accepts).toBeInstanceOf(Array);
-      expect(body.accepts.length).toBe(2);
-      expect(body.accepts[0].network).toBe("eip155:10"); // Optimism Mainnet
-      expect(body.accepts[1].network).toBe("eip155:8453"); // Base Mainnet
+      // Optimism: USDC. Base: EURC first (the preference), then USDC.
+      expect(
+        body.accepts.map((a: { network: string; extra: { name: string } }) => [
+          a.network,
+          a.extra.name,
+        ]),
+      ).toEqual([
+        ["eip155:10", "USD Coin"],
+        ["eip155:8453", "EURC"],
+        ["eip155:8453", "USD Coin"],
+      ]);
     });
 
     test("should reject an unsupported network instead of offering mainnet", async () => {
@@ -1081,7 +1089,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
           accepted: {
             scheme: "exact",
             network: "eip155:8453",
-            amount: "60200",
+            amount: "60000",
             asset: BASE_EURC,
             payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
           },
@@ -1089,7 +1097,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
             authorization: {
               from: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
               to: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
-              value: "60200",
+              value: "60000",
             },
           },
         };
@@ -1101,12 +1109,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         };
       }
 
-      afterEach(() => {
-        delete process.env.EUR_PER_USD;
-      });
-
-      test("verifies against EURC requirements at the converted price", async () => {
-        process.env.EUR_PER_USD = "0.86";
+      test("verifies against EURC requirements at the EURC price", async () => {
         setupSuccessfulMintingFlow(102, "eip155:8453");
 
         const response = await handle(eurcEvent(), {});
@@ -1116,19 +1119,24 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
           .mocked(global.fetch)
           .mock.calls.find((call) => String(call[0]).includes("/verify"));
         const verifyBody = JSON.parse(String(verifyCall?.[1]?.body));
-        // 70000 USD-atomic (the default image price) × 0.86
+        // The image's own EURC price (0.06 EURC), not its USDC price and not a conversion of it.
         expect(verifyBody.paymentRequirements).toMatchObject({
           network: "eip155:8453",
           asset: BASE_EURC,
-          amount: "60200",
+          amount: "60000",
           extra: { name: "EURC", version: "2" },
         });
       });
 
-      test("refuses EURC before contacting the facilitator while EUR_PER_USD is unset", async () => {
+      test("refuses EURC on a network without EURC, before contacting the facilitator", async () => {
         global.fetch = vi.fn();
+        const event = eurcEvent();
+        const payment = JSON.parse(event.headers["x-payment"]);
+        payment.accepted.network = "eip155:10";
+        event.headers["x-payment"] = JSON.stringify(payment);
+        event.body = JSON.stringify({ prompt: "Test EURC", network: "eip155:10" });
 
-        const response = await handle(eurcEvent(), {});
+        const response = await handle(event, {});
 
         expect(response.statusCode).toBe(402);
         expect(JSON.parse(response.body).reason).toBe("invalid_payment_asset");
@@ -1725,20 +1733,24 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/test",
         description: "Test Resource",
         mimeType: "application/json",
-        usdAmount: "1000",
+        price: { USDC: "1000", EURC: "900" },
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
       });
 
       expect(requirements.x402Version).toBe(2);
-      expect(requirements.accepts).toHaveLength(4);
+      // USDC on all four networks, plus EURC on Base and Base Sepolia.
+      expect(requirements.accepts).toHaveLength(6);
 
       const networks = requirements.accepts.map((a) => a.network);
       expect(networks).toContain("eip155:10");
       expect(networks).toContain("eip155:11155420");
 
-      for (const accept of requirements.accepts) {
-        const config = getUSDCConfig(accept.network);
-        expect(accept.asset).toBe(config.address);
+      // Every network offers USDC at the USDC price.
+      for (const network of new Set(networks)) {
+        const usdc = requirements.accepts.find(
+          (a) => a.network === network && a.asset === getUSDCConfig(network).address,
+        );
+        expect(usdc?.amount).toBe("1000");
       }
     });
 
@@ -1796,7 +1808,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/test",
         description: "Test",
         mimeType: "application/json",
-        usdAmount: "1000",
+        price: { USDC: "1000", EURC: "900" },
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
       });
 
@@ -1819,20 +1831,15 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       });
     });
 
-    describe("with EURC priced (EUR_PER_USD set)", () => {
-      afterEach(() => {
-        delete process.env.EUR_PER_USD;
-      });
-
+    describe("USDC and EURC as two parallel price lists", () => {
       test("lists EURC before USDC on Base, and only USDC on Optimism", async () => {
-        process.env.EUR_PER_USD = "0.86";
         const { createPaymentRequirements } = await import("../x402_server.js");
 
         const { accepts } = createPaymentRequirements({
           resourceUrl: "/test",
           description: "Test",
           mimeType: "application/json",
-          usdAmount: "1001",
+          price: { USDC: "1001", EURC: "850" },
           payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
         });
 
@@ -1850,8 +1857,8 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         const baseUsdc = accepts.find(
           (a) => a.network === "eip155:8453" && a.extra.name === "USD Coin",
         );
-        // 1001 × 0.86 = 860.86, rounded UP so the seller never receives less than the USD price.
-        expect(baseEurc?.amount).toBe("861");
+        // Each entry carries its own token's price — no conversion between the two.
+        expect(baseEurc?.amount).toBe("850");
         expect(baseEurc?.asset).toBe("0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42");
         expect(baseUsdc?.amount).toBe("1001");
       });

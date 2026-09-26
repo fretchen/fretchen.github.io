@@ -44,18 +44,17 @@ import openapiSpec from "./openapi.genimg.json" with { type: "json" };
 import { faviconBase64, faviconContentType } from "./favicon.js";
 import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
 import { logger } from "./logger.js";
-import {
-  offeredStablecoins,
-  resolvePaidStablecoin,
-  usdAtomicToAsset,
-} from "./stablecoin_pricing.js";
+import { offeredStablecoins, resolvePaidStablecoin, type PriceList } from "./stablecoin_pricing.js";
 
 // Re-export for backward compatibility with tests
 export { handle, create402Response };
 
-// The image price in USD atomic units (6 decimals). The env var keeps its historical USDC
-// name because it is deployed config; a EURC payment is priced from it via EUR_PER_USD.
-const PRICE_USD_ATOMIC = process.env.USDC_PAYMENT_AMOUNT ?? "70000";
+// The image price, quoted separately in each token's atomic units (6 decimals): 0.07 USDC or
+// 0.06 EURC. Two parallel prices, not one converted into the other.
+const PRICE_ATOMIC: PriceList = {
+  USDC: process.env.USDC_PAYMENT_AMOUNT ?? "70000",
+  EURC: process.env.EURC_PAYMENT_AMOUNT ?? "60000",
+};
 const GAS_BUFFER = parseEther("0.00001");
 
 // keccak256("Transfer(address,address,uint256)") — used to extract tokenId from mint tx logs
@@ -460,7 +459,7 @@ async function handle(
       resourceUrl: event.path ?? process.env.GENIMG_SERVICE_URL ?? "https://api.example.com/genimg",
       description: "AI Image Generation with NFT Certificate",
       mimeType: "application/json",
-      usdAmount: PRICE_USD_ATOMIC,
+      price: PRICE_ATOMIC,
       payTo: serverWallet,
       networks,
     });
@@ -536,7 +535,7 @@ async function handle(
   const paymentRequirements: SdkPaymentRequirements = {
     scheme: "exact",
     network: clientNetwork! as `${string}:${string}`,
-    amount: usdAtomicToAsset(PRICE_USD_ATOMIC, coin.symbol),
+    amount: PRICE_ATOMIC[coin.symbol],
     asset: coin.address,
     payTo: serverWallet,
     maxTimeoutSeconds: 60,

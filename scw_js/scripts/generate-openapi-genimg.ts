@@ -76,11 +76,12 @@ export function generateOpenApiSpec(): GenimgSpec {
           operationId: "genimgX402Token",
           summary: "Generate AI Image and Mint NFT (x402 stablecoin payment)",
           description:
-            "Generates an AI image using Black Forest Labs (BFL), uploads it to S3, mints an NFT on Optimism/Base, and transfers it to the payer. Requires an x402 payment in USDC, or EURC on Base. An unpaid request is answered with the 402 challenge whatever its body says, so a client can always discover the payment terms; a paid request is validated before anything is verified or settled.",
+            "Generates an AI image using Black Forest Labs (BFL), uploads it to S3, mints an NFT on Optimism/Base, and transfers it to the payer. Requires an x402 payment: 0.07 USDC, or 0.06 EURC on Base — two separately set prices, not a conversion. An unpaid request is answered with the 402 challenge whatever its body says, so a client can always discover the payment terms; a paid request is validated before anything is verified or settled.",
           tags: ["Image Generation", "NFT", "x402"],
           security: [],
           "x-payment-info": {
             protocols: ["x402"],
+            // The discovery spec prices in USD, so this is the USDC price; EURC is in the description.
             price: { mode: "fixed", currency: "USD", amount: "0.07" },
           },
           requestBody: {

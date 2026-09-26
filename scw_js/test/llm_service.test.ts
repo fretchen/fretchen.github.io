@@ -12,7 +12,7 @@ import {
 // Setup global mocks
 setupGlobalMocks();
 
-import { callLLMAPI, convertTokensToUsdcCost, type LLMMessage } from "../llm_service.js";
+import { callLLMAPI, tokensToCost, type LLMMessage } from "../llm_service.js";
 
 describe("llm_service.js", () => {
   beforeEach(() => {
@@ -376,76 +376,90 @@ describe("llm_service.js", () => {
   });
 });
 
-describe("convertTokensToUsdcCost — per-provider, input/output-split USDC conversion", () => {
-  describe("mistral — asymmetric input/output rates ($0.50/M in, $1.50/M out)", () => {
+describe("tokensToCost — per-provider, per-currency, input/output-split pricing", () => {
+  describe("mistral, USD card — asymmetric input/output rates ($0.50/M in, $1.50/M out)", () => {
     test("matches the estimated-tokens-per-message ceiling convention used by sc_llm_x402.ts", () => {
       // sc_llm_x402.ts prices the whole pre-auth estimate as completion (output)
       // tokens (the pricier rate) since no real split exists yet for the ceiling.
       // 2000 tokens * $1.50/M = 3000 atomic units ($0.003).
-      expect(
-        convertTokensToUsdcCost({ prompt_tokens: 0n, completion_tokens: 2000n }, "mistral"),
-      ).toBe(3000n);
+      expect(tokensToCost({ prompt_tokens: 0n, completion_tokens: 2000n }, "mistral", "USDC")).toBe(
+        3000n,
+      );
     });
 
     test("prices input tokens at the input rate only", () => {
       // 1,000,000 prompt tokens * $0.50/M = 500,000 atomic units.
       expect(
-        convertTokensToUsdcCost({ prompt_tokens: 1_000_000n, completion_tokens: 0n }, "mistral"),
+        tokensToCost({ prompt_tokens: 1_000_000n, completion_tokens: 0n }, "mistral", "USDC"),
       ).toBe(500_000n);
     });
 
     test("prices completion tokens at the (higher) output rate only", () => {
       // 1,000,000 completion tokens * $1.50/M = 1,500,000 atomic units.
       expect(
-        convertTokensToUsdcCost({ prompt_tokens: 0n, completion_tokens: 1_000_000n }, "mistral"),
+        tokensToCost({ prompt_tokens: 0n, completion_tokens: 1_000_000n }, "mistral", "USDC"),
       ).toBe(1_500_000n);
     });
 
     test("sums input and output cost for a mixed split", () => {
       // 500,000 * $0.50/M + 500,000 * $1.50/M = 250,000 + 750,000 = 1,000,000 atomic units.
       expect(
-        convertTokensToUsdcCost(
-          { prompt_tokens: 500_000n, completion_tokens: 500_000n },
-          "mistral",
-        ),
+        tokensToCost({ prompt_tokens: 500_000n, completion_tokens: 500_000n }, "mistral", "USDC"),
       ).toBe(1_000_000n);
     });
   });
 
+  describe("mistral, EUR card (€0.44/M in, €1.50/M out) — its own price list, not a conversion", () => {
+    test("prices input tokens on the EUR input rate", () => {
+      // 1,000,000 prompt tokens * €0.44/M = 440,000 EURC atomic units — not the USD card's 500,000.
+      expect(
+        tokensToCost({ prompt_tokens: 1_000_000n, completion_tokens: 0n }, "mistral", "EURC"),
+      ).toBe(440_000n);
+    });
+
+    test("prices the same mixed usage differently on each card", () => {
+      const usage = { prompt_tokens: 500_000n, completion_tokens: 500_000n };
+      // USD: 250,000 + 750,000. EUR: 220,000 + 750,000.
+      expect(tokensToCost(usage, "mistral", "USDC")).toBe(1_000_000n);
+      expect(tokensToCost(usage, "mistral", "EURC")).toBe(970_000n);
+    });
+  });
+
   test("accepts number and numeric-string inputs equivalently to bigint", () => {
-    const viaBigint = convertTokensToUsdcCost(
+    const viaBigint = tokensToCost(
       { prompt_tokens: 1000n, completion_tokens: 500n },
       "mistral",
+      "USDC",
+    );
+    expect(tokensToCost({ prompt_tokens: 1000, completion_tokens: 500 }, "mistral", "USDC")).toBe(
+      viaBigint,
     );
     expect(
-      convertTokensToUsdcCost({ prompt_tokens: 1000, completion_tokens: 500 }, "mistral"),
-    ).toBe(viaBigint);
-    expect(
-      convertTokensToUsdcCost({ prompt_tokens: "1000", completion_tokens: "500" }, "mistral"),
+      tokensToCost({ prompt_tokens: "1000", completion_tokens: "500" }, "mistral", "USDC"),
     ).toBe(viaBigint);
   });
 
   test("rejects a negative number", () => {
     expect(() =>
-      convertTokensToUsdcCost({ prompt_tokens: -5, completion_tokens: 0 }, "mistral"),
+      tokensToCost({ prompt_tokens: -5, completion_tokens: 0 }, "mistral", "USDC"),
     ).toThrow(TypeError);
   });
 
   test("rejects a non-finite number", () => {
     expect(() =>
-      convertTokensToUsdcCost({ prompt_tokens: Infinity, completion_tokens: 0 }, "mistral"),
+      tokensToCost({ prompt_tokens: Infinity, completion_tokens: 0 }, "mistral", "USDC"),
     ).toThrow(TypeError);
   });
 
   test("rejects a non-numeric string", () => {
     expect(() =>
-      convertTokensToUsdcCost({ prompt_tokens: "abc", completion_tokens: 0 }, "mistral"),
+      tokensToCost({ prompt_tokens: "abc", completion_tokens: 0 }, "mistral", "USDC"),
     ).toThrow(TypeError);
   });
 
   test("rejects an unknown provider", () => {
     expect(() =>
-      convertTokensToUsdcCost({ prompt_tokens: 100n, completion_tokens: 100n }, "openai"),
+      tokensToCost({ prompt_tokens: 100n, completion_tokens: 100n }, "openai", "USDC"),
     ).toThrow(/Unknown LLM provider: openai/);
   });
 });

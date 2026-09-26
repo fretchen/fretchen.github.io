@@ -32,13 +32,19 @@ const BASE = "eip155:8453";
  * A channelConfig differing only by `salt`, so two fixtures can share every field and still
  * be distinct channels. `withdrawDelay` matches the deployed 86400.
  */
-function makeConfig(salt = 1): Channel["channelConfig"] {
+const BASE_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+const BASE_EURC = "0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42";
+
+function makeConfig(
+  salt = 1,
+  token = "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+): Channel["channelConfig"] {
   return {
     payer: "0x073f26F0C3FC100e7b075C3DC3cDE0A777497D20",
     payerAuthorizer: "0x45E41fC1d1c7e47E209a2867F3948065B6b627A8",
     receiver: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
     receiverAuthorizer: "0xF9B70303375f9762516669591D75049692Ab2c93",
-    token: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+    token,
     withdrawDelay: 86400,
     salt: `0x${salt.toString(16).padStart(64, "0")}`,
   } as Channel["channelConfig"];
@@ -51,9 +57,9 @@ function makeConfig(salt = 1): Channel["channelConfig"] {
  */
 function makeChannel(
   overrides: Partial<Channel> = {},
-  { network = OP, salt = 1 }: { network?: string; salt?: number } = {},
+  { network = OP, salt = 1, token }: { network?: string; salt?: number; token?: string } = {},
 ): Channel {
-  const channelConfig = makeConfig(salt);
+  const channelConfig = makeConfig(salt, token);
   return {
     channelId: computeChannelId(channelConfig, network as `${string}:${string}`),
     channelConfig,
@@ -160,6 +166,42 @@ describe("S3ChannelStorage", () => {
       const result = await storage.list();
 
       expect(result.map((c) => c.channelId)).toEqual([opChannel.channelId]);
+    });
+
+    describe("scoped to one token", () => {
+      // USDC and EURC channels share Base's prefix. The claim cron lists one token at a time,
+      // because the SDK claims every listed channel in its single token and the facilitator
+      // refuses a batch that mixes tokens — one unfiltered list would fail every Base claim.
+      const usdc = makeChannel({}, { network: BASE, salt: 1, token: BASE_USDC });
+      const eurc = makeChannel({}, { network: BASE, salt: 2, token: BASE_EURC });
+      const keyOf = (c: Channel) => `${channelPrefix(BASE)}${c.channelId.toLowerCase()}.json`;
+
+      beforeEach(() => {
+        mockListObjects.mockResolvedValue([keyOf(usdc), keyOf(eurc)]);
+        mockGetS3ObjectWithMeta.mockImplementation(async (key: string) => {
+          if (key === keyOf(usdc)) return { body: JSON.stringify(usdc), etag: '"e1"' };
+          if (key === keyOf(eurc)) return { body: JSON.stringify(eurc), etag: '"e2"' };
+          return null;
+        });
+      });
+
+      it("lists only that token's channels", async () => {
+        const eurcOnly = await new S3ChannelStorage(BASE, BASE_EURC).list();
+        expect(eurcOnly.map((c) => c.channelId)).toEqual([eurc.channelId]);
+
+        const usdcOnly = await new S3ChannelStorage(BASE, BASE_USDC).list();
+        expect(usdcOnly.map((c) => c.channelId)).toEqual([usdc.channelId]);
+      });
+
+      it("matches the token case-insensitively", async () => {
+        const result = await new S3ChannelStorage(BASE, BASE_EURC.toLowerCase()).list();
+        expect(result.map((c) => c.channelId)).toEqual([eurc.channelId]);
+      });
+
+      it("lists both tokens when no token is given — the serving path's view", async () => {
+        const result = await new S3ChannelStorage(BASE).list();
+        expect(result).toHaveLength(2);
+      });
     });
   });
 

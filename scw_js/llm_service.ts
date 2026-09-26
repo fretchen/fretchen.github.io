@@ -1,3 +1,4 @@
+import type { StablecoinSymbol } from "@fretchen/chain-utils";
 import { logger } from "./logger.js";
 import { UpstreamChatCompletionSchema, flattenUpstreamContent } from "./upstream_schemas.js";
 
@@ -6,9 +7,15 @@ interface LLMProviderConfig {
   baseUrl: string; // no trailing "/chat/completions" — appended at call time
   defaultModel: string;
   apiKeyEnvVar: string;
-  // Price per 1,000,000 tokens, num/den to stay exact bigint math. USD-quoted.
-  inputPricePerMillion: { num: bigint; den: bigint };
-  outputPricePerMillion: { num: bigint; den: bigint };
+  // Price per 1,000,000 tokens, num/den to stay exact bigint math — one rate card per
+  // settlement token, each as the provider publishes it in that currency. Two parallel price
+  // systems: a EURC cost is computed from the EUR card, never converted from the USD one.
+  pricePerMillion: Record<StablecoinSymbol, { input: RatePerMillion; output: RatePerMillion }>;
+}
+
+interface RatePerMillion {
+  num: bigint;
+  den: bigint;
 }
 
 const LLM_PROVIDERS: Record<string, LLMProviderConfig> = {
@@ -17,10 +24,13 @@ const LLM_PROVIDERS: Record<string, LLMProviderConfig> = {
     baseUrl: "https://api.mistral.ai/v1",
     defaultModel: "mistral-large-latest",
     apiKeyEnvVar: "MISTRAL_API_KEY",
-    // Mistral Large 3, mistral.ai/pricing/api (fetched 2026-07-21) — re-verify before any
-    // mainnet cutover; Mistral has repriced materially before.
-    inputPricePerMillion: { num: 50n, den: 100n },
-    outputPricePerMillion: { num: 150n, den: 100n },
+    // Mistral Large 3, mistral.ai/pricing/api — re-verify before any mainnet cutover; Mistral
+    // has repriced materially before. The EUR card is the page's own EUR view (behind its
+    // currency toggle), read 2026-09-26; it is not a conversion of the USD card.
+    pricePerMillion: {
+      USDC: { input: { num: 50n, den: 100n }, output: { num: 150n, den: 100n } }, // $0.50 / $1.50 (2026-07-21)
+      EURC: { input: { num: 44n, den: 100n }, output: { num: 150n, den: 100n } }, // €0.44 / €1.50 (2026-09-26)
+    },
   },
 };
 
@@ -295,30 +305,32 @@ function parseTokenCount(tokenCount: bigint | number | string): bigint {
 }
 
 /**
- * USDC-denominated cost (6 decimals) for the given provider, pricing prompt and
- * completion tokens separately — providers typically charge more for completion
- * (output) tokens than prompt (input) tokens, so a single blended rate would
- * systematically mis-price a provider with an asymmetric split (e.g. Mistral:
- * $0.50/M input vs $1.50/M output — a 3x gap. See LLM_PROVIDERS above).
+ * Cost of `usage` in `symbol`'s atomic units (6 decimals), from the provider's rate card in that
+ * currency, pricing prompt and completion tokens separately — providers typically charge more
+ * for completion (output) tokens than prompt (input) tokens, so a single blended rate would
+ * systematically mis-price a provider with an asymmetric split (e.g. Mistral: $0.50/M input vs
+ * $1.50/M output — a 3x gap. See LLM_PROVIDERS above).
  *
- * USDC has 6 decimals and prices are quoted per 1,000,000 tokens, so the 1e6
- * factors cancel exactly — no separate decimals conversion needed. Prices are
- * USD-quoted and treated as 1 USD = 1 USDC.
+ * Both tokens have 6 decimals and prices are quoted per 1,000,000 tokens, so the 1e6 factors
+ * cancel exactly — no separate decimals conversion needed. A card is read as 1 USD = 1 USDC and
+ * 1 EUR = 1 EURC.
  */
-export function convertTokensToUsdcCost(
+export function tokensToCost(
   usage: {
     prompt_tokens: bigint | number | string;
     completion_tokens: bigint | number | string;
   },
   provider: string,
+  symbol: StablecoinSymbol,
 ): bigint {
   const config = getLLMProviderConfig(provider);
   const p = parseTokenCount(usage.prompt_tokens);
   const c = parseTokenCount(usage.completion_tokens);
-  const { num: inNum, den: inDen } = config.inputPricePerMillion;
-  const { num: outNum, den: outDen } = config.outputPricePerMillion;
+  const { input, output } = config.pricePerMillion[symbol];
+  const { num: inNum, den: inDen } = input;
+  const { num: outNum, den: outDen } = output;
   // Cross-multiply to keep one shared denominator instead of assuming inDen === outDen.
-  // No explicit 1e6 factor here — as in the single-rate formula this replaces, the
-  // "per 1,000,000 tokens" divisor and USDC's 6 decimals cancel exactly.
+  // No explicit 1e6 factor here — the "per 1,000,000 tokens" divisor and the tokens' 6
+  // decimals cancel exactly.
   return (p * inNum * outDen + c * outNum * inDen) / (inDen * outDen);
 }

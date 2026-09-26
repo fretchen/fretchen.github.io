@@ -23,11 +23,11 @@ serverless function that returns 402 is a **seller**, even though it is "our bac
 
 From the spec — use these words, in this order of preference:
 
-| Official term | Also acceptable here | Never |
-|---|---|---|
-| **Client** | buyer | "consumer", "payer app" |
-| **Resource server** | seller, server | "vendor", "merchant" (except the facilitator's own fee code, which uses `merchant`) |
-| **Facilitator** | — | "gateway", "processor", "escrow" |
+| Official term       | Also acceptable here | Never                                                                               |
+| ------------------- | -------------------- | ----------------------------------------------------------------------------------- |
+| **Client**          | buyer                | "consumer", "payer app"                                                             |
+| **Resource server** | seller, server       | "vendor", "merchant" (except the facilitator's own fee code, which uses `merchant`) |
+| **Facilitator**     | —                    | "gateway", "processor", "escrow"                                                    |
 
 The facilitator **does not hold funds and is not a custodian**. It verifies signed payloads and
 broadcasts transactions on the seller's behalf. Say so; do not imply custody.
@@ -45,23 +45,23 @@ has a buyer calling `/verify`, it is wrong.
 5. Server delivers the resource, and POSTs to the facilitator's `/settle`.
 6. Server returns the resource plus a `PAYMENT-RESPONSE` header (base64 `SettlementResponse`).
 
-**Schemes** decide *when* value moves: `exact`, `upto`, `batch-settlement`.
+**Schemes** decide _when_ value moves: `exact`, `upto`, `batch-settlement`.
 
 ## This repo's role map — verified, not guessed
 
-| Role | Component | Deployed as | Key files |
-|---|---|---|---|
-| **Client / buyer** | `website/` — `/imagegen` and `/assistent` | GitHub Pages | `hooks/useX402ImageGeneration.ts`, `hooks/useX402Chat.ts` — both use `wrapFetchWithPayment` from `@x402/fetch` |
-| **Resource server / seller** | `scw_js/` — two paid endpoints | Scaleway Functions | `genimg_x402_token.ts` → `imagegen-agent.fretchen.eu`; `sc_llm_x402.ts` → `llm-agent.fretchen.eu`; shared `x402_server.ts` (`create402Response`) |
-| **Facilitator** | `x402_facilitator/` | Scaleway Functions | `x402_facilitator.ts` — `/verify`, `/settle`, `/supported` at `facilitator.fretchen.eu` |
+| Role                         | Component                                 | Deployed as        | Key files                                                                                                                                        |
+| ---------------------------- | ----------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Client / buyer**           | `website/` — `/imagegen` and `/assistent` | GitHub Pages       | `hooks/useX402ImageGeneration.ts`, `hooks/useX402Chat.ts` — both use `wrapFetchWithPayment` from `@x402/fetch`                                   |
+| **Resource server / seller** | `scw_js/` — two paid endpoints            | Scaleway Functions | `genimg_x402_token.ts` → `imagegen-agent.fretchen.eu`; `sc_llm_x402.ts` → `llm-agent.fretchen.eu`; shared `x402_server.ts` (`create402Response`) |
+| **Facilitator**              | `x402_facilitator/`                       | Scaleway Functions | `x402_facilitator.ts` — `/verify`, `/settle`, `/supported` at `facilitator.fretchen.eu`                                                          |
 
 Plus `scw_js/llm_x402_cron.ts` — a 12-hourly cron that claims and settles accumulated
 batch-settlement channels. It is seller-side infrastructure, not a fourth role.
 
-**The trap:** `/imagegen` and `/assistent` are *buyers*. They are the site's own UIs, which makes
+**The trap:** `/imagegen` and `/assistent` are _buyers_. They are the site's own UIs, which makes
 them feel like "the product we sell" — but they spend USDC, they do not collect it. The sellers
 are the `*-agent.fretchen.eu` Scaleway endpoints those pages call. `website/pages/x402/buyers/+Page.tsx`
-states it plainly: the endpoints are *"consumed on the site by"* the Image Generator and the
+states it plainly: the endpoints are _"consumed on the site by"_ the Image Generator and the
 assistant. "Consumed by" identifies the client.
 
 ## Where the docs are
@@ -78,12 +78,17 @@ fallback (see `genimg_x402_token.ts`).
 ## Repo-specific facts that are easy to get wrong
 
 - **EIP-712 domain names differ by network.** Mainnet USDC is `"USD Coin"`, testnet is `"USDC"`.
-  The verified per-network table is in `scw_js/README.md` → *Adding New Networks*. Never guess one.
+  The verified per-network table is in `scw_js/README.md` → _Adding New Networks_. Never guess one.
 - **The batch-settlement recipient whitelist is OR logic** across a manual list, testnet-only test
   wallets, and NFT-holder status — and it checks `payTo`, the recipient, not the payer. See
-  `x402_facilitator/README.md` → *Whitelist Architecture*.
-- **The facilitator collects a fee** via `transferFrom(merchant, facilitator, fee)`, which needs a
-  one-time USDC `approve()` from the merchant. Amounts live only in `website/pages/x402/sellers/`.
+  `x402_facilitator/README.md` → _Whitelist Architecture_.
+- **The facilitator collects a fee** via `transferFrom(merchant, facilitator, fee)`, in the token
+  the payment settled in — so the merchant needs one `approve()` **per token** it takes (USDC, and
+  EURC on Base). Amounts live only in `website/pages/x402/sellers/`.
+- **Two stablecoins: USDC everywhere, EURC on Base and Base Sepolia only.** They are two parallel
+  price lists — every price is set in each token, never converted (see `scw_js/README.md` →
+  _Stablecoins and pricing_). On Base the 402 lists EURC first. That order is the seller's
+  preference; the buyer's choice is made by its own selector and spend controls.
 
 ## Writing about x402 on the site
 

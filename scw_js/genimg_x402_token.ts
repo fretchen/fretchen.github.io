@@ -2,7 +2,6 @@ import {
   GenImNFTv4ABI as nftAbi,
   getViemChain,
   getGenAiNFTAddress,
-  getUSDCConfig,
   isTestnet,
   loadPrivateKey,
   getRpcUrl,
@@ -45,11 +44,17 @@ import openapiSpec from "./openapi.genimg.json" with { type: "json" };
 import { faviconBase64, faviconContentType } from "./favicon.js";
 import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
 import { logger } from "./logger.js";
+import { offeredStablecoins, resolvePaidStablecoin, type PriceList } from "./stablecoin_pricing.js";
 
 // Re-export for backward compatibility with tests
 export { handle, create402Response };
 
-const USDC_PAYMENT_AMOUNT = process.env.USDC_PAYMENT_AMOUNT ?? "70000";
+// The image price, quoted separately in each token's atomic units (6 decimals): 0.07 USDC or
+// 0.06 EURC. Two parallel prices, not one converted into the other.
+const PRICE_ATOMIC: PriceList = {
+  USDC: process.env.USDC_PAYMENT_AMOUNT ?? "70000",
+  EURC: process.env.EURC_PAYMENT_AMOUNT ?? "60000",
+};
 const GAS_BUFFER = parseEther("0.00001");
 
 // keccak256("Transfer(address,address,uint256)") — used to extract tokenId from mint tx logs
@@ -454,7 +459,7 @@ async function handle(
       resourceUrl: event.path ?? process.env.GENIMG_SERVICE_URL ?? "https://api.example.com/genimg",
       description: "AI Image Generation with NFT Certificate",
       mimeType: "application/json",
-      amount: USDC_PAYMENT_AMOUNT,
+      price: PRICE_ATOMIC,
       payTo: serverWallet,
       networks,
     });
@@ -510,19 +515,31 @@ async function handle(
     });
   }
 
-  const usdcConfig = getUSDCConfig(clientNetwork!);
+  // Price the stablecoin the buyer chose from the 402, not a fixed one: the requirements below
+  // must match its `accepted` entry, or verify rejects the payment.
+  const accepted = (paymentPayload as Record<string, unknown>)?.["accepted"] as
+    | Record<string, unknown>
+    | undefined;
+  const coin = resolvePaidStablecoin(clientNetwork!, accepted?.["asset"]);
+  if (!coin) {
+    logger.warn({ clientNetwork, asset: accepted?.["asset"] }, "Payment asset not offered");
+    return paymentError("invalid_payment_asset", {
+      received: accepted?.["asset"] ?? null,
+      expected: offeredStablecoins(clientNetwork!).map((offered) => offered.address),
+    });
+  }
   const contractAddress = getGenAiNFTAddress(clientNetwork!);
-  logger.debug({ network: usdcConfig.name, clientNetwork }, "Client selected network");
+  logger.debug({ clientNetwork, asset: coin.symbol }, "Client selected network and asset");
 
   // Single-network requirements object for the x402 verify/settle calls
   const paymentRequirements: SdkPaymentRequirements = {
     scheme: "exact",
     network: clientNetwork! as `${string}:${string}`,
-    amount: USDC_PAYMENT_AMOUNT,
-    asset: usdcConfig.address,
+    amount: PRICE_ATOMIC[coin.symbol],
+    asset: coin.address,
     payTo: serverWallet,
     maxTimeoutSeconds: 60,
-    extra: { name: usdcConfig.usdcName, version: usdcConfig.usdcVersion },
+    extra: { name: coin.name, version: coin.version },
   };
 
   let verification: { isValid: boolean; invalidReason?: string; payer?: string };

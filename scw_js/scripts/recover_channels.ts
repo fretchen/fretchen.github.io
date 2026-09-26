@@ -17,12 +17,16 @@
  * Needs the production environment: NFT_WALLET_PUBLIC_KEY, RECEIVER_AUTHORIZER_PRIVATE_KEY,
  * SCW_ACCESS_KEY / SCW_SECRET_KEY, and the RPC_URL_* for the target network.
  *
+ * One token per run, because a claim batch must not mix tokens (see S3ChannelStorage). The token
+ * defaults to USDC; pass EURC for Base's EURC channels.
+ *
  * Usage (from scw_js/):
  *   npx tsx scripts/recover_channels.ts eip155:10             # dry run: lists channels only
  *   npx tsx scripts/recover_channels.ts eip155:10 --apply     # claims, then refunds
+ *   npx tsx scripts/recover_channels.ts eip155:8453 EURC --apply
  */
 import dotenv from "dotenv";
-import { getUSDCConfig } from "@fretchen/chain-utils";
+import { getStablecoins } from "@fretchen/chain-utils";
 import {
   createLLMResourceServer,
   createFacilitatorClient,
@@ -35,8 +39,10 @@ dotenv.config();
 
 const APPLY = process.argv.includes("--apply");
 const network = process.argv[2];
+const symbol = process.argv[3] && !process.argv[3].startsWith("--") ? process.argv[3] : "USDC";
 
-function usdc(atomic: string | bigint): string {
+/** Both stablecoins have 6 decimals. */
+function units(atomic: string | bigint): string {
   return (Number(atomic) / 1e6).toFixed(6);
 }
 
@@ -54,15 +60,21 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const { schemeFor } = createLLMResourceServer(receiver as `0x${string}`);
-  const scheme = schemeFor(network);
+  const coin = getStablecoins(network).find((c) => c.symbol === symbol);
+  if (!coin) {
+    console.error(`No ${symbol} on ${network}.`);
+    process.exit(1);
+  }
+
+  const { claimSchemeFor } = createLLMResourceServer(receiver as `0x${string}`);
+  const scheme = claimSchemeFor(network, coin.address);
   const manager = scheme.createChannelManager(
     createFacilitatorClient(),
     network as `${string}:${string}`,
-    getUSDCConfig(network).address as `0x${string}`,
+    coin.address,
   );
 
-  console.log(`Network: ${network}`);
+  console.log(`Network: ${network}, token: ${coin.symbol} ${coin.address}`);
   console.log(APPLY ? "Mode: APPLY (will move funds)\n" : "Mode: DRY RUN (no writes)\n");
 
   // MUST run before any refund. The stored `balance` is a cache that goes stale-low, and the
@@ -77,11 +89,11 @@ async function main(): Promise<void> {
     // can never print as a bare id with nothing after it.
     const drifted: string[] = [];
     if (s.storedBalance !== s.chainBalance) {
-      drifted.push(`balance ${usdc(s.storedBalance)} -> ${usdc(s.chainBalance)} USDC`);
+      drifted.push(`balance ${units(s.storedBalance)} -> ${units(s.chainBalance)} ${symbol}`);
     }
     if (s.storedTotalClaimed !== s.chainTotalClaimed) {
       drifted.push(
-        `totalClaimed ${usdc(s.storedTotalClaimed)} -> ${usdc(s.chainTotalClaimed)} USDC`,
+        `totalClaimed ${units(s.storedTotalClaimed)} -> ${units(s.chainTotalClaimed)} ${symbol}`,
       );
     }
     // A stale nonce is the difference between a refund that works and one that reverts, so it is
@@ -115,14 +127,14 @@ async function main(): Promise<void> {
     totalOutstanding += outstanding > 0n ? outstanding : 0n;
     console.log(
       `  ${c.channelId}\n    payer=${c.channelConfig.payer}` +
-        `\n    balance=${usdc(balance)} (on-chain) charged=${usdc(c.chargedCumulativeAmount)} ` +
-        `claimed=${usdc(c.totalClaimed)} outstanding=${usdc(outstanding)} USDC` +
-        `\n    refund would return ${usdc(BigInt(balance) - BigInt(c.chargedCumulativeAmount))} USDC` +
+        `\n    balance=${units(balance)} (on-chain) charged=${units(c.chargedCumulativeAmount)} ` +
+        `claimed=${units(c.totalClaimed)} outstanding=${units(outstanding)} ${symbol}` +
+        `\n    refund would return ${units(BigInt(balance) - BigInt(c.chargedCumulativeAmount))} ${symbol}` +
         `\n    lastRequest=${new Date(c.lastRequestTimestamp).toISOString()}`,
     );
   }
   console.log(
-    `\nTotals: escrow ${usdc(totalBalance)} USDC on-chain, claimable ${usdc(totalOutstanding)} USDC.`,
+    `\nTotals: escrow ${units(totalBalance)} ${symbol} on-chain, claimable ${units(totalOutstanding)} ${symbol}.`,
   );
 
   if (!APPLY) {
@@ -142,7 +154,7 @@ async function main(): Promise<void> {
   // receiver_authorizer_mismatch. Applied after the claim so claim/settle are untouched.
   await useEnhancedRefundRequirements(scheme, manager, {
     network,
-    asset: getUSDCConfig(network).address,
+    asset: coin.address,
     payTo: receiver,
   });
 

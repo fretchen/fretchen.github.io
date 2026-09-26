@@ -69,7 +69,7 @@ describe("x402 Verify — real signature (integration, live RPC)", () => {
       payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
       maxTimeoutSeconds: 300,
       extra: { name: cfg.USDC_NAME, version: "2" },
-    };
+    } as const;
 
     const partialPayload = await evmClient.createPaymentPayload(2, paymentRequirements);
     const paymentPayload = {
@@ -94,9 +94,10 @@ describe("x402 Verify — real signature (integration, live RPC)", () => {
       expect(result.invalidReason).toBeUndefined();
     }
 
-    expect(paymentPayload.payload.authorization.from.toLowerCase()).toBe(
-      payerAccount.address.toLowerCase(),
-    );
+    // partialPayload.payload is scheme-specific and typed `unknown` by the SDK.
+    const authorization = (paymentPayload.payload as { authorization: { from: string } })
+      .authorization;
+    expect(authorization.from.toLowerCase()).toBe(payerAccount.address.toLowerCase());
   });
 
   test("validates signature for Optimism Mainnet (chainId 10)", async () => {
@@ -121,7 +122,7 @@ describe("x402 Verify — real signature (integration, live RPC)", () => {
       payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
       maxTimeoutSeconds: 300,
       extra: { name: cfg.USDC_NAME, version: "2" },
-    };
+    } as const;
 
     const partialPayload = await evmClient.createPaymentPayload(2, paymentRequirements);
     const paymentPayload = {
@@ -156,7 +157,7 @@ describe("x402 Verify — real signature (integration, live RPC)", () => {
    * wrong domain name there would surface as invalid_exact_evm_signature; the negative
    * control below shows this test can tell the two apart.
    */
-  async function verifyEurcPayment(domainName) {
+  async function verifyEurcPayment(domainName?: string) {
     const payerAccount = privateKeyToAccount(generatePrivateKey());
     const evmClient = new ExactEvmScheme({
       address: payerAccount.address,
@@ -164,7 +165,7 @@ describe("x402 Verify — real signature (integration, live RPC)", () => {
     });
 
     const network = "eip155:84532"; // Base Sepolia
-    const eurc = findStablecoin(network, EURC_ADDRESSES[network]);
+    const eurc = findStablecoin(network, EURC_ADDRESSES[network])!;
     const paymentRequirements = {
       scheme: "exact",
       network,
@@ -173,7 +174,7 @@ describe("x402 Verify — real signature (integration, live RPC)", () => {
       payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
       maxTimeoutSeconds: 300,
       extra: { name: domainName ?? eurc.name, version: eurc.version },
-    };
+    } as const;
 
     const partialPayload = await evmClient.createPaymentPayload(2, paymentRequirements);
     const paymentPayload = {

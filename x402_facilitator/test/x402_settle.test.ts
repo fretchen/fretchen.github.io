@@ -1,14 +1,20 @@
-// @ts-check
-
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { settlePayment } from "../x402_settle.js";
 import * as facilitatorInstance from "../facilitator_instance.js";
+import type { getFacilitator } from "../facilitator_instance.js";
 import * as verifyModule from "../x402_verify.js";
 import * as feeModule from "../x402_fee.js";
 import { SettleResponseSchema } from "../x402_schemas.js";
 
 const BASE_SEPOLIA_USDC = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
 const BASE_SEPOLIA_EURC = "0x808456652fdb597867f38412077A9182bf77359F";
+
+// Test mocks only implement the `settle` method the code under test calls, so cast through
+// `unknown` rather than satisfying the full `x402Facilitator` SDK class shape — mirrors
+// `mockContract`/`mockPublicClient` in x402_fee.test.ts.
+function asFacilitator(shape: Record<string, unknown>) {
+  return shape as unknown as ReturnType<typeof getFacilitator>;
+}
 
 // Mock viem
 vi.mock("viem", async () => {
@@ -437,7 +443,7 @@ describe("x402_settle with mocked facilitator", () => {
       payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     });
 
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
 
@@ -460,7 +466,7 @@ describe("x402_settle with mocked facilitator", () => {
       payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     });
 
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
 
@@ -491,7 +497,7 @@ describe("x402_settle with mocked facilitator", () => {
       isValid: true,
       payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     });
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
 
@@ -515,7 +521,7 @@ describe("x402_settle with mocked facilitator", () => {
       isValid: true,
       payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     });
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
 
@@ -611,7 +617,7 @@ describe("x402_settle with mocked facilitator", () => {
       recipient: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
     });
 
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     vi.spyOn(feeModule, "collectFee").mockResolvedValue({
       success: true,
@@ -623,23 +629,23 @@ describe("x402_settle with mocked facilitator", () => {
     expect(result.success).toBe(true);
     expect(result.transaction).toBe("0xsettletxhash");
     expect(result.fee).toBeDefined();
-    expect(result.fee.collected).toBe(true);
-    expect(result.fee.txHash).toBe("0xfeetxhash123");
+    expect(result.fee!.collected).toBe(true);
+    expect(result.fee!.txHash).toBe("0xfeetxhash123");
     // Verify facilitatorFees extension (per x402 Fee Disclosure proposal #1016)
     expect(result.extensions).toBeDefined();
-    expect(result.extensions.facilitatorFees).toBeDefined();
-    expect(result.extensions.facilitatorFees.info.version).toBe("1");
-    expect(result.extensions.facilitatorFees.info.facilitatorFeePaid).toBe("10000");
-    expect(result.extensions.facilitatorFees.info.collection).toEqual({
+    expect(result.extensions!.facilitatorFees!).toBeDefined();
+    expect(result.extensions!.facilitatorFees!.info.version).toBe("1");
+    expect(result.extensions!.facilitatorFees!.info.facilitatorFeePaid).toBe("10000");
+    expect(result.extensions!.facilitatorFees!.info.collection).toEqual({
       status: "collected",
       txHash: "0xfeetxhash123",
     });
-    expect(result.fee.status).toBe("collected");
+    expect(result.fee!.status).toBe("collected");
     // Asset uses CAIP-19 format: {network}/erc20:{address}
-    expect(result.extensions.facilitatorFees.info.asset).toBe(
+    expect(result.extensions!.facilitatorFees!.info.asset).toBe(
       "eip155:11155420/erc20:0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
     );
-    expect(result.extensions.facilitatorFees.info.model).toBe("flat");
+    expect(result.extensions!.facilitatorFees!.info.model).toBe("flat");
     expect(feeModule.collectFee).toHaveBeenCalledWith(
       "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
       "eip155:11155420",
@@ -662,7 +668,7 @@ describe("x402_settle with mocked facilitator", () => {
       recipient: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
     });
 
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     vi.spyOn(feeModule, "collectFee").mockResolvedValue({
       success: false,
@@ -675,15 +681,15 @@ describe("x402_settle with mocked facilitator", () => {
     expect(result.success).toBe(true);
     expect(result.transaction).toBe("0xsettletxhash");
     expect(result.fee).toBeDefined();
-    expect(result.fee.collected).toBe(false);
-    expect(result.fee.status).toBe("failed");
-    expect(result.fee.error).toBe("insufficient_fee_allowance");
+    expect(result.fee!.collected).toBe(false);
+    expect(result.fee!.status).toBe("failed");
+    expect(result.fee!.error).toBe("insufficient_fee_allowance");
     // The fee was still ASSESSED — zeroing it here would understate what the payment
     // cost. The uncollected state is reported by collection.status instead.
     expect(result.extensions).toBeDefined();
-    expect(result.extensions.facilitatorFees.info.facilitatorFeePaid).toBe("10000");
-    expect(result.extensions.facilitatorFees.info.collection.status).toBe("failed");
-    expect(result.extensions.facilitatorFees.info.model).toBe("flat");
+    expect(result.extensions!.facilitatorFees!.info.facilitatorFeePaid).toBe("10000");
+    expect(result.extensions!.facilitatorFees!.info.collection.status).toBe("failed");
+    expect(result.extensions!.facilitatorFees!.info.model).toBe("flat");
   });
 
   // ═══════════════════════════════════════════════════════════
@@ -692,9 +698,11 @@ describe("x402_settle with mocked facilitator", () => {
 
   /** Shared setup for the receipt tests: a settlement that owes a fee. */
   function mockFeeBearingSettlement() {
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue({
-      settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xsettletxhash" }),
-    });
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(
+      asFacilitator({
+        settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xsettletxhash" }),
+      }),
+    );
     vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({
       isValid: true,
       payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
@@ -716,12 +724,12 @@ describe("x402_settle with mocked facilitator", () => {
 
     // The tx hash is the seller's reconciliation mechanism: it was sent, they can
     // look it up. Reporting the fee as "0" would understate what the payment cost.
-    expect(result.extensions.facilitatorFees.info.facilitatorFeePaid).toBe("10000");
-    expect(result.extensions.facilitatorFees.info.collection).toEqual({
+    expect(result.extensions!.facilitatorFees!.info.facilitatorFeePaid).toBe("10000");
+    expect(result.extensions!.facilitatorFees!.info.collection).toEqual({
       status: "pending",
       txHash: "0xpendingtx",
     });
-    expect(result.fee.collected).toBe(false);
+    expect(result.fee!.collected).toBe(false);
   });
 
   it("distinguishes a hard failure from a pending collection", async () => {
@@ -734,9 +742,9 @@ describe("x402_settle with mocked facilitator", () => {
 
     const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
 
-    expect(result.extensions.facilitatorFees.info.facilitatorFeePaid).toBe("10000");
-    expect(result.extensions.facilitatorFees.info.collection.status).toBe("failed");
-    expect(result.fee.status).toBe("failed");
+    expect(result.extensions!.facilitatorFees!.info.facilitatorFeePaid).toBe("10000");
+    expect(result.extensions!.facilitatorFees!.info.collection.status).toBe("failed");
+    expect(result.fee!.status).toBe("failed");
     // Settlement is unaffected either way.
     expect(result.success).toBe(true);
   });
@@ -755,7 +763,7 @@ describe("x402_settle with mocked facilitator", () => {
       payer: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     });
 
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const collectFeeSpy = vi.spyOn(feeModule, "collectFee");
 
@@ -781,7 +789,7 @@ describe("x402_settle with mocked facilitator", () => {
       feeRequired: true,
     });
 
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const collectFeeSpy = vi.spyOn(feeModule, "collectFee");
 
@@ -814,7 +822,7 @@ describe("x402_settle with mocked facilitator", () => {
       recipient: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
     });
 
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
     const collectFeeSpy = vi.spyOn(feeModule, "collectFee");
 
     const result = await settlePayment(batchPayload, batchRequirements);
@@ -855,7 +863,7 @@ describe("x402_settle with mocked facilitator", () => {
       feeRequired: false,
     });
 
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const result = await settlePayment(batchPayload, batchRequirements);
 
@@ -914,7 +922,7 @@ describe("x402_settle with mocked facilitator", () => {
         },
       }),
     };
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
     const verifyPaymentSpy = vi.spyOn(verifyModule, "verifyPayment");
 
     const result = await settlePayment(claimPayload, claimRequirements);
@@ -937,8 +945,8 @@ describe("x402_settle with mocked facilitator", () => {
       "eip155:84532",
       BASE_SEPOLIA_USDC,
     );
-    expect(result.fee.collected).toBe(true);
-    expect(result.extensions.facilitatorFees.info.facilitatorFeePaid).toBe("10000");
+    expect(result.fee!.collected).toBe(true);
+    expect(result.extensions!.facilitatorFees!.info.facilitatorFeePaid).toBe("10000");
   });
 
   it("skips verifyPayment for a batch-settlement 'settle' payload too", async () => {
@@ -960,7 +968,7 @@ describe("x402_settle with mocked facilitator", () => {
     const mockFacilitator = {
       settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xsweeptxhash" }),
     };
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
     const verifyPaymentSpy = vi.spyOn(verifyModule, "verifyPayment");
 
     const result = await settlePayment(settlePayload, requirements);
@@ -974,7 +982,7 @@ describe("x402_settle with mocked facilitator", () => {
       "eip155:84532",
       BASE_SEPOLIA_USDC,
     );
-    expect(result.fee.collected).toBe(true);
+    expect(result.fee!.collected).toBe(true);
   });
 
   it("surfaces the facilitator's error reason when a batch-settlement claim fails", async () => {
@@ -1012,7 +1020,7 @@ describe("x402_settle with mocked facilitator", () => {
         errorReason: "invalid_batch_settlement_evm_claim_authorizer_signature",
       }),
     };
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const result = await settlePayment(claimPayload, requirements);
 
@@ -1063,7 +1071,7 @@ describe("x402_settle with mocked facilitator", () => {
     };
 
     const mockFacilitator = { settle: vi.fn() };
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const result = await settlePayment(claimPayload, claimRequirements);
 
@@ -1088,7 +1096,7 @@ describe("x402_settle with mocked facilitator", () => {
     };
 
     const mockFacilitator = { settle: vi.fn() };
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const result = await settlePayment(settlePayload, requirements);
 
@@ -1111,7 +1119,7 @@ describe("x402_settle with mocked facilitator", () => {
     };
 
     const mockFacilitator = { settle: vi.fn() };
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const result = await settlePayment(claimPayload, requirements);
 
@@ -1153,7 +1161,7 @@ describe("x402_settle with mocked facilitator", () => {
     const mockFacilitator = {
       settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xsweeptxhash" }),
     };
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const result = await settlePayment(settlePayload, requirements);
 
@@ -1198,7 +1206,7 @@ describe("x402_settle with mocked facilitator", () => {
     const mockFacilitator = {
       settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xclaimtxhash" }),
     };
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const result = await settlePayment(claimPayload, requirements);
 
@@ -1258,7 +1266,7 @@ describe("x402_settle with mocked facilitator", () => {
     };
 
     const mockFacilitator = { settle: vi.fn() };
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const result = await settlePayment(claimPayload, requirements);
 
@@ -1315,7 +1323,7 @@ describe("x402_settle with mocked facilitator", () => {
     const mockFacilitator = {
       settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xclaimtxhash" }),
     };
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const result = await settlePayment(claimPayload, requirements);
 
@@ -1372,7 +1380,7 @@ describe("x402_settle with mocked facilitator", () => {
     };
 
     const mockFacilitator = { settle: vi.fn() };
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const result = await settlePayment(claimPayload, requirements);
 
@@ -1416,7 +1424,7 @@ describe("x402_settle with mocked facilitator", () => {
     const mockFacilitator = {
       settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xclaimtxhash" }),
     };
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const result = await settlePayment(claimPayload, requirements);
 
@@ -1427,7 +1435,7 @@ describe("x402_settle with mocked facilitator", () => {
   });
 
   /** A claim command on Base Sepolia whose channels are in the given tokens. */
-  const claimCommandIn = (...tokens) => ({
+  const claimCommandIn = (...tokens: (string | undefined)[]) => ({
     x402Version: 2,
     accepted: { scheme: "batch-settlement", network: "eip155:84532" },
     payload: {
@@ -1457,7 +1465,7 @@ describe("x402_settle with mocked facilitator", () => {
     const mockFacilitator = {
       settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xclaimtxhash" }),
     };
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const result = await settlePayment(claimCommandIn(BASE_SEPOLIA_EURC), claimCommandRequirements);
 
@@ -1472,7 +1480,7 @@ describe("x402_settle with mocked facilitator", () => {
       "eip155:84532",
       BASE_SEPOLIA_EURC,
     );
-    expect(result.extensions.facilitatorFees.info.asset).toBe(
+    expect(result.extensions!.facilitatorFees!.info.asset).toBe(
       `eip155:84532/erc20:${BASE_SEPOLIA_EURC}`,
     );
   });
@@ -1481,7 +1489,7 @@ describe("x402_settle with mocked facilitator", () => {
     // One flat fee is charged in one token against one allowance, so a batch sweeping a
     // USDC channel and a EURC channel together has no single token to charge.
     const mockFacilitator = { settle: vi.fn() };
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const result = await settlePayment(
       claimCommandIn(BASE_SEPOLIA_USDC, BASE_SEPOLIA_EURC),
@@ -1496,7 +1504,7 @@ describe("x402_settle with mocked facilitator", () => {
 
   it("rejects a claim command whose channel names no token", async () => {
     const mockFacilitator = { settle: vi.fn() };
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const result = await settlePayment(claimCommandIn(undefined), claimCommandRequirements);
 
@@ -1509,7 +1517,7 @@ describe("x402_settle with mocked facilitator", () => {
     const mockFacilitator = {
       settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xsweeptxhash" }),
     };
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const result = await settlePayment(
       {
@@ -1550,7 +1558,7 @@ describe("x402_settle with mocked facilitator", () => {
   const payer = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
 
   /** An enriched refund for `seller`, with `claims` overridable per test. */
-  const enrichedRefundPayload = (claims) => ({
+  const enrichedRefundPayload = (claims: unknown) => ({
     x402Version: 2,
     accepted: { scheme: "batch-settlement", network: "eip155:84532" },
     payload: {
@@ -1570,7 +1578,7 @@ describe("x402_settle with mocked facilitator", () => {
     },
   });
 
-  const claimFor = (receiver) => ({
+  const claimFor = (receiver: string) => ({
     voucher: {
       channel: { payer, receiver, token: BASE_SEPOLIA_USDC },
       maxClaimableAmount: "12000",
@@ -1592,7 +1600,7 @@ describe("x402_settle with mocked facilitator", () => {
     const mockFacilitator = {
       settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xrefundtxhash" }),
     };
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const result = await settlePayment(
       enrichedRefundPayload([claimFor(seller)]),
@@ -1624,7 +1632,7 @@ describe("x402_settle with mocked facilitator", () => {
       reason: "insufficient_fee_allowance",
     });
     const mockFacilitator = { settle: vi.fn() };
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const result = await settlePayment(
       enrichedRefundPayload([claimFor(seller)]),
@@ -1648,7 +1656,7 @@ describe("x402_settle with mocked facilitator", () => {
         extra: { channelState: { channelId: "0xchannel" } },
       }),
     };
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const result = await settlePayment(enrichedRefundPayload([]), refundRequirements);
 
@@ -1666,7 +1674,7 @@ describe("x402_settle with mocked facilitator", () => {
     // valid refund for a channel the caller owns could smuggle payouts to anyone.
     vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({ isValid: true, payer });
     const mockFacilitator = { settle: vi.fn() };
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const result = await settlePayment(
       enrichedRefundPayload([claimFor("0x3333333333333333333333333333333333333333")]),
@@ -1687,7 +1695,7 @@ describe("x402_settle with mocked facilitator", () => {
       .spyOn(verifyModule, "verifyPayment")
       .mockResolvedValue({ isValid: true, payer });
     const mockFacilitator = { settle: vi.fn() };
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
     const eurcClaim = claimFor(seller);
     eurcClaim.voucher.channel.token = BASE_SEPOLIA_EURC;
 
@@ -1705,7 +1713,7 @@ describe("x402_settle with mocked facilitator", () => {
     // fully "narrowed". Malformed, not free.
     vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({ isValid: true, payer });
     const mockFacilitator = { settle: vi.fn() };
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const result = await settlePayment(enrichedRefundPayload({}), refundRequirements);
 
@@ -1720,7 +1728,7 @@ describe("x402_settle with mocked facilitator", () => {
     // payout.
     vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({ isValid: true, payer });
     const mockFacilitator = { settle: vi.fn() };
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const result = await settlePayment(
       enrichedRefundPayload([
@@ -1742,7 +1750,7 @@ describe("x402_settle with mocked facilitator", () => {
     const mockFacilitator = {
       settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xrefundtxhash" }),
     };
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const result = await settlePayment(
       enrichedRefundPayload([claimFor(seller)]),
@@ -1799,7 +1807,7 @@ describe("x402_settle with mocked facilitator", () => {
     const mockFacilitator = {
       settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xclaimtxhash" }),
     };
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(mockFacilitator);
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(asFacilitator(mockFacilitator));
 
     const result = await settlePayment(claimPayload, requirements);
 
@@ -1820,9 +1828,11 @@ describe("x402_settle with mocked facilitator", () => {
       feeRequired: false,
       recipient: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
     });
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue({
-      settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xsettletxhash" }),
-    });
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(
+      asFacilitator({
+        settle: vi.fn().mockResolvedValue({ success: true, transaction: "0xsettletxhash" }),
+      }),
+    );
 
     const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
 
@@ -1847,13 +1857,15 @@ describe("x402_settle with mocked facilitator", () => {
       feeRequired: true,
       recipient: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
     });
-    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue({
-      settle: vi.fn().mockResolvedValue({
-        success: true,
-        transaction: "0xsettletxhash",
-        extra: { channelState: { channelId: "0xchannel" } },
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockReturnValue(
+      asFacilitator({
+        settle: vi.fn().mockResolvedValue({
+          success: true,
+          transaction: "0xsettletxhash",
+          extra: { channelState: { channelId: "0xchannel" } },
+        }),
       }),
-    });
+    );
 
     const result = await settlePayment(validPaymentPayload, validPaymentRequirements);
 

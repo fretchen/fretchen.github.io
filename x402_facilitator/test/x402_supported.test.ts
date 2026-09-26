@@ -1,5 +1,3 @@
-// @ts-check
-
 /**
  * Tests for x402 /supported endpoint
  *
@@ -34,7 +32,7 @@ describe("x402 /supported endpoint", () => {
   test("includes Optimism Mainnet support", () => {
     const capabilities = getSupportedCapabilities();
 
-    const mainnetSupport = capabilities.kinds.find((k) => k.network === "eip155:10");
+    const mainnetSupport = capabilities.kinds.find((k) => k.network === "eip155:10")!;
 
     expect(mainnetSupport).toBeDefined();
     expect(mainnetSupport.x402Version).toBe(2);
@@ -46,7 +44,7 @@ describe("x402 /supported endpoint", () => {
   test("includes Optimism Sepolia support", () => {
     const capabilities = getSupportedCapabilities();
 
-    const sepoliaSupport = capabilities.kinds.find((k) => k.network === "eip155:11155420");
+    const sepoliaSupport = capabilities.kinds.find((k) => k.network === "eip155:11155420")!;
 
     expect(sepoliaSupport).toBeDefined();
     expect(sepoliaSupport.x402Version).toBe(2);
@@ -57,7 +55,7 @@ describe("x402 /supported endpoint", () => {
   test("includes Base Mainnet support", () => {
     const capabilities = getSupportedCapabilities();
 
-    const baseSupport = capabilities.kinds.find((k) => k.network === "eip155:8453");
+    const baseSupport = capabilities.kinds.find((k) => k.network === "eip155:8453")!;
 
     expect(baseSupport).toBeDefined();
     expect(baseSupport.x402Version).toBe(2);
@@ -67,7 +65,7 @@ describe("x402 /supported endpoint", () => {
   test("includes Base Sepolia support", () => {
     const capabilities = getSupportedCapabilities();
 
-    const baseSepoliaSupport = capabilities.kinds.find((k) => k.network === "eip155:84532");
+    const baseSepoliaSupport = capabilities.kinds.find((k) => k.network === "eip155:84532")!;
 
     expect(baseSepoliaSupport).toBeDefined();
     expect(baseSepoliaSupport.x402Version).toBe(2);
@@ -143,6 +141,9 @@ describe("x402 /supported endpoint", () => {
 
     const fees = capabilities.facilitatorFees;
     expect(fees).toBeDefined();
+    if (!fees) {
+      throw new Error("unreachable");
+    }
     expect(fees.version).toBe("1");
     expect(fees.model).toBe("flat");
     // The fee is charged in whichever token settles — USDC, or EURC on Base.
@@ -166,7 +167,7 @@ describe("x402 /supported endpoint", () => {
     process.env.FACILITATOR_WALLET_PRIVATE_KEY =
       "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
-    const fees = getSupportedCapabilities().facilitatorFees;
+    const fees = getSupportedCapabilities().facilitatorFees!;
     const settlementsCovered = BigInt(fees.setup.recommended_amount) / BigInt(fees.flatFee);
 
     // The approval spender is the same hot key that signs every settlement, so this

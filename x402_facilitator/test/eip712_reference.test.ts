@@ -1,4 +1,3 @@
-// @ts-check
 /**
  * EIP-712 Reference Test
  *
@@ -43,7 +42,7 @@ describe("EIP-712 Reference Tests", () => {
       },
       contents: "Hello, Bob!",
     },
-  };
+  } as const;
 
   test("viem hashTypedData matches EIP-712 reference", () => {
     const hash = hashTypedData({
@@ -78,7 +77,7 @@ describe("EIP-712 Reference Tests", () => {
       version: "2",
       chainId: 11155420,
       verifyingContract: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
-    };
+    } as const;
 
     const message = {
       from: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
@@ -130,7 +129,7 @@ describe("EIP-712 Reference Tests", () => {
       version: "2",
       chainId: 11155420,
       verifyingContract: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
-    };
+    } as const;
 
     // Hash mit nur Domain
     const hash1 = hashTypedData({
@@ -167,7 +166,7 @@ describe("EIP-712 Reference Tests", () => {
       version: "1",
       chainId: 1,
       verifyingContract: "0x0000000000000000000000000000000000000001",
-    };
+    } as const;
 
     // Mit BigInt
     const hashWithBigInt = hashTypedData({

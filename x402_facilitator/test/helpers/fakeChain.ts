@@ -110,6 +110,8 @@ interface Log {
   data: Hex;
 }
 
+type Failure = "revert" | "revertOnChain" | "receiptTimeout";
+
 const lc = (a: string) => a.toLowerCase();
 
 /** Shared state. Reset it in `beforeEach` with `chain.reset()`. */
@@ -120,6 +122,9 @@ export const chain = {
   usedNonces: new Set<string>(),
   receipts: new Map<string, Log[]>(),
   writes: [] as WriteCall[],
+  failures: new Map<string, Failure>(),
+  timedOut: new Set<string>(),
+  reverted: new Set<string>(),
 
   reset() {
     this.tokens.clear();
@@ -128,9 +133,26 @@ export const chain = {
     this.usedNonces.clear();
     this.receipts.clear();
     this.writes = [];
+    this.failures.clear();
+    this.timedOut.clear();
+    this.reverted.clear();
     // The SDK caches "this asset is a deployed contract" process-wide for 15 minutes, so
     // without this a token deployed in one test stays "deployed" in the next.
     resetAssetContractCache();
+  },
+
+  /**
+   * Make the next write of `functionName` fail:
+   * - "revert": `writeContract` throws, as viem does when gas estimation reverts — nothing
+   *   is broadcast and no state changes.
+   * - "revertOnChain": the tx is broadcast and mined but reverts — a hash exists, the receipt
+   *   says `status: "reverted"`, and no state changes.
+   * - "receiptTimeout": the tx is sent and takes effect, but waiting for its receipt throws
+   *   viem's real `WaitForTransactionReceiptTimeoutError` — the "broadcast, outcome unknown"
+   *   case.
+   */
+  failNext(functionName: string, failure: Failure) {
+    this.failures.set(functionName, failure);
   },
 
   /** Deploy a token: after this, getCode reports bytecode and name()/version() answer. */
@@ -203,8 +225,13 @@ function readToken(address: string, functionName: string, args: readonly unknown
 }
 
 export function fakeViem(actual: typeof Viem) {
-  const { decodeFunctionData, encodeFunctionResult, encodeEventTopics, encodeAbiParameters } =
-    actual;
+  const {
+    decodeFunctionData,
+    encodeFunctionResult,
+    encodeEventTopics,
+    encodeAbiParameters,
+    WaitForTransactionReceiptTimeoutError,
+  } = actual;
 
   let txCounter = 0;
   const nextHash = (): Hex => `0x${(++txCounter).toString(16).padStart(64, "0")}`;
@@ -266,6 +293,12 @@ export function fakeViem(actual: typeof Viem) {
         throw new Error("fakeChain: ERC-1271 signature verification is not modelled");
       },
       async waitForTransactionReceipt({ hash }: { hash: Hex }) {
+        if (chain.timedOut.has(hash)) {
+          throw new WaitForTransactionReceiptTimeoutError({ hash });
+        }
+        if (chain.reverted.has(hash)) {
+          return { status: "reverted" as const, transactionHash: hash, blockNumber: 1n, logs: [] };
+        }
         const logs = chain.receipts.get(hash);
         if (!logs) {
           throw new Error(`fakeChain: unknown transaction ${hash}`);
@@ -289,6 +322,18 @@ export function fakeViem(actual: typeof Viem) {
       }) {
         requireToken(address);
         const sender = account.address;
+        const failure = chain.failures.get(functionName);
+        chain.failures.delete(functionName);
+        if (failure === "revert") {
+          throw new Revert(`${functionName} (injected by chain.failNext)`);
+        }
+        if (failure === "revertOnChain") {
+          // Mined, but nothing happened: record the attempt, change no state.
+          chain.writes.push({ address, functionName, args, from: sender });
+          const hash = nextHash();
+          chain.reverted.add(hash);
+          return hash;
+        }
         let logs: Log[];
 
         if (functionName === "transferWithAuthorization") {
@@ -325,6 +370,9 @@ export function fakeViem(actual: typeof Viem) {
         chain.writes.push({ address, functionName, args, from: sender });
         const hash = nextHash();
         chain.receipts.set(hash, logs);
+        if (failure === "receiptTimeout") {
+          chain.timedOut.add(hash);
+        }
         return hash;
       },
       async sendTransaction(): Promise<Hex> {

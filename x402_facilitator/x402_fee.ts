@@ -23,7 +23,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import pino from "pino";
 import { findStablecoin, loadPrivateKey } from "@fretchen/chain-utils";
-import { getChainConfig } from "./chain_utils";
+import { getChainConfig, getRpcUrl } from "./chain_utils";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
@@ -193,7 +193,7 @@ export async function checkMerchantAllowance(
     const config = getChainConfig(network);
     const publicClient = createPublicClient({
       chain: config.chain,
-      transport: http(),
+      transport: http(getRpcUrl(network)),
     });
 
     const feeToken = getContract({
@@ -351,13 +351,13 @@ export async function collectFee(
 
     const publicClient = createPublicClient({
       chain: config.chain,
-      transport: http(),
+      transport: http(getRpcUrl(network)),
     });
 
     const walletClient = createWalletClient({
       account,
       chain: config.chain,
-      transport: http(),
+      transport: http(getRpcUrl(network)),
     });
 
     const feeToken = getContract({

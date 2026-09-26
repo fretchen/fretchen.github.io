@@ -137,7 +137,7 @@ function getBatchSettlementTarget(
  *                       Phase 3).
  * - `reject`          — malformed, or claims that do not belong to the verified channel.
  */
-type BatchRoute =
+export type BatchRoute =
   | { kind: "command"; feeRecipient: string; feeToken: string }
   | { kind: "claiming-refund"; feeRecipient: string; feeToken: string }
   | { kind: "free" }
@@ -156,7 +156,7 @@ type BatchRoute =
  *
  * A claim-less refund stays free: it returns the payer's own escrow and pays out to no one.
  */
-function classifyBatchSettlement(payload: Record<string, unknown> | undefined): BatchRoute {
+export function classifyBatchSettlement(payload: Record<string, unknown> | undefined): BatchRoute {
   if (isBatchSettlementClaimPayload(payload) || isBatchSettlementSettlePayload(payload)) {
     const target = getBatchSettlementTarget(payload);
     return target
@@ -624,17 +624,10 @@ export async function settlePayment(
     // registered, or getFacilitator() itself failing.
     logger.error({ err }, "Settlement threw");
 
-    // Try to extract meaningful error reason. No "insufficient" → insufficient_funds branch:
-    // that string also matches OUR wallet being out of gas ("insufficient funds for gas"),
-    // which is not the caller's fault and must not be reported to them as such. It falls
-    // through to the generic settlement_failed below instead.
-    let errorReason = "settlement_failed";
-    if (err.message?.includes("nonce")) {
-      errorReason = "authorization_already_used";
-    } else if (err.message?.includes("expired")) {
-      errorReason = "authorization_expired";
-    }
-
+    // Always the generic reason. Caller errors (reused nonce, expiry, balance) come back
+    // from the SDK as returned reasons, never through here, so there is nothing to recover
+    // by sniffing the message — and sniffing once reported OUR wallet running out of gas
+    // ("insufficient funds for gas") as the caller's fault.
     const payload = paymentPayload.payload as Record<string, unknown> | undefined;
     // EIP-3009 shape only. Permit2 payloads (payer at permit2Authorization.from) are
     // rejected at verify time (permit2_not_supported), so they never reach settle.
@@ -643,7 +636,7 @@ export async function settlePayment(
 
     return {
       success: false,
-      errorReason,
+      errorReason: "settlement_failed",
       payer: authorization?.from as string | undefined,
       transaction: "",
       network: accepted?.network as string | undefined,

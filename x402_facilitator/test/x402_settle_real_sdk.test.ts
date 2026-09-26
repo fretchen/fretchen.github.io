@@ -89,9 +89,13 @@ describe("settlePayment — real SDK, fake chain", () => {
 
     const result = await settlePayment(payload, requirements);
 
-    // Strip the internal-only errorMessage exactly as x402_facilitator.ts does.
-    const { errorMessage: _internal, ...body } = result;
-    expect(SettleResponseSchema.safeParse(body).success).toBe(true);
+    // errorMessage is internal-only (logged, never sent), so it is absent from the schema;
+    // everything else must validate strictly — a new field on the settle path that the
+    // schema (and therefore openapi.json) doesn't know about fails here.
+    const { errorMessage, ...wire } = result;
+    expect(errorMessage).toBeUndefined();
+    const parsed = SettleResponseSchema.strict().safeParse(wire);
+    expect(parsed.error?.issues ?? []).toEqual([]);
   });
 
   it("cannot be replayed: the second settlement of the same payment moves nothing", async () => {
@@ -143,5 +147,84 @@ describe("settlePayment — real SDK, fake chain", () => {
     expect(result.success).toBe(true);
     expect(result.fee).toBeUndefined();
     expect(result.extensions).toBeUndefined();
+  });
+
+  // ─── Failures after verify passed ───────────────────────
+
+  it("reports a reverted settlement as failed and never pulls the fee", async () => {
+    const { payload, requirements, token, payer } = await fundedPayment();
+    chain.failNext("transferWithAuthorization", "revert");
+
+    const result = await settlePayment(payload, requirements);
+
+    expect(result).toMatchObject({
+      success: false,
+      errorReason: "invalid_exact_evm_transaction_failed",
+      transaction: "",
+      payer,
+    });
+    expect(chain.writes).toEqual([]);
+    expect(chain.balanceOf(token, SELLER)).toBe(0n);
+  });
+
+  it("reports a mined-but-reverted settlement as terminal: no hash to reconcile, no fee", async () => {
+    const { payload, requirements, token, payer } = await fundedPayment();
+    chain.failNext("transferWithAuthorization", "revertOnChain");
+
+    const result = await settlePayment(payload, requirements);
+
+    expect(result).toMatchObject({
+      success: false,
+      errorReason: "invalid_exact_evm_transaction_failed",
+      // The SDK hands back the reverted tx's hash; we drop it, because only
+      // settlement_pending (below) is an outcome the caller should reconcile.
+      transaction: "",
+    });
+    expect(chain.writes.map((w) => w.functionName)).toEqual(["transferWithAuthorization"]);
+    expect(chain.balanceOf(token, payer)).toBe(1_000_000n);
+  });
+
+  it("returns the broadcast hash when the settlement's outcome is unknown, and does not charge", async () => {
+    const { payload, requirements } = await fundedPayment();
+    chain.failNext("transferWithAuthorization", "receiptTimeout");
+
+    const result = await settlePayment(payload, requirements);
+
+    expect(result).toMatchObject({ success: false, errorReason: "settlement_pending" });
+    // The caller reconciles against this hash, so it must be the tx that was actually sent.
+    expect(result.transaction).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(chain.writes.map((w) => w.functionName)).toEqual(["transferWithAuthorization"]);
+  });
+
+  it("keeps a landed settlement successful when the fee pull reverts, and still reports the assessed fee", async () => {
+    const { payload, requirements, token } = await fundedPayment();
+    chain.failNext("transferFrom", "revert");
+
+    const result = await settlePayment(payload, requirements);
+
+    expect(result.success).toBe(true);
+    expect(chain.balanceOf(token, SELLER)).toBe(PRICE); // paid in full, no fee taken
+    expect(result.fee).toMatchObject({ collected: false, status: "failed" });
+    // The receipt discloses what the payment cost, not what was collected.
+    expect(result.extensions!.facilitatorFees!.info).toMatchObject({
+      facilitatorFeePaid: FEE.toString(),
+      collection: { status: "failed" },
+    });
+  });
+
+  it("reports a fee pull whose receipt timed out as pending, with its hash", async () => {
+    const { payload, requirements } = await fundedPayment();
+    chain.failNext("transferFrom", "receiptTimeout");
+
+    const result = await settlePayment(payload, requirements);
+
+    expect(result.success).toBe(true);
+    expect(result.fee).toMatchObject({ collected: false, status: "pending" });
+    expect(result.fee!.txHash).toMatch(/^0x[0-9a-f]{64}$/);
+    // The hash lets the seller look the fee tx up; the assessed fee is still the full fee.
+    expect(result.extensions!.facilitatorFees!.info).toMatchObject({
+      facilitatorFeePaid: FEE.toString(),
+      collection: { status: "pending", txHash: result.fee!.txHash },
+    });
   });
 });

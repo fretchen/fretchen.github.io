@@ -7,7 +7,6 @@ import { isLocalizedPath } from "../locales/locales";
 import { getRelMeLinks, SITE } from "../utils/siteData";
 import { analyticsConfig } from "../utils/analyticsConfig";
 import { getPageUrl } from "../utils/pageContext";
-import favicon from "./image_3_1fc7cfc7b9e9.jpg";
 
 /**
  * The only `+Head` in the repo, and deliberately so.
@@ -50,7 +49,7 @@ export default function HeadDefault() {
 
   return (
     <>
-      <link rel="icon" href={favicon} />
+      <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
       {/* Canonical URL - points to current page in its current language */}
       <link rel="canonical" href={canonicalUrl} />

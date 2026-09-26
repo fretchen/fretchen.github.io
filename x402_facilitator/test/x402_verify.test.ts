@@ -1,276 +1,259 @@
 /**
- * Tests for x402 verify endpoint
+ * Tests for x402 verify — the REAL verify path, hermetic.
+ *
+ * Nothing in our code or in @x402/evm is mocked. Only the RPC client is replaced by an
+ * in-memory chain (test/helpers/fakeChain.ts), and every payment is genuinely signed
+ * (test/helpers/signPayment.ts) with the one field under test set wrong BEFORE signing.
+ * So each rejection test reaches the check it is named for: remove that check from the
+ * SDK or from our fee hook and the matching test fails.
+ *
+ * The same payments against live RPC are in test/integration/x402_verify_signature.integration.test.ts.
  */
-import { describe, test, expect, beforeEach, afterEach } from "vitest";
+import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
+
+vi.mock("viem", async (importOriginal) => {
+  const { fakeViem } = await import("./helpers/fakeChain");
+  return fakeViem(await importOriginal<typeof import("viem")>());
+});
+
 import { verifyPayment } from "../x402_verify.js";
 import { resetFacilitator } from "../facilitator_instance.js";
+import { getFacilitatorAddress } from "../x402_fee.js";
+import { chain } from "./helpers/fakeChain";
+import { signExactPayment, SELLER } from "./helpers/signPayment";
 
-describe("x402 Verify", () => {
+const FACILITATOR_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+const now = () => BigInt(Math.floor(Date.now() / 1000));
+
+describe("x402 Verify (real SDK, fake chain)", () => {
   const originalEnv = { ...process.env };
 
-  beforeEach(() => {
-    // Reset facilitator singleton before each test
-    resetFacilitator();
+  /**
+   * Sign a payment and put the chain in the state where it should pass: token deployed,
+   * payer funded, seller has approved the facilitator for the fee.
+   */
+  async function fundedPayment(options: Parameters<typeof signExactPayment>[0] = {}) {
+    const signed = await signExactPayment(options);
+    chain.addToken(signed.token, signed.name);
+    chain.setBalance(signed.token, signed.payer, 1_000_000n);
+    chain.setAllowance(signed.token, SELLER, getFacilitatorAddress()!, 1_000_000n);
+    return signed;
+  }
 
-    // Set facilitator private key for tests (Hardhat test account #0)
-    process.env.FACILITATOR_WALLET_PRIVATE_KEY =
-      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+  beforeEach(() => {
+    process.env.FACILITATOR_WALLET_PRIVATE_KEY = FACILITATOR_KEY;
+    resetFacilitator();
+    chain.reset();
   });
 
   afterEach(() => {
-    // Restore original environment
     process.env = { ...originalEnv };
   });
 
-  // Simple payment amount - no fee calculation needed
-  const paymentAmount = "100000"; // $0.10 in 6-decimal USDC
-  const tokenAddress = "0x5fd84259d66Cd46123540766Be93DFE6D43130D7";
+  test("accepts a correctly signed, funded payment", async () => {
+    const { payload, requirements, payer } = await fundedPayment();
 
-  const validPaymentPayload = {
-    x402Version: 2,
-    resource: {
-      url: "https://api.example.com/premium-data",
-      description: "Access to premium market data",
-      mimeType: "application/json",
-    },
-    accepted: {
-      scheme: "exact",
-      network: "eip155:11155420", // Optimism Sepolia for testing
-      amount: paymentAmount, // Payment to recipient
-      asset: tokenAddress,
-      payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
-      maxTimeoutSeconds: 60,
-      extra: {
-        name: "USDC",
-        version: "2",
-      },
-    },
-    payload: {
-      signature:
-        "0x82be15c8934c70f82322befd3ae22fef371a9265014fa5f2323368bf42b257db27f16284db18eff5b60bbf3415ab860a8edf54cd7927a1a124a0ddd9d687921b1b",
-      authorization: {
-        from: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-        to: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
-        value: paymentAmount, // Full payment amount
-        validAfter: "1740672089",
-        validBefore: "9999999999", // Far future
-        nonce: "0xf3746613c2d920b5fdabc0856f2aeb2d4f88ee6037b8cc5d04a71a4462f13480",
-      },
-    },
-  };
-
-  const validPaymentRequirements = {
-    scheme: "exact",
-    network: "eip155:11155420",
-    amount: paymentAmount,
-    asset: tokenAddress,
-    payTo: "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
-    maxTimeoutSeconds: 60,
-    extra: {
-      name: "USDC",
-      version: "2",
-    },
-  };
-
-  test("validates signature before custom hooks run", async () => {
-    // This test demonstrates that x402 v2 validates signatures BEFORE custom hooks run
-    // The unauthorized recipient will be caught by invalid signature, not hooks
-    const unauthorizedRecipient = "0x1111111111111111111111111111111111111111";
-    const payload = {
-      ...validPaymentPayload,
-      accepted: {
-        ...validPaymentPayload.accepted,
-        payTo: unauthorizedRecipient,
-      },
-      payload: {
-        ...validPaymentPayload.payload,
-        authorization: {
-          ...validPaymentPayload.payload.authorization,
-          to: unauthorizedRecipient,
-        },
-      },
-    };
-    const requirements = {
-      ...validPaymentRequirements,
-      payTo: unauthorizedRecipient,
-    };
     const result = await verifyPayment(payload, requirements);
 
-    expect(result.isValid).toBe(false);
-    // Signature validation happens first, so we get signature error
-    // (The test signature is from a different address/message)
+    expect(result).toMatchObject({ isValid: true, payer, feeRequired: true, recipient: SELLER });
+    // 1_000_000 allowance / 10_000 fee
+    expect(result.remainingSettlements).toBe(100);
+  });
+
+  test("verify is read-only: nothing is written to the chain", async () => {
+    const { payload, requirements } = await fundedPayment();
+
+    await verifyPayment(payload, requirements);
+
+    expect(chain.writes).toEqual([]);
+  });
+
+  // ─── Signature ───────────────────────────────────────────
+
+  test("rejects a signature by someone other than authorization.from", async () => {
+    const { payload, requirements } = await fundedPayment();
+    const other = await signExactPayment();
+    payload.payload.signature = other.payload.payload.signature;
+
+    const result = await verifyPayment(payload, requirements);
+
+    expect(result).toMatchObject({ isValid: false, invalidReason: "invalid_exact_evm_signature" });
+  });
+
+  test("rejects a payment whose signed authorization was altered afterwards", async () => {
+    const { payload, requirements } = await fundedPayment();
+    payload.payload.authorization.value = "1"; // no longer what was signed
+
+    const result = await verifyPayment(payload, requirements);
+
     expect(result.invalidReason).toBe("invalid_exact_evm_signature");
-  });
-
-  test("rejects invalid x402 version", async () => {
-    const payload = { ...validPaymentPayload, x402Version: 1 };
-    const result = await verifyPayment(payload, validPaymentRequirements);
-
-    expect(result.isValid).toBe(false);
-    // x402 v2 throws error "No facilitator registered for scheme: exact and network: eip155:11155420"
-    // which we catch and return as "unexpected_verify_error"
-    expect(result.invalidReason).toBe("unexpected_verify_error");
-  });
-
-  test("rejects unsupported scheme", async () => {
-    const payload = {
-      ...validPaymentPayload,
-      accepted: { ...validPaymentPayload.accepted, scheme: "deferred" },
-    };
-    const result = await verifyPayment(payload, validPaymentRequirements);
-
-    expect(result.isValid).toBe(false);
-    // x402 v2 EVM exact scheme returns unsupported_scheme
-    expect(result.invalidReason).toBe("invalid_exact_evm_scheme");
-  });
-
-  test("rejects unsupported network", async () => {
-    const payload = {
-      ...validPaymentPayload,
-      accepted: { ...validPaymentPayload.accepted, network: "eip155:1" }, // Ethereum mainnet
-    };
-    const result = await verifyPayment(payload, validPaymentRequirements);
-
-    expect(result.isValid).toBe(false);
-    // x402 v2 returns network_mismatch for unsupported networks
-    expect(result.invalidReason).toBe("invalid_exact_evm_network_mismatch");
-  });
-
-  test("rejects expired authorization", async () => {
-    const payload = {
-      ...validPaymentPayload,
-      payload: {
-        ...validPaymentPayload.payload,
-        authorization: {
-          ...validPaymentPayload.payload.authorization,
-          validBefore: "1000000000", // Past timestamp
-        },
-      },
-    };
-    const result = await verifyPayment(payload, validPaymentRequirements);
-
-    expect(result.isValid).toBe(false);
-    // x402 v2 validates signature FIRST, so we get signature error before timing check
-    // To properly test validBefore, we would need a valid signature for this modified payload
-    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
-  });
-
-  test("rejects not yet valid authorization", async () => {
-    const payload = {
-      ...validPaymentPayload,
-      payload: {
-        ...validPaymentPayload.payload,
-        authorization: {
-          ...validPaymentPayload.payload.authorization,
-          validAfter: "9999999999", // Future timestamp
-        },
-      },
-    };
-    const result = await verifyPayment(payload, validPaymentRequirements);
-
-    expect(result.isValid).toBe(false);
-    // x402 v2 validates signature FIRST, so we get signature error before timing check
-    // To properly test validAfter, we would need a valid signature for this modified payload
-    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
-  });
-
-  test("rejects insufficient amount (less than payment)", async () => {
-    const payload = {
-      ...validPaymentPayload,
-      payload: {
-        ...validPaymentPayload.payload,
-        authorization: {
-          ...validPaymentPayload.payload.authorization,
-          value: "5000", // Less than required payment amount
-        },
-      },
-    };
-    const result = await verifyPayment(payload, validPaymentRequirements);
-
-    expect(result.isValid).toBe(false);
-    // x402 v2 validates signature FIRST, so we get signature error before amount check
-    // To properly test amount validation, we would need a valid signature for this modified payload
-    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
-  });
-
-  test("rejects mismatched recipient", async () => {
-    const differentRecipient = "0x0000000000000000000000000000000000000000";
-
-    const payload = {
-      ...validPaymentPayload,
-      payload: {
-        ...validPaymentPayload.payload,
-        authorization: {
-          ...validPaymentPayload.payload.authorization,
-          to: differentRecipient,
-        },
-      },
-    };
-    const result = await verifyPayment(payload, validPaymentRequirements);
-
-    expect(result.isValid).toBe(false);
-    // x402 v2 validates signature FIRST, so we get signature error before recipient check
-    // To properly test recipient validation, we would need a valid signature for this modified payload
-    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
-  });
-
-  test("rejects missing payload", async () => {
-    const payload = {
-      ...validPaymentPayload,
-      payload: {},
-    };
-    const result = await verifyPayment(payload, validPaymentRequirements);
-
-    expect(result.isValid).toBe(false);
-    // x402 v2 may return missing_eip712_domain or catch as unexpected_verify_error
-    expect(["missing_eip712_domain", "unexpected_verify_error"]).toContain(result.invalidReason);
   });
 
   test("rejects signature without 0x prefix", async () => {
-    const payload = {
-      ...validPaymentPayload,
-      payload: {
-        ...validPaymentPayload.payload,
-        signature:
-          "2d6a7588d6acca505cbf0d9a4a227e0c52c6c34008c8e8986a1283259764173608a2ce6496642e377d6da8dbbf5836e9bd15092f9ecab05ded3d6293af148b571c", // Missing 0x
-      },
-    };
-    const result = await verifyPayment(payload, validPaymentRequirements);
+    const { payload, requirements } = await fundedPayment();
+    payload.payload.signature = payload.payload.signature.slice(2) as `0x${string}`;
 
-    expect(result.isValid).toBe(false);
-    // x402 v2 EVM exact scheme precise error reason
-    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
+    const result = await verifyPayment(payload, requirements);
+
+    expect(result).toMatchObject({ isValid: false, invalidReason: "invalid_exact_evm_signature" });
   });
 
   test("rejects signature with invalid length", async () => {
-    const payload = {
-      ...validPaymentPayload,
-      payload: {
-        ...validPaymentPayload.payload,
-        signature:
-          "0x2d6a7588d6acca505cbf0d9a4a227e0c52c6c34008c8e8986a1283259764173608a2ce6496642e377d6da8dbbf5836e9bd15092f9ecab05ded3d6293af148b57", // Too short
-      },
-    };
-    const result = await verifyPayment(payload, validPaymentRequirements);
+    const { payload, requirements } = await fundedPayment();
+    payload.payload.signature = payload.payload.signature.slice(0, -2) as `0x${string}`;
 
-    expect(result.isValid).toBe(false);
-    // x402 v2 EVM exact scheme precise error reason
-    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
+    const result = await verifyPayment(payload, requirements);
+
+    expect(result).toMatchObject({ isValid: false, invalidReason: "invalid_exact_evm_signature" });
   });
 
-  test("uses x402 v2 ExactEvmScheme for Optimism networks", async () => {
-    // This test verifies that x402 v2 ExactEvmScheme processes Optimism networks
-    // The test signature is invalid, but the important part is that the facilitator
-    // accepts and processes the Optimism network without errors
+  // ─── Authorization fields (validly signed, one field wrong) ───
 
-    const result = await verifyPayment(validPaymentPayload, validPaymentRequirements);
+  test("rejects an authorization paying someone other than payTo", async () => {
+    const { payload, requirements } = await fundedPayment({
+      authorization: { to: "0x1111111111111111111111111111111111111111" },
+    });
 
-    expect(result.isValid).toBe(false);
-    // Should fail on signature validation (test signature doesn't match the payload)
-    expect(result.invalidReason).toBe("invalid_exact_evm_signature");
+    const result = await verifyPayment(payload, requirements);
+
+    expect(result.invalidReason).toBe("invalid_exact_evm_recipient_mismatch");
   });
 
-  // Real-signature verification (live RPC) lives in the integration suite:
-  // test/integration/x402_verify_signature.integration.test.js — run via
-  // `npm run test:integration`. It's kept out of the hermetic unit run.
+  test("rejects an expired authorization", async () => {
+    const { payload, requirements } = await fundedPayment({
+      authorization: { validBefore: now() - 1n },
+    });
+
+    const result = await verifyPayment(payload, requirements);
+
+    expect(result.invalidReason).toBe("invalid_exact_evm_payload_authorization_valid_before");
+  });
+
+  test("rejects an authorization that is not valid yet", async () => {
+    const { payload, requirements } = await fundedPayment({
+      authorization: { validAfter: now() + 3600n },
+    });
+
+    const result = await verifyPayment(payload, requirements);
+
+    expect(result.invalidReason).toBe("invalid_exact_evm_payload_authorization_valid_after");
+  });
+
+  test("rejects an authorization for less than the required amount", async () => {
+    const { payload, requirements } = await fundedPayment({ authorization: { value: 5_000n } });
+
+    const result = await verifyPayment(payload, requirements);
+
+    expect(result.invalidReason).toBe("invalid_exact_evm_payload_authorization_value_mismatch");
+  });
+
+  // ─── On-chain state ─────────────────────────────────────
+
+  test("rejects a payer without enough balance", async () => {
+    const { payload, requirements, payer, token } = await fundedPayment();
+    chain.setBalance(token, payer, 99_999n);
+
+    const result = await verifyPayment(payload, requirements);
+
+    expect(result).toMatchObject({
+      isValid: false,
+      invalidReason: "invalid_exact_evm_insufficient_balance",
+      payer,
+    });
+  });
+
+  test("rejects an authorization whose nonce was already used", async () => {
+    const { payload, requirements, payer, token, nonce } = await fundedPayment();
+    chain.markNonceUsed(token, payer, nonce);
+
+    const result = await verifyPayment(payload, requirements);
+
+    expect(result.invalidReason).toBe("invalid_exact_evm_nonce_already_used");
+  });
+
+  test("rejects a token that is not a deployed contract", async () => {
+    const { payload, requirements } = await signExactPayment(); // token never added
+
+    const result = await verifyPayment(payload, requirements);
+
+    expect(result.invalidReason).toBe("asset_not_deployed_contract");
+  });
+
+  // ─── Our fee gate (facilitator_instance onAfterVerify) ─────
+
+  test("rejects when the seller has not approved the facilitator for the fee", async () => {
+    const { payload, requirements, token } = await fundedPayment();
+    chain.setAllowance(token, SELLER, getFacilitatorAddress()!, 9_999n);
+
+    const result = await verifyPayment(payload, requirements);
+
+    expect(result).toMatchObject({ isValid: false, invalidReason: "insufficient_fee_allowance" });
+  });
+
+  test("accepts without any approval when no fee is configured", async () => {
+    process.env.FACILITATOR_FEE_AMOUNT = "0";
+    const { payload, requirements, token } = await fundedPayment();
+    chain.setAllowance(token, SELLER, getFacilitatorAddress()!, 0n);
+
+    const result = await verifyPayment(payload, requirements);
+
+    expect(result).toMatchObject({ isValid: true, feeRequired: false });
+  });
+
+  // ─── Request shape ──────────────────────────────────────
+
+  test("rejects invalid x402 version", async () => {
+    const { payload, requirements } = await fundedPayment();
+
+    const result = await verifyPayment({ ...payload, x402Version: 1 }, requirements);
+
+    // The SDK throws "No facilitator registered for x402 version: 1"; verifyPayment maps it.
+    expect(result).toMatchObject({ isValid: false, invalidReason: "unexpected_verify_error" });
+  });
+
+  test("rejects unsupported scheme", async () => {
+    const { payload, requirements } = await fundedPayment();
+
+    const result = await verifyPayment(
+      { ...payload, accepted: { ...payload.accepted, scheme: "deferred" } },
+      requirements,
+    );
+
+    expect(result.invalidReason).toBe("invalid_exact_evm_scheme");
+  });
+
+  test("rejects a payload whose network differs from the requirements", async () => {
+    const { payload, requirements } = await fundedPayment();
+
+    const result = await verifyPayment(
+      { ...payload, accepted: { ...payload.accepted, network: "eip155:1" } },
+      requirements,
+    );
+
+    expect(result.invalidReason).toBe("invalid_exact_evm_network_mismatch");
+  });
+
+  test("rejects missing payload", async () => {
+    const { payload, requirements } = await fundedPayment();
+
+    const result = await verifyPayment({ ...payload, payload: {} }, requirements);
+
+    expect(result).toMatchObject({ isValid: false, invalidReason: "unexpected_verify_error" });
+  });
+
+  test("verifies on every supported network with that network's USDC domain", async () => {
+    // Optimism mainnet's USDC domain name is "USD Coin", testnets use "USDC" — a wrong
+    // per-network name would fail the signature check here.
+    for (const network of ["eip155:10", "eip155:11155420", "eip155:8453", "eip155:84532"]) {
+      const { payload, requirements } = await fundedPayment({ network });
+
+      const result = await verifyPayment(payload, requirements);
+
+      expect({ network, isValid: result.isValid, reason: result.invalidReason }).toEqual({
+        network,
+        isValid: true,
+        reason: undefined,
+      });
+    }
+  });
 });

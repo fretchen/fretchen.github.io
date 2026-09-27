@@ -217,9 +217,13 @@ USD, so it carries the USDC price; the EURC price is stated in the description.
   pays with the first entry its spend controls allow, and the SDK's built-in asset registry only
   knows USDC, so a default client keeps paying USDC until it allowlists EURC.
 - **Facilitator fee:** charged in the token the payment settled in, so the seller wallet
-  (`NFT_WALLET_PUBLIC_KEY`) needs an `approve()` for the facilitator **in EURC as well as USDC**
-  on every network where it takes EURC. Without it every EURC settlement or claim fails with
-  `insufficient_fee_allowance`. The claim cron warns per token when an approval runs low.
+  (`NFT_WALLET_PUBLIC_KEY`) needs an `approve()` for the facilitator for **every (network, token)
+  pair the sellers offer**. Without it every payment or claim in that pair fails with
+  `insufficient_fee_allowance`. `npm run fee-allowances` lists every offered pair and exits 1 if
+  any is below one fee; `npm run fee-allowances -- --approve` fixes the short ones (needs
+  `NFT_WALLET_PRIVATE_KEY` and a little gas). It runs as `predeploy`, so `npm run deploy` refuses to
+  ship an offer that cannot be paid. The claim cron still warns per token when an approval runs
+  low between deploys.
 - **Channels:** USDC and EURC channels share each network's `channels/<network>/` prefix (the
   token is part of the channel id). The cron claims one token at a time, because a claim batch
   must not mix tokens. `scripts/recover_channels.ts` takes the token as an argument for the same

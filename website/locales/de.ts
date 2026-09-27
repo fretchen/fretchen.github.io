@@ -18,7 +18,7 @@ export default {
     creating: "Wird erstellt...",
     generating: "Wird generiert...",
     mintingInfo:
-      "Zahlung mit USDC auf Optimism (Netzwerkgebühr < 1¢). Souveräne Generierung — Dein Prompt kann nur für Dein NFT verwendet werden, nicht anderswo gespeichert.",
+      "Zahlung: {cost} auf {chain} (Netzwerkgebühr < 1¢). Souveräne Generierung — Dein Prompt kann nur für Dein NFT verwendet werden, nicht anderswo gespeichert.",
     myArtworks: "Meine Kunstwerke",
     allPublicArtworks: "Alle öffentlichen Kunstwerke",
     artwork: "Kunstwerk",
@@ -38,11 +38,10 @@ export default {
     unknownError: "Ein unbekannter Fehler ist aufgetreten",
     chainSwitchFailed: "Netzwerkwechsel fehlgeschlagen - bitte erneut versuchen",
     // x402 Zahlung
-    awaitingSignature: "USDC-Zahlung in Wallet signieren...",
+    awaitingSignature: "Zahlung in der Wallet signieren...",
     processingPayment: "Zahlung wird verarbeitet...",
     mintingNft: "Dein NFT wird erstellt...",
     paymentConfirmed: "Zahlung bestätigt!",
-    usdcCost: "Kosten: $0,07 USDC",
     // File upload
     uploadReferenceImage: "Referenzbild hochladen (Optional)",
     dragDropHere: "Bild hierher ziehen oder klicken zum Durchsuchen",
@@ -233,5 +232,11 @@ export default {
     modalOnChainBody: "Du bist im richtigen Netzwerk — dir fehlt nur USDC, um 0,50 USDC zu spenden.",
     modalGetUsdcButton: "USDC besorgen",
     modalRetry: "Erneut versuchen",
+  },
+  // Mit welchem Stablecoin die Seite bezahlt, gemeinsam für /imagegen und /assistent.
+  payment: {
+    payWith: "Bezahlen mit",
+    eurcBaseOnly: "EURC gibt es nur auf Base.",
+    currencyFallback: "Dieser Agent nimmt diese Währung hier nicht an, die Zahlung läuft daher über",
   },
 };

@@ -17,8 +17,9 @@ export default {
     switchingNetwork: "Switching Network...",
     creating: "Creating...",
     generating: "Generating...",
+    // {cost} is the price with its currency, e.g. "€0.06 EURC"; {chain} the payment network.
     mintingInfo:
-      "Pays with USDC on Optimism (network fee < 1¢). Sovereign generation — your prompt can only be used for your NFT, not stored elsewhere.",
+      "Pays {cost} on {chain} (network fee < 1¢). Sovereign generation — your prompt can only be used for your NFT, not stored elsewhere.",
     myArtworks: "My Artworks",
     allPublicArtworks: "All Public Artworks",
     artwork: "Artwork",
@@ -38,11 +39,10 @@ export default {
     unknownError: "An unknown error occurred",
     chainSwitchFailed: "Failed to switch network - please try again",
     // x402 Payment
-    awaitingSignature: "Sign USDC payment in wallet...",
+    awaitingSignature: "Sign the payment in your wallet...",
     processingPayment: "Processing payment...",
     mintingNft: "Minting your NFT...",
     paymentConfirmed: "Payment confirmed!",
-    usdcCost: "Cost: $0.07 USDC",
     // File upload
     uploadReferenceImage: "Upload Reference Image (Optional)",
     dragDropHere: "Drag & drop an image here, or click to browse",
@@ -218,5 +218,12 @@ export default {
     modalOnChainBody: "You're on a supported network — you just need USDC to donate 0.50 USDC.",
     modalGetUsdcButton: "Get USDC",
     modalRetry: "Try again",
+  },
+  // Which stablecoin the site pays with, shared by /imagegen and /assistent.
+  payment: {
+    payWith: "Pay with",
+    eurcBaseOnly: "EURC is on Base only.",
+    // Followed by the currency actually used, e.g. "… so payment will use USDC."
+    currencyFallback: "This agent doesn't take that currency here, so payment will use",
   },
 };

@@ -19,6 +19,7 @@ function renderCard(overrides: Partial<React.ComponentProps<typeof ToolConfirmCa
       size="1024x1024"
       phase="confirm"
       network="eip155:10"
+      price="€0.06 EURC"
       onConfirm={onConfirm}
       onCancel={onCancel}
       {...overrides}

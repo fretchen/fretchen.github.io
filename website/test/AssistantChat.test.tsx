@@ -51,6 +51,7 @@ vi.mock("../hooks/useX402Chat", () => ({
     reset: vi.fn(),
     isReady: true,
     paymentNetwork: "eip155:10",
+    paymentCurrency: "USDC",
   })),
   DEFAULT_LLM_AGENT_URL: "https://llm-agent.fretchen.eu",
 }));
@@ -82,14 +83,18 @@ vi.mock("../hooks/useWalletConnection", () => ({
 
 // AssistantChat calls this twice — once for the chat network, once for the image tool's — so the
 // mock must tell them apart rather than returning one shared switchIfNeeded for both. The chat
-// call always passes exactly `[paymentNetwork]`; the image call passes the full mainnet GenAI
-// list. Length is the discriminator: matching on a specific chain id silently stopped working
-// once the image list changed from GENAI_NFT_NETWORKS to the mainnet-only subset.
-const isImageNetworkCall = (supportedNetworks: readonly string[]) => supportedNetworks.length > 1;
+// call always passes exactly `[paymentNetwork]`, mocked to "eip155:10" by default; the image call
+// passes `networksForCurrency(currency, IMAGE_TOOL_NETWORKS)`, which for the default EURC
+// preference is Base only. Content, not length, is the discriminator: EURC collapsed the image
+// list to one entry too (Base is the only network EURC exists on), so the length check that used
+// to tell the two apart stopped working. Kept inline rather than calling a shared helper: this
+// factory is hoisted above every module-scope const, so it cannot reference one.
+const isImageNetworkCall = (supportedNetworks: readonly string[]) =>
+  supportedNetworks.includes("eip155:8453") && !supportedNetworks.includes("eip155:10");
 
 vi.mock("../hooks/useAutoNetwork", () => ({
   useAutoNetwork: vi.fn((supportedNetworks: readonly string[]) =>
-    supportedNetworks.length > 1
+    supportedNetworks.includes("eip155:8453") && !supportedNetworks.includes("eip155:10")
       ? {
           network: "eip155:10",
           isOnCorrectNetwork: true,
@@ -246,6 +251,7 @@ describe("AssistantChat", () => {
       reset: vi.fn(),
       isReady: true,
       paymentNetwork: "eip155:10",
+      paymentCurrency: "USDC",
     });
     vi.mocked(useWalletConnection).mockReturnValue({
       address: "0x1234567890123456789012345678901234567890",
@@ -340,6 +346,7 @@ describe("AssistantChat", () => {
       reset: vi.fn(),
       isReady: true,
       paymentNetwork: "eip155:10",
+      paymentCurrency: "USDC",
     });
     mockSendMessage.mockImplementation(() => new Promise(() => {})); // never resolves: stay loading
 
@@ -423,6 +430,7 @@ describe("AssistantChat", () => {
       reset: vi.fn(),
       isReady: true,
       paymentNetwork: "eip155:8453",
+      paymentCurrency: "EURC",
     });
 
     renderWithQuery(<AssistantChat />);
@@ -1078,46 +1086,91 @@ describe("AssistantChat", () => {
   });
 
   /**
-   * The network picker. A channel is per (network, receiver) and each one escrows $0.50, so
-   * "the choice sticks" is the assertion that actually protects the user's money — without
-   * it they'd silently open a second channel on the other chain.
+   * The network and currency pickers. A channel is per (network, token, receiver) and each one
+   * escrows 0.50, so "the choice sticks" is the assertion that actually protects the user's
+   * money — without it they'd silently open a second channel. EURC is the site default and
+   * exists only on Base, so the network follows the currency: choosing EURC always means Base,
+   * and Optimism only reappears once USDC is chosen.
    */
-  describe("network picker", () => {
+  describe("network and currency", () => {
     beforeEach(() => window.localStorage.clear());
 
-    it("defaults to Optimism and pays on it", () => {
+    it("defaults to EURC on Base — the only network EURC exists on — and pays on it", () => {
       renderWithQuery(<AssistantChat />);
 
-      expect(useX402Chat).toHaveBeenCalledWith("eip155:10", "https://llm-agent.fretchen.eu");
+      expect(useX402Chat).toHaveBeenCalledWith("eip155:8453", "https://llm-agent.fretchen.eu", "EURC");
     });
 
-    it("persists the chosen network and pays on it", async () => {
+    it("offers only Base while paying with EURC, with a note explaining why", () => {
       renderWithQuery(<AssistantChat />);
+
+      expect(screen.getByRole("button", { name: "Base" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Optimism" })).not.toBeInTheDocument();
+      expect(screen.getByText("payment.eurcBaseOnly")).toBeInTheDocument();
+    });
+
+    it("switching to USDC re-enables Optimism and defaults to it", async () => {
+      renderWithQuery(<AssistantChat />);
+
+      fireEvent.click(screen.getByRole("button", { name: "USDC" }));
+
+      await waitFor(() =>
+        expect(useX402Chat).toHaveBeenLastCalledWith("eip155:10", "https://llm-agent.fretchen.eu", "USDC"),
+      );
+      expect(window.localStorage.getItem("x402-currency")).toBe("USDC");
+    });
+
+    it("persists the chosen network under USDC and pays on it", async () => {
+      renderWithQuery(<AssistantChat />);
+      fireEvent.click(screen.getByRole("button", { name: "USDC" }));
+      await waitFor(() =>
+        expect(useX402Chat).toHaveBeenLastCalledWith("eip155:10", "https://llm-agent.fretchen.eu", "USDC"),
+      );
 
       fireEvent.click(screen.getByRole("button", { name: "Base" }));
 
-      await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:8453", "https://llm-agent.fretchen.eu"));
+      await waitFor(() =>
+        expect(useX402Chat).toHaveBeenLastCalledWith("eip155:8453", "https://llm-agent.fretchen.eu", "USDC"),
+      );
       expect(window.localStorage.getItem("x402-chat-network")).toBe("eip155:8453");
     });
 
-    it("restores a stored choice on the next visit", async () => {
+    it("restores a stored USDC network choice on the next visit", async () => {
+      window.localStorage.setItem("x402-currency", "USDC");
       window.localStorage.setItem("x402-chat-network", "eip155:8453");
 
       renderWithQuery(<AssistantChat />);
 
-      await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:8453", "https://llm-agent.fretchen.eu"));
+      await waitFor(() =>
+        expect(useX402Chat).toHaveBeenLastCalledWith("eip155:8453", "https://llm-agent.fretchen.eu", "USDC"),
+      );
     });
 
-    it("ignores a stored network the site no longer supports", async () => {
+    it("ignores a stored network the current currency does not offer", async () => {
+      // Chosen under USDC, but EURC (the default here) exists only on Base.
+      window.localStorage.setItem("x402-chat-network", "eip155:10");
+
+      renderWithQuery(<AssistantChat />);
+
+      await waitFor(() =>
+        expect(useX402Chat).toHaveBeenLastCalledWith("eip155:8453", "https://llm-agent.fretchen.eu", "EURC"),
+      );
+    });
+
+    it("ignores a stored network the site no longer supports at all", async () => {
+      window.localStorage.setItem("x402-currency", "USDC");
       window.localStorage.setItem("x402-chat-network", "eip155:84532");
 
       renderWithQuery(<AssistantChat />);
 
-      await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:10", "https://llm-agent.fretchen.eu"));
+      await waitFor(() =>
+        expect(useX402Chat).toHaveBeenLastCalledWith("eip155:10", "https://llm-agent.fretchen.eu", "USDC"),
+      );
     });
 
     it("explains itself when the agent forced a different network than the one chosen", () => {
-      // Chose Optimism (the default) but the hook negotiated down to Base — the user is
+      window.localStorage.setItem("x402-currency", "USDC");
+      // Chose Optimism (USDC's default) but the hook negotiated down to Base — the user is
       // paying on a chain they didn't pick, so the UI has to say so.
       vi.mocked(useX402Chat).mockReturnValue({
         sendMessage: mockSendMessage,
@@ -1128,6 +1181,7 @@ describe("AssistantChat", () => {
         reset: vi.fn(),
         isReady: true,
         paymentNetwork: "eip155:8453",
+        paymentCurrency: "USDC",
       });
 
       renderWithQuery(<AssistantChat />);
@@ -1137,6 +1191,25 @@ describe("AssistantChat", () => {
       const note = screen.getByText(/assistent\.networkFallback/);
       expect(note).toBeInTheDocument();
       expect(within(note).getByTitle("Base")).toBeInTheDocument();
+    });
+
+    it("explains itself when the agent forced a different currency than the one chosen", () => {
+      // EURC preferred (the default), but the agent only offers USDC on the negotiated network.
+      vi.mocked(useX402Chat).mockReturnValue({
+        sendMessage: mockSendMessage,
+        paidFetch: mockPaidFetch,
+        status: "idle",
+        error: null,
+        paymentReceipt: null,
+        reset: vi.fn(),
+        isReady: true,
+        paymentNetwork: "eip155:8453",
+        paymentCurrency: "USDC",
+      });
+
+      renderWithQuery(<AssistantChat />);
+
+      expect(screen.getByText(/payment\.currencyFallback/)).toBeInTheDocument();
     });
   });
 
@@ -1165,7 +1238,7 @@ describe("AssistantChat", () => {
       renderWithQuery(<AssistantChat />);
 
       expect(screen.getByPlaceholderText("https://another-agent.example")).toBeInTheDocument();
-      expect(useX402Chat).toHaveBeenCalledWith("eip155:10", "https://llm-agent.fretchen.eu");
+      expect(useX402Chat).toHaveBeenCalledWith("eip155:8453", "https://llm-agent.fretchen.eu", "EURC");
     });
 
     it("pre-checks a pasted URL and then pays that agent instead", async () => {
@@ -1175,7 +1248,7 @@ describe("AssistantChat", () => {
       pasteAndTry(CUSTOM_URL);
 
       await waitFor(() => expect(precheckLlmV1Agent).toHaveBeenCalledWith(CUSTOM_URL));
-      await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:10", CUSTOM_URL));
+      await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:8453", CUSTOM_URL, "EURC"));
       // Provenance of who is about to be paid.
       expect(screen.getByText("Someone Else")).toBeInTheDocument();
     });
@@ -1202,7 +1275,9 @@ describe("AssistantChat", () => {
       const back = await screen.findByRole("button", { name: "Back to default agent" });
       fireEvent.click(back);
 
-      await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:10", "https://llm-agent.fretchen.eu"));
+      await waitFor(() =>
+        expect(useX402Chat).toHaveBeenLastCalledWith("eip155:8453", "https://llm-agent.fretchen.eu", "EURC"),
+      );
     });
 
     /**
@@ -1222,7 +1297,7 @@ describe("AssistantChat", () => {
         expect(screen.getAllByLabelText("Site analytics").length).toBeGreaterThan(0);
 
         pasteAndTry(CUSTOM_URL);
-        await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:10", CUSTOM_URL));
+        await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:8453", CUSTOM_URL, "EURC"));
 
         // ...and no longer once a stranger is being paid.
         expect(screen.queryByLabelText("Site analytics")).not.toBeInTheDocument();
@@ -1237,7 +1312,7 @@ describe("AssistantChat", () => {
 
         renderWithQuery(<AssistantChat />);
         pasteAndTry(CUSTOM_URL);
-        await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:10", CUSTOM_URL));
+        await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:8453", CUSTOM_URL, "EURC"));
 
         sendUserMessage("How is the site doing?");
 
@@ -1261,7 +1336,7 @@ describe("AssistantChat", () => {
 
         renderWithQuery(<AssistantChat />);
         pasteAndTry(CUSTOM_URL);
-        await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:10", CUSTOM_URL));
+        await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:8453", CUSTOM_URL, "EURC"));
 
         sendUserMessage("What is x402?");
 

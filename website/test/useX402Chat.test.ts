@@ -13,7 +13,7 @@ import { renderHook, act } from "@testing-library/react";
 import { useWalletClient, useAccount } from "wagmi";
 import { useX402Chat } from "../hooks/useX402Chat";
 import { WebStorageClientChannelStorage } from "../utils/x402PaidFetch";
-import { buildUsdcAllowedAssets } from "../hooks/x402SpendControls";
+import { buildStablecoinAllowedAssets } from "../hooks/x402SpendControls";
 import { resetAcceptsCache } from "../hooks/x402Discovery";
 import type { X402ChatMessage } from "../types/x402";
 import { buildAccountData, buildWalletClientData } from "./setup";
@@ -142,7 +142,7 @@ describe("useX402Chat", () => {
 
     // Regression guard for the production incident where an unconfigured x402Client's
     // default spend controls rejected Optimism USDC (see x402SpendControls.ts).
-    it("allowlists USDC on every site network via setSpendControls before registering the scheme", async () => {
+    it("allowlists every stablecoin on every site network via setSpendControls before registering the scheme", async () => {
       vi.stubGlobal(
         "fetch",
         vi.fn().mockResolvedValue(new Response(JSON.stringify({ content: "hi" }), { status: 200 })),
@@ -153,7 +153,7 @@ describe("useX402Chat", () => {
         await result.current.sendMessage([{ role: "user", content: "Hi" }]);
       });
 
-      expect(mockSetSpendControls).toHaveBeenCalledWith({ allowedAssets: buildUsdcAllowedAssets() });
+      expect(mockSetSpendControls).toHaveBeenCalledWith({ allowedAssets: buildStablecoinAllowedAssets() });
       expect(mockSetSpendControls.mock.invocationCallOrder[0]).toBeLessThan(mockRegister.mock.invocationCallOrder[0]);
     });
 
@@ -585,7 +585,8 @@ describe("useX402Chat", () => {
         ),
       );
 
-      const { result } = renderHook(() => useX402Chat(NETWORK));
+      // USDC explicitly: the USDC.e caveat below is that token's alone.
+      const { result } = renderHook(() => useX402Chat(NETWORK, undefined, "USDC"));
       let thrown: Error | undefined;
       await act(async () => {
         try {
@@ -597,6 +598,38 @@ describe("useX402Chat", () => {
 
       expect(thrown?.message).toMatch(/Not enough USDC/i);
       expect(thrown?.message).toMatch(/USDC\.e/);
+    });
+
+    it("names EURC instead, without the USDC.e caveat, when paying with EURC", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockImplementation(() =>
+          Promise.resolve(
+            new Response(
+              JSON.stringify({
+                x402Version: 2,
+                error: "invalid_batch_settlement_evm_insufficient_balance",
+                accepts: [{ scheme: "batch-settlement", network: NETWORK, amount: "9000" }],
+              }),
+              { status: 402 },
+            ),
+          ),
+        ),
+      );
+
+      // Default currency (EURC) — no third argument.
+      const { result } = renderHook(() => useX402Chat(NETWORK));
+      let thrown: Error | undefined;
+      await act(async () => {
+        try {
+          await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+        } catch (err) {
+          thrown = err as Error;
+        }
+      });
+
+      expect(thrown?.message).toMatch(/Not enough EURC/i);
+      expect(thrown?.message).not.toMatch(/USDC/i);
     });
 
     it("does not clear or retry for an unrelated 402", async () => {

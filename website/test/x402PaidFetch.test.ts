@@ -54,6 +54,7 @@ function makeClient(network = NETWORK) {
     walletClient,
     publicClient: { readContract: vi.fn() },
     network,
+    currency: "USDC",
   });
 }
 
@@ -241,6 +242,7 @@ describe("createPaidFetch", () => {
       walletClient,
       publicClient: { readContract: vi.fn() },
       network: NETWORK,
+      currency: "USDC",
       onTopUp,
     });
     await paidFetch("https://web-agent.fretchen.eu/search?q=x");

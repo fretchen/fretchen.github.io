@@ -8,9 +8,9 @@ import type { PaymentFailure } from "./failure";
  * (`scw_js/search_api.ts`), which proxies Brave's LLM Context API.
  *
  * Paid rather than gated: Brave bills per query, and x402 is how a visitor covers that without an
- * allowlist. $0.01 a call, settled as a voucher on the channel the chat already opened, so it costs
- * no wallet prompt. The paid fetch arrives as a parameter rather than from a hook, so this module
- * stays React-free and testable without a wallet.
+ * allowlist. $0.01 a call in USDC or EURC, settled as a voucher on the channel the chat already
+ * opened, so it costs no wallet prompt. The paid fetch arrives as a parameter rather than from a
+ * hook, so this module stays React-free and testable without a wallet.
  *
  * The server already projects Brave's payload down. This module caps it again — not from distrust
  * of our own endpoint, but because the size of a tool result is this module's promise to the chat
@@ -73,10 +73,10 @@ export type { PaymentFailure } from "./failure";
 // --- Fetcher: paid fetch, no cache, throws on failure ------------------------------------------
 
 /**
- * `paidFetch` rather than a bearer token: the endpoint sells this route for $0.01 in USDC, billed
- * onto the channel the chat already opened (`utils/x402PaidFetch.ts`). A payment that fails throws
- * `PaymentError`, which the runner reports to the model as its own status; a non-OK response here
- * is the resource's own failure, and stays a plain error.
+ * `paidFetch` rather than a bearer token: the endpoint sells this route for $0.01, billed onto the
+ * channel the chat already opened (`utils/x402PaidFetch.ts`), in whichever stablecoin that channel
+ * is in. A payment that fails throws `PaymentError`, which the runner reports to the model as its
+ * own status; a non-OK response here is the resource's own failure, and stays a plain error.
  */
 export async function fetchSearch(query: string, paidFetch: PaidFetch): Promise<unknown> {
   const res = await paidFetch(`${SEARCH_URL}/search?q=${encodeURIComponent(query)}`);

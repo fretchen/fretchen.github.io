@@ -45,7 +45,7 @@ export type ToolRunResult = {
 export interface OfferedTool<S extends string> {
   tool: X402Tool;
   source: S | null;
-  /** Costs the user USDC per call, so it counts against `MAX_PAID_CALLS`. */
+  /** Costs the user a stablecoin per call, so it counts against `MAX_PAID_CALLS`. */
   paid?: boolean;
 }
 

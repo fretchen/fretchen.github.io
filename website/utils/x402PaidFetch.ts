@@ -1,5 +1,6 @@
 import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
-import { buildUsdcAllowedAssets } from "../hooks/x402SpendControls";
+import { buildStablecoinAllowedAssets } from "../hooks/x402SpendControls";
+import { preferCurrency, type PaymentCurrency } from "../hooks/x402Currency";
 // Type-only import — erased at compile time, so no @x402 runtime is pulled into SSR.
 import type {
   ClientChannelStorage,
@@ -165,7 +166,9 @@ function getOrCreateVoucherSigner(walletAddress: string) {
   return privateKeyToAccount(privateKey);
 }
 
-// Floor for channel deposits/top-ups, in USDC atomic units (6 decimals) — $0.50.
+// Floor for channel deposits/top-ups, in the channel token's atomic units (6 decimals for both
+// USDC and EURC) — 0.50 of whichever token the channel is in. The reasoning below is in dollars
+// but holds the same in euros.
 // The SDK's own default (depositMultiplier x per-message ceiling) tracks whatever the
 // ceiling happens to be, currently ~$0.003/message, so it sizes deposits at ~1-3 cents:
 // enough for only ~5 messages worst-case before another on-chain top-up (a real tx, a
@@ -225,7 +228,7 @@ function errorCodeOf(body: string): string | undefined {
  * SDK does NOT auto-recover from it — so it warrants an actionable "wait and retry" line
  * rather than dumping the raw reason code. Any other reason keeps the informative default.
  */
-function describePaymentError(status: number, body: string): string {
+function describePaymentError(status: number, body: string, currency: PaymentCurrency): string {
   const errorCode = errorCodeOf(body);
   if (errorCode?.includes("channel_busy")) {
     return "Your previous message is still being settled on-chain. Please wait a few seconds and send it again.";
@@ -238,7 +241,10 @@ function describePaymentError(status: number, body: string): string {
     return DRAINED_CHANNEL_MESSAGE.chat;
   }
   if (errorCode?.includes("insufficient_balance")) {
-    return "Not enough USDC in your wallet to fund the payment channel. Note that only native USDC works — a bridged variant such as USDC.e cannot be used.";
+    // The USDC.e note is USDC's alone: bridged EURC is not a thing people end up holding by accident.
+    return currency === "USDC"
+      ? "Not enough USDC in your wallet to fund the payment channel. Note that only native USDC works — a bridged variant such as USDC.e cannot be used."
+      : `Not enough ${currency} in your wallet to fund the payment channel.`;
   }
   return `Request failed: ${status} - ${body}`;
 }
@@ -255,8 +261,15 @@ export class PaymentError extends Error {
   readonly status: number;
   readonly body: string;
 
-  constructor(status: number, body: string) {
-    super(describePaymentError(status, body));
+  /**
+   * @param currency - The token the channel is in, so an underfunded wallet is told which one it
+   *   is short of. Every real call site passes it explicitly (createPaidFetch knows which channel
+   *   it just paid on); the default is USDC only so a test or script that builds a bare
+   *   `PaymentError` for its wire body (e.g. a `channel_busy` fixture, where the currency plays no
+   *   part) does not have to name one.
+   */
+  constructor(status: number, body: string, currency: PaymentCurrency = "USDC") {
+    super(describePaymentError(status, body, currency));
     this.name = "PaymentError";
     this.status = status;
     this.body = body;
@@ -301,6 +314,10 @@ export interface PaidFetchOptions {
   /** CAIP-2 id of the network to pay on. Already negotiated by the caller: registering the wrong
    *  one opens a second channel on a chain the user did not mean to fund. */
   network: string;
+  /** The stablecoin to pay with when the seller offers it on `network`. Part of the channel's
+   *  identity: a different token computes a different `channelId`, so every paid call of one turn
+   *  must pass the same value or it opens a second channel. */
+  currency: PaymentCurrency;
   /** Called when a drained channel is being resynced and topped up, so a UI can say so. */
   onTopUp?: () => void;
 }
@@ -322,6 +339,7 @@ export async function createPaidFetch({
   walletClient,
   publicClient,
   network,
+  currency,
   onTopUp,
 }: PaidFetchOptions): Promise<PaidFetchClient> {
   // Dynamic, browser-only: keeps the @x402 runtime out of SSR.
@@ -359,10 +377,12 @@ export async function createPaidFetch({
   const voucherSigner = getOrCreateVoucherSigner(walletClient.account.address);
   const scheme = new BatchSettlementEvmScheme(signer, { storage, voucherSigner, depositStrategy });
 
-  const client = new x402Client();
-  // Explicitly allowlist USDC on every network this site pays on — the SDK's default spend
-  // controls reject Optimism USDC otherwise. See x402SpendControls.ts.
-  client.setSpendControls({ allowedAssets: buildUsdcAllowedAssets() });
+  // The selector picks the entry in `currency` among what the spend controls let through (see
+  // x402Currency.ts); the seller lists both tokens on Base.
+  const client = new x402Client(preferCurrency(currency));
+  // Explicitly allowlist every stablecoin this site pays with — the SDK's default spend controls
+  // reject Optimism USDC and all EURC otherwise. See x402SpendControls.ts.
+  client.setSpendControls({ allowedAssets: buildStablecoinAllowedAssets() });
   // `network` is a CAIP-2 id (e.g. "eip155:10"); register's type wants the literal
   // `${string}:${string}` shape, which every CAIP-2 value satisfies.
   client.register(network as `${string}:${string}`, scheme);
@@ -413,12 +433,12 @@ export async function createPaidFetch({
       response = await fetchWithPayment(input, init);
       // Same rule as above: the retry can land on the resource's own refusal just as easily.
       if (response.status === 402) {
-        throw new PaymentError(response.status, await response.text());
+        throw new PaymentError(response.status, await response.text(), currency);
       }
       return response;
     }
 
-    throw new PaymentError(response.status, errorText);
+    throw new PaymentError(response.status, errorText, currency);
   };
 
   return { paidFetch, readReceipt };

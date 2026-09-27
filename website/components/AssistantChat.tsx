@@ -21,6 +21,9 @@ import { useWalletConnection } from "../hooks/useWalletConnection";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
 import { useX402Chat, DEFAULT_LLM_AGENT_URL } from "../hooks/useX402Chat";
 import { useX402ImageGeneration } from "../hooks/useX402ImageGeneration";
+import { usePaymentCurrency, networksForCurrency } from "../hooks/x402Currency";
+import { CurrencyToggle } from "./CurrencyToggle";
+import { IMAGE_PRICE } from "../utils/x402Prices";
 import { fetchAgentCard, precheckLlmV1Agent, type AgentCard } from "../hooks/x402Discovery";
 import { generateImageTool, runImageTool } from "../tools/generateImage";
 import {
@@ -411,6 +414,8 @@ export function AssistantChat() {
   const viewPaymentLabel = useLocale({ label: "assistent.viewPayment" });
   const networkLabel = useLocale({ label: "assistent.network" });
   const networkFallbackLabel = useLocale({ label: "assistent.networkFallback" });
+  const eurcBaseOnlyLabel = useLocale({ label: "payment.eurcBaseOnly" });
+  const currencyFallbackLabel = useLocale({ label: "payment.currencyFallback" });
 
   // Mobile detection
   React.useEffect(() => {
@@ -532,23 +537,30 @@ export function AssistantChat() {
     storeDisabledTools(next);
   };
 
-  // Precedence: explicit choice → the wallet's own chain if we support it → Optimism.
+  // Which stablecoin to pay with. Narrows the eligible chat networks first — EURC only exists on
+  // Base, so it always wins that network regardless of the stored/wallet preference below.
+  const currency = usePaymentCurrency();
+  const currencyNetworks = networksForCurrency(currency, CHAT_NETWORKS);
+
+  // Precedence: explicit choice (if still valid for this currency) → the wallet's own chain if
+  // we support it → the first network this currency pays on.
   const walletNetwork = toCAIP2(useChainId());
+  const validPreferred = preferredNetwork && currencyNetworks.includes(preferredNetwork) ? preferredNetwork : null;
   const desiredNetwork =
-    preferredNetwork ??
-    ((CHAT_NETWORKS as readonly string[]).includes(walletNetwork) ? walletNetwork : CHAT_NETWORKS[0]);
+    validPreferred ?? (currencyNetworks.includes(walletNetwork) ? walletNetwork : currencyNetworks[0]);
 
   const agentUrl = customUrl ?? DEFAULT_LLM_AGENT_URL;
-  // The hook may negotiate away from `desiredNetwork` when the agent doesn't offer it (e.g. a
-  // Base-only third-party agent while the user prefers Optimism), so the wallet must be
+  // The hook may negotiate away from `desiredNetwork`/`currency` when the agent doesn't offer them
+  // (e.g. a USDC-only third-party agent while the user prefers EURC), so the wallet must be
   // switched to what will actually be paid — `paymentNetwork`, not the preference.
   const {
     sendMessage: payAndSend,
     paidFetch,
     paymentReceipt,
     paymentNetwork,
+    paymentCurrency,
     status: chatStatus,
-  } = useX402Chat(desiredNetwork, agentUrl);
+  } = useX402Chat(desiredNetwork, agentUrl, currency);
   const { network, switchIfNeeded, getSwitchError } = useAutoNetwork([paymentNetwork]);
 
   // The image tool pays on a different network/scheme (exact, genimg's own wallet signature)
@@ -566,8 +578,8 @@ export function AssistantChat() {
     network: imageNetwork,
     switchIfNeeded: switchImageIfNeeded,
     getSwitchError: getImageSwitchError,
-  } = useAutoNetwork(IMAGE_TOOL_NETWORKS);
-  const { generateImage } = useX402ImageGeneration();
+  } = useAutoNetwork(networksForCurrency(currency, IMAGE_TOOL_NETWORKS));
+  const { generateImage } = useX402ImageGeneration(currency);
   // Bundestakt's caching lives here rather than in tools/bundestakt.ts — see loadBundestakt().
   const queryClient = useQueryClient();
   // Same auth prefix as useAnalyticsStats, so a visit to /analytics in the last 4 minutes leaves
@@ -1045,9 +1057,13 @@ export function AssistantChat() {
         <summary className={chat.advancedSummary}>{advancedLabel}</summary>
         <div className={chat.advancedBody}>
           <div className={chat.sidebarSection}>
+            <CurrencyToggle />
+          </div>
+
+          <div className={chat.sidebarSection}>
             <h4 className={chat.sidebarHeading}>{networkLabel}</h4>
             <div className={chat.networkOptions}>
-              {CHAT_NETWORKS.map((option) => {
+              {currencyNetworks.map((option) => {
                 const selected = paymentNetwork === option;
                 return (
                   <button
@@ -1064,11 +1080,21 @@ export function AssistantChat() {
                 );
               })}
             </div>
+            {/* EURC narrows the picker to one button; say why rather than leaving Optimism looking
+                like an oversight. */}
+            {currencyNetworks.length === 1 && <p className={chat.networkNote}>{eurcBaseOnlyLabel}</p>}
             {/* Only surfaced when the agent forced our hand — otherwise the buttons speak
                 for themselves and a permanent caption would just be noise. */}
             {paymentNetwork !== desiredNetwork && (
               <p className={chat.networkNote}>
                 {networkFallbackLabel} <ChainBadge network={paymentNetwork} size="sm" position="inline" />.
+              </p>
+            )}
+            {/* Separately from the network fallback above: the agent may accept the negotiated
+                network but only in the other currency (e.g. USDC-only on Base). */}
+            {paymentCurrency !== currency && (
+              <p className={chat.networkNote}>
+                {currencyFallbackLabel} {paymentCurrency}.
               </p>
             )}
           </div>
@@ -1231,6 +1257,7 @@ export function AssistantChat() {
                 size={toolCard.size}
                 phase={toolCard.phase}
                 network={imageNetwork}
+                price={IMAGE_PRICE[currency]}
                 onConfirm={handleToolConfirm}
                 onCancel={handleToolCancel}
               />

@@ -27,6 +27,18 @@ Each package documents its own commands in its `README.md`. Three ordering rules
 - **`shared/chain-utils/`** — it is a local file dependency (`"file:../shared/chain-utils"`). Run `npm run build` there before rebuilding any dependent package.
 - **`eth/`** — after changing a contract, run `npx hardhat run scripts/export-abi.ts`, then update the website's ABI imports.
 
+## Git Workflow
+
+**Branching off `origin/main`: always pass `--no-track`.** `git switch -c <branch> origin/main`
+(no `--no-track`) makes Git auto-configure the new branch's upstream as `origin/main` itself
+(`branch.autoSetupMerge`), not a future same-named remote branch. Symptom: `git status` compares
+against `origin/main` instead of showing the branch as unpublished, and a bare `git push` fails
+with "the upstream branch ... does not match the name of your current branch" — or, with a
+different `push.default`, could push straight onto `main`. Use
+`git switch -c <branch> --no-track origin/main`, or fix an already-created branch with
+`git branch --unset-upstream`. Set the correct tracking on first push with
+`git push -u origin <branch>`.
+
 ## Architecture Patterns
 
 ### Smart Contracts (`eth/`)

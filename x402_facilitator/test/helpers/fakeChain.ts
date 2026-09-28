@@ -110,7 +110,7 @@ interface Log {
   data: Hex;
 }
 
-type Failure = "revert" | "revertOnChain" | "receiptTimeout";
+type Failure = "revert" | "revertOnChain" | "receiptTimeout" | "underpriced" | "rpcError";
 
 const lc = (a: string) => a.toLowerCase();
 
@@ -122,9 +122,11 @@ export const chain = {
   usedNonces: new Set<string>(),
   receipts: new Map<string, Log[]>(),
   writes: [] as WriteCall[],
-  failures: new Map<string, Failure>(),
+  failures: new Map<string, { failure: Failure; remaining: number }>(),
   timedOut: new Set<string>(),
   reverted: new Set<string>(),
+  /** Every account a wallet client was created with — lets tests check how signers are built. */
+  walletAccounts: [] as { address: Address; nonceManager?: unknown }[],
 
   reset() {
     this.tokens.clear();
@@ -133,6 +135,7 @@ export const chain = {
     this.usedNonces.clear();
     this.receipts.clear();
     this.writes = [];
+    this.walletAccounts = [];
     this.failures.clear();
     this.timedOut.clear();
     this.reverted.clear();
@@ -142,7 +145,7 @@ export const chain = {
   },
 
   /**
-   * Make the next write of `functionName` fail:
+   * Make the next `times` writes of `functionName` fail:
    * - "revert": `writeContract` throws, as viem does when gas estimation reverts — nothing
    *   is broadcast and no state changes.
    * - "revertOnChain": the tx is broadcast and mined but reverts — a hash exists, the receipt
@@ -150,9 +153,16 @@ export const chain = {
    * - "receiptTimeout": the tx is sent and takes effect, but waiting for its receipt throws
    *   viem's real `WaitForTransactionReceiptTimeoutError` — the "broadcast, outcome unknown"
    *   case.
+   * - "underpriced": the node refuses the tx before it enters the mempool, as a load-balanced
+   *   RPC did when a node that lagged behind handed out a nonce already in use — nothing is
+   *   broadcast and no state changes.
+   * - "rpcError": a transport failure with no word on whether the node took the tx. Nothing
+   *   happens here, but the caller cannot know that — the case that must not be retried.
+   *
+   * `times` separates a transient failure (1) from one that holds on every attempt.
    */
-  failNext(functionName: string, failure: Failure) {
-    this.failures.set(functionName, failure);
+  failNext(functionName: string, failure: Failure, times = 1) {
+    this.failures.set(functionName, { failure, remaining: times });
   },
 
   /** Deploy a token: after this, getCode reports bytecode and name()/version() answer. */
@@ -308,7 +318,12 @@ export function fakeViem(actual: typeof Viem) {
     };
   }
 
-  function createWalletClient({ account }: { account: { address: Address } }) {
+  function createWalletClient({
+    account,
+  }: {
+    account: { address: Address; nonceManager?: unknown };
+  }) {
+    chain.walletAccounts.push(account);
     return {
       account,
       async writeContract({
@@ -322,10 +337,19 @@ export function fakeViem(actual: typeof Viem) {
       }) {
         requireToken(address);
         const sender = account.address;
-        const failure = chain.failures.get(functionName);
-        chain.failures.delete(functionName);
+        const pending = chain.failures.get(functionName);
+        if (pending && --pending.remaining <= 0) {
+          chain.failures.delete(functionName);
+        }
+        const failure = pending?.failure;
         if (failure === "revert") {
           throw new Revert(`${functionName} (injected by chain.failNext)`);
+        }
+        if (failure === "underpriced") {
+          throw new Error("replacement transaction underpriced");
+        }
+        if (failure === "rpcError") {
+          throw new Error("fetch failed");
         }
         if (failure === "revertOnChain") {
           // Mined, but nothing happened: record the attempt, change no state.

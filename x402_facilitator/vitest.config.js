@@ -17,6 +17,8 @@ export default defineConfig({
       RPC_URL_EIP155_11155420: "http://127.0.0.1:9",
       RPC_URL_EIP155_8453: "http://127.0.0.1:9",
       RPC_URL_EIP155_84532: "http://127.0.0.1:9",
+      // The fee pull's retry pause (x402_fee.ts). Real behaviour, no waiting.
+      FEE_RETRY_DELAY_MS: "0",
     },
     coverage: {
       provider: "v8",

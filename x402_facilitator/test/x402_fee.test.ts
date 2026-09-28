@@ -5,6 +5,7 @@ import {
   checkMerchantAllowance,
   collectFee,
   evaluateFeeGate,
+  wasRejectedBeforeBroadcast,
 } from "../x402_fee.js";
 import type { createPublicClient, getContract } from "viem";
 
@@ -596,5 +597,26 @@ describe("x402_fee", () => {
 
       expect(gate.kind).toBe("no_fee");
     });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+// wasRejectedBeforeBroadcast — which failed fee sends may be sent again
+// ═══════════════════════════════════════════════════════════
+
+describe("wasRejectedBeforeBroadcast", () => {
+  it.each([
+    ["replacement transaction underpriced", "a node refused a reused nonce"],
+    ["nonce too low", "the nonce is already mined"],
+    ["execution reverted: ERC20: transfer amount exceeds balance", "the simulation reverted"],
+  ])("retries %s (%s)", (message) => {
+    expect(wasRejectedBeforeBroadcast(new Error(message))).toBe(true);
+  });
+
+  it.each([
+    ["fetch failed", "transport error — the node may have taken the tx"],
+    ["Timed out while waiting for transaction", "receipt timeout — broadcast, outcome unknown"],
+  ])("never retries %s (%s)", (message) => {
+    expect(wasRejectedBeforeBroadcast(new Error(message))).toBe(false);
   });
 });

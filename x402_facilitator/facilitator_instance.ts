@@ -11,14 +11,12 @@
  */
 
 import { createPublicClient, createWalletClient, http, type Account } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
 import { x402Facilitator } from "@x402/core/facilitator";
 import { toFacilitatorEvmSigner } from "@x402/evm";
 import { ExactEvmScheme } from "@x402/evm/exact/facilitator";
 import { BatchSettlementEvmScheme } from "@x402/evm/batch-settlement/facilitator";
 import pino from "pino";
-import { loadPrivateKey } from "@fretchen/chain-utils";
-import { evaluateFeeGate, getFacilitatorAddress } from "./x402_fee";
+import { evaluateFeeGate, getFacilitatorAddress, loadFacilitatorAccount } from "./x402_fee";
 import {
   getChainConfig,
   getSupportedNetworks,
@@ -138,7 +136,9 @@ export function createReadOnlyFacilitator(): InstanceType<typeof x402Facilitator
 export function createFacilitator(requirePrivateKey = true): InstanceType<typeof x402Facilitator> {
   let account;
   try {
-    account = privateKeyToAccount(loadPrivateKey("FACILITATOR_WALLET_PRIVATE_KEY"));
+    // Shares viem's nonceManager with the fee pull that follows every settlement — see
+    // loadFacilitatorAccount.
+    account = loadFacilitatorAccount();
   } catch (err) {
     if (!requirePrivateKey) {
       return createReadOnlyFacilitator();

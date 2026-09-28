@@ -77,6 +77,25 @@ whitelist-gated and fee-free, before Phase 3 moved `claim`/`settle` onto this sa
 allowance check. `BATCH_SETTLEMENT_TEST_WALLETS` (`x402_whitelist.ts`) is the one
 remaining carve-out: a listed address skips the allowance check, but only on testnets.
 
+### Fee pull right after the settlement
+
+The fee is a second transaction from the facilitator wallet, sent within a second of the
+settlement. On a load-balanced RPC that second send can reach a node that has not caught up:
+fee pulls have reused the settlement's nonce (`replacement transaction underpriced`) and
+simulated against a balance that did not yet include the payment. Two measures, both in
+`x402_fee.ts`:
+
+- Every transaction is signed by an account from `loadFacilitatorAccount()`, which carries
+  viem's shared `nonceManager`, so the fee pull never takes a nonce below the settlement's. Build
+  no signer for this key any other way.
+- A fee send that the node refused before broadcast (underpriced, nonce too low, or a reverted
+  simulation) is sent again, up to `FEE_SEND_ATTEMPTS` times, 2 s apart
+  (`FEE_RETRY_DELAY_MS`). Nothing that may have been broadcast is ever resent; a receipt timeout
+  stays `fee_collection_pending`.
+
+If a settlement ever hangs as `settlement_pending` on a healthy RPC after a deploy, suspect a
+dropped transaction the nonce manager has already counted: a restart of the instance clears it.
+
 ## Quick Start
 
 ### Installation

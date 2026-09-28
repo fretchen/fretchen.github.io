@@ -16,7 +16,8 @@ vi.mock("viem", async (importOriginal) => {
 
 import { settlePayment } from "../x402_settle.js";
 import { resetFacilitator } from "../facilitator_instance.js";
-import { getFacilitatorAddress } from "../x402_fee.js";
+import { FEE_SEND_ATTEMPTS, getFacilitatorAddress } from "../x402_fee.js";
+import { nonceManager } from "viem";
 import { SettleResponseSchema } from "../x402_schemas.js";
 import { chain } from "./helpers/fakeChain";
 import { signExactPayment, SELLER } from "./helpers/signPayment";
@@ -198,7 +199,8 @@ describe("settlePayment — real SDK, fake chain", () => {
 
   it("keeps a landed settlement successful when the fee pull reverts, and still reports the assessed fee", async () => {
     const { payload, requirements, token } = await fundedPayment();
-    chain.failNext("transferFrom", "revert");
+    // A genuine revert holds on every attempt; a one-off one is the retry case further down.
+    chain.failNext("transferFrom", "revert", FEE_SEND_ATTEMPTS);
 
     const result = await settlePayment(payload, requirements);
 
@@ -221,10 +223,84 @@ describe("settlePayment — real SDK, fake chain", () => {
     expect(result.success).toBe(true);
     expect(result.fee).toMatchObject({ collected: false, status: "pending" });
     expect(result.fee!.txHash).toMatch(/^0x[0-9a-f]{64}$/);
+    // Broadcast, outcome unknown: sending again could charge the seller twice.
+    expect(chain.writes.filter((w) => w.functionName === "transferFrom")).toHaveLength(1);
     // The hash lets the seller look the fee tx up; the assessed fee is still the full fee.
     expect(result.extensions!.facilitatorFees!.info).toMatchObject({
       facilitatorFeePaid: FEE.toString(),
       collection: { status: "pending", txHash: result.fee!.txHash },
+    });
+  });
+
+  /**
+   * The fee pull is the second transaction from the facilitator wallet within a second of the
+   * first. On a load-balanced RPC it met nodes that had not caught up: once it reused the
+   * settlement's nonce ("replacement transaction underpriced"), once it simulated against a
+   * balance without the payment just received. Both were refused before broadcast, so sending
+   * again is safe — and anything that may have been broadcast must not be sent twice.
+   */
+  describe("fee pull refused by a node that lagged behind", () => {
+    const feePulls = () => chain.writes.filter((w) => w.functionName === "transferFrom");
+
+    it("collects the fee on the next attempt after an underpriced refusal, exactly once", async () => {
+      const { payload, requirements, token } = await fundedPayment();
+      chain.failNext("transferFrom", "underpriced");
+
+      const result = await settlePayment(payload, requirements);
+
+      expect(result).toMatchObject({
+        success: true,
+        fee: { collected: true, status: "collected" },
+      });
+      expect(feePulls()).toHaveLength(1); // refused attempts leave no trace: no double charge
+      expect(chain.balanceOf(token, SELLER)).toBe(PRICE - FEE);
+      expect(chain.balanceOf(token, facilitator)).toBe(FEE);
+    });
+
+    it("collects the fee on the next attempt after a simulation reverted on stale state", async () => {
+      const { payload, requirements, token } = await fundedPayment();
+      chain.failNext("transferFrom", "revert");
+
+      const result = await settlePayment(payload, requirements);
+
+      expect(result.fee).toMatchObject({ collected: true, status: "collected" });
+      expect(chain.balanceOf(token, SELLER)).toBe(PRICE - FEE);
+    });
+
+    it("gives up after the last attempt, and the settlement still stands", async () => {
+      const { payload, requirements, token } = await fundedPayment();
+      chain.failNext("transferFrom", "underpriced", FEE_SEND_ATTEMPTS);
+
+      const result = await settlePayment(payload, requirements);
+
+      expect(result.success).toBe(true);
+      expect(result.fee).toMatchObject({ collected: false, status: "failed" });
+      expect(chain.balanceOf(token, SELLER)).toBe(PRICE);
+    });
+
+    it("does not retry an error that may have come after the node took the transaction", async () => {
+      const { payload, requirements, token } = await fundedPayment();
+      // Once only: a retry would succeed, so a collected fee here would prove one happened.
+      chain.failNext("transferFrom", "rpcError");
+
+      const result = await settlePayment(payload, requirements);
+
+      expect(result.fee).toMatchObject({ collected: false, status: "failed" });
+      expect(chain.balanceOf(token, SELLER)).toBe(PRICE);
+    });
+
+    it("signs the settlement and the fee pull with one shared nonce manager", async () => {
+      const { payload, requirements } = await fundedPayment();
+
+      await settlePayment(payload, requirements);
+
+      // Only senders sharing viem's nonceManager see each other's nonces; a signer that bypassed
+      // loadFacilitatorAccount would reintroduce the reused-nonce refusals.
+      const signers = chain.walletAccounts.filter((a) => a.address === facilitator);
+      expect(signers.length).toBeGreaterThanOrEqual(2);
+      for (const signer of signers) {
+        expect(signer.nonceManager).toBe(nonceManager);
+      }
     });
   });
 });

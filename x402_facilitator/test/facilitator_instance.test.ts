@@ -87,8 +87,11 @@ vi.mock("viem/accounts", () => ({
   })),
 }));
 
-// Mock fee module — the hook's dependency
-vi.mock("../x402_fee.js", () => ({
+// Mock fee module — only what the hook's tests steer. Partial on purpose: loadFacilitatorAccount
+// stays real and runs against the viem/accounts mock above, so a missing key still throws as in
+// production and the signer is built exactly the way the facilitator builds it.
+vi.mock("../x402_fee.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../x402_fee.js")>()),
   evaluateFeeGate: vi.fn(),
   getFacilitatorAddress: vi.fn(),
 }));

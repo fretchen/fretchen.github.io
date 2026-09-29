@@ -1180,12 +1180,21 @@ export function AssistantChat() {
                     message.role === "user" ? chat.messageContainerUser : chat.messageContainerAssistant
                   }`}
                 >
+                  {message.role === "assistant" && (
+                    <img
+                      src="/fretchen.svg"
+                      alt={assistantLabel}
+                      width={32}
+                      height={32}
+                      className={chat.assistantAvatar}
+                    />
+                  )}
                   <div
                     className={`${chat.messageBubble} ${
                       message.role === "user" ? chat.messageBubbleUser({ teen: teenMode }) : chat.messageBubbleAssistant
                     }`}
                   >
-                    <div className={chat.messageRole}>{message.role === "user" ? youLabel : assistantLabel}</div>
+                    {message.role === "user" && <div className={chat.messageRole}>{youLabel}</div>}
                     {/* The assistant's reply is prose, so it takes the serif; your own message
                         is input to a tool and stays in the sans. See IDENTITY.md. */}
                     <div
@@ -1229,6 +1238,7 @@ export function AssistantChat() {
 
             {isLoading && (
               <div className={chat.loadingMessage}>
+                <img src="/fretchen.svg" alt="" width={32} height={32} className={chat.assistantAvatar} />
                 <div className={chat.loadingBubble}>
                   {/* Three states, in the order they actually happen within one turn: a drained
                       channel tops itself up first (see useX402Chat) — saying so keeps the wallet

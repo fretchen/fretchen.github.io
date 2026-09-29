@@ -504,7 +504,7 @@ describe("AssistantChat", () => {
       });
       // alt="" is deliberate (decorative, inline with its own caption text), which excludes it
       // from the accessibility tree's "img" role — hence a DOM query rather than getByRole.
-      expect(container.querySelector("img")).toHaveAttribute("src", "https://example.com/generated.png");
+      expect(container.querySelector('img[src="https://example.com/generated.png"]')).toBeInTheDocument();
       // The card is gone once the loop resolves.
       expect(screen.queryByDisplayValue("an edited prompt")).not.toBeInTheDocument();
     });

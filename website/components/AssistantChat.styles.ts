@@ -229,6 +229,16 @@ export const messageContainerUser = css({
 
 export const messageContainerAssistant = css({
   justifyContent: "flex-start",
+  alignItems: "flex-start",
+  gap: "sm",
+});
+
+// No circle crop (it would cut off the ears) and no frame: the face carries its own outline.
+export const assistantAvatar = css({
+  width: "32px",
+  height: "32px",
+  flexShrink: 0,
+  objectFit: "contain",
 });
 
 export const messageBubble = css({
@@ -329,6 +339,8 @@ export const loadingMessage = css({
   marginY: "md",
   display: "flex",
   justifyContent: "flex-start",
+  alignItems: "flex-start",
+  gap: "sm",
 });
 
 export const loadingBubble = css({

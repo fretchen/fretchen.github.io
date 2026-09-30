@@ -129,6 +129,42 @@ stacks. They remain valid tokens, so `fontFamily: "mono"` fails _silently_. Rule
 Prefer variable builds: one file per family, not one per weight. Headings take their hierarchy
 from weight and whitespace, not from a size ratio.
 
+
+## Mark
+
+Two versions of one figure: the full logo on the page, a reduced one for browser and OS icons
+only. Reasons in `IDENTITY.md`.
+
+All files live in `public/` and are referenced by their fixed path, not imported. The logo
+uses `fill="currentColor"`, so on the page it is rendered inline by `FretchenLogo`, which sets
+it to `brand`; as an `<img>` it would render black.
+
+| File                   | Tier            | Use                                                   |
+| ---------------------- | --------------- | ----------------------------------------------------- |
+| `fretchen-logo.svg`    | all elements    | on the page, via `components/FretchenLogo.tsx` — nav, assistant, 404, about |
+| `fretchen.png`         | all elements    | raster of the logo — OG image, h-card photo           |
+| `favicon.svg`          | content + actor | browser tab (opaque white tile)                       |
+| `apple-touch-icon.png` | content + actor | 180px, opaque, square — iOS home screen               |
+
+No 16/32/48px PNGs: every current browser takes `favicon.svg`. iOS home screens are the one
+place SVG is ignored, hence the single PNG, exported from `favicon.svg`:
+`inkscape public/favicon.svg --export-type=png --export-width=180 --export-background=white --export-background-opacity=1 -o public/apple-touch-icon.png`.
+
+**Tiers** — goggles are content and never drop. Square, ears, smile are actors. Cheeks,
+nose, cut corners, temple arms are scaffolding and drop only in the favicon files.
+
+**Appears in** — nav (links home, every page, pinned outside the scrolling links on mobile);
+assistant, beside the latest reply of the default agent only; 404 and dead ends; favicon and OG.
+
+**Never appears in** — hero or page titles; footer; article headings or bylines; beside
+figures; loading or waiting states; labelling a visitor-supplied agent.
+
+**Colour** — brand `#0066CC`. _Provisional:_ unresolved against the link colour; if both
+are the same blue they compete for the same signal.
+
+**On the page** — no box, no tint, no circle crop, no badge. Separation is whitespace, as
+with figures. The white tile in `favicon.svg` is a tab-strip affordance only.
+
 ## Figures
 
 Reasons in [`IDENTITY.md`](./IDENTITY.md). The contract here.

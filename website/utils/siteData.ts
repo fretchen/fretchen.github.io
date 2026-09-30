@@ -21,7 +21,7 @@ import { SITE_CONFIG } from "./siteConfig";
  */
 export const SITE = {
   ...SITE_CONFIG,
-  photo: "/fretchen.svg", // u-photo for h-card (profile image, static asset in public/)
+  photo: "/fretchen.png", // h-card u-photo; raster, since fediverse avatars reject SVG
 } as const;
 
 /**

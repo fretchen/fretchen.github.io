@@ -464,6 +464,21 @@ describe("AssistantChat", () => {
     expect(container.querySelector("img")).toBeNull();
   });
 
+  it("marks only the latest reply of the default agent with its face", async () => {
+    mockSendMessage.mockResolvedValueOnce(textResponse("First answer")).mockResolvedValueOnce(textResponse("Second answer"));
+
+    renderWithQuery(<AssistantChat />);
+    sendUserMessage("First question");
+    await screen.findByText("First answer");
+    sendUserMessage("Second question");
+    await screen.findByText("Second answer");
+
+    const marks = screen.getAllByRole("img", { name: /assistent\.assistant/ });
+    expect(marks).toHaveLength(1);
+    expect(marks[0].parentElement?.parentElement).toHaveTextContent("Second answer");
+    expect(marks[0].parentElement?.parentElement).not.toHaveTextContent("First answer");
+  });
+
   describe("tool-call loop", () => {
     it("shows a confirm card pre-filled from the model's tool call, and never auto-executes", async () => {
       mockSendMessage.mockResolvedValueOnce(

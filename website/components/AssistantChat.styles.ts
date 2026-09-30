@@ -233,12 +233,12 @@ export const messageContainerAssistant = css({
   gap: "sm",
 });
 
-// No circle crop (it would cut off the ears) and no frame: the face carries its own outline.
+// Fixed slot for the mark, filled only beside the latest reply. No circle crop (it would cut off
+// the ears) and no frame: the face carries its own outline.
 export const assistantAvatar = css({
   width: "32px",
   height: "32px",
   flexShrink: 0,
-  objectFit: "contain",
 });
 
 export const messageBubble = css({

@@ -19,8 +19,9 @@ const Footer: React.FC = () => {
     <footer className={layout.footer}>
       <div className={layout.footerContent}>
         <div className={`h-card ${layout.hcard}`} data-about={SITE.url}>
-          {/* h-card: Photo (u-photo) - hidden but part of h-card for parsers */}
-          <img src={SITE.photo} alt={SITE.name} className={`u-photo ${layout.hcardPhoto}`} />
+          {/* h-card photo for parsers (Bridgy Fed). A <data> element, not an <img>: it renders
+              nothing, and the mark does not appear in the footer (README → Mark). */}
+          <data className="u-photo" value={`${SITE.url}${SITE.photo}`} />
 
           {/* h-card: Main name/URL */}
           <div className={layout.hcardName}>

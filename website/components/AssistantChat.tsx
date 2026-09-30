@@ -84,6 +84,7 @@ import { useChainId } from "wagmi";
 import { ChainBadge, getChainName } from "./ChainBadge";
 import { button } from "../styled-system/recipes";
 import { PageHeader } from "./PageHeader";
+import { FretchenLogo } from "./FretchenLogo";
 
 /**
  * Which tools oblige the answer to name where it got its facts. Bundestakt is a CC BY licence
@@ -373,6 +374,7 @@ export function AssistantChat() {
   const { trackEvent } = useUmami();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const lastAssistantIndex = messages.findLastIndex((m) => m.role === "assistant");
   const [currentInput, setCurrentInput] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -550,6 +552,7 @@ export function AssistantChat() {
     validPreferred ?? (currencyNetworks.includes(walletNetwork) ? walletNetwork : currencyNetworks[0]);
 
   const agentUrl = customUrl ?? DEFAULT_LLM_AGENT_URL;
+  const isDefaultAgent = customUrl === null;
   // The hook may negotiate away from `desiredNetwork`/`currency` when the agent doesn't offer them
   // (e.g. a USDC-only third-party agent while the user prefers EURC), so the wallet must be
   // switched to what will actually be paid — `paymentNetwork`, not the preference.
@@ -1180,21 +1183,24 @@ export function AssistantChat() {
                     message.role === "user" ? chat.messageContainerUser : chat.messageContainerAssistant
                   }`}
                 >
-                  {message.role === "assistant" && (
-                    <img
-                      src="/fretchen.svg"
-                      alt={assistantLabel}
-                      width={32}
-                      height={32}
-                      className={chat.assistantAvatar}
-                    />
+                  {/* The mark names the default agent, once, beside its latest reply; the empty
+                      slot on earlier replies keeps one left edge. A visitor's own agent gets the
+                      text label instead — README → Mark. */}
+                  {message.role === "assistant" && isDefaultAgent && (
+                    <div className={chat.assistantAvatar}>
+                      {index === lastAssistantIndex && (
+                        <FretchenLogo size={32} label={assistantLabel} />
+                      )}
+                    </div>
                   )}
                   <div
                     className={`${chat.messageBubble} ${
                       message.role === "user" ? chat.messageBubbleUser({ teen: teenMode }) : chat.messageBubbleAssistant
                     }`}
                   >
-                    {message.role === "user" && <div className={chat.messageRole}>{youLabel}</div>}
+                    {(message.role === "user" || !isDefaultAgent) && (
+                      <div className={chat.messageRole}>{message.role === "user" ? youLabel : assistantLabel}</div>
+                    )}
                     {/* The assistant's reply is prose, so it takes the serif; your own message
                         is input to a tool and stays in the sans. See IDENTITY.md. */}
                     <div
@@ -1238,7 +1244,7 @@ export function AssistantChat() {
 
             {isLoading && (
               <div className={chat.loadingMessage}>
-                <img src="/fretchen.svg" alt="" width={32} height={32} className={chat.assistantAvatar} />
+                {isDefaultAgent && <div className={chat.assistantAvatar} />}
                 <div className={chat.loadingBubble}>
                   {/* Three states, in the order they actually happen within one turn: a drained
                       channel tops itself up first (see useX402Chat) — saying so keeps the wallet

@@ -4,6 +4,8 @@ import "./panda.css";
 import React, { useEffect, useRef } from "react";
 import { usePageContext } from "vike-react/usePageContext";
 import { Link } from "../components/Link";
+import { defaultLocale } from "../locales/locales";
+import { FretchenLogo } from "../components/FretchenLogo";
 import WalletOptions from "../components/WalletOptions";
 import LanguageToggle from "../components/LanguageToggle";
 import Footer from "../components/Footer";
@@ -56,8 +58,9 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
       <WagmiProvider config={config}>
         <Appbar>
           <div className={layout.navigationContainer}>
+            {/* Outside the scrolling links so the way home never scrolls away on mobile. */}
+            <NavMark />
             <div className={layout.navigationLinks} ref={navigationRef}>
-              <NavItem href="/">Welcome</NavItem>
               <NavItem href="/blog">Blog</NavItem>
               <NavItem href="/quantum">Quantum</NavItem>
               <NavItem href="/lab">Lab</NavItem>
@@ -95,6 +98,21 @@ function NavItem({ href, children }: { href: string; children: React.ReactNode }
     <div className={`${layout.navigationLink} ${isActive ? navActive[territoryFor(href)] : ""}`}>
       <Link href={href}>{children}</Link>
     </div>
+  );
+}
+
+/**
+ * The mark as the home link. A plain anchor rather than `Link`: `Link` paints a hover
+ * background, which would put a box behind the mark (README → Mark).
+ */
+function NavMark() {
+  const { locale } = usePageContext();
+  const href = locale && locale !== defaultLocale ? `/${locale}/` : "/";
+
+  return (
+    <a href={href} className={layout.navMark}>
+      <FretchenLogo size={28} label="fretchen.eu – home" />
+    </a>
   );
 }
 

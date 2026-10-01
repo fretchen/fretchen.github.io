@@ -3,10 +3,14 @@ on:
   push:
     branches: ["main"]
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
 jobs:
-  build-and-deploy:
-    concurrency: ci-${{ github.ref }} # Recommended if you intend to make multiple deployments in quick succession.
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout 🛎️
@@ -28,9 +32,19 @@ jobs:
           cd website
           npm ci
           npm run build
-          mv build ../build
 
-      - name: Deploy 🚀
-        uses: JamesIves/github-pages-deploy-action@v4
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          folder: build # The folder the action should deploy.
+          path: website/build
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages 🚀
+        id: deployment
+        uses: actions/deploy-pages@v4

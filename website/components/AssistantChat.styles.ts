@@ -257,7 +257,8 @@ export const messageBubble = css({
  * read from. So the page carries more of the hue the longer you talk, rather than announcing
  * itself once and then sitting there. `messageBubbleAssistant` is deliberately untouched: it is
  * the one surface here you read rather than operate, and a tint under serif prose is both harder
- * to read and the "reads as dirty" failure IDENTITY.md names.
+ * to read and the "reads as dirty" failure IDENTITY.md names. The one exception is the agent's
+ * face (FretchenLogo, teen variant): it takes the hue, its bubble does not.
  */
 export const messageBubbleUser = cva({
   base: {

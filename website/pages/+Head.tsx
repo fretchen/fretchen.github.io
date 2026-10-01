@@ -50,7 +50,7 @@ export default function HeadDefault() {
   return (
     <>
       <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-      <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+      <link rel="apple-touch-icon" href="/fretchen.png" />
 
       {/* Canonical URL - points to current page in its current language */}
       <link rel="canonical" href={canonicalUrl} />

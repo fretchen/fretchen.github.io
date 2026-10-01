@@ -1189,7 +1189,7 @@ export function AssistantChat() {
                   {message.role === "assistant" && isDefaultAgent && (
                     <div className={chat.assistantAvatar}>
                       {index === lastAssistantIndex && (
-                        <FretchenLogo size={32} label={assistantLabel} />
+                        <FretchenLogo size={32} label={assistantLabel} teen={teenMode} />
                       )}
                     </div>
                   )}

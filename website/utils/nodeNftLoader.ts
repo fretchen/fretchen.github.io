@@ -3,8 +3,9 @@
  * Used for build-time operations like blog generation
  */
 
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
 import { createPublicClient, http } from "viem";
-import { getDefaultNetwork } from "./nodeChainUtils";
 import { getGenAiNFTAddress, GenImNFTv4ABI, getViemChain } from "@fretchen/chain-utils";
 import { NFTMetadata } from "../types/BlogPost";
 
@@ -14,126 +15,113 @@ interface NFTMetadataJSON {
   image?: string;
 }
 
-/**
- * Create a public client for the default network
- */
-function createDefaultPublicClient() {
-  const network = getDefaultNetwork();
-  const chain = getViemChain(network);
-  return createPublicClient({
-    chain,
-    transport: http(),
-  });
+// Blog frontmatter tokenIDs are minted on Optimism mainnet, so dev must read mainnet too.
+const BLOG_NFT_NETWORK = "eip155:10";
+const FETCH_TIMEOUT_MS = 5_000;
+const FETCH_CONCURRENCY = 6;
+
+// Dev-only disk cache so a restarted dev server doesn't refetch every token over a slow link.
+// Production builds always fetch fresh, so image updates still reach the deployed site.
+const USE_DISK_CACHE = process.env.NODE_ENV !== "production";
+const CACHE_FILE = resolve(process.cwd(), "node_modules/.cache/blog-nft-metadata.json");
+
+async function readCache(): Promise<Record<number, NFTMetadata>> {
+  try {
+    return JSON.parse(await readFile(CACHE_FILE, "utf8"));
+  } catch {
+    return {};
+  }
 }
 
-/**
- * Node.js-specific NFT metadata loader using pure viem
- */
-export async function loadNFTMetadataNode(tokenID: number): Promise<NFTMetadata | null> {
+async function writeCache(cache: Record<number, NFTMetadata>): Promise<void> {
   try {
-    console.log(`Loading NFT metadata for token ${tokenID}...`);
+    await mkdir(dirname(CACHE_FILE), { recursive: true });
+    await writeFile(CACHE_FILE, JSON.stringify(cache, null, 2));
+  } catch (error) {
+    console.warn("Failed to write NFT metadata cache:", error);
+  }
+}
 
-    const network = getDefaultNetwork();
-    const contractAddress = getGenAiNFTAddress(network);
-    const publicClient = createDefaultPublicClient();
+async function fetchMetadata(tokenID: number, tokenURI: string): Promise<NFTMetadata | null> {
+  if (tokenURI.startsWith("file://")) {
+    console.warn(`Cannot fetch file:// URL for token ${tokenID}:`, tokenURI);
+    return null;
+  }
 
-    // Get token URI from contract using pure viem
-    const tokenURIResult = await publicClient.readContract({
-      address: contractAddress,
-      abi: GenImNFTv4ABI,
-      functionName: "tokenURI",
-      args: [BigInt(tokenID)],
+  try {
+    const response = await fetch(tokenURI, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; Blog-Generator/1.0)",
+      },
     });
 
-    const tokenURI = tokenURIResult;
-
-    // Skip file:// URLs as they can't be fetched in this environment
-    if (tokenURI.startsWith("file://")) {
-      console.warn(`Cannot fetch file:// URL for token ${tokenID}:`, tokenURI);
-      return null;
+    if (!response.ok) {
+      throw new Error(`Failed to fetch metadata: ${response.status} ${response.statusText}`);
     }
 
-    // Add timeout to prevent hanging
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds timeout
+    const metadata = (await response.json()) as NFTMetadataJSON;
 
-    try {
-      // Fetch metadata from URI with timeout
-      const response = await fetch(tokenURI, {
-        signal: controller.signal,
-        headers: {
-          "User-Agent": "Mozilla/5.0 (compatible; Blog-Generator/1.0)",
-        },
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch metadata: ${response.status} ${response.statusText}`);
-      }
-
-      const metadata = (await response.json()) as NFTMetadataJSON;
-
-      // Extract prompt from description
-      const prompt = extractPromptFromDescription(metadata.description || "");
-
-      return {
-        imageUrl: metadata.image || "",
-        prompt,
-        name: metadata.name || `NFT #${tokenID}`,
-        description: metadata.description || "",
-      };
-    } finally {
-      clearTimeout(timeoutId);
-    }
+    return {
+      imageUrl: metadata.image || "",
+      prompt: extractPromptFromDescription(metadata.description || ""),
+      name: metadata.name || `NFT #${tokenID}`,
+      description: metadata.description || "",
+    };
   } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
-      console.error(`Timeout loading NFT metadata for token ${tokenID}`);
-    } else {
-      console.error(`Error loading NFT metadata for token ${tokenID}:`, error);
-    }
+    console.error(`Error loading NFT metadata for token ${tokenID}:`, error);
     return null;
   }
 }
 
 /**
- * Load multiple NFT metadata entries with controlled concurrency (Node.js version)
- * @param tokenIDs Array of token IDs to load
- * @param concurrency Maximum number of concurrent requests (default: 2 for Node.js)
+ * Load metadata for many tokens: one multicall for all tokenURIs, then parallel metadata fetches.
  */
-export async function loadMultipleNFTMetadataNode(
-  tokenIDs: number[],
-  concurrency = 2, // Lower concurrency for Node.js environment
-): Promise<Record<number, NFTMetadata>> {
+export async function loadMultipleNFTMetadataNode(tokenIDs: number[]): Promise<Record<number, NFTMetadata>> {
+  const cache = USE_DISK_CACHE ? await readCache() : {};
   const results: Record<number, NFTMetadata> = {};
+  for (const id of tokenIDs) if (cache[id]) results[id] = cache[id];
 
-  console.log(`Loading NFT metadata for blogs...`);
-  console.log(`Found ${tokenIDs.length} blogs with NFT tokens: ${tokenIDs.join(", ")}`);
+  const missing = tokenIDs.filter((id) => !results[id]);
+  if (missing.length === 0) return results;
 
-  // Helper function to process a batch of tokens
-  const processBatch = async (batch: number[]): Promise<void> => {
-    const promises = batch.map(async (tokenID) => {
-      const metadata = await loadNFTMetadataNode(tokenID);
-      if (metadata) {
-        results[tokenID] = metadata;
+  console.log(`Loading NFT metadata for ${missing.length} tokens: ${missing.join(", ")}`);
+
+  const publicClient = createPublicClient({
+    chain: getViemChain(BLOG_NFT_NETWORK),
+    transport: http(undefined, { timeout: FETCH_TIMEOUT_MS, retryCount: 1 }),
+  });
+  const address = getGenAiNFTAddress(BLOG_NFT_NETWORK);
+
+  const tokenURIs = await publicClient.multicall({
+    allowFailure: true,
+    contracts: missing.map((tokenID) => ({
+      address,
+      abi: GenImNFTv4ABI,
+      functionName: "tokenURI" as const,
+      args: [BigInt(tokenID)] as const,
+    })),
+  });
+
+  let next = 0;
+  const worker = async () => {
+    while (next < missing.length) {
+      const i = next++;
+      const tokenID = missing[i];
+      const call = tokenURIs[i];
+      if (call.status !== "success") {
+        console.warn(`tokenURI failed for token ${tokenID}: ${call.error.message.split("\n")[0]}`);
+        continue;
       }
-    });
-
-    await Promise.all(promises);
-  };
-
-  // Process tokens in batches with controlled concurrency
-  for (let i = 0; i < tokenIDs.length; i += concurrency) {
-    const batch = tokenIDs.slice(i, i + concurrency);
-    await processBatch(batch);
-
-    // Larger delay between batches for Node.js to be respectful to RPC endpoints
-    if (i + concurrency < tokenIDs.length) {
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      const metadata = await fetchMetadata(tokenID, call.result as string);
+      if (metadata) results[tokenID] = metadata;
     }
-  }
+  };
+  await Promise.all(Array.from({ length: Math.min(FETCH_CONCURRENCY, missing.length) }, worker));
 
-  console.log(`Successfully loaded metadata for ${Object.keys(results).length} NFTs`);
+  if (USE_DISK_CACHE) await writeCache({ ...cache, ...results });
+
+  console.log(`Successfully loaded metadata for ${Object.keys(results).length} of ${tokenIDs.length} NFTs`);
   return results;
 }
 

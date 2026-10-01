@@ -27,7 +27,7 @@ const CACHE_FILE = resolve(process.cwd(), "node_modules/.cache/blog-nft-metadata
 
 async function readCache(): Promise<Record<number, NFTMetadata>> {
   try {
-    return JSON.parse(await readFile(CACHE_FILE, "utf8"));
+    return JSON.parse(await readFile(CACHE_FILE, "utf8")) as Record<number, NFTMetadata>;
   } catch {
     return {};
   }
@@ -113,7 +113,7 @@ export async function loadMultipleNFTMetadataNode(tokenIDs: number[]): Promise<R
         console.warn(`tokenURI failed for token ${tokenID}: ${call.error.message.split("\n")[0]}`);
         continue;
       }
-      const metadata = await fetchMetadata(tokenID, call.result as string);
+      const metadata = await fetchMetadata(tokenID, call.result);
       if (metadata) results[tokenID] = metadata;
     }
   };

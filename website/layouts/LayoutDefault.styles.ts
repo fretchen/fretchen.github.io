@@ -63,7 +63,6 @@ export const layout = {
     marginRight: "md",
     "@media (max-width: 768px)": {
       marginRight: "sm",
-      "& svg": { height: "24px", width: "auto" },
     },
   }),
   navigationLinks: css({

@@ -27,9 +27,17 @@ function exportedNames(source: string): string[] {
     names.push(m[1]);
   }
   for (const m of source.matchAll(/^export\s*\{([^}]*)\}/gm)) {
-    for (const item of m[1].split(",").map((s) => s.trim()).filter(Boolean)) {
+    for (const item of m[1]
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)) {
       if (item.startsWith("type ")) continue;
-      names.push(item.split(/\s+as\s+/).pop()!.trim());
+      names.push(
+        item
+          .split(/\s+as\s+/)
+          .pop()!
+          .trim(),
+      );
     }
   }
   if (/^export\s+default\b/m.test(source)) names.push("default");
@@ -40,7 +48,11 @@ function exportedNames(source: string): string[] {
 describe("Vike + files", () => {
   it("export nothing but their own setting", () => {
     const violations = plusFiles(PAGES).flatMap((path) => {
-      const setting = path.split("/").pop()!.replace(/^\+/, "").replace(/\.(tsx?|jsx?)$/, "");
+      const setting = path
+        .split("/")
+        .pop()!
+        .replace(/^\+/, "")
+        .replace(/\.(tsx?|jsx?)$/, "");
       const extra = exportedNames(readFileSync(path, "utf-8")).filter((name) => name !== setting && name !== "default");
       return extra.map((name) => `${path.slice(ROOT.length + 1)}: ${name}`);
     });

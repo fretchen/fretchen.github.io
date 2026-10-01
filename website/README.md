@@ -134,20 +134,19 @@ from weight and whitespace, not from a size ratio.
 
 One figure, plus a teen variant for the assistant. Reasons in `IDENTITY.md`.
 
-All files live in `public/` and are referenced by their fixed path, not imported. The SVGs use
-`fill="currentColor"`, so on the page they are rendered inline by `components/FretchenLogo.tsx`,
-which sets the colour; as an `<img>` they would render black.
+Two source files in `public/`; everything else is derived from them. Edit only these.
 
-| File                | Use                                                                    |
-| ------------------- | ---------------------------------------------------------------------- |
-| `fretchen-logo.svg` | on the page via `FretchenLogo` — nav, assistant, 404, about            |
-| `fretchen-teen.svg` | assistant in teen mode, via `FretchenLogo teen`                         |
-| `favicon.svg`       | browser tab — the logo path with a fixed fill                          |
-| `fretchen.png`      | 512px raster for where SVG is refused — iOS home screen, OG, h-card     |
+| File                | Use                                                                              |
+| ------------------- | -------------------------------------------------------------------------------- |
+| `fretchen-logo.svg` | on the page via `components/FretchenLogo.tsx` — nav, assistant, 404, about       |
+| `fretchen-teen.svg` | assistant in teen mode, via `FretchenLogo teen`                                  |
+| `fretchen.png`      | generated, gitignored — browser tab, iOS home screen, OG image, h-card photo     |
 
-`fretchen.png` is exported from `favicon.svg` (the logo's `currentColor` would export black):
-`inkscape public/favicon.svg --export-type=png --export-width=512 --export-background=white --export-background-opacity=1 -o public/fretchen.png`.
-When a path changes, update the copy in `FretchenLogo.tsx` and re-export the PNG.
+`FretchenLogo` uses the SVG as a CSS mask over the `brand` (or `teen`) colour, so the file's own
+fill does not matter. `fretchen.png` is rendered from `fretchen-logo.svg` (512px, brand blue on
+white) by `utils/generateMarkPng.ts`, which runs before `npm run dev` and `npm run build`.
+
+The paths must fit inside the `viewBox`: a shape that runs past it is cut off everywhere.
 
 **Appears in** — nav (links home, every page, pinned outside the scrolling links on mobile);
 assistant, beside the latest reply of the default agent only; 404 and dead ends; favicon and OG.

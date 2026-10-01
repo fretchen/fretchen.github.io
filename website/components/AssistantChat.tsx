@@ -1163,10 +1163,8 @@ export function AssistantChat() {
                 {/* The one moment someone is looking at the middle of an empty screen with
                     nothing to read. Offered here rather than only in the sidebar, which is
                     the difference between a mode that exists and one anybody finds.
-                    `visual: "teen"`, not "secondary": this is the one place the mode's hue is
-                    allowed to advertise rather than mark — everywhere else magenta means "this
-                    is yours" once the mode is already on, but a closed door needs to show the
-                    colour of the room before anyone has opened it. */}
+                    `visual: "teen"`, not "secondary": a closed door shows the colour of the room
+                    before anyone has opened it. */}
                 {!teenMode && (
                   <div className={chat.emptyStateOffer}>
                     <button onClick={() => storeTeenMode(true)} className={button({ visual: "teen", size: "sm" })}>
@@ -1195,7 +1193,7 @@ export function AssistantChat() {
                   )}
                   <div
                     className={`${chat.messageBubble} ${
-                      message.role === "user" ? chat.messageBubbleUser({ teen: teenMode }) : chat.messageBubbleAssistant
+                      message.role === "user" ? chat.messageBubbleUser : chat.messageBubbleAssistant
                     }`}
                   >
                     {(message.role === "user" || !isDefaultAgent) && (

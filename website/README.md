@@ -155,8 +155,8 @@ assistant, beside the latest reply of the default agent only; 404 and dead ends;
 **Never appears in** — hero or page titles; footer; article headings or bylines; beside
 figures; loading or waiting states; labelling a visitor-supplied agent.
 
-**Colour** — brand `#0066CC`; the teen face takes `teen` (`#c2007a`), the one assistant surface
-that does. _Provisional:_ brand is unresolved against the link colour; if both are the same blue
+**Colour** — brand `#0066CC`; in teen mode the face takes `teen` (`#c2007a`), because a different
+assistant is answering. _Provisional:_ brand is unresolved against the link colour; if both are the same blue
 they compete for the same signal.
 
 **On the page** — no box, no tint, no circle crop, no badge. Separation is whitespace, as

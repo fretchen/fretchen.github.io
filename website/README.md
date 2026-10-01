@@ -129,6 +129,38 @@ stacks. They remain valid tokens, so `fontFamily: "mono"` fails _silently_. Rule
 Prefer variable builds: one file per family, not one per weight. Headings take their hierarchy
 from weight and whitespace, not from a size ratio.
 
+
+## Mark
+
+One figure, plus a teen variant for the assistant. Reasons in `IDENTITY.md`.
+
+Two source files in `public/`; everything else is derived from them. Edit only these.
+
+| File                | Use                                                                              |
+| ------------------- | -------------------------------------------------------------------------------- |
+| `fretchen-logo.svg` | on the page via `components/FretchenLogo.tsx` — nav, assistant, 404, about       |
+| `fretchen-teen.svg` | assistant in teen mode, via `FretchenLogo teen`                                  |
+| `fretchen.png`      | generated, gitignored — browser tab, iOS home screen, OG image, h-card photo     |
+
+`FretchenLogo` uses the SVG as a CSS mask over the `brand` (or `teen`) colour, so the file's own
+fill does not matter. `fretchen.png` is rendered from `fretchen-logo.svg` (512px, brand blue on
+white) by `utils/generateMarkPng.ts`, which runs before `npm run dev` and `npm run build`.
+
+The paths must fit inside the `viewBox`: a shape that runs past it is cut off everywhere.
+
+**Appears in** — nav (links home, every page, pinned outside the scrolling links on mobile);
+assistant, beside the latest reply of the default agent only; 404 and dead ends; favicon and OG.
+
+**Never appears in** — hero or page titles; footer; article headings or bylines; beside
+figures; loading or waiting states; labelling a visitor-supplied agent.
+
+**Colour** — brand `#0066CC`; in teen mode the face takes `teen` (`#c2007a`), because a different
+assistant is answering. _Provisional:_ brand is unresolved against the link colour; if both are the same blue
+they compete for the same signal.
+
+**On the page** — no box, no tint, no circle crop, no badge. Separation is whitespace, as
+with figures.
+
 ## Figures
 
 Reasons in [`IDENTITY.md`](./IDENTITY.md). The contract here.

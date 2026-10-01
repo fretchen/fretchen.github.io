@@ -54,7 +54,7 @@ export const gridMobile = css({
 });
 
 // Sidebar styles
-/** In teen mode the panel's existing left edge carries the hue: the controls are yours. */
+/** In teen mode the panel's existing left edge carries the hue. */
 export const sidebar = cva({
   base: {
     backgroundColor: "surface",
@@ -208,6 +208,29 @@ export const emptyState = css({
 /** Spacing for the teen-mode offer under the empty-state line. */
 export const emptyStateOffer = css({
   marginTop: "md",
+  textAlign: "center",
+});
+
+/** The greeting's four lines: one short paragraph each. */
+export const door = css({
+  "& p": { margin: 0 },
+  "& p + p": { marginTop: "sm" },
+});
+
+/** Starter questions under the greeting; they fill the input, they don't send. */
+export const starters = css({
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "xs",
+  justifyContent: "center",
+});
+
+/** One quiet line saying what teen mode changes, under its offer button and its toggle. */
+export const teenModeHint = css({
+  margin: 0,
+  marginTop: "xs",
+  fontSize: "xs",
+  color: "textMuted",
 });
 
 /** Message bubbles. Teen mode's share of the change here is air: more room between turns. */
@@ -229,6 +252,16 @@ export const messageContainerUser = css({
 
 export const messageContainerAssistant = css({
   justifyContent: "flex-start",
+  alignItems: "flex-start",
+  gap: "sm",
+});
+
+// Fixed slot for the mark, filled only beside the latest reply. No circle crop (it would cut off
+// the ears) and no frame: the face carries its own outline.
+export const assistantAvatar = css({
+  width: "32px",
+  height: "32px",
+  flexShrink: 0,
 });
 
 export const messageBubble = css({
@@ -239,26 +272,13 @@ export const messageBubble = css({
 });
 
 /**
- * Teen mode's biggest visual move: your own messages are filled in the mode's hue instead of
- * near-black.
- *
- * The rule the whole treatment follows is that magenta marks what is *yours* — your messages,
- * your controls, your frame — while the assistant's replies stay on the neutral ground they are
- * read from. So the page carries more of the hue the longer you talk, rather than announcing
- * itself once and then sitting there. `messageBubbleAssistant` is deliberately untouched: it is
- * the one surface here you read rather than operate, and a tint under serif prose is both harder
- * to read and the "reads as dirty" failure IDENTITY.md names.
+ * In teen mode magenta marks that the system changed: the room around the chat, and the
+ * assistant's face, which names who now answers. Replies and the visitor's own messages look the
+ * same in both modes.
  */
-export const messageBubbleUser = cva({
-  base: {
-    backgroundColor: "text",
-    color: "light",
-  },
-  variants: {
-    teen: {
-      true: { backgroundColor: "teen" },
-    },
-  },
+export const messageBubbleUser = css({
+  backgroundColor: "text",
+  color: "light",
 });
 
 export const messageBubbleAssistant = css({
@@ -329,6 +349,8 @@ export const loadingMessage = css({
   marginY: "md",
   display: "flex",
   justifyContent: "flex-start",
+  alignItems: "flex-start",
+  gap: "sm",
 });
 
 export const loadingBubble = css({
@@ -377,7 +399,7 @@ export const inputArea = css({
   alignItems: "flex-end", // keep button visually aligned to input
 });
 
-/** In teen mode the composer's focus ring is the mode's hue, because typing is yours. */
+/** In teen mode the composer's focus ring takes the hue. */
 export const messageInput = cva({
   base: {
     flex: 1,

@@ -286,6 +286,11 @@ export class PaymentError extends Error {
   get isDrainedChannel(): boolean {
     return isDrainedChannel(this.body);
   }
+
+  /** The wallet itself holds too little of the token to open or top up the channel. */
+  get isInsufficientBalance(): boolean {
+    return errorCodeOf(this.body)?.includes("insufficient_balance") ?? false;
+  }
 }
 
 /**

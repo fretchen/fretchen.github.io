@@ -157,6 +157,7 @@ import { useAutoNetwork } from "../hooks/useAutoNetwork";
 import sitzungenFixture from "./fixtures/bundestakt/sitzungen.json";
 import claimsFixture from "./fixtures/bundestakt/claims.json";
 import { OWNER_SCOPES } from "../utils/getChain";
+import { PaymentError } from "../utils/x402PaidFetch";
 
 /** The first wallet with analytics scope — the scope `get_analytics` is gated on. */
 const OWNER_ADDRESS = OWNER_SCOPES.analytics[0];
@@ -464,6 +465,62 @@ describe("AssistantChat", () => {
     expect(container.querySelector("img")).toBeNull();
   });
 
+  it("marks only the latest reply of the default agent with its face", async () => {
+    mockSendMessage
+      .mockResolvedValueOnce(textResponse("First answer"))
+      .mockResolvedValueOnce(textResponse("Second answer"));
+
+    renderWithQuery(<AssistantChat />);
+    sendUserMessage("First question");
+    await screen.findByText("First answer");
+    sendUserMessage("Second question");
+    await screen.findByText("Second answer");
+
+    const marks = screen.getAllByRole("img", { name: /assistent\.assistant/ });
+    expect(marks).toHaveLength(1);
+    expect(marks[0].parentElement?.parentElement).toHaveTextContent("Second answer");
+    expect(marks[0].parentElement?.parentElement).not.toHaveTextContent("First answer");
+  });
+
+  it("greets first-time visitors with a door, and a starter only fills the input", async () => {
+    mockSendMessage.mockResolvedValueOnce(textResponse("An answer"));
+
+    renderWithQuery(<AssistantChat />);
+    expect(screen.getByText("assistent.doorIntro")).toBeInTheDocument();
+    expect(screen.getByText("assistent.doorCost")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "assistent.starter2" }));
+    expect(screen.getByPlaceholderText("assistent.placeholder")).toHaveValue("assistent.starter2");
+    expect(mockSendMessage).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: /assistent\.send/ }));
+    await screen.findByText("An answer");
+    expect(screen.queryByText("assistent.doorIntro")).not.toBeInTheDocument();
+  });
+
+  it("opens the get-funds modal when the wallet holds too little EURC", async () => {
+    vi.mocked(useX402Chat).mockReturnValue({
+      sendMessage: mockSendMessage,
+      paidFetch: mockPaidFetch,
+      status: "idle",
+      error: null,
+      paymentReceipt: null,
+      reset: vi.fn(),
+      isReady: true,
+      paymentNetwork: "eip155:8453",
+      paymentCurrency: "EURC",
+    });
+    mockSendMessage.mockRejectedValueOnce(
+      new PaymentError(402, JSON.stringify({ error: "insufficient_balance" }), "EURC"),
+    );
+
+    renderWithQuery(<AssistantChat />);
+    sendUserMessage("Hi");
+
+    const getFunds = await screen.findByRole("link", { name: "assistent.fundsButton" });
+    expect(getFunds).toHaveAttribute("href", "https://www.coinbase.com/de/how-to-buy/euro-coin-2");
+  });
+
   describe("tool-call loop", () => {
     it("shows a confirm card pre-filled from the model's tool call, and never auto-executes", async () => {
       mockSendMessage.mockResolvedValueOnce(
@@ -504,7 +561,7 @@ describe("AssistantChat", () => {
       });
       // alt="" is deliberate (decorative, inline with its own caption text), which excludes it
       // from the accessibility tree's "img" role — hence a DOM query rather than getByRole.
-      expect(container.querySelector("img")).toHaveAttribute("src", "https://example.com/generated.png");
+      expect(container.querySelector('img[src="https://example.com/generated.png"]')).toBeInTheDocument();
       // The card is gone once the loop resolves.
       expect(screen.queryByDisplayValue("an edited prompt")).not.toBeInTheDocument();
     });

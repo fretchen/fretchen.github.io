@@ -56,6 +56,15 @@ export const layout = {
       padding: "0 token(spacing.xs)",
     },
   }),
+  // The mark as the home link. No box, tint or hover effect — README → Mark.
+  navMark: css({
+    display: "flex",
+    flexShrink: 0,
+    marginRight: "md",
+    "@media (max-width: 768px)": {
+      marginRight: "sm",
+    },
+  }),
   navigationLinks: css({
     display: "flex",
     flexDirection: "row",
@@ -163,13 +172,6 @@ export const layout = {
     _hover: {
       textDecoration: "underline",
     },
-  }),
-  hcardPhoto: css({
-    width: "0",
-    height: "0",
-    opacity: 0,
-    position: "absolute",
-    pointerEvents: "none",
   }),
   hcardNote: css({
     fontSize: "xs",

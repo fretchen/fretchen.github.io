@@ -84,6 +84,9 @@ import { useChainId } from "wagmi";
 import { ChainBadge, getChainName } from "./ChainBadge";
 import { button } from "../styled-system/recipes";
 import { PageHeader } from "./PageHeader";
+import { FretchenLogo } from "./FretchenLogo";
+import { GetFundsModal } from "./GetFundsModal";
+import { PaymentError } from "../utils/x402PaidFetch";
 
 /**
  * Which tools oblige the answer to name where it got its facts. Bundestakt is a CC BY licence
@@ -373,6 +376,7 @@ export function AssistantChat() {
   const { trackEvent } = useUmami();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const lastAssistantIndex = messages.findLastIndex((m) => m.role === "assistant");
   const [currentInput, setCurrentInput] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -408,6 +412,19 @@ export function AssistantChat() {
   const clearChatLabel = useLocale({ label: "assistent.clearChat" });
   const titleLabel = useLocale({ label: "assistent.title" });
   const emptyStateLabel = useLocale({ label: "assistent.emptyState" });
+  const doorLines = [
+    useLocale({ label: "assistent.doorIntro" }),
+    useLocale({ label: "assistent.doorCan" }),
+    useLocale({ label: "assistent.doorCost" }),
+    useLocale({ label: "assistent.doorHonest" }),
+  ];
+  const starters = [
+    useLocale({ label: "assistent.starter1" }),
+    useLocale({ label: "assistent.starter2" }),
+    useLocale({ label: "assistent.starter3" }),
+  ];
+  const tooltipConnectLabel = useLocale({ label: "assistent.tooltipConnect" });
+  const teenModeHintLabel = useLocale({ label: "assistent.teenModeHint" });
   const youLabel = useLocale({ label: "assistent.you" });
   const assistantLabel = useLocale({ label: "assistent.assistant" });
   const placeholderLabel = useLocale({ label: "assistent.placeholder" });
@@ -524,6 +541,12 @@ export function AssistantChat() {
       <span>{teenModeLabel}</span>
     </label>
   );
+  const teenToggleWithHint = (
+    <>
+      {teenToggle}
+      <p className={chat.teenModeHint}>{teenModeHintLabel}</p>
+    </>
+  );
 
   // Takes every wire name a row stands for, not one — a grouped row toggles all its members
   // together, since the visitor never chose to have two checkboxes for "Bundestakt" in the
@@ -550,6 +573,7 @@ export function AssistantChat() {
     validPreferred ?? (currencyNetworks.includes(walletNetwork) ? walletNetwork : currencyNetworks[0]);
 
   const agentUrl = customUrl ?? DEFAULT_LLM_AGENT_URL;
+  const isDefaultAgent = customUrl === null;
   // The hook may negotiate away from `desiredNetwork`/`currency` when the agent doesn't offer them
   // (e.g. a USDC-only third-party agent while the user prefers EURC), so the wallet must be
   // switched to what will actually be paid — `paymentNetwork`, not the preference.
@@ -591,6 +615,7 @@ export function AssistantChat() {
   // user click without turning into a state machine: waitForConfirmation() below stores the
   // Promise's resolve function here, and the card's own buttons call it.
   const [toolCard, setToolCard] = useState<ToolCardState | null>(null);
+  const [showFundsModal, setShowFundsModal] = useState(false);
   const confirmResolverRef = useRef<
     ((r: { action: "confirm"; prompt: string; size: ToolSize } | { action: "cancel" }) => void) | null
   >(null);
@@ -985,6 +1010,7 @@ export function AssistantChat() {
       };
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (error) {
+      if (error instanceof PaymentError && error.isInsufficientBalance) setShowFundsModal(true);
       const errorMsg: ChatMessage = {
         role: "assistant",
         content: `${errorPrefixMessage} ${error instanceof Error ? error.message : unknownErrorLabel}`,
@@ -1047,7 +1073,7 @@ export function AssistantChat() {
    */
   const sidebarBlocks = (
     <>
-      <div className={chat.sidebarSection}>{teenToggle}</div>
+      <div className={chat.sidebarSection}>{teenToggleWithHint}</div>
 
       <div className={chat.sidebarSection}>
         <ToolSelector options={toolSelectorOptions} disabled={disabledTools} onToggle={toggleTool} />
@@ -1155,20 +1181,52 @@ export function AssistantChat() {
           {/* Messages Container */}
           <div className={chat.messagesContainer({ teen: teenMode })}>
             {messages.length === 0 ? (
-              <div className={chat.emptyState}>
-                {emptyStateLabel}
+              <div className={isDefaultAgent ? undefined : chat.emptyState}>
+                {/* The door (IDENTITY.md → welcoming, honest): the default agent greets first and
+                    says what it is, what it can do, what it costs and that it can be wrong. A
+                    visitor's own agent gets the neutral line — the face and "this website's
+                    assistant" would claim authorship it does not have. */}
+                {isDefaultAgent ? (
+                  <>
+                    <div className={`${chat.messageContainer({ teen: teenMode })} ${chat.messageContainerAssistant}`}>
+                      <div className={chat.assistantAvatar}>
+                        <FretchenLogo size={32} label={assistantLabel} teen={teenMode} />
+                      </div>
+                      <div className={`${chat.messageBubble} ${chat.messageBubbleAssistant}`}>
+                        <div className={`${chat.messageContent} ${chat.messageContentReading} ${chat.door}`}>
+                          {doorLines.map((line) => (
+                            <p key={line}>{line.replaceAll("{currency}", paymentCurrency)}</p>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    {/* Fill the box, never send: sending costs money, so the visitor presses Send. */}
+                    <div className={chat.starters}>
+                      {starters.map((starter) => (
+                        <button
+                          key={starter}
+                          onClick={() => setCurrentInput(starter)}
+                          className={button({ visual: "secondary", size: "sm" })}
+                        >
+                          {starter}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  emptyStateLabel
+                )}
                 {/* The one moment someone is looking at the middle of an empty screen with
                     nothing to read. Offered here rather than only in the sidebar, which is
                     the difference between a mode that exists and one anybody finds.
-                    `visual: "teen"`, not "secondary": this is the one place the mode's hue is
-                    allowed to advertise rather than mark — everywhere else magenta means "this
-                    is yours" once the mode is already on, but a closed door needs to show the
-                    colour of the room before anyone has opened it. */}
+                    `visual: "teen"`, not "secondary": a closed door shows the colour of the room
+                    before anyone has opened it. */}
                 {!teenMode && (
                   <div className={chat.emptyStateOffer}>
                     <button onClick={() => storeTeenMode(true)} className={button({ visual: "teen", size: "sm" })}>
                       {teenModeOfferLabel}
                     </button>
+                    <p className={chat.teenModeHint}>{teenModeHintLabel}</p>
                   </div>
                 )}
               </div>
@@ -1180,12 +1238,24 @@ export function AssistantChat() {
                     message.role === "user" ? chat.messageContainerUser : chat.messageContainerAssistant
                   }`}
                 >
+                  {/* The mark names the default agent, once, beside its latest reply; the empty
+                      slot on earlier replies keeps one left edge. A visitor's own agent gets the
+                      text label instead — README → Mark. */}
+                  {message.role === "assistant" && isDefaultAgent && (
+                    <div className={chat.assistantAvatar}>
+                      {index === lastAssistantIndex && (
+                        <FretchenLogo size={32} label={assistantLabel} teen={teenMode} />
+                      )}
+                    </div>
+                  )}
                   <div
                     className={`${chat.messageBubble} ${
-                      message.role === "user" ? chat.messageBubbleUser({ teen: teenMode }) : chat.messageBubbleAssistant
+                      message.role === "user" ? chat.messageBubbleUser : chat.messageBubbleAssistant
                     }`}
                   >
-                    <div className={chat.messageRole}>{message.role === "user" ? youLabel : assistantLabel}</div>
+                    {(message.role === "user" || !isDefaultAgent) && (
+                      <div className={chat.messageRole}>{message.role === "user" ? youLabel : assistantLabel}</div>
+                    )}
                     {/* The assistant's reply is prose, so it takes the serif; your own message
                         is input to a tool and stays in the sans. See IDENTITY.md. */}
                     <div
@@ -1229,6 +1299,7 @@ export function AssistantChat() {
 
             {isLoading && (
               <div className={chat.loadingMessage}>
+                {isDefaultAgent && <div className={chat.assistantAvatar} />}
                 <div className={chat.loadingBubble}>
                   {/* Three states, in the order they actually happen within one turn: a drained
                       channel tops itself up first (see useX402Chat) — saying so keeps the wallet
@@ -1292,6 +1363,7 @@ export function AssistantChat() {
               }}
               disabled={isLoading || (!isConnected ? false : !currentInput.trim())}
               className={button({ visual: teenMode ? "teen" : "primary" })}
+              title={isConnected ? undefined : tooltipConnectLabel.replaceAll("{currency}", paymentCurrency)}
             >
               {getButtonText(buttonState)}
             </button>
@@ -1301,6 +1373,7 @@ export function AssistantChat() {
           {isMobile && sidebarBlocks}
         </div>
       </div>
+      {showFundsModal && <GetFundsModal currency={paymentCurrency} onClose={() => setShowFundsModal(false)} />}
     </div>
   );
 }

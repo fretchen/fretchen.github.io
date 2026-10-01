@@ -8,6 +8,8 @@ website/public/quantum
 # dev server can serve the page list /assistent's get_page tool reads. The deployed copy is the
 # one written straight into build/.
 website/public/content-index.json
+# Rendered from website/public/fretchen-logo.svg by utils/generateMarkPng.ts before dev and build.
+website/public/fretchen.png
 
 *blogs.json
 

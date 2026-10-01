@@ -83,7 +83,7 @@ export default {
   assistent: {
     title: "Chat-Assistent",
     connectWalletMessage: "Verbinde dein Konto, um zu starten",
-    clearChat: "🗑️ Chat löschen",
+    clearChat: "Chat löschen",
     // Überschrift über der Werkzeugliste. Sie beschreibt, was der Assistent kann — dass man
     // die Punkte auch abschalten kann, ist der Nebenzweck, nicht die Überschrift wert.
     capabilities: "Was ich kann",
@@ -115,11 +115,26 @@ export default {
     // niemand nachschlagen muss — die Beschreibung darunter erklärt, was es tut.
     capBundestag: "Bundestag",
     emptyState: "Starte eine Unterhaltung, indem du unten eine Nachricht eingibst.",
+    doorIntro: "Hallo — ich bin der KI-Assistent dieser Website.",
+    doorCan:
+      "Ich kann die Beiträge dieser Seite lesen, nachschlagen, was im Bundestag gesagt wurde, und im Web suchen.",
+    doorCost:
+      "Du brauchst eine Wallet mit {currency}. Deine erste Nachricht legt 0,50 {currency} zurück; jede Nachricht kostet weniger als einen halben Cent, und was du nicht verbrauchst, geht ein paar Stunden später automatisch an deine Wallet zurück.",
+    doorHonest: "Ich kann mich irren, darum verlinke ich meine Quellen — prüf sie nach.",
+    starter1: "Worum geht es auf dieser Website?",
+    starter2: "Worüber hat der Bundestag diese Woche gesprochen?",
+    starter3: "Erklär mir einen der Quanten-Beiträge einfach.",
+    tooltipConnect: "Verbinde eine Wallet mit {currency}. Deine erste Nachricht legt 0,50 {currency} zurück.",
+    fundsTitle: "Wallet aufladen",
+    fundsBody:
+      "Zum Chatten brauchst du {currency} in deiner Wallet: Deine erste Nachricht legt 0,50 {currency} zurück.",
+    fundsButton: "{currency} besorgen",
+    fundsNote: "Danach schick deine Nachricht noch einmal.",
     you: "Du",
     assistant: "Assistent",
-    typing: "Assistent tippt...",
+    typing: "Denke nach…",
     toppingUp: "Zahlungskanal wird aufgefüllt…",
-    placeholder: "Gib hier deine Nachricht ein...",
+    placeholder: "Frag mich etwas…",
     send: "Senden",
     cancel: "Abbrechen",
     processing: "Wird verarbeitet...",
@@ -174,6 +189,7 @@ export default {
     // are: this was reported and fixed as a German-wording issue, not a concept rename.
     teenMode: "Jugendmodus",
     teenModeOffer: "Jugendmodus einschalten",
+    teenModeHint: "Kürzere, direktere Antworten für Jugendliche — ohne Belehrung.",
     noResponse: "Keine Antwort erhalten",
     imageReady: "Hier ist dein Bild.",
     bundestaktSource: "Quelle: Bundestakt",

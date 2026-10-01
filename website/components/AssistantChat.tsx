@@ -85,6 +85,8 @@ import { ChainBadge, getChainName } from "./ChainBadge";
 import { button } from "../styled-system/recipes";
 import { PageHeader } from "./PageHeader";
 import { FretchenLogo } from "./FretchenLogo";
+import { GetFundsModal } from "./GetFundsModal";
+import { PaymentError } from "../utils/x402PaidFetch";
 
 /**
  * Which tools oblige the answer to name where it got its facts. Bundestakt is a CC BY licence
@@ -410,6 +412,19 @@ export function AssistantChat() {
   const clearChatLabel = useLocale({ label: "assistent.clearChat" });
   const titleLabel = useLocale({ label: "assistent.title" });
   const emptyStateLabel = useLocale({ label: "assistent.emptyState" });
+  const doorLines = [
+    useLocale({ label: "assistent.doorIntro" }),
+    useLocale({ label: "assistent.doorCan" }),
+    useLocale({ label: "assistent.doorCost" }),
+    useLocale({ label: "assistent.doorHonest" }),
+  ];
+  const starters = [
+    useLocale({ label: "assistent.starter1" }),
+    useLocale({ label: "assistent.starter2" }),
+    useLocale({ label: "assistent.starter3" }),
+  ];
+  const tooltipConnectLabel = useLocale({ label: "assistent.tooltipConnect" });
+  const teenModeHintLabel = useLocale({ label: "assistent.teenModeHint" });
   const youLabel = useLocale({ label: "assistent.you" });
   const assistantLabel = useLocale({ label: "assistent.assistant" });
   const placeholderLabel = useLocale({ label: "assistent.placeholder" });
@@ -526,6 +541,12 @@ export function AssistantChat() {
       <span>{teenModeLabel}</span>
     </label>
   );
+  const teenToggleWithHint = (
+    <>
+      {teenToggle}
+      <p className={chat.teenModeHint}>{teenModeHintLabel}</p>
+    </>
+  );
 
   // Takes every wire name a row stands for, not one — a grouped row toggles all its members
   // together, since the visitor never chose to have two checkboxes for "Bundestakt" in the
@@ -594,6 +615,7 @@ export function AssistantChat() {
   // user click without turning into a state machine: waitForConfirmation() below stores the
   // Promise's resolve function here, and the card's own buttons call it.
   const [toolCard, setToolCard] = useState<ToolCardState | null>(null);
+  const [showFundsModal, setShowFundsModal] = useState(false);
   const confirmResolverRef = useRef<
     ((r: { action: "confirm"; prompt: string; size: ToolSize } | { action: "cancel" }) => void) | null
   >(null);
@@ -988,6 +1010,7 @@ export function AssistantChat() {
       };
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (error) {
+      if (error instanceof PaymentError && error.isInsufficientBalance) setShowFundsModal(true);
       const errorMsg: ChatMessage = {
         role: "assistant",
         content: `${errorPrefixMessage} ${error instanceof Error ? error.message : unknownErrorLabel}`,
@@ -1050,7 +1073,7 @@ export function AssistantChat() {
    */
   const sidebarBlocks = (
     <>
-      <div className={chat.sidebarSection}>{teenToggle}</div>
+      <div className={chat.sidebarSection}>{teenToggleWithHint}</div>
 
       <div className={chat.sidebarSection}>
         <ToolSelector options={toolSelectorOptions} disabled={disabledTools} onToggle={toggleTool} />
@@ -1158,8 +1181,41 @@ export function AssistantChat() {
           {/* Messages Container */}
           <div className={chat.messagesContainer({ teen: teenMode })}>
             {messages.length === 0 ? (
-              <div className={chat.emptyState}>
-                {emptyStateLabel}
+              <div className={isDefaultAgent ? undefined : chat.emptyState}>
+                {/* The door (IDENTITY.md → welcoming, honest): the default agent greets first and
+                    says what it is, what it can do, what it costs and that it can be wrong. A
+                    visitor's own agent gets the neutral line — the face and "this website's
+                    assistant" would claim authorship it does not have. */}
+                {isDefaultAgent ? (
+                  <>
+                    <div className={`${chat.messageContainer({ teen: teenMode })} ${chat.messageContainerAssistant}`}>
+                      <div className={chat.assistantAvatar}>
+                        <FretchenLogo size={32} label={assistantLabel} teen={teenMode} />
+                      </div>
+                      <div className={`${chat.messageBubble} ${chat.messageBubbleAssistant}`}>
+                        <div className={`${chat.messageContent} ${chat.messageContentReading} ${chat.door}`}>
+                          {doorLines.map((line) => (
+                            <p key={line}>{line.replaceAll("{currency}", paymentCurrency)}</p>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    {/* Fill the box, never send: sending costs money, so the visitor presses Send. */}
+                    <div className={chat.starters}>
+                      {starters.map((starter) => (
+                        <button
+                          key={starter}
+                          onClick={() => setCurrentInput(starter)}
+                          className={button({ visual: "secondary", size: "sm" })}
+                        >
+                          {starter}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  emptyStateLabel
+                )}
                 {/* The one moment someone is looking at the middle of an empty screen with
                     nothing to read. Offered here rather than only in the sidebar, which is
                     the difference between a mode that exists and one anybody finds.
@@ -1170,6 +1226,7 @@ export function AssistantChat() {
                     <button onClick={() => storeTeenMode(true)} className={button({ visual: "teen", size: "sm" })}>
                       {teenModeOfferLabel}
                     </button>
+                    <p className={chat.teenModeHint}>{teenModeHintLabel}</p>
                   </div>
                 )}
               </div>
@@ -1306,6 +1363,7 @@ export function AssistantChat() {
               }}
               disabled={isLoading || (!isConnected ? false : !currentInput.trim())}
               className={button({ visual: teenMode ? "teen" : "primary" })}
+              title={isConnected ? undefined : tooltipConnectLabel.replaceAll("{currency}", paymentCurrency)}
             >
               {getButtonText(buttonState)}
             </button>
@@ -1315,6 +1373,7 @@ export function AssistantChat() {
           {isMobile && sidebarBlocks}
         </div>
       </div>
+      {showFundsModal && <GetFundsModal currency={paymentCurrency} onClose={() => setShowFundsModal(false)} />}
     </div>
   );
 }

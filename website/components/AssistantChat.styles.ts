@@ -208,6 +208,29 @@ export const emptyState = css({
 /** Spacing for the teen-mode offer under the empty-state line. */
 export const emptyStateOffer = css({
   marginTop: "md",
+  textAlign: "center",
+});
+
+/** The greeting's four lines: one short paragraph each. */
+export const door = css({
+  "& p": { margin: 0 },
+  "& p + p": { marginTop: "sm" },
+});
+
+/** Starter questions under the greeting; they fill the input, they don't send. */
+export const starters = css({
+  display: "flex",
+  flexWrap: "wrap",
+  gap: "xs",
+  justifyContent: "center",
+});
+
+/** One quiet line saying what teen mode changes, under its offer button and its toggle. */
+export const teenModeHint = css({
+  margin: 0,
+  marginTop: "xs",
+  fontSize: "xs",
+  color: "textMuted",
 });
 
 /** Message bubbles. Teen mode's share of the change here is air: more room between turns. */

@@ -8,10 +8,10 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@nomicfoundation/hardhat-ethers": "^4.1.0",
+    "@nomicfoundation/hardhat-ethers": "^4.2.0",
     "@nomicfoundation/hardhat-keystore": "^3.1.0",
     "@nomicfoundation/hardhat-toolbox-viem": "^5.0.7",
-    "@nomicfoundation/hardhat-verify": "^3.1.0",
+    "@nomicfoundation/hardhat-verify": "^3.1.1",
     "@openzeppelin/hardhat-upgrades": "^4.1.0",
     "@solidstate/hardhat-abi-exporter": "^3.0.4",
     "chai": "^6.0.0",
@@ -28,7 +28,7 @@
     "@openzeppelin/merkle-tree": "^1.0.8",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
-    "typescript-eslint": "^8.70.0",
+    "typescript-eslint": "^8.70.1",
     "zod": "^4.6.5"
   }
 }

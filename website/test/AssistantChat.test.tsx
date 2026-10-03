@@ -1057,6 +1057,29 @@ describe("AssistantChat", () => {
         expect(systemPrompt(0)).not.toContain("assistent.systemPromptResearch");
       });
 
+      it("puts what each answer charged under it, and a chat total in the sidebar", async () => {
+        // Each paid hop raises the channel record's cumulative charge, as the SDK does on settle.
+        let charged = 0;
+        mockSendMessage.mockImplementation(async () => {
+          charged += 2_000;
+          window.localStorage.setItem(
+            "x402-channel:0xabc",
+            JSON.stringify({ chargedCumulativeAmount: String(charged) }),
+          );
+          return textResponse(`answer ${charged}`);
+        });
+
+        renderWithQuery(<AssistantChat />);
+        sendUserMessage("First");
+        await waitFor(() => expect(screen.getByText("answer 2000")).toBeInTheDocument());
+        sendUserMessage("Second");
+        await waitFor(() => expect(screen.getByText("answer 4000")).toBeInTheDocument());
+
+        // Each answer shows its own turn's difference, not the running cumulative.
+        expect(screen.getAllByText("$0.002 USDC")).toHaveLength(2);
+        expect(screen.getAllByText("assistent.chatTotal").length).toBeGreaterThan(0);
+      });
+
       it("lists the model's notes under the bubble while it researches", async () => {
         let releaseSecondHop: (value: unknown) => void = () => {};
         mockSendMessage

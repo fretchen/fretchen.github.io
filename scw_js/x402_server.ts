@@ -147,6 +147,34 @@ export async function getFacilitatorFeeConfig(): Promise<FacilitatorFeeConfig | 
 export type SdkPaymentPayload = Parameters<x402ResourceServer["verifyPayment"]>[0];
 export type SdkPaymentRequirements = Parameters<x402ResourceServer["verifyPayment"]>[1];
 
+/**
+ * Release the channel lock a verified-but-unsettled request holds, charging nothing.
+ *
+ * `verifyPayment` takes the channel's `pendingRequest` lock and only `settlePayment` clears it, so
+ * a request that fails in between left the lock to its TTL (`LLM_MAX_TIMEOUT_SECONDS`, or the
+ * search routes' 30 s). The chat and the paid web tools share one channel, so a single failed
+ * `fetch_url` then rejected the user's next chat message with `channel_busy` — which really ended
+ * research turns. Cancelling fires the scheme's `onVerifiedPaymentCanceled`, which clears exactly
+ * this request's reservation. Must get the same `resourceServer` and payload object the verify
+ * used: the scheme looks up the request context verify stored.
+ *
+ * Best effort: a failure here only leaves the lock to its TTL, today's behaviour, so it is logged
+ * and never thrown.
+ */
+export async function releaseLock(
+  resourceServer: x402ResourceServer,
+  payload: SdkPaymentPayload,
+  requirements: SdkPaymentRequirements,
+): Promise<void> {
+  try {
+    await resourceServer
+      .createPaymentCancellationDispatcher(payload, requirements)
+      .cancel({ reason: "handler_failed" });
+  } catch (err) {
+    logger.warn({ err }, "Could not release channel lock; it expires with its TTL");
+  }
+}
+
 export function createResourceServer(): x402ResourceServer {
   const server = new x402ResourceServer(createFacilitatorClient());
   for (const network of getSupportedNetworks()) {

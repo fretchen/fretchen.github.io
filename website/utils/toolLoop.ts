@@ -30,7 +30,7 @@ export const MAX_HOPS = 10;
 export const MAX_PAID_CALLS = 15;
 
 /**
- * What an ephemeral tool result is replaced with once the model has had a hop to take notes on it.
+ * What a paid tool's result is replaced with once the model has had a hop to take notes on it.
  *
  * Every hop re-sends the whole conversation, so a 10 000-character page read on hop 2 would
  * otherwise be paid for again on hops 3 through 10 — and fill the endpoint's message cap after a
@@ -60,11 +60,11 @@ export type ToolRunResult = {
 export interface OfferedTool<S extends string> {
   tool: X402Tool;
   source: S | null;
-  /** Costs the user a stablecoin per call, so it counts against `MAX_PAID_CALLS`. */
+  /** Costs the user a stablecoin per call, so it counts against `MAX_PAID_CALLS`. Its result is
+   *  also compacted after one hop (`COMPACTED_RESULT`): the paid tools are exactly the web tools,
+   *  whose results are raw material — a page, a list of search hits — that the notes condense. A
+   *  paid tool with a small, lasting answer would need its own flag; none exists yet. */
   paid?: boolean;
-  /** Its result is raw material (a page, a list of search hits): kept for one hop so the model can
-   *  note what matters, then replaced by `COMPACTED_RESULT`. */
-  ephemeral?: boolean;
   /** The model does not need this tool's result back (the notepad). Text in a response holding
    *  only such calls is shown to the user — it is a plan or an answer, not "let me look that up" —
    *  but the turn still goes on: the loop cannot tell a plan from an answer, and ending on a plan
@@ -135,11 +135,10 @@ export async function runToolLoop<S extends string>(
   const failedTools = new Set<string>();
   const sourceOf = new Map(offeredTools.map((entry) => [entry.tool.function.name, entry.source]));
   const isPaid = new Set(offeredTools.filter((entry) => entry.paid).map((entry) => entry.tool.function.name));
-  const isEphemeral = new Set(offeredTools.filter((entry) => entry.ephemeral).map((entry) => entry.tool.function.name));
   const isBookkeeping = new Set(
     offeredTools.filter((entry) => entry.bookkeeping).map((entry) => entry.tool.function.name),
   );
-  const ephemeralResults: { message: X402ChatMessage; hop: number }[] = [];
+  const paidResults: { message: X402ChatMessage; hop: number }[] = [];
   let paidCalls = 0;
 
   for (let hop = 0; hop < maxHops; hop++) {
@@ -150,7 +149,7 @@ export async function runToolLoop<S extends string>(
     // A result from hop h was seen raw on hop h+1, which is the model's chance to note it; from
     // h+2 on only the stub is re-sent. The message itself stays, so every tool_call keeps its
     // matching `role: "tool"` turn.
-    for (const entry of ephemeralResults) {
+    for (const entry of paidResults) {
       if (hop - entry.hop >= 2) entry.message.content = COMPACTED_RESULT;
     }
 
@@ -229,7 +228,7 @@ export async function runToolLoop<S extends string>(
       }
       const message: X402ChatMessage = { role: "tool", tool_call_id: call.id, content: JSON.stringify(result) };
       convo.push(message);
-      if (isEphemeral.has(call.function.name)) ephemeralResults.push({ message, hop });
+      if (isPaid.has(call.function.name)) paidResults.push({ message, hop });
     }
 
     // Text alongside nothing but bookkeeping calls is written for the user — a plan, or an answer

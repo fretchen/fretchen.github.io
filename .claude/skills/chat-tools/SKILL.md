@@ -124,8 +124,8 @@ pieces, each where it belongs:
   the ToolSelector: it rides along with the web tools in `sendMessage`. It stores nothing; the
   findings live in the conversation as the call's own arguments. The prompt asks for it in the
   same hop as the next search, so notes cost no extra paid completion.
-- **Compaction** (`utils/toolLoop.ts`) — results of `ephemeral` tools (the paid web tools) are
-  replaced by a stub two hops after they arrive. The model sees the raw text for one hop, notes
+- **Compaction** (`utils/toolLoop.ts`) — results of `paid` tools (today exactly the web tools, whose
+  results are raw material) are replaced by a stub two hops after they arrive. The model sees the raw text for one hop, notes
   it, and only the notes are re-billed afterwards. This is what keeps a research run under
   `MAX_MESSAGES_BYTES`.
 - **`bookkeeping` tools** (the notepad) — text in a response with _only_ such calls is kept and
@@ -138,7 +138,12 @@ pieces, each where it belongs:
 - **Visible cost** — the loading bubble shows searches, pages and the turn's real spend once a web
   tool has run. The spend is the difference in `chargedCumulativeAmount` across the channel records
   (`readChargedTotal` in `utils/x402PaidFetch.ts`), so no rate card is mirrored client-side. The
-  notes so far are listed in a collapsed `<details>` under it, parsed from the tool phase's `args`.
+  notes so far are listed in a collapsed `<details>` under it, read with the same `readFindings`
+  the runner uses. After the turn, the same difference is stored on the answer (`ChatMessage.cost`)
+  and shown under it, for every answer, and the sidebar sums those into "This chat". Images pay
+  on their own scheme and are not included.
+- **Notes are lenient** — `validateFindings` rejects only a batch with no usable claim. Stricter
+  checks (length, https) cost a paid hop per resend to protect a notepad only the model reads.
 - **Debugging** — in dev, every hop logs one `[assistant] hop n` line to the console: request
   bytes, tools offered, finish reason, the start of the content and the tool calls.
 

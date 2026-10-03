@@ -27,6 +27,7 @@ import {
   getBatchSettlementNetworks,
   formatUsdcAtomicAsDecimalUsd,
   LLM_MAX_TIMEOUT_SECONDS,
+  releaseLock,
   type SdkPaymentPayload,
   type SdkPaymentRequirements,
 } from "./x402_server.js";
@@ -493,6 +494,9 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     llmData = await callLLMAPI(prompt, useMock, resolved.provider, forwardedParams);
   } catch (error) {
     logger.error({ err: error }, "Error during answer generation");
+    // Verified but never settled: release the channel lock, or the next message waits out
+    // LLM_MAX_TIMEOUT_SECONDS behind `channel_busy` for an answer that was never charged.
+    await releaseLock(resourceServer, paymentPayload as SdkPaymentPayload, paymentRequirements);
     return errorResponse(500, (error as Error).message);
   }
 

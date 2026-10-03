@@ -17,12 +17,14 @@ const {
   mockCreatePaymentRequiredResponse,
   mockEnhancePaymentRequirements,
   mockScheme,
+  mockReleaseLock,
 } = vi.hoisted(() => {
   // enhancePaymentRequirements() is called for real verify/settle calls (not just the
   // 402-building path) — see sc_llm_x402.ts's paymentRequirements construction. Echo the
   // base requirements back unchanged, which is enough for the handler-logic tests here.
   const mockEnhancePaymentRequirements = vi.fn().mockImplementation(async (base: unknown) => base);
   return {
+    mockReleaseLock: vi.fn(),
     mockCallLLMAPI: vi.fn(),
     // Real formula (matches llm_service.ts's actual tokensToCost: separate
     // input/output rates per provider — see LLM_PROVIDERS there), not a fixed stub — so
@@ -90,6 +92,7 @@ vi.mock("../x402_server.js", () => ({
   extractPaymentPayload: mockExtractPaymentPayload,
   createSettlementHeaders: mockCreateSettlementHeaders,
   getBatchSettlementNetworks: mockGetBatchSettlementNetworks,
+  releaseLock: mockReleaseLock,
   // Real constant (not a mock fn) — imported by sc_llm_x402.ts for the verify-time
   // maxTimeoutSeconds; keep in sync with x402_server.ts's exported value.
   LLM_MAX_TIMEOUT_SECONDS: 120,
@@ -1002,6 +1005,9 @@ describe("sc_llm_x402", () => {
       const res = await handle(makeEvent() as never, {});
       expect(res.statusCode).toBe(500);
       expect(mockSettlePayment).not.toHaveBeenCalled();
+      // Verified but never settled: the channel lock is released rather than left to block the
+      // next message for LLM_MAX_TIMEOUT_SECONDS.
+      expect(mockReleaseLock).toHaveBeenCalledOnce();
     });
 
     it("returns 500 for other LLM API errors", async () => {

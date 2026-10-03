@@ -21,7 +21,7 @@ import { useWalletConnection } from "../hooks/useWalletConnection";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
 import { useX402Chat, DEFAULT_LLM_AGENT_URL } from "../hooks/useX402Chat";
 import { useX402ImageGeneration } from "../hooks/useX402ImageGeneration";
-import { usePaymentCurrency, networksForCurrency } from "../hooks/x402Currency";
+import { usePaymentCurrency, networksForCurrency, type PaymentCurrency } from "../hooks/x402Currency";
 import { CurrencyToggle } from "./CurrencyToggle";
 import { IMAGE_PRICE, formatSpend } from "../utils/x402Prices";
 import { fetchAgentCard, precheckLlmV1Agent, type AgentCard } from "../hooks/x402Discovery";
@@ -72,7 +72,7 @@ import {
   type FetchToolResult,
 } from "../tools/webFetch";
 import { paymentFailed } from "../tools/failure";
-import { noteFindingsTool, validateFindings } from "../tools/notes";
+import { noteFindingsTool, readFindings, validateFindings } from "../tools/notes";
 import { useWalletAuth } from "../hooks/useWalletAuth";
 import { isOwnerAddress, type OwnerScope } from "../utils/getChain";
 import type { X402ChatMessage, X402Tool, X402ToolCall } from "../types/x402";
@@ -264,23 +264,19 @@ type ResearchNote = { claim: string; source?: string };
 /** The claims out of a `note_findings` call's raw arguments, for display. Lenient on purpose —
  *  `validateFindings` is what tells the model a batch is wrong; this only shows what was there. */
 function parseNotes(args: string): ResearchNote[] {
+  let parsed: unknown;
   try {
-    const { findings } = JSON.parse(args) as { findings?: { claim?: unknown; source_url?: unknown }[] };
-    if (!Array.isArray(findings)) return [];
-    return findings
-      .filter((finding) => typeof finding?.claim === "string")
-      .map((finding) => {
-        let source: string | undefined;
-        try {
-          source = typeof finding.source_url === "string" ? new URL(finding.source_url).hostname : undefined;
-        } catch {
-          source = undefined;
-        }
-        return { claim: finding.claim as string, source };
-      });
+    parsed = JSON.parse(args);
   } catch {
     return [];
   }
+  return readFindings(parsed).map(({ claim, source_url }) => {
+    try {
+      return { claim, source: source_url ? new URL(source_url).hostname : undefined };
+    } catch {
+      return { claim };
+    }
+  });
 }
 
 /**
@@ -325,7 +321,13 @@ interface ChatMessage {
    *  back to the model. Filled only from successful lookups, since a failed one contributed
    *  nothing to cite. See TOOL_SOURCES for why each one is named. */
   sources?: ToolSource[];
+  /** What this turn charged the payment channel. Display only, never sent to the model. Carries
+   *  its own currency because the user can switch currency mid-chat. Image generation pays on its
+   *  own scheme and is not in here — its card states its own price. */
+  cost?: MessageCost;
 }
+
+type MessageCost = { atomic: bigint; currency: PaymentCurrency };
 
 /** The confirm card's lifecycle. No "failed" phase: a cancel or error clears the card
  *  immediately and the tool result carries the status — the *next* hop's assistant text
@@ -414,6 +416,17 @@ export function AssistantChat() {
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const lastAssistantIndex = messages.findLastIndex((m) => m.role === "assistant");
+  // What this chat has cost so far, per currency, summed from the answers' own cost lines.
+  const chatTotals = [
+    ...messages
+      .reduce((totals, m) => {
+        if (m.cost && m.cost.atomic > 0n) {
+          totals.set(m.cost.currency, (totals.get(m.cost.currency) ?? 0n) + m.cost.atomic);
+        }
+        return totals;
+      }, new Map<PaymentCurrency, bigint>())
+      .entries(),
+  ];
   const [currentInput, setCurrentInput] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -443,6 +456,7 @@ export function AssistantChat() {
   const researchProgressLabel = useLocale({ label: "assistent.researchProgress" });
   const stopAndAnswerLabel = useLocale({ label: "assistent.stopAndAnswer" });
   const researchNotesLabel = useLocale({ label: "assistent.researchNotes" });
+  const chatTotalLabel = useLocale({ label: "assistent.chatTotal" });
   const teenModeLabel = useLocale({ label: "assistent.teenMode" });
   const teenModeOfferLabel = useLocale({ label: "assistent.teenModeOffer" });
   const noResponseMessage = useLocale({ label: "assistent.noResponse" });
@@ -1010,21 +1024,28 @@ export function AssistantChat() {
     setMessages((prev) => [...prev, userMsg]);
     setCurrentInput("");
 
+    // Baseline for this turn's spend. Read from the channel records the SDK keeps, so the figure
+    // shown is what was charged, not an estimate from a mirrored rate card. Outside the `try`, so a
+    // turn that fails halfway still reports what it had already spent.
+    const chargedAtStart = readChargedTotal(window.localStorage);
+    const turnCost = (): MessageCost => ({
+      atomic: readChargedTotal(window.localStorage) - chargedAtStart,
+      currency: paymentCurrency,
+    });
+
     try {
       // The loop itself lives in utils/toolLoop.ts — this component keeps state and rendering.
       // `availableTools` already applies the owner gate; what is left to subtract here is what the
       // user switched off in the ToolSelector. Failures within the turn are the loop's business.
       //
-      // The web tools are `ephemeral` because they are exactly the paid ones: raw pages and search
-      // hits, kept for one hop so the model can note them and then compacted by the loop.
       const offeredTools: OfferedTool<ToolSource>[] = availableTools
         .filter((entry) => !disabledTools.has(entry.tool.function.name))
-        .map((entry) => ({ tool: entry.tool, source: entry.source, paid: entry.paid, ephemeral: entry.paid }));
+        .map((entry) => ({ tool: entry.tool, source: entry.source, paid: entry.paid }));
       const canResearch = offeredTools.some((entry) => WEB_TOOL_NAMES.has(entry.tool.function.name));
       // `bookkeeping`: the model never needs the notepad's answer, so text filed alongside notes is
       // the final answer — see toolLoop.ts.
       if (canResearch) {
-        offeredTools.push({ tool: noteFindingsTool, source: null, paid: false, ephemeral: false, bookkeeping: true });
+        offeredTools.push({ tool: noteFindingsTool, source: null, paid: false, bookkeeping: true });
       }
 
       // Full conversation history, as the OpenAI `messages[]` array sc_llm_x402 expects. Tool
@@ -1059,9 +1080,6 @@ export function AssistantChat() {
 
       stopRequestedRef.current = false;
       setStopPressed(false);
-      // Baseline for this turn's spend. Read from the channel records the SDK keeps, so the figure
-      // shown is what was charged, not an estimate from a mirrored rate card.
-      const chargedAtStart = readChargedTotal(window.localStorage);
       let searches = 0;
       let pages = 0;
       const notes: ResearchNote[] = [];
@@ -1125,6 +1143,9 @@ export function AssistantChat() {
         timestamp: Date.now(),
         imageUrl: finalImageUrl,
         sources: sources.length > 0 ? sources : undefined,
+        // Every hop has settled by now — `payAndSend` resolves only after its settle response —
+        // so the channel record already carries the whole turn.
+        cost: turnCost(),
       };
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (error) {
@@ -1133,6 +1154,7 @@ export function AssistantChat() {
         role: "assistant",
         content: `${errorPrefixMessage} ${error instanceof Error ? error.message : unknownErrorLabel}`,
         timestamp: Date.now(),
+        cost: turnCost(),
       };
       setMessages((prev) => [...prev, errorMsg]);
     } finally {
@@ -1192,6 +1214,17 @@ export function AssistantChat() {
    */
   const sidebarBlocks = (
     <>
+      {/* The chat's running total, from the per-answer costs — so it resets with "Clear chat" and
+          needs no storage of its own. One figure per currency, since the user can switch. */}
+      {chatTotals.length > 0 && (
+        <div className={`${chat.sidebarSection} ${chat.messageSource}`}>
+          {chatTotalLabel.replaceAll(
+            "{spent}",
+            chatTotals.map(([currency, atomic]) => formatSpend(atomic, currency)).join(" + "),
+          )}
+        </div>
+      )}
+
       <div className={chat.sidebarSection}>{teenToggleWithHint}</div>
 
       <div className={chat.sidebarSection}>
@@ -1410,6 +1443,12 @@ export function AssistantChat() {
                           </a>
                         </div>
                       ))}
+                      {/* What this answer charged the channel — exact, not estimated. */}
+                      {message.cost && message.cost.atomic > 0n && (
+                        <div className={chat.messageSource}>
+                          {formatSpend(message.cost.atomic, message.cost.currency)}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

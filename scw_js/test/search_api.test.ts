@@ -28,6 +28,7 @@ const {
   mockSettlePayment,
   mockCreatePaymentRequiredResponse,
   mockEnhancePaymentRequirements,
+  mockReleaseLock,
 } = vi.hoisted(() => ({
   mockCreateLLMResourceServer: vi.fn(),
   mockCreateBatchSettlementPaymentRequirements: vi.fn(),
@@ -38,6 +39,7 @@ const {
   mockSettlePayment: vi.fn(),
   mockCreatePaymentRequiredResponse: vi.fn(),
   mockEnhancePaymentRequirements: vi.fn(),
+  mockReleaseLock: vi.fn(),
 }));
 
 vi.mock("../x402_server.js", () => ({
@@ -46,6 +48,7 @@ vi.mock("../x402_server.js", () => ({
   create402Response: mockCreate402Response,
   extractPaymentPayload: mockExtractPaymentPayload,
   createSettlementHeaders: mockCreateSettlementHeaders,
+  releaseLock: mockReleaseLock,
 }));
 
 /** The seller's own address — `NFT_WALLET_PUBLIC_KEY`, shared with the chat so both land on one
@@ -645,6 +648,8 @@ describe("the paid path", () => {
 
     expect(res.statusCode).toBe(500);
     expect(mockSettlePayment).not.toHaveBeenCalled();
+    // Verified but unsettled: the channel lock is released, not left to block the next message.
+    expect(mockReleaseLock).toHaveBeenCalledOnce();
   });
 
   /** Nor is a request we refused to attempt — and it is refused before the channel is touched. */
@@ -673,7 +678,12 @@ describe("the paid path", () => {
     expect(mockSettlePayment).not.toHaveBeenCalled();
   });
 
-  test("does not settle a paid request for a private address", async () => {
+  /**
+   * The failure that ended real research turns: a fetch rejected after verify (here the private
+   * address, found only by resolving the name) returns a quiet 400. The lock that verify took must
+   * be released, or the user's next chat message on the shared channel gets `channel_busy`.
+   */
+  test("does not settle a paid request for a private address, and releases the lock", async () => {
     const res = await handle(
       makeEvent("GET", "fetch", { auth: null, query: { url: "https://169.254.169.254/" } }),
       {},
@@ -681,6 +691,18 @@ describe("the paid path", () => {
 
     expect(res.statusCode).toBe(400);
     expect(mockSettlePayment).not.toHaveBeenCalled();
+    expect(mockReleaseLock).toHaveBeenCalledOnce();
+  });
+
+  test("does not release a lock on success", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: async () => braveResponse() }),
+    );
+
+    await handle(makeEvent("GET", "search", { auth: null, query: { q: "x402" } }), {});
+
+    expect(mockReleaseLock).not.toHaveBeenCalled();
   });
 
   test("refuses a payment on a network it does not sell on", async () => {

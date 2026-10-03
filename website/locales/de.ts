@@ -140,6 +140,7 @@ export default {
     researchProgress: "Suchen: {searches} · gelesene Seiten: {pages} · bisher {spent}",
     stopAndAnswer: "Stopp & antworten",
     researchNotes: "Notizen ({n})",
+    chatTotal: "Dieser Chat: {spent}",
     placeholder: "Frag mich etwas…",
     send: "Senden",
     cancel: "Abbrechen",

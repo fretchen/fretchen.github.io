@@ -190,9 +190,9 @@ describe("runToolLoop", () => {
     });
   });
 
-  describe("compaction of ephemeral results", () => {
-    const ephemeralOffered: OfferedTool<Source>[] = [
-      { tool: tool("read_tool"), source: null, ephemeral: true },
+  describe("compaction of paid results", () => {
+    const readOffered: OfferedTool<Source>[] = [
+      { tool: tool("read_tool"), source: null, paid: true },
       { tool: tool("plain_tool"), source: null },
     ];
 
@@ -209,14 +209,14 @@ describe("runToolLoop", () => {
       });
       const runToolCall = vi.fn().mockResolvedValue({ result: { status: "ok", content: "RAW PAGE TEXT" } });
 
-      await runToolLoop<Source>(convo(), ephemeralOffered, deps(payAndSend, runToolCall));
+      await runToolLoop<Source>(convo(), readOffered, deps(payAndSend, runToolCall));
 
       const readResult = (snapshot: X402ChatMessage[]) =>
         snapshot.find((m) => m.role === "tool" && m.tool_call_id === "call_read_tool");
       expect(readResult(snapshots[1])?.content).toContain("RAW PAGE TEXT");
       expect(readResult(snapshots[2])?.content).not.toContain("RAW PAGE TEXT");
       expect(JSON.parse(readResult(snapshots[2])!.content as string)).toMatchObject({ compacted: true });
-      // The non-ephemeral result is left alone.
+      // The free tool's result is left alone.
       const plain = snapshots[2].find((m) => m.role === "tool" && m.tool_call_id === "call_plain_tool");
       expect(plain?.content).toContain("RAW PAGE TEXT");
     });

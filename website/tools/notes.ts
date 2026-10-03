@@ -14,12 +14,6 @@ import type { X402Tool } from "../types/x402";
  * Free and local: no fetch, no payment. React-free like the other tool modules.
  */
 
-/** Findings per call. A batch is what one round of reading produces, not a whole report. */
-const MAX_FINDINGS = 10;
-
-/** One sentence, condensed — a claim longer than this is a paste of the source, not a note. */
-const MAX_CLAIM_CHARS = 400;
-
 const STATUSES = ["open", "answered", "blocked"] as const;
 
 export const noteFindingsTool: X402Tool = {
@@ -56,37 +50,36 @@ export const noteFindingsTool: X402Tool = {
 
 export type NoteFindingsResult = { status: "ok"; recorded: number } | { status: "invalid"; reason: string };
 
+/** One finding as far as anything outside the model cares: the claim, and where it came from. */
+export type Finding = { claim: string; source_url?: string };
+
 /**
- * Checks one batch and says how many findings it held. Pure: the findings themselves are already
- * in the conversation as this call's arguments, so there is nothing to store.
+ * The usable findings out of a call's parsed arguments — every entry with a non-empty `claim`.
+ * Shared by the runner and the chat's notes list, so the two can never disagree about what was
+ * noted. Deliberately lenient: the notepad is read by the model alone, and rejecting a long claim
+ * or a missing url would only cost a paid hop for the resend. The schema's `status` and
+ * `source_url` shape what the model writes; the prompt carries the citation discipline.
+ */
+export function readFindings(args: unknown): Finding[] {
+  const findings = (args as { findings?: unknown } | null)?.findings;
+  if (!Array.isArray(findings)) return [];
+  return findings.flatMap((entry: unknown) => {
+    const { claim, source_url } = (entry ?? {}) as { claim?: unknown; source_url?: unknown };
+    if (typeof claim !== "string" || !claim.trim()) return [];
+    return [{ claim, ...(typeof source_url === "string" ? { source_url } : {}) }];
+  });
+}
+
+/**
+ * Says how many findings a batch held. Pure: the findings themselves are already in the
+ * conversation as this call's arguments, so there is nothing to store.
  *
- * `invalid` is an answer, not a malfunction — the runner marks it recoverable so the model can
- * resend a corrected batch rather than losing the tool for the rest of the turn.
+ * `invalid` only for a batch with nothing in it — an answer, not a malfunction, so the runner marks
+ * it recoverable and the notepad stays on offer.
  */
 export function validateFindings(args: Record<string, unknown>): NoteFindingsResult {
-  const findings = args.findings;
-  if (!Array.isArray(findings) || findings.length === 0) {
-    return { status: "invalid", reason: "findings must be a non-empty array." };
-  }
-  if (findings.length > MAX_FINDINGS) {
-    return { status: "invalid", reason: `At most ${MAX_FINDINGS} findings per call.` };
-  }
-  for (const [i, finding] of findings.entries()) {
-    const { claim, source_url, status } = (finding ?? {}) as Record<string, unknown>;
-    if (typeof claim !== "string" || !claim.trim()) {
-      return { status: "invalid", reason: `findings[${i}].claim must be a non-empty string.` };
-    }
-    if (claim.length > MAX_CLAIM_CHARS) {
-      return { status: "invalid", reason: `findings[${i}].claim is too long; condense it to one sentence.` };
-    }
-    if (!STATUSES.includes(status as (typeof STATUSES)[number])) {
-      return { status: "invalid", reason: `findings[${i}].status must be one of ${STATUSES.join(", ")}.` };
-    }
-    // An answered or blocked claim has to say where it came from — that url is what the final
-    // answer cites, and a claim without one is exactly the fabricated citation this prevents.
-    if (status !== "open" && !(typeof source_url === "string" && source_url.startsWith("https://"))) {
-      return { status: "invalid", reason: `findings[${i}].source_url must be the https url the claim came from.` };
-    }
-  }
-  return { status: "ok", recorded: findings.length };
+  const recorded = readFindings(args).length;
+  return recorded > 0
+    ? { status: "ok", recorded }
+    : { status: "invalid", reason: "findings must be a non-empty array of { claim, source_url, status }." };
 }

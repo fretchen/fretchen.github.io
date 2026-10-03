@@ -143,6 +143,30 @@ export class WebStorageClientChannelStorage implements ClientChannelStorage {
 }
 
 /**
+ * Everything this browser's channels have been charged so far, summed over every cached record,
+ * in atomic units.
+ *
+ * Only meaningful as a difference: read it before a chat turn and again during it, and the delta
+ * is exactly what that turn has cost — LLM hops and paid tools alike, since they all bill onto the
+ * same channel and the SDK writes each settle's `chargedCumulativeAmount` back to the record. No
+ * rate card is mirrored here, so the figure cannot drift from what was really charged.
+ */
+export function readChargedTotal(backend: Storage, prefix = "x402-channel:"): bigint {
+  let total = 0n;
+  for (let i = 0; i < backend.length; i++) {
+    const key = backend.key(i);
+    if (!key?.startsWith(prefix)) continue;
+    try {
+      const context = JSON.parse(backend.getItem(key) ?? "{}") as { chargedCumulativeAmount?: string };
+      total += BigInt(context.chargedCumulativeAmount ?? "0");
+    } catch {
+      // An unparseable record contributes nothing; it cannot be charged against either.
+    }
+  }
+  return total;
+}
+
+/**
  * Returns a stable, locally-generated delegate signer for voucher signing, persisted to
  * `localStorage` and keyed by the connected wallet address. Passing this as `voucherSigner`
  * to `BatchSettlementEvmScheme` means only the channel deposit (and later top-ups) prompts

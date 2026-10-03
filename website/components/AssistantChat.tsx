@@ -21,9 +21,9 @@ import { useWalletConnection } from "../hooks/useWalletConnection";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
 import { useX402Chat, DEFAULT_LLM_AGENT_URL } from "../hooks/useX402Chat";
 import { useX402ImageGeneration } from "../hooks/useX402ImageGeneration";
-import { usePaymentCurrency, networksForCurrency } from "../hooks/x402Currency";
+import { usePaymentCurrency, networksForCurrency, type PaymentCurrency } from "../hooks/x402Currency";
 import { CurrencyToggle } from "./CurrencyToggle";
-import { IMAGE_PRICE } from "../utils/x402Prices";
+import { IMAGE_PRICE, formatSpend } from "../utils/x402Prices";
 import { fetchAgentCard, precheckLlmV1Agent, type AgentCard } from "../hooks/x402Discovery";
 import { generateImageTool, runImageTool } from "../tools/generateImage";
 import {
@@ -72,10 +72,11 @@ import {
   type FetchToolResult,
 } from "../tools/webFetch";
 import { paymentFailed } from "../tools/failure";
+import { noteFindingsTool, readFindings, validateFindings } from "../tools/notes";
 import { useWalletAuth } from "../hooks/useWalletAuth";
 import { isOwnerAddress, type OwnerScope } from "../utils/getChain";
 import type { X402ChatMessage, X402Tool, X402ToolCall } from "../types/x402";
-import { runToolLoop, type ToolRunResult, type LoopPhase } from "../utils/toolLoop";
+import { runToolLoop, type ToolRunResult, type LoopPhase, type OfferedTool } from "../utils/toolLoop";
 import { formatDateContext } from "../utils/dateContext";
 import { createLocalStorageStore } from "../utils/localStorageStore";
 import { useQueryClient } from "@tanstack/react-query";
@@ -86,7 +87,7 @@ import { button } from "../styled-system/recipes";
 import { PageHeader } from "./PageHeader";
 import { FretchenLogo } from "./FretchenLogo";
 import { GetFundsModal } from "./GetFundsModal";
-import { PaymentError } from "../utils/x402PaidFetch";
+import { PaymentError, readChargedTotal } from "../utils/x402PaidFetch";
 
 /**
  * Which tools oblige the answer to name where it got its facts. Bundestakt is a CC BY licence
@@ -244,7 +245,39 @@ const IMAGE_TOOL_NETWORKS = getGenAiNFTMainnetNetworks();
  * was offered, so every name it reports is a real key here regardless of which subset a given
  * render offered.
  */
-const TOOL_LABEL_BY_NAME = new Map(TOOL_REGISTRY.map((entry) => [entry.tool.function.name, entry.label]));
+const TOOL_LABEL_BY_NAME = new Map<string, string>([
+  ...TOOL_REGISTRY.map((entry) => [entry.tool.function.name, entry.label] as const),
+  [noteFindingsTool.function.name, "assistent.toolResearchNotes"],
+]);
+
+/**
+ * The web tools — what makes a turn a possible research run. `note_findings` rides along with
+ * them rather than sitting in `TOOL_REGISTRY`: it is not a capability anyone chooses, only the
+ * notepad research needs, so it is on exactly when one of these is offered. It is free, so it
+ * costs nothing when the model does not use it beyond its definition's bytes.
+ */
+const WEB_TOOL_NAMES = new Set([searchWebTool.function.name, fetchUrlTool.function.name]);
+
+/** One note as the loading bubble lists it: the claim, and the site it came from. */
+type ResearchNote = { claim: string; source?: string };
+
+/** The claims out of a `note_findings` call's raw arguments, for display. Lenient on purpose —
+ *  `validateFindings` is what tells the model a batch is wrong; this only shows what was there. */
+function parseNotes(args: string): ResearchNote[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(args);
+  } catch {
+    return [];
+  }
+  return readFindings(parsed).map(({ claim, source_url }) => {
+    try {
+      return { claim, source: source_url ? new URL(source_url).hostname : undefined };
+    } catch {
+      return { claim };
+    }
+  });
+}
 
 /**
  * The execution half of the tool contract. `TOOL_REGISTRY` above says what exists and who may use
@@ -288,7 +321,13 @@ interface ChatMessage {
    *  back to the model. Filled only from successful lookups, since a failed one contributed
    *  nothing to cite. See TOOL_SOURCES for why each one is named. */
   sources?: ToolSource[];
+  /** What this turn charged the payment channel. Display only, never sent to the model. Carries
+   *  its own currency because the user can switch currency mid-chat. Image generation pays on its
+   *  own scheme and is not in here — its card states its own price. */
+  cost?: MessageCost;
 }
+
+type MessageCost = { atomic: bigint; currency: PaymentCurrency };
 
 /** The confirm card's lifecycle. No "failed" phase: a cancel or error clears the card
  *  immediately and the tool result carries the status — the *next* hop's assistant text
@@ -377,6 +416,17 @@ export function AssistantChat() {
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const lastAssistantIndex = messages.findLastIndex((m) => m.role === "assistant");
+  // What this chat has cost so far, per currency, summed from the answers' own cost lines.
+  const chatTotals = [
+    ...messages
+      .reduce((totals, m) => {
+        if (m.cost && m.cost.atomic > 0n) {
+          totals.set(m.cost.currency, (totals.get(m.cost.currency) ?? 0n) + m.cost.atomic);
+        }
+        return totals;
+      }, new Map<PaymentCurrency, bigint>())
+      .entries(),
+  ];
   const [currentInput, setCurrentInput] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -384,10 +434,29 @@ export function AssistantChat() {
   // `finally` alongside `isLoading` — a phase from a finished turn must never survive into the
   // next one's "waiting" moment before the loop has had a chance to set its own first phase.
   const [loopPhase, setLoopPhase] = useState<LoopPhase | null>(null);
+  // A research run's visible cost, for the loading bubble: web calls so far and what the turn has
+  // actually been charged (see `readChargedTotal`). Null until the first paid web call, so a plain
+  // chat message looks exactly as it always did. Cleared in the same `finally` as `loopPhase`.
+  const [research, setResearch] = useState<{
+    searches: number;
+    pages: number;
+    spent: bigint;
+    notes: ResearchNote[];
+  } | null>(null);
+  // Read by the loop before each hop. A ref, not state: the loop is already running inside an
+  // event handler and must see the press without waiting for a re-render. `stopPressed` is only the
+  // button's own feedback.
+  const stopRequestedRef = useRef(false);
+  const [stopPressed, setStopPressed] = useState(false);
 
   // Localized messages (reuse the existing assistent.* namespace)
   const systemPromptMessage = useLocale({ label: "assistent.systemPrompt" });
   const teenPromptMessage = useLocale({ label: "assistent.systemPromptTeen" });
+  const researchPromptMessage = useLocale({ label: "assistent.systemPromptResearch" });
+  const researchProgressLabel = useLocale({ label: "assistent.researchProgress" });
+  const stopAndAnswerLabel = useLocale({ label: "assistent.stopAndAnswer" });
+  const researchNotesLabel = useLocale({ label: "assistent.researchNotes" });
+  const chatTotalLabel = useLocale({ label: "assistent.chatTotal" });
   const teenModeLabel = useLocale({ label: "assistent.teenMode" });
   const teenModeOfferLabel = useLocale({ label: "assistent.teenModeOffer" });
   const noResponseMessage = useLocale({ label: "assistent.noResponse" });
@@ -920,6 +989,9 @@ export function AssistantChat() {
   toolRunners[searchWebTool.function.name] = loadSearch;
   toolRunners[fetchUrlTool.function.name] = loadFetch;
   toolRunners[getAnalyticsTool.function.name] = async (args) => ({ result: await loadAnalytics(args) });
+  // `invalid` is an answer — resend a corrected batch — so it must not withdraw the notepad.
+  toolRunners[noteFindingsTool.function.name] = (args) =>
+    Promise.resolve({ result: validateFindings(args), recoverable: true });
 
   /** Dispatches one tool call by name, or tells the model it invented one. */
   async function runToolCall(call: X402ToolCall): Promise<ToolRunResult> {
@@ -952,7 +1024,30 @@ export function AssistantChat() {
     setMessages((prev) => [...prev, userMsg]);
     setCurrentInput("");
 
+    // Baseline for this turn's spend. Read from the channel records the SDK keeps, so the figure
+    // shown is what was charged, not an estimate from a mirrored rate card. Outside the `try`, so a
+    // turn that fails halfway still reports what it had already spent.
+    const chargedAtStart = readChargedTotal(window.localStorage);
+    const turnCost = (): MessageCost => ({
+      atomic: readChargedTotal(window.localStorage) - chargedAtStart,
+      currency: paymentCurrency,
+    });
+
     try {
+      // The loop itself lives in utils/toolLoop.ts — this component keeps state and rendering.
+      // `availableTools` already applies the owner gate; what is left to subtract here is what the
+      // user switched off in the ToolSelector. Failures within the turn are the loop's business.
+      //
+      const offeredTools: OfferedTool<ToolSource>[] = availableTools
+        .filter((entry) => !disabledTools.has(entry.tool.function.name))
+        .map((entry) => ({ tool: entry.tool, source: entry.source, paid: entry.paid }));
+      const canResearch = offeredTools.some((entry) => WEB_TOOL_NAMES.has(entry.tool.function.name));
+      // `bookkeeping`: the model never needs the notepad's answer, so text filed alongside notes is
+      // the final answer — see toolLoop.ts.
+      if (canResearch) {
+        offeredTools.push({ tool: noteFindingsTool, source: null, paid: false, bookkeeping: true });
+      }
+
       // Full conversation history, as the OpenAI `messages[]` array sc_llm_x402 expects. Tool
       // turns pushed inside the loop below live only in this local array — never in `messages`
       // state, so a previous tool call is never replayed to the model on a later message. Its
@@ -971,6 +1066,9 @@ export function AssistantChat() {
           content: [
             systemPromptMessage,
             teenMode ? teenPromptMessage : null,
+            // How to research, only when there is something to research with — it is input
+            // tokens on every hop, and without web tools it would describe tools that are absent.
+            canResearch ? researchPromptMessage : null,
             formatDateContext(new Date(), Intl.DateTimeFormat().resolvedOptions().timeZone),
           ]
             .filter(Boolean)
@@ -980,12 +1078,32 @@ export function AssistantChat() {
         { role: "user", content: userMessage.trim() },
       ];
 
-      // The loop itself lives in utils/toolLoop.ts — this component keeps state and rendering.
-      // `availableTools` already applies the owner gate; what is left to subtract here is what the
-      // user switched off in the ToolSelector. Failures within the turn are the loop's business.
-      const offeredTools = availableTools
-        .filter((entry) => !disabledTools.has(entry.tool.function.name))
-        .map((entry) => ({ tool: entry.tool, source: entry.source, paid: entry.paid }));
+      stopRequestedRef.current = false;
+      setStopPressed(false);
+      let searches = 0;
+      let pages = 0;
+      const notes: ResearchNote[] = [];
+
+      // Dev-only trace, one console line per hop: what was sent, what came back. The way to read a
+      // research run without digging through the Network tab — and the request size shows whether
+      // compaction is keeping the conversation flat.
+      let hop = 0;
+      const tracedPayAndSend: typeof payAndSend = async (sent, options) => {
+        const data = await payAndSend(sent, options);
+        if (import.meta.env.DEV) {
+          const choice = data.choices?.[0];
+          console.log(`[assistant] hop ${++hop}`, {
+            requestBytes: new TextEncoder().encode(JSON.stringify(sent)).length,
+            offered: options?.tools?.map((t) => t.function.name) ?? "none",
+            finish: choice?.finish_reason,
+            content: choice?.message.content?.slice(0, 120) ?? null,
+            toolCalls: choice?.message.tool_calls?.map(
+              (call) => `${call.function.name} ${call.function.arguments.slice(0, 200)}`,
+            ),
+          });
+        }
+        return data;
+      };
 
       const { finalContent, finalImageUrl, sources } = await runToolLoop<ToolSource>(convo, offeredTools, {
         ensureReady: async () => {
@@ -994,9 +1112,27 @@ export function AssistantChat() {
             throw new Error(getSwitchError() ?? `Please switch your wallet to ${getViemChain(network).name}`);
           }
         },
-        payAndSend,
+        payAndSend: tracedPayAndSend,
         runToolCall,
-        onPhase: setLoopPhase,
+        shouldStop: () => stopRequestedRef.current,
+        onPhase: (phase) => {
+          setLoopPhase(phase);
+          if (phase.kind === "tool" && phase.name === searchWebTool.function.name) searches++;
+          if (phase.kind === "tool" && phase.name === fetchUrlTool.function.name) pages++;
+          if (phase.kind === "tool" && phase.name === noteFindingsTool.function.name) {
+            notes.push(...parseNotes(phase.args));
+          }
+          // Every earlier hop and tool call has settled by the time the next phase starts, so the
+          // channel record already carries their charges.
+          if (searches + pages + notes.length > 0) {
+            setResearch({
+              searches,
+              pages,
+              spent: readChargedTotal(window.localStorage) - chargedAtStart,
+              notes: [...notes],
+            });
+          }
+        },
       });
 
       const assistantMsg: ChatMessage = {
@@ -1007,6 +1143,9 @@ export function AssistantChat() {
         timestamp: Date.now(),
         imageUrl: finalImageUrl,
         sources: sources.length > 0 ? sources : undefined,
+        // Every hop has settled by now — `payAndSend` resolves only after its settle response —
+        // so the channel record already carries the whole turn.
+        cost: turnCost(),
       };
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (error) {
@@ -1015,12 +1154,14 @@ export function AssistantChat() {
         role: "assistant",
         content: `${errorPrefixMessage} ${error instanceof Error ? error.message : unknownErrorLabel}`,
         timestamp: Date.now(),
+        cost: turnCost(),
       };
       setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setToolCard(null);
       setIsLoading(false);
       setLoopPhase(null);
+      setResearch(null);
     }
   };
 
@@ -1073,6 +1214,17 @@ export function AssistantChat() {
    */
   const sidebarBlocks = (
     <>
+      {/* The chat's running total, from the per-answer costs — so it resets with "Clear chat" and
+          needs no storage of its own. One figure per currency, since the user can switch. */}
+      {chatTotals.length > 0 && (
+        <div className={`${chat.sidebarSection} ${chat.messageSource}`}>
+          {chatTotalLabel.replaceAll(
+            "{spent}",
+            chatTotals.map(([currency, atomic]) => formatSpend(atomic, currency)).join(" + "),
+          )}
+        </div>
+      )}
+
       <div className={chat.sidebarSection}>{teenToggleWithHint}</div>
 
       <div className={chat.sidebarSection}>
@@ -1291,6 +1443,12 @@ export function AssistantChat() {
                           </a>
                         </div>
                       ))}
+                      {/* What this answer charged the channel — exact, not estimated. */}
+                      {message.cost && message.cost.atomic > 0n && (
+                        <div className={chat.messageSource}>
+                          {formatSpend(message.cost.atomic, message.cost.currency)}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1300,24 +1458,66 @@ export function AssistantChat() {
             {isLoading && (
               <div className={chat.loadingMessage}>
                 {isDefaultAgent && <div className={chat.assistantAvatar} />}
-                <div className={chat.loadingBubble}>
-                  {/* Three states, in the order they actually happen within one turn: a drained
+                <div className={chat.loadingColumn}>
+                  <div className={chat.loadingBubble}>
+                    {/* Three states, in the order they actually happen within one turn: a drained
                       channel tops itself up first (see useX402Chat) — saying so keeps the wallet
                       signature that follows from arriving unexplained; then the model runs a
                       tool, named from the same key ToolSelector shows for it, so "running" and
                       "offered" always agree; otherwise it is just thinking. */}
-                  {chatStatus === "topping-up" ? (
-                    toppingUpLabel
-                  ) : loopPhase?.kind === "tool" ? (
-                    <LocaleText label={TOOL_LABEL_BY_NAME.get(loopPhase.name) ?? "assistent.typing"} />
-                  ) : (
-                    typingLabel
+                    {chatStatus === "topping-up" ? (
+                      toppingUpLabel
+                    ) : loopPhase?.kind === "tool" ? (
+                      <LocaleText label={TOOL_LABEL_BY_NAME.get(loopPhase.name) ?? "assistent.typing"} />
+                    ) : (
+                      typingLabel
+                    )}
+                    <span className={chat.typingDots} aria-hidden="true">
+                      <span className={`${chat.typingDot} typing-dot`} style={{ animationDelay: "0s" }} />
+                      <span className={`${chat.typingDot} typing-dot`} style={{ animationDelay: "0.2s" }} />
+                      <span className={`${chat.typingDot} typing-dot`} style={{ animationDelay: "0.4s" }} />
+                    </span>
+                  </div>
+                  {/* Only once the turn has touched the web: what it has done and really cost so
+                    far, and a way to end it. Stop does not cancel the call in flight — a paid
+                    call cannot be taken back halfway — it makes the next hop answer from the
+                    notes. */}
+                  {research && (
+                    <div className={chat.researchStatus}>
+                      <span>
+                        {researchProgressLabel
+                          .replaceAll("{searches}", String(research.searches))
+                          .replaceAll("{pages}", String(research.pages))
+                          .replaceAll("{spent}", formatSpend(research.spent, paymentCurrency))}
+                      </span>
+                      <button
+                        type="button"
+                        className={button({ visual: "ghost", size: "sm" })}
+                        disabled={stopPressed}
+                        onClick={() => {
+                          stopRequestedRef.current = true;
+                          setStopPressed(true);
+                        }}
+                      >
+                        {stopAndAnswerLabel}
+                      </button>
+                    </div>
                   )}
-                  <span className={chat.typingDots} aria-hidden="true">
-                    <span className={`${chat.typingDot} typing-dot`} style={{ animationDelay: "0s" }} />
-                    <span className={`${chat.typingDot} typing-dot`} style={{ animationDelay: "0.2s" }} />
-                    <span className={`${chat.typingDot} typing-dot`} style={{ animationDelay: "0.4s" }} />
-                  </span>
+                  {/* The model's notes so far, so a long run is something to watch rather than
+                      wait out. Native <details>: collapsed by default, no state of its own. */}
+                  {research && research.notes.length > 0 && (
+                    <details className={chat.researchNotes}>
+                      <summary>{researchNotesLabel.replaceAll("{n}", String(research.notes.length))}</summary>
+                      <ul>
+                        {research.notes.map((note, i) => (
+                          <li key={i}>
+                            {note.claim}
+                            {note.source && ` — ${note.source}`}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
                 </div>
               </div>
             )}

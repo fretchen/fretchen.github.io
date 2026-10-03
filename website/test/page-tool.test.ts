@@ -20,13 +20,13 @@ import {
   getPageTool,
 } from "../tools/page";
 import { TOOL_REGISTRY } from "../components/AssistantChat";
+import { noteFindingsTool } from "../tools/notes";
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/** Mirrors the two caps in scw_js/llm_schemas.ts, which the endpoint validates server-side. */
-const MAX_TOOLS = 8;
+/** Mirrors the cap in scw_js/llm_schemas.ts, which the endpoint validates server-side. */
 const MAX_TOOLS_BYTES = 8192;
 
 function page(body: string, title = "A Post | fretchen.eu"): string {
@@ -361,14 +361,14 @@ describe("fetchers", () => {
 
 describe("tool budget", () => {
   /**
-   * `sc_llm_x402.ts` validates both caps server-side and answers a clean 400 — which the user
+   * `sc_llm_x402.ts` validates the cap server-side and answers a clean 400 — which the user
    * sees only as a chat message that failed. Nothing else in the suite measures the array.
+   * `note_findings` is not in the registry but rides along with the web tools, so it counts.
    */
-  it("keeps the offered tools inside the endpoint's caps", () => {
-    const tools = TOOL_REGISTRY.map((entry) => entry.tool);
+  it("keeps the offered tools inside the endpoint's byte cap", () => {
+    const tools = [...TOOL_REGISTRY.map((entry) => entry.tool), noteFindingsTool];
 
-    expect(tools.length).toBeLessThanOrEqual(MAX_TOOLS);
-    expect(JSON.stringify(tools).length).toBeLessThanOrEqual(MAX_TOOLS_BYTES);
+    expect(new TextEncoder().encode(JSON.stringify(tools)).length).toBeLessThanOrEqual(MAX_TOOLS_BYTES);
   });
 
   it("offers get_page", () => {

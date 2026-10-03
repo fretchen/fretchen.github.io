@@ -27,6 +27,7 @@ import {
   getBatchSettlementNetworks,
   formatUsdcAtomicAsDecimalUsd,
   LLM_MAX_TIMEOUT_SECONDS,
+  releaseLock,
   type SdkPaymentPayload,
   type SdkPaymentRequirements,
 } from "./x402_server.js";
@@ -77,9 +78,13 @@ const STRIPPED_REQUEST_KEYS = new Set(
 //
 // Raising it costs plain-chat callers nothing: this is the *authorization* bound the 402
 // advertises and verifyPayment checks, while settlement is still usage-derived. It only means a
-// larger per-message voucher. At 6000: ceiling = 6000 × $1.50/M = $0.009, covering ~18,000 input
-// tokens or ~6000 output tokens.
-const MAX_TOKENS_PER_MESSAGE = process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE ?? "6000";
+// larger per-message voucher.
+//
+// Raised again from 6000 for multi-hop web research: a research turn carries notes plus the
+// latest fetched pages, and at 6000 (~18,000 input tokens) MAX_MESSAGES_BYTES had to stay at
+// 64 KB — six page reads. At 20000: ceiling = 20000 × $1.50/M = $0.03, covering ~60,000 input
+// tokens or ~20,000 output tokens. Raise it together with MAX_MESSAGES_BYTES, never alone.
+const MAX_TOKENS_PER_MESSAGE = process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE ?? "20000";
 // No real prompt/completion split exists yet for the ceiling, so price the entire
 // estimate as completion (output) tokens — the pricier of the two rates for a
 // provider with an asymmetric split like Mistral's. This guarantees the ceiling is
@@ -489,6 +494,9 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     llmData = await callLLMAPI(prompt, useMock, resolved.provider, forwardedParams);
   } catch (error) {
     logger.error({ err: error }, "Error during answer generation");
+    // Verified but never settled: release the channel lock, or the next message waits out
+    // LLM_MAX_TIMEOUT_SECONDS behind `channel_busy` for an answer that was never charged.
+    await releaseLock(resourceServer, paymentPayload as SdkPaymentPayload, paymentRequirements);
     return errorResponse(500, (error as Error).message);
   }
 

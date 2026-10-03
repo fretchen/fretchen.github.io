@@ -20,6 +20,7 @@ import {
   createLLMResourceServer,
   createSettlementHeaders,
   extractPaymentPayload,
+  releaseLock,
   type SdkPaymentPayload,
   type SdkPaymentRequirements,
 } from "./x402_server.js";
@@ -270,7 +271,12 @@ async function servePaid(
   try {
     data = await run(args);
   } catch (err) {
-    // Nothing is settled: an upstream that failed is not something to charge for.
+    // Nothing is settled: an upstream that failed is not something to charge for. But verify took
+    // the channel lock, which the chat shares — release it, or the user's next message is
+    // rejected with `channel_busy`. Logged here because a page-level 400 is otherwise silent,
+    // which is how this stayed invisible.
+    logger.warn({ err, route }, "Run failed after verify; lock released");
+    await releaseLock(resourceServer, payload as SdkPaymentPayload, paymentRequirements);
     return errorResponseFor(err);
   }
 

@@ -17,12 +17,14 @@ const {
   mockCreatePaymentRequiredResponse,
   mockEnhancePaymentRequirements,
   mockScheme,
+  mockReleaseLock,
 } = vi.hoisted(() => {
   // enhancePaymentRequirements() is called for real verify/settle calls (not just the
   // 402-building path) — see sc_llm_x402.ts's paymentRequirements construction. Echo the
   // base requirements back unchanged, which is enough for the handler-logic tests here.
   const mockEnhancePaymentRequirements = vi.fn().mockImplementation(async (base: unknown) => base);
   return {
+    mockReleaseLock: vi.fn(),
     mockCallLLMAPI: vi.fn(),
     // Real formula (matches llm_service.ts's actual tokensToCost: separate
     // input/output rates per provider — see LLM_PROVIDERS there), not a fixed stub — so
@@ -90,6 +92,7 @@ vi.mock("../x402_server.js", () => ({
   extractPaymentPayload: mockExtractPaymentPayload,
   createSettlementHeaders: mockCreateSettlementHeaders,
   getBatchSettlementNetworks: mockGetBatchSettlementNetworks,
+  releaseLock: mockReleaseLock,
   // Real constant (not a mock fn) — imported by sc_llm_x402.ts for the verify-time
   // maxTimeoutSeconds; keep in sync with x402_server.ts's exported value.
   LLM_MAX_TIMEOUT_SECONDS: 120,
@@ -251,7 +254,7 @@ describe("sc_llm_x402", () => {
       expect(body["x-service-type"]).toBe("llm/v1");
       expect(body.paths["/"].post["x-payment-info"]).toEqual({
         protocols: ["x402"],
-        price: { mode: "dynamic", currency: "USD", min: "0", max: "0.009" },
+        price: { mode: "dynamic", currency: "USD", min: "0", max: "0.03" },
       });
       expect(body.paths["/"].post.responses["402"]).toBeDefined();
     });
@@ -333,7 +336,7 @@ describe("sc_llm_x402", () => {
         expect(res.statusCode).toBe(200);
         const body = JSON.parse(res.body);
         // 4000 tokens * 150n/100n (mistral output rate, mocked to match llm_service.ts) = 6000n
-        // atomic units = "0.006" decimal USD -- distinct from the static file's "0.009".
+        // atomic units = "0.006" decimal USD -- distinct from the static file's "0.03".
         expect(body.paths["/"].post["x-payment-info"].price.max).toBe("0.006");
       } finally {
         if (originalEstimate === undefined) {
@@ -456,14 +459,14 @@ describe("sc_llm_x402", () => {
     it("returns a 402 built from createBatchSettlementPaymentRequirements", async () => {
       const res = await handle(makeEvent() as never, {});
       expect(res.statusCode).toBe(402);
-      // Ceiling: the whole 6000-token estimate priced as completion (output) tokens
-      // at Mistral's $1.50/M rate — 6000 * 150 / 100 = 9000.
+      // Ceiling: the whole 20000-token estimate priced as completion (output) tokens
+      // at Mistral's $1.50/M rate — 20000 * 150 / 100 = 30000.
       expect(mockCreateBatchSettlementPaymentRequirements).toHaveBeenCalledWith(
         expect.objectContaining({
           payTo: VALID_ADDRESS,
           scheme: mockScheme,
-          // 6000 tokens at the output rate: $1.50/M and €1.50/M both give 9000.
-          price: { USDC: "9000", EURC: "9000" },
+          // 20000 tokens at the output rate: $1.50/M and €1.50/M both give 30000.
+          price: { USDC: "30000", EURC: "30000" },
         }),
       );
       expect(mockCreate402Response).toHaveBeenCalled();
@@ -707,7 +710,7 @@ describe("sc_llm_x402", () => {
 
     describe("tools are capped rather than refused", () => {
       // Unlike the params above, tools are a feature — but tool definitions are input tokens
-      // billed on every hop, so an uncapped array inflates the metered cost for free. Both caps
+      // billed on every hop, so an uncapped array inflates the metered cost for free. The byte cap
       // must bite before verifyPayment, or a caller could make us pay for the inference.
       function toolsEvent(tools: unknown) {
         return makeEvent({
@@ -719,18 +722,13 @@ describe("sc_llm_x402", () => {
         }) as never;
       }
 
-      it("rejects more than 8 tools before any payment is verified", async () => {
-        const res = await handle(toolsEvent(Array(9).fill(TEST_TOOL)), {});
-
-        expect(res.statusCode).toBe(400);
-        expect(JSON.parse(res.body).error.param).toBe("tools");
-        expect(mockVerifyPayment).not.toHaveBeenCalled();
-        expect(mockCallLLMAPI).not.toHaveBeenCalled();
+      it("does not cap the tool count — only bytes are billed", async () => {
+        const res = await handle(toolsEvent(Array(12).fill(TEST_TOOL)), {});
+        expect(res.statusCode).toBe(200);
       });
 
-      it("rejects a tools array over the byte cap", async () => {
-        // Two tools, well under the count cap, but one carries a huge description — the count cap
-        // alone does not bound input tokens.
+      it("rejects a tools array over the byte cap before any payment is verified", async () => {
+        // Two tools, but one carries a huge description — bytes, not count, are what is billed.
         const fat = {
           ...TEST_TOOL,
           function: { ...TEST_TOOL.function, description: "x".repeat(9000) },
@@ -740,6 +738,7 @@ describe("sc_llm_x402", () => {
         expect(res.statusCode).toBe(400);
         expect(JSON.parse(res.body).error.param).toBe("tools");
         expect(mockVerifyPayment).not.toHaveBeenCalled();
+        expect(mockCallLLMAPI).not.toHaveBeenCalled();
       });
 
       it("rejects a malformed tool definition", async () => {
@@ -747,11 +746,6 @@ describe("sc_llm_x402", () => {
 
         expect(res.statusCode).toBe(400);
         expect(JSON.parse(res.body).error.param).toBe("tools");
-      });
-
-      it("accepts a tool bag at the count cap", async () => {
-        const res = await handle(toolsEvent(Array(8).fill(TEST_TOOL)), {});
-        expect(res.statusCode).toBe(200);
       });
 
       it("measures the byte cap in UTF-8 bytes, not UTF-16 code units", async () => {
@@ -782,7 +776,7 @@ describe("sc_llm_x402", () => {
 
       it("rejects a conversation over the byte cap before any payment is verified", async () => {
         const res = await handle(
-          messagesEvent([{ role: "user", content: "x".repeat(70_000) }]),
+          messagesEvent([{ role: "user", content: "x".repeat(200_000) }]),
           {},
         );
 
@@ -798,7 +792,7 @@ describe("sc_llm_x402", () => {
         // Twenty turns, each comfortably small on its own, summing to over the cap.
         const messages = Array.from({ length: 20 }, () => ({
           role: "user",
-          content: "y".repeat(4_000),
+          content: "y".repeat(10_000),
         }));
         const res = await handle(messagesEvent(messages), {});
 
@@ -808,10 +802,10 @@ describe("sc_llm_x402", () => {
       });
 
       it("measures the cap in UTF-8 bytes, not UTF-16 code units", async () => {
-        // ~30k three-byte chars: ~30k UTF-16 units (under the 65536 cap by that measure) but
-        // ~90k UTF-8 bytes (over it). Billed by byte, so it must be rejected.
+        // ~70k three-byte chars: ~70k UTF-16 units (under the 196608 cap by that measure) but
+        // ~210k UTF-8 bytes (over it). Billed by byte, so it must be rejected.
         const res = await handle(
-          messagesEvent([{ role: "user", content: "あ".repeat(30_000) }]),
+          messagesEvent([{ role: "user", content: "あ".repeat(70_000) }]),
           {},
         );
 
@@ -822,7 +816,7 @@ describe("sc_llm_x402", () => {
 
       it("accepts a conversation just under the cap", async () => {
         const res = await handle(
-          messagesEvent([{ role: "user", content: "z".repeat(60_000) }]),
+          messagesEvent([{ role: "user", content: "z".repeat(190_000) }]),
           {},
         );
         expect(res.statusCode).toBe(200);
@@ -1011,6 +1005,9 @@ describe("sc_llm_x402", () => {
       const res = await handle(makeEvent() as never, {});
       expect(res.statusCode).toBe(500);
       expect(mockSettlePayment).not.toHaveBeenCalled();
+      // Verified but never settled: the channel lock is released rather than left to block the
+      // next message for LLM_MAX_TIMEOUT_SECONDS.
+      expect(mockReleaseLock).toHaveBeenCalledOnce();
     });
 
     it("returns 500 for other LLM API errors", async () => {
@@ -1170,7 +1167,7 @@ describe("sc_llm_x402", () => {
 
     it("settles for the LLM's actual token usage, not the ceiling", async () => {
       // 200 prompt + 800 completion -> 0.5*200 + 1.5*800 = 100 + 1200 = 1300 (Mistral
-      // rates), well under the 9000 ceiling (6000 tokens, all priced as completion).
+      // rates), well under the 30000 ceiling (20000 tokens, all priced as completion).
       mockCallLLMAPI.mockResolvedValue(
         openAiCompletion("answer", {
           prompt_tokens: 200,
@@ -1182,12 +1179,12 @@ describe("sc_llm_x402", () => {
       const res = await handle(makeEvent() as never, {});
       expect(res.statusCode).toBe(200);
 
-      // verifyPayment must still see the pre-authorized ceiling (9000) — the client signed
+      // verifyPayment must still see the pre-authorized ceiling (30000) — the client signed
       // its voucher against that, and handleBeforeVerify requires an exact match.
       const enhancedRequirements = await mockEnhancePaymentRequirements.mock.results[0]?.value;
       expect(mockVerifyPayment).toHaveBeenCalledWith(
         samplePaymentPayload,
-        expect.objectContaining({ amount: "9000" }),
+        expect.objectContaining({ amount: "30000" }),
       );
 
       // settlePayment must see the real, usage-derived amount instead.
@@ -1198,14 +1195,14 @@ describe("sc_llm_x402", () => {
     });
 
     it("caps the settlement amount at the ceiling when usage runs over the estimate", async () => {
-      // 1000 prompt + 6000 completion -> 0.5*1000 + 1.5*6000 = 500 + 9000 = 9500, which
-      // exceeds the 9000 ceiling — must be capped there rather than settling for more
+      // 1000 prompt + 20000 completion -> 0.5*1000 + 1.5*20000 = 500 + 30000 = 30500, which
+      // exceeds the 30000 ceiling — must be capped there rather than settling for more
       // than the client authorized (or aborting).
       mockCallLLMAPI.mockResolvedValue(
         openAiCompletion("answer", {
           prompt_tokens: 1000,
-          completion_tokens: 6000,
-          total_tokens: 7000,
+          completion_tokens: 20000,
+          total_tokens: 21000,
         }),
       );
 
@@ -1213,7 +1210,7 @@ describe("sc_llm_x402", () => {
       expect(res.statusCode).toBe(200);
       expect(mockSettlePayment).toHaveBeenCalledWith(
         samplePaymentPayload,
-        expect.objectContaining({ amount: "9000" }),
+        expect.objectContaining({ amount: "30000" }),
       );
     });
 
@@ -1258,12 +1255,12 @@ describe("sc_llm_x402", () => {
       const res = await handle(makeEvent() as never, {});
       expect(res.statusCode).toBe(200);
 
-      // Ceiling: 6000 tokens × €1.50/M = 9000. Settle: 88 + 1200 = 1288.
+      // Ceiling: 20000 tokens × €1.50/M = 30000. Settle: 88 + 1200 = 1288.
       expect(mockVerifyPayment).toHaveBeenCalledWith(
         eurcPayload,
         expect.objectContaining({
           asset: EURC,
-          amount: "9000",
+          amount: "30000",
           extra: expect.objectContaining({ name: "EURC" }),
         }),
       );

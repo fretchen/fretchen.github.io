@@ -86,6 +86,142 @@ describe("runToolLoop", () => {
     expect(result.finalContent).toBeNull();
   });
 
+  // Running out of hops used to end in the generic "no response" — every hop had tools on offer,
+  // so a model that kept researching never wrote anything.
+  it("offers no tools on the last hop, so the model has to answer", async () => {
+    const payAndSend = vi.fn().mockResolvedValue(toolCallTurn("plain_tool"));
+    const runToolCall = vi.fn().mockResolvedValue({ result: { status: "ok" } });
+
+    await runToolLoop<Source>(convo(), OFFERED, deps(payAndSend, runToolCall));
+
+    expect(offeredOn(payAndSend, MAX_HOPS - 2)).toContain("plain_tool");
+    expect(offeredOn(payAndSend, MAX_HOPS - 1)).toBeUndefined();
+    // A tool call on the tool-free hop is not run — nothing would read its result.
+    expect(runToolCall).toHaveBeenCalledTimes(MAX_HOPS - 1);
+  });
+
+  it("answers on the next hop once shouldStop turns true", async () => {
+    let stop = false;
+    const payAndSend = vi
+      .fn()
+      .mockImplementationOnce(async () => toolCallTurn("plain_tool"))
+      .mockResolvedValue(textTurn("from my notes"));
+    const runToolCall = vi.fn().mockImplementation(async () => {
+      stop = true; // pressed while the tool was running
+      return { result: { status: "ok" } };
+    });
+
+    const result = await runToolLoop<Source>(convo(), OFFERED, {
+      ...deps(payAndSend, runToolCall),
+      shouldStop: () => stop,
+    });
+
+    expect(runToolCall).toHaveBeenCalledOnce();
+    expect(offeredOn(payAndSend, 1)).toBeUndefined();
+    expect(result.finalContent).toBe("from my notes");
+  });
+
+  describe("text alongside bookkeeping calls", () => {
+    const withNotepad: OfferedTool<Source>[] = [
+      { tool: tool("note_tool"), source: null, bookkeeping: true },
+      { tool: tool("plain_tool"), source: null },
+    ];
+
+    /** One response carrying both text and tool calls — what Mistral sends when it answers and
+     *  files its last notes at once. */
+    function textWithCalls(content: string, names: string[]) {
+      return {
+        choices: [
+          {
+            message: {
+              role: "assistant",
+              content,
+              tool_calls: names.map((name, i) => ({
+                id: `c${i}`,
+                type: "function",
+                function: { name, arguments: "{}" },
+              })),
+            },
+            finish_reason: "tool_calls",
+          },
+        ],
+      };
+    }
+
+    // A plan filed as notes must not end the turn: that stopped a real run before its first search.
+    it("keeps that text and goes on, showing it before the final reply", async () => {
+      const payAndSend = vi
+        .fn()
+        .mockResolvedValueOnce(textWithCalls("I will look into A and B.", ["note_tool"]))
+        .mockResolvedValueOnce(toolCallTurn("plain_tool"))
+        .mockResolvedValue(textTurn("A is x, B is y."));
+      const runToolCall = vi.fn().mockResolvedValue({ result: { status: "ok" } });
+
+      const result = await runToolLoop<Source>(convo(), withNotepad, deps(payAndSend, runToolCall));
+
+      expect(payAndSend).toHaveBeenCalledTimes(3);
+      expect(result.finalContent).toBe("I will look into A and B.\n\nA is x, B is y.");
+    });
+
+    it("does not show text that came with a call the model needs back", async () => {
+      const payAndSend = vi
+        .fn()
+        .mockResolvedValueOnce(textWithCalls("Let me look that up.", ["note_tool", "plain_tool"]))
+        .mockResolvedValue(textTurn("done"));
+      const runToolCall = vi.fn().mockResolvedValue({ result: { status: "ok" } });
+
+      const result = await runToolLoop<Source>(convo(), withNotepad, deps(payAndSend, runToolCall));
+
+      expect(result.finalContent).toBe("done");
+    });
+
+    // The "see the answer above" case: the answer was filed with its last notes, and the closing
+    // reply adds nothing. The answer must still reach the user.
+    it("shows that text alone when the final reply is empty", async () => {
+      const payAndSend = vi
+        .fn()
+        .mockResolvedValueOnce(textWithCalls("The full answer.", ["note_tool"]))
+        .mockResolvedValue(textTurn(""));
+      const runToolCall = vi.fn().mockResolvedValue({ result: { status: "ok" } });
+
+      const result = await runToolLoop<Source>(convo(), withNotepad, deps(payAndSend, runToolCall));
+
+      expect(result.finalContent).toBe("The full answer.");
+    });
+  });
+
+  describe("compaction of paid results", () => {
+    const readOffered: OfferedTool<Source>[] = [
+      { tool: tool("read_tool"), source: null, paid: true },
+      { tool: tool("plain_tool"), source: null },
+    ];
+
+    // The loop mutates one array across hops, so each call's view is snapshotted as it is sent.
+    it("keeps a raw result for one hop, then re-sends only a stub with the same tool_call_id", async () => {
+      const snapshots: X402ChatMessage[][] = [];
+      const payAndSend = vi.fn().mockImplementation(async (sent: X402ChatMessage[]) => {
+        snapshots.push(structuredClone(sent));
+        return snapshots.length === 1
+          ? toolCallTurn("read_tool")
+          : snapshots.length === 2
+            ? toolCallTurn("plain_tool")
+            : textTurn("done");
+      });
+      const runToolCall = vi.fn().mockResolvedValue({ result: { status: "ok", content: "RAW PAGE TEXT" } });
+
+      await runToolLoop<Source>(convo(), readOffered, deps(payAndSend, runToolCall));
+
+      const readResult = (snapshot: X402ChatMessage[]) =>
+        snapshot.find((m) => m.role === "tool" && m.tool_call_id === "call_read_tool");
+      expect(readResult(snapshots[1])?.content).toContain("RAW PAGE TEXT");
+      expect(readResult(snapshots[2])?.content).not.toContain("RAW PAGE TEXT");
+      expect(JSON.parse(readResult(snapshots[2])!.content as string)).toMatchObject({ compacted: true });
+      // The free tool's result is left alone.
+      const plain = snapshots[2].find((m) => m.role === "tool" && m.tool_call_id === "call_plain_tool");
+      expect(plain?.content).toContain("RAW PAGE TEXT");
+    });
+  });
+
   it("feeds each tool result back as a role:'tool' turn", async () => {
     const payAndSend = vi.fn().mockResolvedValueOnce(toolCallTurn("alpha_tool")).mockResolvedValueOnce(textTurn("ok"));
     const runToolCall = vi.fn().mockResolvedValue({ result: { status: "ok", value: 42 } });
@@ -212,7 +348,11 @@ describe("runToolLoop", () => {
 
     await runToolLoop<Source>(convo(), OFFERED, { ...deps(payAndSend, runToolCall), onPhase: (p) => phases.push(p) });
 
-    expect(phases).toEqual([{ kind: "waiting" }, { kind: "tool", name: "alpha_tool" }, { kind: "waiting" }]);
+    expect(phases).toEqual([
+      { kind: "waiting" },
+      { kind: "tool", name: "alpha_tool", args: "{}" },
+      { kind: "waiting" },
+    ]);
   });
 
   it("checks readiness before every hop, and lets a refusal abort the turn", async () => {

@@ -65,8 +65,10 @@ export interface OfferedTool<S extends string> {
   /** Its result is raw material (a page, a list of search hits): kept for one hop so the model can
    *  note what matters, then replaced by `COMPACTED_RESULT`. */
   ephemeral?: boolean;
-  /** The model does not need this tool's result back (the notepad). A response holding text and
-   *  only such calls ends the turn with that text instead of asking the model again. */
+  /** The model does not need this tool's result back (the notepad). Text in a response holding
+   *  only such calls is shown to the user — it is a plan or an answer, not "let me look that up" —
+   *  but the turn still goes on: the loop cannot tell a plan from an answer, and ending on a plan
+   *  stopped a research run before its first search. */
   bookkeeping?: boolean;
 }
 
@@ -125,6 +127,7 @@ export async function runToolLoop<S extends string>(
   const { ensureReady, payAndSend, runToolCall, maxHops = MAX_HOPS, shouldStop, onPhase } = deps;
 
   let finalContent: string | null = null;
+  const interimTexts: string[] = [];
   let finalImageUrl: string | undefined;
   const usedSources = new Set<S>();
   // Per tool, not global: a failed Bundestakt lookup must not also disable generate_image for the
@@ -229,15 +232,15 @@ export async function runToolLoop<S extends string>(
       if (isEphemeral.has(call.function.name)) ephemeralResults.push({ message, hop });
     }
 
-    // Text alongside nothing but bookkeeping calls is the answer: the model wrote it and filed its
-    // last notes in the same breath. Asking again would only get "see the answer above" — about
-    // text the chat never showed, which really happened — and cost a paid hop for it.
+    // Text alongside nothing but bookkeeping calls is written for the user — a plan, or an answer
+    // filed together with its last notes. Dropping it hid a whole answer behind a later "see the
+    // answer above"; ending the turn on it stopped a run after its plan. So keep it and go on.
     const text = choice.message.content;
     if (text && text.trim().length > 0 && toolCalls.every((call) => isBookkeeping.has(call.function.name))) {
-      finalContent = text;
-      break;
+      interimTexts.push(text);
     }
   }
 
-  return { finalContent, finalImageUrl, sources: [...usedSources] };
+  const shown = [...interimTexts, finalContent].filter((part): part is string => !!part);
+  return { finalContent: shown.length > 0 ? shown.join("\n\n") : null, finalImageUrl, sources: [...usedSources] };
 }

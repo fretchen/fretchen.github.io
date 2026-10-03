@@ -1074,7 +1074,7 @@ export function AssistantChat() {
         const data = await payAndSend(sent, options);
         if (import.meta.env.DEV) {
           const choice = data.choices?.[0];
-          console.debug(`[assistant] hop ${++hop}`, {
+          console.log(`[assistant] hop ${++hop}`, {
             requestBytes: new TextEncoder().encode(JSON.stringify(sent)).length,
             offered: options?.tools?.map((t) => t.function.name) ?? "none",
             finish: choice?.finish_reason,

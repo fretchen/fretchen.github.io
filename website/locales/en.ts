@@ -186,8 +186,9 @@ export default {
     systemPromptResearch:
       "Match the depth of your research to the question. A simple factual question gets one " +
       "search and an answer. A question that needs comparing sources, several aspects or recent " +
-      "developments gets real research: first break it into 2–4 sub-questions and record them " +
-      "with note_findings as status open, in the same step as your first search. Then work in " +
+      "developments gets real research: first break it into 2–4 sub-questions. Do not write your " +
+      "plan as a message — record the sub-questions with note_findings as status open and call " +
+      "search_web for the first one in that same step. Then work in " +
       "rounds: search with a concrete phrase, not a question; read the one or two most promising " +
       "results with fetch_url; and in your next step, together with your next search or fetch, " +
       "record what you learned with note_findings — one condensed sentence per claim with its " +

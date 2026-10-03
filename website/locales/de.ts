@@ -196,8 +196,9 @@ export default {
     systemPromptResearch:
       "Passe die Tiefe deiner Recherche an die Frage an. Eine einfache Faktenfrage bekommt eine " +
       "Suche und eine Antwort. Eine Frage, die Quellen vergleicht, mehrere Aspekte hat oder nach " +
-      "Aktuellem fragt, bekommt echte Recherche: Zerlege sie zuerst in 2–4 Teilfragen und halte " +
-      "sie mit note_findings als status open fest, im selben Schritt wie deine erste Suche. " +
+      "Aktuellem fragt, bekommt echte Recherche: Zerlege sie zuerst in 2–4 Teilfragen. Schreib " +
+      "deinen Plan nicht als Nachricht — halte die Teilfragen mit note_findings als status open " +
+      "fest und rufe im selben Schritt search_web für die erste davon auf. " +
       "Arbeite dann in Runden: Suche mit einer konkreten Wortfolge, nicht mit einer Frage; lies " +
       "die ein oder zwei vielversprechendsten Ergebnisse mit fetch_url; und halte im nächsten " +
       "Schritt, zusammen mit deiner nächsten Suche oder deinem nächsten Abruf, mit note_findings " +

@@ -148,21 +148,22 @@ describe("runToolLoop", () => {
       };
     }
 
-    it("ends the turn with that text, after running the calls", async () => {
+    // A plan filed as notes must not end the turn: that stopped a real run before its first search.
+    it("keeps that text and goes on, showing it before the final reply", async () => {
       const payAndSend = vi
         .fn()
-        .mockResolvedValueOnce(textWithCalls("The full answer.", ["note_tool"]))
-        .mockResolvedValue(textTurn("The answer above covers it."));
+        .mockResolvedValueOnce(textWithCalls("I will look into A and B.", ["note_tool"]))
+        .mockResolvedValueOnce(toolCallTurn("plain_tool"))
+        .mockResolvedValue(textTurn("A is x, B is y."));
       const runToolCall = vi.fn().mockResolvedValue({ result: { status: "ok" } });
 
       const result = await runToolLoop<Source>(convo(), withNotepad, deps(payAndSend, runToolCall));
 
-      expect(result.finalContent).toBe("The full answer.");
-      expect(runToolCall).toHaveBeenCalledOnce();
-      expect(payAndSend).toHaveBeenCalledOnce();
+      expect(payAndSend).toHaveBeenCalledTimes(3);
+      expect(result.finalContent).toBe("I will look into A and B.\n\nA is x, B is y.");
     });
 
-    it("keeps going when a call the model needs back is among them", async () => {
+    it("does not show text that came with a call the model needs back", async () => {
       const payAndSend = vi
         .fn()
         .mockResolvedValueOnce(textWithCalls("Let me look that up.", ["note_tool", "plain_tool"]))
@@ -172,7 +173,20 @@ describe("runToolLoop", () => {
       const result = await runToolLoop<Source>(convo(), withNotepad, deps(payAndSend, runToolCall));
 
       expect(result.finalContent).toBe("done");
-      expect(payAndSend).toHaveBeenCalledTimes(2);
+    });
+
+    // The "see the answer above" case: the answer was filed with its last notes, and the closing
+    // reply adds nothing. The answer must still reach the user.
+    it("shows that text alone when the final reply is empty", async () => {
+      const payAndSend = vi
+        .fn()
+        .mockResolvedValueOnce(textWithCalls("The full answer.", ["note_tool"]))
+        .mockResolvedValue(textTurn(""));
+      const runToolCall = vi.fn().mockResolvedValue({ result: { status: "ok" } });
+
+      const result = await runToolLoop<Source>(convo(), withNotepad, deps(payAndSend, runToolCall));
+
+      expect(result.finalContent).toBe("The full answer.");
     });
   });
 

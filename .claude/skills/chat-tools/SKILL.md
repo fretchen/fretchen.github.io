@@ -128,9 +128,10 @@ pieces, each where it belongs:
   replaced by a stub two hops after they arrive. The model sees the raw text for one hop, notes
   it, and only the notes are re-billed afterwards. This is what keeps a research run under
   `MAX_MESSAGES_BYTES`.
-- **`bookkeeping` tools** (the notepad) — a response with text and _only_ such calls is the final
-  answer: the loop runs the calls and ends the turn with that text. Without this, Mistral's habit
-  of answering and filing notes in one response hid the answer behind a "see above" reply.
+- **`bookkeeping` tools** (the notepad) — text in a response with _only_ such calls is kept and
+  shown before the final reply, and the turn goes on. Dropping it hid a whole answer behind a "see
+  above" reply; ending the turn on it stopped a run after its plan. The loop cannot tell a plan
+  from an answer, so it does neither.
 - **The last hop offers no tools**, and neither does the hop after `shouldStop()` turns true (the
   "Stop & answer" button). A tool call the model makes on such a hop anyway is not run. Running out
   of hops therefore ends in an answer, not in `noResponse`.

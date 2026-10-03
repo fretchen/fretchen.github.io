@@ -158,6 +158,7 @@ import sitzungenFixture from "./fixtures/bundestakt/sitzungen.json";
 import claimsFixture from "./fixtures/bundestakt/claims.json";
 import { OWNER_SCOPES } from "../utils/getChain";
 import { PaymentError } from "../utils/x402PaidFetch";
+import { MAX_HOPS } from "../utils/toolLoop";
 
 /** The first wallet with analytics scope — the scope `get_analytics` is gated on. */
 const OWNER_ADDRESS = OWNER_SCOPES.analytics[0];
@@ -662,8 +663,9 @@ describe("AssistantChat", () => {
       renderWithQuery(<AssistantChat />);
       sendUserMessage("Draw x");
 
-      // Auto-confirm every card the loop opens, until it gives up.
-      for (let i = 0; i < 4; i++) {
+      // Auto-confirm every card the loop opens, until it gives up. The last hop offers no tools,
+      // so a call the model makes there anyway is not run — one card fewer than hops.
+      for (let i = 0; i < MAX_HOPS - 1; i++) {
         const generateButton = await screen.findByRole("button", { name: /assistent\.toolConfirmGenerate/ });
         fireEvent.click(generateButton);
         await waitFor(() => expect(mockGenerateImage).toHaveBeenCalledTimes(i + 1));
@@ -673,8 +675,8 @@ describe("AssistantChat", () => {
         expect(screen.getByText("assistent.imageReady")).toBeInTheDocument();
       });
       expect(screen.queryByText("assistent.noResponse")).not.toBeInTheDocument();
-      expect(mockSendMessage).toHaveBeenCalledTimes(4); // MAX_HOPS, no 5th attempt
-      expect(mockGenerateImage).toHaveBeenCalledTimes(4);
+      expect(mockSendMessage).toHaveBeenCalledTimes(MAX_HOPS); // no further attempt
+      expect(mockGenerateImage).toHaveBeenCalledTimes(MAX_HOPS - 1);
     });
 
     it("still says no-response when the hops run out without an image", async () => {
@@ -686,7 +688,7 @@ describe("AssistantChat", () => {
       renderWithQuery(<AssistantChat />);
       sendUserMessage("Draw x");
 
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < MAX_HOPS - 1; i++) {
         const cancelButton = await screen.findByRole("button", { name: "assistent.cancel" });
         fireEvent.click(cancelButton);
         await waitFor(() => expect(mockSendMessage).toHaveBeenCalledTimes(i + 1));
@@ -1026,6 +1028,63 @@ describe("AssistantChat", () => {
       await waitFor(() => expect(mockSendMessage).toHaveBeenCalledOnce());
       const offered = (mockSendMessage.mock.calls[0][1] as { tools: { function: { name: string } }[] }).tools;
       expect(offered.map((t) => t.function.name)).toEqual(expect.arrayContaining(["search_web", "fetch_url"]));
+    });
+
+    describe("research", () => {
+      const offeredNames = (call: number) =>
+        (mockSendMessage.mock.calls[call][1] as { tools?: { function: { name: string } }[] }).tools?.map(
+          (t) => t.function.name,
+        );
+      const systemPrompt = (call: number) =>
+        (mockSendMessage.mock.calls[call][0] as { role: string; content: string }[])[0].content;
+
+      it("offers the notepad and the research prompt together with the web tools", async () => {
+        renderWithQuery(<AssistantChat />);
+        sendUserMessage("Compare two things");
+
+        await waitFor(() => expect(mockSendMessage).toHaveBeenCalledOnce());
+        expect(offeredNames(0)).toContain("note_findings");
+        expect(systemPrompt(0)).toContain("assistent.systemPromptResearch");
+      });
+
+      it("offers neither once both web tools are switched off", async () => {
+        window.localStorage.setItem("x402-chat-disabled-tools", "search_web,fetch_url");
+        renderWithQuery(<AssistantChat />);
+        sendUserMessage("Hello");
+
+        await waitFor(() => expect(mockSendMessage).toHaveBeenCalledOnce());
+        expect(offeredNames(0)).not.toContain("note_findings");
+        expect(systemPrompt(0)).not.toContain("assistent.systemPromptResearch");
+      });
+
+      it("shows what a web turn has cost, and Stop makes the next hop answer without tools", async () => {
+        mockPaidFetch.mockImplementation(async () => {
+          // What the SDK does on settle: the channel record's cumulative charge goes up.
+          window.localStorage.setItem("x402-channel:0xabc", JSON.stringify({ chargedCumulativeAmount: "10000" }));
+          return new Response(JSON.stringify({ results: [{ url: "https://a.example", title: "A", text: "a" }] }));
+        });
+        let releaseSecondHop: (value: unknown) => void = () => {};
+        mockSendMessage
+          .mockResolvedValueOnce(toolCallResponse("search_web", { query: "cod stocks" }))
+          .mockImplementationOnce(() => new Promise((resolve) => (releaseSecondHop = resolve)))
+          .mockResolvedValueOnce(textResponse("Answer from my notes."));
+
+        renderWithQuery(<AssistantChat />);
+        sendUserMessage("Research cod stocks");
+
+        const stop = await screen.findByRole("button", { name: "assistent.stopAndAnswer" });
+        expect(screen.getByText(/assistent\.researchProgress/)).toBeInTheDocument();
+        fireEvent.click(stop);
+        expect(stop).toBeDisabled();
+
+        // The hop already in flight finishes; the model keeps researching, but the hop after it
+        // offers nothing, so the turn closes with an answer.
+        releaseSecondHop(toolCallResponse("search_web", { query: "more" }));
+        await waitFor(() => expect(screen.getByText("Answer from my notes.")).toBeInTheDocument());
+        expect(offeredNames(1)).toContain("search_web");
+        expect(offeredNames(2)).toBeUndefined();
+        expect(screen.queryByRole("button", { name: "assistent.stopAndAnswer" })).not.toBeInTheDocument();
+      });
     });
 
     it("offers the analytics tool to the owner and credits the source", async () => {

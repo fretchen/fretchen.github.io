@@ -23,7 +23,7 @@ import { useX402Chat, DEFAULT_LLM_AGENT_URL } from "../hooks/useX402Chat";
 import { useX402ImageGeneration } from "../hooks/useX402ImageGeneration";
 import { usePaymentCurrency, networksForCurrency } from "../hooks/x402Currency";
 import { CurrencyToggle } from "./CurrencyToggle";
-import { IMAGE_PRICE } from "../utils/x402Prices";
+import { IMAGE_PRICE, formatSpend } from "../utils/x402Prices";
 import { fetchAgentCard, precheckLlmV1Agent, type AgentCard } from "../hooks/x402Discovery";
 import { generateImageTool, runImageTool } from "../tools/generateImage";
 import {
@@ -72,6 +72,7 @@ import {
   type FetchToolResult,
 } from "../tools/webFetch";
 import { paymentFailed } from "../tools/failure";
+import { noteFindingsTool, validateFindings } from "../tools/notes";
 import { useWalletAuth } from "../hooks/useWalletAuth";
 import { isOwnerAddress, type OwnerScope } from "../utils/getChain";
 import type { X402ChatMessage, X402Tool, X402ToolCall } from "../types/x402";
@@ -86,7 +87,7 @@ import { button } from "../styled-system/recipes";
 import { PageHeader } from "./PageHeader";
 import { FretchenLogo } from "./FretchenLogo";
 import { GetFundsModal } from "./GetFundsModal";
-import { PaymentError } from "../utils/x402PaidFetch";
+import { PaymentError, readChargedTotal } from "../utils/x402PaidFetch";
 
 /**
  * Which tools oblige the answer to name where it got its facts. Bundestakt is a CC BY licence
@@ -244,7 +245,18 @@ const IMAGE_TOOL_NETWORKS = getGenAiNFTMainnetNetworks();
  * was offered, so every name it reports is a real key here regardless of which subset a given
  * render offered.
  */
-const TOOL_LABEL_BY_NAME = new Map(TOOL_REGISTRY.map((entry) => [entry.tool.function.name, entry.label]));
+const TOOL_LABEL_BY_NAME = new Map<string, string>([
+  ...TOOL_REGISTRY.map((entry) => [entry.tool.function.name, entry.label] as const),
+  [noteFindingsTool.function.name, "assistent.toolResearchNotes"],
+]);
+
+/**
+ * The web tools — what makes a turn a possible research run. `note_findings` rides along with
+ * them rather than sitting in `TOOL_REGISTRY`: it is not a capability anyone chooses, only the
+ * notepad research needs, so it is on exactly when one of these is offered. It is free, so it
+ * costs nothing when the model does not use it beyond its definition's bytes.
+ */
+const WEB_TOOL_NAMES = new Set([searchWebTool.function.name, fetchUrlTool.function.name]);
 
 /**
  * The execution half of the tool contract. `TOOL_REGISTRY` above says what exists and who may use
@@ -384,10 +396,22 @@ export function AssistantChat() {
   // `finally` alongside `isLoading` — a phase from a finished turn must never survive into the
   // next one's "waiting" moment before the loop has had a chance to set its own first phase.
   const [loopPhase, setLoopPhase] = useState<LoopPhase | null>(null);
+  // A research run's visible cost, for the loading bubble: web calls so far and what the turn has
+  // actually been charged (see `readChargedTotal`). Null until the first paid web call, so a plain
+  // chat message looks exactly as it always did. Cleared in the same `finally` as `loopPhase`.
+  const [research, setResearch] = useState<{ searches: number; pages: number; spent: bigint } | null>(null);
+  // Read by the loop before each hop. A ref, not state: the loop is already running inside an
+  // event handler and must see the press without waiting for a re-render. `stopPressed` is only the
+  // button's own feedback.
+  const stopRequestedRef = useRef(false);
+  const [stopPressed, setStopPressed] = useState(false);
 
   // Localized messages (reuse the existing assistent.* namespace)
   const systemPromptMessage = useLocale({ label: "assistent.systemPrompt" });
   const teenPromptMessage = useLocale({ label: "assistent.systemPromptTeen" });
+  const researchPromptMessage = useLocale({ label: "assistent.systemPromptResearch" });
+  const researchProgressLabel = useLocale({ label: "assistent.researchProgress" });
+  const stopAndAnswerLabel = useLocale({ label: "assistent.stopAndAnswer" });
   const teenModeLabel = useLocale({ label: "assistent.teenMode" });
   const teenModeOfferLabel = useLocale({ label: "assistent.teenModeOffer" });
   const noResponseMessage = useLocale({ label: "assistent.noResponse" });
@@ -920,6 +944,9 @@ export function AssistantChat() {
   toolRunners[searchWebTool.function.name] = loadSearch;
   toolRunners[fetchUrlTool.function.name] = loadFetch;
   toolRunners[getAnalyticsTool.function.name] = async (args) => ({ result: await loadAnalytics(args) });
+  // `invalid` is an answer — resend a corrected batch — so it must not withdraw the notepad.
+  toolRunners[noteFindingsTool.function.name] = (args) =>
+    Promise.resolve({ result: validateFindings(args), recoverable: true });
 
   /** Dispatches one tool call by name, or tells the model it invented one. */
   async function runToolCall(call: X402ToolCall): Promise<ToolRunResult> {
@@ -953,6 +980,18 @@ export function AssistantChat() {
     setCurrentInput("");
 
     try {
+      // The loop itself lives in utils/toolLoop.ts — this component keeps state and rendering.
+      // `availableTools` already applies the owner gate; what is left to subtract here is what the
+      // user switched off in the ToolSelector. Failures within the turn are the loop's business.
+      //
+      // The web tools are `ephemeral` because they are exactly the paid ones: raw pages and search
+      // hits, kept for one hop so the model can note them and then compacted by the loop.
+      const offeredTools = availableTools
+        .filter((entry) => !disabledTools.has(entry.tool.function.name))
+        .map((entry) => ({ tool: entry.tool, source: entry.source, paid: entry.paid, ephemeral: entry.paid }));
+      const canResearch = offeredTools.some((entry) => WEB_TOOL_NAMES.has(entry.tool.function.name));
+      if (canResearch) offeredTools.push({ tool: noteFindingsTool, source: null, paid: false, ephemeral: false });
+
       // Full conversation history, as the OpenAI `messages[]` array sc_llm_x402 expects. Tool
       // turns pushed inside the loop below live only in this local array — never in `messages`
       // state, so a previous tool call is never replayed to the model on a later message. Its
@@ -971,6 +1010,9 @@ export function AssistantChat() {
           content: [
             systemPromptMessage,
             teenMode ? teenPromptMessage : null,
+            // How to research, only when there is something to research with — it is input
+            // tokens on every hop, and without web tools it would describe tools that are absent.
+            canResearch ? researchPromptMessage : null,
             formatDateContext(new Date(), Intl.DateTimeFormat().resolvedOptions().timeZone),
           ]
             .filter(Boolean)
@@ -980,12 +1022,13 @@ export function AssistantChat() {
         { role: "user", content: userMessage.trim() },
       ];
 
-      // The loop itself lives in utils/toolLoop.ts — this component keeps state and rendering.
-      // `availableTools` already applies the owner gate; what is left to subtract here is what the
-      // user switched off in the ToolSelector. Failures within the turn are the loop's business.
-      const offeredTools = availableTools
-        .filter((entry) => !disabledTools.has(entry.tool.function.name))
-        .map((entry) => ({ tool: entry.tool, source: entry.source, paid: entry.paid }));
+      stopRequestedRef.current = false;
+      setStopPressed(false);
+      // Baseline for this turn's spend. Read from the channel records the SDK keeps, so the figure
+      // shown is what was charged, not an estimate from a mirrored rate card.
+      const chargedAtStart = readChargedTotal(window.localStorage);
+      let searches = 0;
+      let pages = 0;
 
       const { finalContent, finalImageUrl, sources } = await runToolLoop<ToolSource>(convo, offeredTools, {
         ensureReady: async () => {
@@ -996,7 +1039,17 @@ export function AssistantChat() {
         },
         payAndSend,
         runToolCall,
-        onPhase: setLoopPhase,
+        shouldStop: () => stopRequestedRef.current,
+        onPhase: (phase) => {
+          setLoopPhase(phase);
+          if (phase.kind === "tool" && phase.name === searchWebTool.function.name) searches++;
+          if (phase.kind === "tool" && phase.name === fetchUrlTool.function.name) pages++;
+          // Every earlier hop and tool call has settled by the time the next phase starts, so the
+          // channel record already carries their charges.
+          if (searches + pages > 0) {
+            setResearch({ searches, pages, spent: readChargedTotal(window.localStorage) - chargedAtStart });
+          }
+        },
       });
 
       const assistantMsg: ChatMessage = {
@@ -1021,6 +1074,7 @@ export function AssistantChat() {
       setToolCard(null);
       setIsLoading(false);
       setLoopPhase(null);
+      setResearch(null);
     }
   };
 
@@ -1300,24 +1354,51 @@ export function AssistantChat() {
             {isLoading && (
               <div className={chat.loadingMessage}>
                 {isDefaultAgent && <div className={chat.assistantAvatar} />}
-                <div className={chat.loadingBubble}>
-                  {/* Three states, in the order they actually happen within one turn: a drained
+                <div className={chat.loadingColumn}>
+                  <div className={chat.loadingBubble}>
+                    {/* Three states, in the order they actually happen within one turn: a drained
                       channel tops itself up first (see useX402Chat) — saying so keeps the wallet
                       signature that follows from arriving unexplained; then the model runs a
                       tool, named from the same key ToolSelector shows for it, so "running" and
                       "offered" always agree; otherwise it is just thinking. */}
-                  {chatStatus === "topping-up" ? (
-                    toppingUpLabel
-                  ) : loopPhase?.kind === "tool" ? (
-                    <LocaleText label={TOOL_LABEL_BY_NAME.get(loopPhase.name) ?? "assistent.typing"} />
-                  ) : (
-                    typingLabel
+                    {chatStatus === "topping-up" ? (
+                      toppingUpLabel
+                    ) : loopPhase?.kind === "tool" ? (
+                      <LocaleText label={TOOL_LABEL_BY_NAME.get(loopPhase.name) ?? "assistent.typing"} />
+                    ) : (
+                      typingLabel
+                    )}
+                    <span className={chat.typingDots} aria-hidden="true">
+                      <span className={`${chat.typingDot} typing-dot`} style={{ animationDelay: "0s" }} />
+                      <span className={`${chat.typingDot} typing-dot`} style={{ animationDelay: "0.2s" }} />
+                      <span className={`${chat.typingDot} typing-dot`} style={{ animationDelay: "0.4s" }} />
+                    </span>
+                  </div>
+                  {/* Only once the turn has touched the web: what it has done and really cost so
+                    far, and a way to end it. Stop does not cancel the call in flight — a paid
+                    call cannot be taken back halfway — it makes the next hop answer from the
+                    notes. */}
+                  {research && (
+                    <div className={chat.researchStatus}>
+                      <span>
+                        {researchProgressLabel
+                          .replaceAll("{searches}", String(research.searches))
+                          .replaceAll("{pages}", String(research.pages))
+                          .replaceAll("{spent}", formatSpend(research.spent, paymentCurrency))}
+                      </span>
+                      <button
+                        type="button"
+                        className={button({ visual: "ghost", size: "sm" })}
+                        disabled={stopPressed}
+                        onClick={() => {
+                          stopRequestedRef.current = true;
+                          setStopPressed(true);
+                        }}
+                      >
+                        {stopAndAnswerLabel}
+                      </button>
+                    </div>
                   )}
-                  <span className={chat.typingDots} aria-hidden="true">
-                    <span className={`${chat.typingDot} typing-dot`} style={{ animationDelay: "0s" }} />
-                    <span className={`${chat.typingDot} typing-dot`} style={{ animationDelay: "0.2s" }} />
-                    <span className={`${chat.typingDot} typing-dot`} style={{ animationDelay: "0.4s" }} />
-                  </span>
                 </div>
               </div>
             )}

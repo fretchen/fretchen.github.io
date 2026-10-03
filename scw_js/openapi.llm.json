@@ -52,7 +52,7 @@
             "mode": "dynamic",
             "currency": "USD",
             "min": "0",
-            "max": "0.009"
+            "max": "0.03"
           }
         },
         "requestBody": {
@@ -179,7 +179,7 @@
               "additionalProperties": {},
               "description": "One turn of the conversation."
             },
-            "description": "The conversation so far. At most 65536 bytes serialized — conversation turns are input tokens charged on every hop, and this endpoint meters each message against a fixed price ceiling, so an uncapped conversation would be billed far below what it costs to serve."
+            "description": "The conversation so far. At most 196608 bytes serialized — conversation turns are input tokens charged on every hop, and this endpoint meters each message against a fixed price ceiling, so an uncapped conversation would be billed far below what it costs to serve."
           },
           "stream": {
             "description": "Streaming is not supported. Each message settles on its final token usage, which requires the whole completion, so stream:true is rejected rather than silently buffered.",
@@ -196,8 +196,7 @@
             "not": {}
           },
           "tools": {
-            "description": "Tool definitions offered to the model, OpenAI shape. At most 8, and at most 8192 bytes serialized — tool definitions are input tokens charged on every hop, so an uncapped array inflates the metered cost. A tool call comes back as choices[].message.tool_calls with finish_reason: \"tool_calls\"; execute it and send the result back as a role:\"tool\" message. This endpoint never calls a tool itself.",
-            "maxItems": 8,
+            "description": "Tool definitions offered to the model, OpenAI shape. At most 8192 bytes serialized — tool definitions are input tokens charged on every hop, so an uncapped array inflates the metered cost. A tool call comes back as choices[].message.tool_calls with finish_reason: \"tool_calls\"; execute it and send the result back as a role:\"tool\" message. This endpoint never calls a tool itself.",
             "type": "array",
             "items": {
               "type": "object",

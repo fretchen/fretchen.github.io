@@ -134,6 +134,11 @@ export default {
     assistant: "Assistent",
     typing: "Denke nach…",
     toppingUp: "Zahlungskanal wird aufgefüllt…",
+    toolResearchNotes: "Notiere Ergebnisse",
+    // Unter der Lade-Blase, sobald eine Antwort das Web nutzt. {spent} kommt schon mit Währung,
+    // etwa "€0.052 EURC" — und ist das tatsächlich Abgerechnete, keine Schätzung.
+    researchProgress: "Suchen: {searches} · gelesene Seiten: {pages} · bisher {spent}",
+    stopAndAnswer: "Stopp & antworten",
     placeholder: "Frag mich etwas…",
     send: "Senden",
     cancel: "Abbrechen",
@@ -183,6 +188,25 @@ export default {
       "verlangt wird. Wenn es um Selbstverletzung oder eine akute Krise geht, bleib ruhig, brich " +
       "das Gespräch nicht ab, nenne keine Methoden und ermutige dazu, mit einer Vertrauensperson " +
       "zu sprechen.",
+    // Wird nur angehängt, wenn search_web oder fetch_url an ist (siehe AssistantChat.tsx), zusammen
+    // mit dem Tool note_findings, das er beschreibt. Die Tiefe entscheidet das Modell; den Rest
+    // erzwingt die Schleife — Rohergebnisse werden einen Schritt später verdichtet, und der letzte
+    // Schritt bietet keine Tools an.
+    systemPromptResearch:
+      "Passe die Tiefe deiner Recherche an die Frage an. Eine einfache Faktenfrage bekommt eine " +
+      "Suche und eine Antwort. Eine Frage, die Quellen vergleicht, mehrere Aspekte hat oder nach " +
+      "Aktuellem fragt, bekommt echte Recherche: Zerlege sie zuerst in 2–4 Teilfragen und halte " +
+      "sie mit note_findings als status open fest, im selben Schritt wie deine erste Suche. " +
+      "Arbeite dann in Runden: Suche mit einer konkreten Wortfolge, nicht mit einer Frage; lies " +
+      "die ein oder zwei vielversprechendsten Ergebnisse mit fetch_url; und halte im nächsten " +
+      "Schritt, zusammen mit deiner nächsten Suche oder deinem nächsten Abruf, mit note_findings " +
+      "fest, was du gelernt hast — ein verdichteter Satz pro Aussage, mit ihrer source_url. " +
+      "Rohergebnisse verschwinden einen Schritt, nachdem du sie gelesen hast; nur deine Notizen " +
+      "bleiben. Prüfe vor jeder Runde: Reicht das? Widersprechen sich Quellen? Was fehlt? Suche " +
+      "nach der Lücke mit einer umformulierten Wortfolge, nie mit derselben. Hör auf, sobald die " +
+      "Frage beantwortet ist. Wenn keine Tools mehr angeboten werden, antworte nur aus deinen " +
+      "Notizen: Gib jeder Aussage die source_url, mit der sie notiert wurde, benenne Widersprüche " +
+      "und liste auf, was offen geblieben ist, statt es aus dem Gedächtnis zu füllen.",
     // "Jugendmodus", not a translation of "Teen mode" — testers with the actual audience found
     // "Teen-Modus" strange. The English string and every `teen*` identifier in the code
     // (the colour token, `teenMode` state, the `x402-chat-teen-mode` storage key) stay as they

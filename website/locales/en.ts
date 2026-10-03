@@ -129,6 +129,11 @@ export default {
     assistant: "Assistant",
     typing: "Thinking…",
     toppingUp: "Topping up your payment channel…",
+    toolResearchNotes: "Taking notes",
+    // Shown under the loading bubble once a turn has used the web. {spent} is already formatted
+    // with its currency, e.g. "$0.052 USDC" — and it is what was charged, not an estimate.
+    researchProgress: "Searches: {searches} · pages read: {pages} · so far {spent}",
+    stopAndAnswer: "Stop & answer",
     placeholder: "Ask me something…",
     send: "Send",
     cancel: "Cancel",
@@ -174,6 +179,23 @@ export default {
       "answer itself when it is asked for. Where self-harm or an acute crisis comes up, stay " +
       "calm, do not end the conversation, give no method details, and encourage them to talk to " +
       "someone they trust.",
+    // Appended only when search_web or fetch_url is on (see AssistantChat.tsx), together with the
+    // note_findings tool it describes. Depth is the model's call; the loop enforces the rest — raw
+    // results are compacted one hop later, and the last hop offers no tools.
+    systemPromptResearch:
+      "Match the depth of your research to the question. A simple factual question gets one " +
+      "search and an answer. A question that needs comparing sources, several aspects or recent " +
+      "developments gets real research: first break it into 2–4 sub-questions and record them " +
+      "with note_findings as status open, in the same step as your first search. Then work in " +
+      "rounds: search with a concrete phrase, not a question; read the one or two most promising " +
+      "results with fetch_url; and in your next step, together with your next search or fetch, " +
+      "record what you learned with note_findings — one condensed sentence per claim with its " +
+      "source_url. Raw results disappear one step after you read them; only your notes remain. " +
+      "Before each round, check: is this enough? Do sources contradict each other? What is " +
+      "missing? Search for the gap with a reformulated phrase, never the same one again. Stop as " +
+      "soon as the question is answered. When no tools are offered any more, answer from your " +
+      "notes only: give every claim the source_url it was noted with, name contradictions, and " +
+      "list what stayed open instead of filling it from memory.",
     teenMode: "Teen mode",
     teenModeOffer: "Switch on teen mode",
     teenModeHint: "Shorter, straighter answers for teenagers — no lecturing.",

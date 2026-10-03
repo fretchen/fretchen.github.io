@@ -2,8 +2,8 @@
  * ToolSelector — lets the user switch individual chat tools off.
  *
  * Transparency is only half the point. Tool definitions are input tokens charged on *every* hop
- * of a turn, and the paid endpoint caps both the count and the serialized size
- * (`MAX_TOOLS`/`MAX_TOOLS_BYTES` in `scw_js/llm_schemas.ts`), so switching a tool off makes the
+ * of a turn, and the paid endpoint caps their serialized size (`MAX_TOOLS_BYTES` in
+ * `scw_js/llm_schemas.ts`), so switching a tool off makes the
  * conversation measurably cheaper as well as more legible.
  *
  * Selection state lives in the parent (AssistantChat), which persists it — the same split

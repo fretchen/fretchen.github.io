@@ -1,5 +1,5 @@
 ---
-description: "Use when: adding, changing or reviewing a tool for the /assistent chat — anything touching website/tools/*.ts, TOOL_REGISTRY or toolRunners in AssistantChat.tsx, the tool loop and its hops, or the MAX_TOOLS / MAX_TOOLS_BYTES caps in scw_js/llm_schemas.ts. Carries the two-part tool contract, why tool modules stay React-free, and the three constraints that bite silently."
+description: "Use when: adding, changing or reviewing a tool for the /assistent chat — anything touching website/tools/*.ts, TOOL_REGISTRY or toolRunners in AssistantChat.tsx, the tool loop and its hops, web research (note_findings, compaction, Stop & answer), or the MAX_TOOLS_BYTES / MAX_MESSAGES_BYTES caps in scw_js/llm_schemas.ts. Carries the two-part tool contract, why tool modules stay React-free, and the three constraints that bite silently."
 ---
 
 # Chat tools in this repo
@@ -86,10 +86,13 @@ if you don't set it, any non-`ok` status withdraws the tool.
 
 ## Three constraints that bite silently
 
-**Two backend caps**, both in `scw_js/llm_schemas.ts`: `MAX_TOOLS` (8) and `MAX_TOOLS_BYTES` (8192).
-They are **ours**, not the model's — cost guards, because tool definitions are input tokens charged
-on _every hop_ of a turn. Exceeding either is a clean 400 from `sc_llm_x402.ts`, but the user just
-sees a failed message. Measure before adding: at ~730 bytes per tool, eight tools is ~5.8 KB.
+**Two backend caps**, both in `scw_js/llm_schemas.ts`: `MAX_TOOLS_BYTES` (8192) on the serialized
+tool definitions and `MAX_MESSAGES_BYTES` (192 KB) on the conversation. They are **ours**, not the
+model's — cost guards, because both are input tokens charged on _every hop_ of a turn. There is no
+tool-count cap; what is billed is bytes. Exceeding either is a clean 400 from `sc_llm_x402.ts`, but
+the user just sees a failed message. Measure before adding: at ~730 bytes per tool, the registry
+plus `note_findings` is measured in `test/page-tool.test.ts`. `MAX_MESSAGES_BYTES` is sized from
+the per-message price ceiling (`LLM_ESTIMATED_TOKENS_PER_MESSAGE`); raise the two together.
 
 **Project tool results hard.** They are input tokens on every later hop too, and the per-message
 charge is capped at `USDC_MAX_PRICE_PER_MESSAGE` (~$0.009) with the **operator** absorbing anything
@@ -111,6 +114,29 @@ entirely. This has been got wrong once and is covered by a test.
 - **The ToolSelector** lets the user switch tools off; the stored value is the set of _disabled_
   names, so a tool added later is on by default.
 
+## Web research
+
+Built in, not a mode: whenever `search_web` or `fetch_url` is offered, the turn can research and
+the model decides how deep to go (`assistent.systemPromptResearch`, appended only then). Four
+pieces, each where it belongs:
+
+- **`note_findings`** (`tools/notes.ts`) — a free, local notepad. Not in `TOOL_REGISTRY` and not in
+  the ToolSelector: it rides along with the web tools in `sendMessage`. It stores nothing; the
+  findings live in the conversation as the call's own arguments. The prompt asks for it in the
+  same hop as the next search, so notes cost no extra paid completion.
+- **Compaction** (`utils/toolLoop.ts`) — results of `ephemeral` tools (the paid web tools) are
+  replaced by a stub two hops after they arrive. The model sees the raw text for one hop, notes
+  it, and only the notes are re-billed afterwards. This is what keeps a research run under
+  `MAX_MESSAGES_BYTES`.
+- **The last hop offers no tools**, and neither does the hop after `shouldStop()` turns true (the
+  "Stop & answer" button). A tool call the model makes on such a hop anyway is not run. Running out
+  of hops therefore ends in an answer, not in `noResponse`.
+- **Visible cost** — the loading bubble shows searches, pages and the turn's real spend once a web
+  tool has run. The spend is the difference in `chargedCumulativeAmount` across the channel records
+  (`readChargedTotal` in `utils/x402PaidFetch.ts`), so no rate card is mirrored client-side.
+
+Limits: `MAX_HOPS` 10 and `MAX_PAID_CALLS` 15. A plain question still ends after one or two hops.
+
 ## When a tool is the wrong shape
 
 **What the client already knows belongs in the system prompt, not in a tool.** The current date is
@@ -120,6 +146,6 @@ is the whole failure. The date is also needed _before_ the first tool call, sinc
 tool arguments (`get_sitzungen` filters on ISO `von`/`bis`, and a guessed year returns an empty list
 rather than an error). In the prompt it costs no hop and no tool budget.
 
-The loop is reactive and bounded by `MAX_HOPS` (4), and every hop is a separately paid completion.
+The loop is reactive and bounded by `MAX_HOPS` (10), and every hop is a separately paid completion.
 Work that needs durable state across runs, minutes of runtime, or a plan the code controls rather
 than the model belongs in `growth-agent/` (LangGraph, cron, S3 state) — not in a chat tool.

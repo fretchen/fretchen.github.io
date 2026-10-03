@@ -353,8 +353,28 @@ export const loadingMessage = css({
   gap: "sm",
 });
 
-export const loadingBubble = css({
+/** Stacks the loading bubble over the research status row, both left-aligned beside the avatar. */
+export const loadingColumn = css({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  gap: "xs",
   maxWidth: "80%",
+});
+
+/** What a research run has done and cost so far, with the button that ends it. */
+export const researchStatus = css({
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "center",
+  gap: "sm",
+  fontSize: "xs",
+  color: "textMuted",
+});
+
+export const loadingBubble = css({
+  // The 80% cap sits on `loadingColumn`, which holds this bubble and the research status row.
+  maxWidth: "100%",
   paddingY: "sm",
   paddingX: "md",
   borderRadius: "sm",

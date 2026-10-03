@@ -116,8 +116,8 @@ export function generateOpenApiSpec(): LlmSpec {
           "x-payment-info": {
             protocols: ["x402"],
             // price.max is overwritten at serve time from the live ceiling — see header note 1.
-            // The baseline tracks LLM_ESTIMATED_TOKENS_PER_MESSAGE's default: 6000 × $1.50/M.
-            price: { mode: "dynamic", currency: "USD", min: "0", max: "0.009" },
+            // The baseline tracks LLM_ESTIMATED_TOKENS_PER_MESSAGE's default: 20000 × $1.50/M.
+            price: { mode: "dynamic", currency: "USD", min: "0", max: "0.03" },
           },
           requestBody: {
             required: true,

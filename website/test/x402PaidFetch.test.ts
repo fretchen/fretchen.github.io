@@ -39,7 +39,13 @@ vi.mock("@x402/evm/batch-settlement/client", () => ({
   readChannelBalanceAndTotalClaimed: () => mockReadChannelBalanceAndTotalClaimed(),
 }));
 
-import { createPaidFetch, PaymentError, WebStorageClientChannelStorage } from "../utils/x402PaidFetch";
+import {
+  createPaidFetch,
+  PaymentError,
+  WebStorageClientChannelStorage,
+  readChargedTotal,
+} from "../utils/x402PaidFetch";
+import { formatSpend } from "../utils/x402Prices";
 
 const NETWORK = "eip155:10";
 const CHANNEL_ID = "0xdd9e576d5d30096bce8ed29916ee2d3faaf3a34269011b881eccfb0e082719d7";
@@ -307,5 +313,29 @@ describe("WebStorageClientChannelStorage.resyncFromChain", () => {
 
     const stored = JSON.parse(window.localStorage.getItem(`x402-channel:${CHANNEL_ID}`)!) as Record<string, string>;
     expect(stored.balance).toBe("42");
+  });
+});
+
+describe("readChargedTotal", () => {
+  beforeEach(() => window.localStorage.clear());
+
+  it("sums every channel record's cumulative charge, ignoring other keys and broken records", () => {
+    window.localStorage.setItem("x402-channel:0xa", JSON.stringify({ chargedCumulativeAmount: "1200" }));
+    window.localStorage.setItem("x402-channel:0xb", JSON.stringify({ chargedCumulativeAmount: "300", network: "x" }));
+    window.localStorage.setItem("x402-channel:0xc", "{not json");
+    window.localStorage.setItem("x402-voucher-signer:0xd", "0xkey");
+
+    expect(readChargedTotal(window.localStorage)).toBe(1500n);
+  });
+
+  it("is zero with no channel yet", () => {
+    expect(readChargedTotal(window.localStorage)).toBe(0n);
+  });
+});
+
+describe("formatSpend", () => {
+  it("shows atomic units in the IMAGE_PRICE shape, to a tenth of a cent", () => {
+    expect(formatSpend(52_340n, "USDC")).toBe("$0.052 USDC");
+    expect(formatSpend(1_000n, "EURC")).toBe("€0.001 EURC");
   });
 });

@@ -13,19 +13,34 @@ import type { X402ChatMessage, X402ChatResponse, X402Tool, X402ToolCall } from "
 /** Hops in one turn before giving up. Each hop is a separately metered chat message, so this
  *  bounds worst-case cost per user turn as well as stopping a model that never answers.
  *
- *  4 rather than 3: the Bundestakt flow is list -> detail -> answer, which already fills three, so
- *  a combined question (find the session, read it, then check a claim) needs one more. */
-export const MAX_HOPS = 4;
+ *  10, sized for web research: plan, then a few rounds of search → read → note, then answer. A
+ *  plain question still ends after one or two hops — the cap only binds a run that is really
+ *  researching, and the user can cut that short (`shouldStop`). The last hop is always offered no
+ *  tools, so running out of hops ends in an answer rather than in silence. */
+export const MAX_HOPS = 10;
 
 /**
  * Paid tool calls allowed in one turn.
  *
  * `MAX_HOPS` bounds hops, not calls — a single hop may ask for as many tools as it likes, so one
  * question could fan out into a dozen searches before anyone noticed. At $0.01 a search this caps
- * a turn's tool spend at about six cents, and it behaves like a failed tool rather than an error:
- * the paid tools come off the menu and the model answers with what it already has.
+ * a turn's tool spend at about fifteen cents, and it behaves like a failed tool rather than an
+ * error: the paid tools come off the menu and the model answers with what it already has.
  */
-export const MAX_PAID_CALLS = 6;
+export const MAX_PAID_CALLS = 15;
+
+/**
+ * What an ephemeral tool result is replaced with once the model has had a hop to take notes on it.
+ *
+ * Every hop re-sends the whole conversation, so a 10 000-character page read on hop 2 would
+ * otherwise be paid for again on hops 3 through 10 — and fill the endpoint's message cap after a
+ * handful of pages. The model's `note_findings` calls carry what was worth keeping.
+ */
+const COMPACTED_RESULT = JSON.stringify({
+  status: "ok",
+  compacted: true,
+  hint: "Raw text dropped to save space; rely on your notes, or fetch again if you need it.",
+});
 
 /** What running one tool produces: the compact `{status}` object the model gets back, plus two
  *  fields the loop reads and the model never sees — the image URL the chat renders locally, and
@@ -47,6 +62,9 @@ export interface OfferedTool<S extends string> {
   source: S | null;
   /** Costs the user a stablecoin per call, so it counts against `MAX_PAID_CALLS`. */
   paid?: boolean;
+  /** Its result is raw material (a page, a list of search hits): kept for one hop so the model can
+   *  note what matters, then replaced by `COMPACTED_RESULT`. */
+  ephemeral?: boolean;
 }
 
 export interface ToolTurnResult<S extends string> {
@@ -75,6 +93,10 @@ export interface ToolLoopDeps {
   payAndSend: (convo: X402ChatMessage[], options: { tools?: X402Tool[] }) => Promise<X402ChatResponse>;
   runToolCall: (call: X402ToolCall) => Promise<ToolRunResult>;
   maxHops?: number;
+  /** Read before each hop. True makes that hop offer no tools, so the model answers from what it
+   *  already has — the "Stop & answer" button. A tool call already running finishes first: a paid
+   *  call cannot be taken back halfway. */
+  shouldStop?: () => boolean;
   /** Fired before each wait-on-the-model span and before each individual tool call. Optional and
    *  side-effect only — the loop's own control flow never reads it back. */
   onPhase?: (phase: LoopPhase) => void;
@@ -93,7 +115,7 @@ export async function runToolLoop<S extends string>(
   offeredTools: readonly OfferedTool<S>[],
   deps: ToolLoopDeps,
 ): Promise<ToolTurnResult<S>> {
-  const { ensureReady, payAndSend, runToolCall, maxHops = MAX_HOPS, onPhase } = deps;
+  const { ensureReady, payAndSend, runToolCall, maxHops = MAX_HOPS, shouldStop, onPhase } = deps;
 
   let finalContent: string | null = null;
   let finalImageUrl: string | undefined;
@@ -103,12 +125,24 @@ export async function runToolLoop<S extends string>(
   const failedTools = new Set<string>();
   const sourceOf = new Map(offeredTools.map((entry) => [entry.tool.function.name, entry.source]));
   const isPaid = new Set(offeredTools.filter((entry) => entry.paid).map((entry) => entry.tool.function.name));
+  const isEphemeral = new Set(offeredTools.filter((entry) => entry.ephemeral).map((entry) => entry.tool.function.name));
+  const ephemeralResults: { message: X402ChatMessage; hop: number }[] = [];
   let paidCalls = 0;
 
   for (let hop = 0; hop < maxHops; hop++) {
     // Re-checked every hop, not just the first: a mid-loop deposit or top-up could in principle
     // need the wallet on a particular chain.
     await ensureReady();
+
+    // A result from hop h was seen raw on hop h+1, which is the model's chance to note it; from
+    // h+2 on only the stub is re-sent. The message itself stays, so every tool_call keeps its
+    // matching `role: "tool"` turn.
+    for (const entry of ephemeralResults) {
+      if (hop - entry.hop >= 2) entry.message.content = COMPACTED_RESULT;
+    }
+
+    // The last hop, or the user pressed stop: nothing on offer, so the model has to answer.
+    const answerNow = hop === maxHops - 1 || shouldStop?.() === true;
 
     // After a failed tool call the model is told what went wrong and given one turn to say so —
     // but NOT another chance to call the same failing tool. Left on offer it just retries: a real
@@ -127,13 +161,15 @@ export async function runToolLoop<S extends string>(
       // `[]` is truthy, and useX402Chat spreads `tools` in on truthiness — an empty array would be
       // sent as `tools: []`. `undefined` drops the key (and tool_choice with it), which is what
       // "nothing left to offer" means on the wire.
-      tools: offered.length > 0 ? offered : undefined,
+      tools: offered.length > 0 && !answerNow ? offered : undefined,
     });
 
     const choice = data.choices?.[0];
     const toolCalls = choice?.message.tool_calls;
 
-    if (choice?.finish_reason !== "tool_calls" || !toolCalls?.length) {
+    // A tool call on a hop that offered none is not run: it was not on offer, and running it
+    // would pay for a result nobody gets to read.
+    if (answerNow || choice?.finish_reason !== "tool_calls" || !toolCalls?.length) {
       // Mistral can return content: "" (or whitespace) with finish_reason: "stop" — a real,
       // empty-but-not-nullish completion, which `??` alone would let through as a blank bubble.
       const content = choice?.message.content;
@@ -178,7 +214,9 @@ export async function runToolLoop<S extends string>(
       } else if (result.status === "ok" && source) {
         usedSources.add(source);
       }
-      convo.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
+      const message: X402ChatMessage = { role: "tool", tool_call_id: call.id, content: JSON.stringify(result) };
+      convo.push(message);
+      if (isEphemeral.has(call.function.name)) ephemeralResults.push({ message, hop });
     }
   }
 

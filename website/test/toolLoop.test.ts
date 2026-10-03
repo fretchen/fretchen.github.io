@@ -86,6 +86,73 @@ describe("runToolLoop", () => {
     expect(result.finalContent).toBeNull();
   });
 
+  // Running out of hops used to end in the generic "no response" — every hop had tools on offer,
+  // so a model that kept researching never wrote anything.
+  it("offers no tools on the last hop, so the model has to answer", async () => {
+    const payAndSend = vi.fn().mockResolvedValue(toolCallTurn("plain_tool"));
+    const runToolCall = vi.fn().mockResolvedValue({ result: { status: "ok" } });
+
+    await runToolLoop<Source>(convo(), OFFERED, deps(payAndSend, runToolCall));
+
+    expect(offeredOn(payAndSend, MAX_HOPS - 2)).toContain("plain_tool");
+    expect(offeredOn(payAndSend, MAX_HOPS - 1)).toBeUndefined();
+    // A tool call on the tool-free hop is not run — nothing would read its result.
+    expect(runToolCall).toHaveBeenCalledTimes(MAX_HOPS - 1);
+  });
+
+  it("answers on the next hop once shouldStop turns true", async () => {
+    let stop = false;
+    const payAndSend = vi
+      .fn()
+      .mockImplementationOnce(async () => toolCallTurn("plain_tool"))
+      .mockResolvedValue(textTurn("from my notes"));
+    const runToolCall = vi.fn().mockImplementation(async () => {
+      stop = true; // pressed while the tool was running
+      return { result: { status: "ok" } };
+    });
+
+    const result = await runToolLoop<Source>(convo(), OFFERED, {
+      ...deps(payAndSend, runToolCall),
+      shouldStop: () => stop,
+    });
+
+    expect(runToolCall).toHaveBeenCalledOnce();
+    expect(offeredOn(payAndSend, 1)).toBeUndefined();
+    expect(result.finalContent).toBe("from my notes");
+  });
+
+  describe("compaction of ephemeral results", () => {
+    const ephemeralOffered: OfferedTool<Source>[] = [
+      { tool: tool("read_tool"), source: null, ephemeral: true },
+      { tool: tool("plain_tool"), source: null },
+    ];
+
+    // The loop mutates one array across hops, so each call's view is snapshotted as it is sent.
+    it("keeps a raw result for one hop, then re-sends only a stub with the same tool_call_id", async () => {
+      const snapshots: X402ChatMessage[][] = [];
+      const payAndSend = vi.fn().mockImplementation(async (sent: X402ChatMessage[]) => {
+        snapshots.push(structuredClone(sent));
+        return snapshots.length === 1
+          ? toolCallTurn("read_tool")
+          : snapshots.length === 2
+            ? toolCallTurn("plain_tool")
+            : textTurn("done");
+      });
+      const runToolCall = vi.fn().mockResolvedValue({ result: { status: "ok", content: "RAW PAGE TEXT" } });
+
+      await runToolLoop<Source>(convo(), ephemeralOffered, deps(payAndSend, runToolCall));
+
+      const readResult = (snapshot: X402ChatMessage[]) =>
+        snapshot.find((m) => m.role === "tool" && m.tool_call_id === "call_read_tool");
+      expect(readResult(snapshots[1])?.content).toContain("RAW PAGE TEXT");
+      expect(readResult(snapshots[2])?.content).not.toContain("RAW PAGE TEXT");
+      expect(JSON.parse(readResult(snapshots[2])!.content as string)).toMatchObject({ compacted: true });
+      // The non-ephemeral result is left alone.
+      const plain = snapshots[2].find((m) => m.role === "tool" && m.tool_call_id === "call_plain_tool");
+      expect(plain?.content).toContain("RAW PAGE TEXT");
+    });
+  });
+
   it("feeds each tool result back as a role:'tool' turn", async () => {
     const payAndSend = vi.fn().mockResolvedValueOnce(toolCallTurn("alpha_tool")).mockResolvedValueOnce(textTurn("ok"));
     const runToolCall = vi.fn().mockResolvedValue({ result: { status: "ok", value: 42 } });

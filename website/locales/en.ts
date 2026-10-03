@@ -134,6 +134,7 @@ export default {
     // with its currency, e.g. "$0.052 USDC" — and it is what was charged, not an estimate.
     researchProgress: "Searches: {searches} · pages read: {pages} · so far {spent}",
     stopAndAnswer: "Stop & answer",
+    researchNotes: "Notes ({n})",
     placeholder: "Ask me something…",
     send: "Send",
     cancel: "Cancel",
@@ -193,7 +194,8 @@ export default {
       "source_url. Raw results disappear one step after you read them; only your notes remain. " +
       "Before each round, check: is this enough? Do sources contradict each other? What is " +
       "missing? Search for the gap with a reformulated phrase, never the same one again. Stop as " +
-      "soon as the question is answered. When no tools are offered any more, answer from your " +
+      "soon as the question is answered. When you write your final answer, do not call any tool " +
+      "in the same step. When no tools are offered any more, answer from your " +
       "notes only: give every claim the source_url it was noted with, name contradictions, and " +
       "list what stayed open instead of filling it from memory.",
     teenMode: "Teen mode",

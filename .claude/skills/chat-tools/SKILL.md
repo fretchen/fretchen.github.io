@@ -128,12 +128,18 @@ pieces, each where it belongs:
   replaced by a stub two hops after they arrive. The model sees the raw text for one hop, notes
   it, and only the notes are re-billed afterwards. This is what keeps a research run under
   `MAX_MESSAGES_BYTES`.
+- **`bookkeeping` tools** (the notepad) — a response with text and _only_ such calls is the final
+  answer: the loop runs the calls and ends the turn with that text. Without this, Mistral's habit
+  of answering and filing notes in one response hid the answer behind a "see above" reply.
 - **The last hop offers no tools**, and neither does the hop after `shouldStop()` turns true (the
   "Stop & answer" button). A tool call the model makes on such a hop anyway is not run. Running out
   of hops therefore ends in an answer, not in `noResponse`.
 - **Visible cost** — the loading bubble shows searches, pages and the turn's real spend once a web
   tool has run. The spend is the difference in `chargedCumulativeAmount` across the channel records
-  (`readChargedTotal` in `utils/x402PaidFetch.ts`), so no rate card is mirrored client-side.
+  (`readChargedTotal` in `utils/x402PaidFetch.ts`), so no rate card is mirrored client-side. The
+  notes so far are listed in a collapsed `<details>` under it, parsed from the tool phase's `args`.
+- **Debugging** — in dev, every hop logs one `[assistant] hop n` line to the console: request
+  bytes, tools offered, finish reason, the start of the content and the tool calls.
 
 Limits: `MAX_HOPS` 10 and `MAX_PAID_CALLS` 15. A plain question still ends after one or two hops.
 

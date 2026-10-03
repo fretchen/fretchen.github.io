@@ -65,6 +65,9 @@ export interface OfferedTool<S extends string> {
   /** Its result is raw material (a page, a list of search hits): kept for one hop so the model can
    *  note what matters, then replaced by `COMPACTED_RESULT`. */
   ephemeral?: boolean;
+  /** The model does not need this tool's result back (the notepad). A response holding text and
+   *  only such calls ends the turn with that text instead of asking the model again. */
+  bookkeeping?: boolean;
 }
 
 export interface ToolTurnResult<S extends string> {
@@ -84,7 +87,11 @@ export interface ToolTurnResult<S extends string> {
  * tool's wire name, e.g. `search_web`, and turning that into a sentence a person reads is the
  * caller's job, same as every other piece of text in this loop.
  */
-export type LoopPhase = { kind: "waiting" } | { kind: "tool"; name: string };
+export type LoopPhase =
+  | { kind: "waiting" }
+  /** `args` is the call's raw JSON argument string, as the model sent it — for a caller that wants
+   *  to show what is being looked up or noted. Parsing and wording it is the caller's job. */
+  | { kind: "tool"; name: string; args: string };
 
 export interface ToolLoopDeps {
   /** Called once per hop before paying. Throws if the wallet cannot proceed — the message is the
@@ -126,6 +133,9 @@ export async function runToolLoop<S extends string>(
   const sourceOf = new Map(offeredTools.map((entry) => [entry.tool.function.name, entry.source]));
   const isPaid = new Set(offeredTools.filter((entry) => entry.paid).map((entry) => entry.tool.function.name));
   const isEphemeral = new Set(offeredTools.filter((entry) => entry.ephemeral).map((entry) => entry.tool.function.name));
+  const isBookkeeping = new Set(
+    offeredTools.filter((entry) => entry.bookkeeping).map((entry) => entry.tool.function.name),
+  );
   const ephemeralResults: { message: X402ChatMessage; hop: number }[] = [];
   let paidCalls = 0;
 
@@ -203,7 +213,7 @@ export async function runToolLoop<S extends string>(
         }
         paidCalls++;
       }
-      onPhase?.({ kind: "tool", name: call.function.name });
+      onPhase?.({ kind: "tool", name: call.function.name, args: call.function.arguments });
       const { result, imageUrl, recoverable } = await runToolCall(call);
       if (imageUrl) finalImageUrl = imageUrl;
       // Only a real failure withdraws the tool for the rest of the turn. Which non-`ok` statuses
@@ -217,6 +227,15 @@ export async function runToolLoop<S extends string>(
       const message: X402ChatMessage = { role: "tool", tool_call_id: call.id, content: JSON.stringify(result) };
       convo.push(message);
       if (isEphemeral.has(call.function.name)) ephemeralResults.push({ message, hop });
+    }
+
+    // Text alongside nothing but bookkeeping calls is the answer: the model wrote it and filed its
+    // last notes in the same breath. Asking again would only get "see the answer above" — about
+    // text the chat never showed, which really happened — and cost a paid hop for it.
+    const text = choice.message.content;
+    if (text && text.trim().length > 0 && toolCalls.every((call) => isBookkeeping.has(call.function.name))) {
+      finalContent = text;
+      break;
     }
   }
 

@@ -1057,6 +1057,30 @@ describe("AssistantChat", () => {
         expect(systemPrompt(0)).not.toContain("assistent.systemPromptResearch");
       });
 
+      it("lists the model's notes under the bubble while it researches", async () => {
+        let releaseSecondHop: (value: unknown) => void = () => {};
+        mockSendMessage
+          .mockResolvedValueOnce(
+            toolCallResponse("note_findings", {
+              findings: [
+                { claim: "Cod recovered after 2010.", source_url: "https://ices.example/cod", status: "answered" },
+              ],
+            }),
+          )
+          .mockImplementationOnce(() => new Promise((resolve) => (releaseSecondHop = resolve)));
+
+        renderWithQuery(<AssistantChat />);
+        sendUserMessage("Research cod stocks");
+
+        await waitFor(() => expect(screen.getByText(/Cod recovered after 2010\./)).toBeInTheDocument());
+        expect(screen.getByText(/ices\.example/)).toBeInTheDocument();
+        expect(screen.getByText("assistent.researchNotes")).toBeInTheDocument();
+
+        releaseSecondHop(textResponse("Done."));
+        await waitFor(() => expect(screen.getByText("Done.")).toBeInTheDocument());
+        expect(screen.queryByText(/Cod recovered after 2010\./)).not.toBeInTheDocument();
+      });
+
       it("shows what a web turn has cost, and Stop makes the next hop answer without tools", async () => {
         mockPaidFetch.mockImplementation(async () => {
           // What the SDK does on settle: the channel record's cumulative charge goes up.

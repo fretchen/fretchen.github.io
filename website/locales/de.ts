@@ -139,6 +139,7 @@ export default {
     // etwa "€0.052 EURC" — und ist das tatsächlich Abgerechnete, keine Schätzung.
     researchProgress: "Suchen: {searches} · gelesene Seiten: {pages} · bisher {spent}",
     stopAndAnswer: "Stopp & antworten",
+    researchNotes: "Notizen ({n})",
     placeholder: "Frag mich etwas…",
     send: "Senden",
     cancel: "Abbrechen",
@@ -204,7 +205,8 @@ export default {
       "Rohergebnisse verschwinden einen Schritt, nachdem du sie gelesen hast; nur deine Notizen " +
       "bleiben. Prüfe vor jeder Runde: Reicht das? Widersprechen sich Quellen? Was fehlt? Suche " +
       "nach der Lücke mit einer umformulierten Wortfolge, nie mit derselben. Hör auf, sobald die " +
-      "Frage beantwortet ist. Wenn keine Tools mehr angeboten werden, antworte nur aus deinen " +
+      "Frage beantwortet ist. Rufe im selben Schritt wie deine abschließende Antwort kein Tool " +
+      "auf. Wenn keine Tools mehr angeboten werden, antworte nur aus deinen " +
       "Notizen: Gib jeder Aussage die source_url, mit der sie notiert wurde, benenne Widersprüche " +
       "und liste auf, was offen geblieben ist, statt es aus dem Gedächtnis zu füllen.",
     // "Jugendmodus", not a translation of "Teen mode" — testers with the actual audience found

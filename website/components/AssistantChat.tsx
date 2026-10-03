@@ -76,7 +76,7 @@ import { noteFindingsTool, validateFindings } from "../tools/notes";
 import { useWalletAuth } from "../hooks/useWalletAuth";
 import { isOwnerAddress, type OwnerScope } from "../utils/getChain";
 import type { X402ChatMessage, X402Tool, X402ToolCall } from "../types/x402";
-import { runToolLoop, type ToolRunResult, type LoopPhase } from "../utils/toolLoop";
+import { runToolLoop, type ToolRunResult, type LoopPhase, type OfferedTool } from "../utils/toolLoop";
 import { formatDateContext } from "../utils/dateContext";
 import { createLocalStorageStore } from "../utils/localStorageStore";
 import { useQueryClient } from "@tanstack/react-query";
@@ -258,6 +258,31 @@ const TOOL_LABEL_BY_NAME = new Map<string, string>([
  */
 const WEB_TOOL_NAMES = new Set([searchWebTool.function.name, fetchUrlTool.function.name]);
 
+/** One note as the loading bubble lists it: the claim, and the site it came from. */
+type ResearchNote = { claim: string; source?: string };
+
+/** The claims out of a `note_findings` call's raw arguments, for display. Lenient on purpose —
+ *  `validateFindings` is what tells the model a batch is wrong; this only shows what was there. */
+function parseNotes(args: string): ResearchNote[] {
+  try {
+    const { findings } = JSON.parse(args) as { findings?: { claim?: unknown; source_url?: unknown }[] };
+    if (!Array.isArray(findings)) return [];
+    return findings
+      .filter((finding) => typeof finding?.claim === "string")
+      .map((finding) => {
+        let source: string | undefined;
+        try {
+          source = typeof finding.source_url === "string" ? new URL(finding.source_url).hostname : undefined;
+        } catch {
+          source = undefined;
+        }
+        return { claim: finding.claim as string, source };
+      });
+  } catch {
+    return [];
+  }
+}
+
 /**
  * The execution half of the tool contract. `TOOL_REGISTRY` above says what exists and who may use
  * it; a runner says how to do it.
@@ -399,7 +424,12 @@ export function AssistantChat() {
   // A research run's visible cost, for the loading bubble: web calls so far and what the turn has
   // actually been charged (see `readChargedTotal`). Null until the first paid web call, so a plain
   // chat message looks exactly as it always did. Cleared in the same `finally` as `loopPhase`.
-  const [research, setResearch] = useState<{ searches: number; pages: number; spent: bigint } | null>(null);
+  const [research, setResearch] = useState<{
+    searches: number;
+    pages: number;
+    spent: bigint;
+    notes: ResearchNote[];
+  } | null>(null);
   // Read by the loop before each hop. A ref, not state: the loop is already running inside an
   // event handler and must see the press without waiting for a re-render. `stopPressed` is only the
   // button's own feedback.
@@ -412,6 +442,7 @@ export function AssistantChat() {
   const researchPromptMessage = useLocale({ label: "assistent.systemPromptResearch" });
   const researchProgressLabel = useLocale({ label: "assistent.researchProgress" });
   const stopAndAnswerLabel = useLocale({ label: "assistent.stopAndAnswer" });
+  const researchNotesLabel = useLocale({ label: "assistent.researchNotes" });
   const teenModeLabel = useLocale({ label: "assistent.teenMode" });
   const teenModeOfferLabel = useLocale({ label: "assistent.teenModeOffer" });
   const noResponseMessage = useLocale({ label: "assistent.noResponse" });
@@ -986,11 +1017,15 @@ export function AssistantChat() {
       //
       // The web tools are `ephemeral` because they are exactly the paid ones: raw pages and search
       // hits, kept for one hop so the model can note them and then compacted by the loop.
-      const offeredTools = availableTools
+      const offeredTools: OfferedTool<ToolSource>[] = availableTools
         .filter((entry) => !disabledTools.has(entry.tool.function.name))
         .map((entry) => ({ tool: entry.tool, source: entry.source, paid: entry.paid, ephemeral: entry.paid }));
       const canResearch = offeredTools.some((entry) => WEB_TOOL_NAMES.has(entry.tool.function.name));
-      if (canResearch) offeredTools.push({ tool: noteFindingsTool, source: null, paid: false, ephemeral: false });
+      // `bookkeeping`: the model never needs the notepad's answer, so text filed alongside notes is
+      // the final answer — see toolLoop.ts.
+      if (canResearch) {
+        offeredTools.push({ tool: noteFindingsTool, source: null, paid: false, ephemeral: false, bookkeeping: true });
+      }
 
       // Full conversation history, as the OpenAI `messages[]` array sc_llm_x402 expects. Tool
       // turns pushed inside the loop below live only in this local array — never in `messages`
@@ -1029,6 +1064,28 @@ export function AssistantChat() {
       const chargedAtStart = readChargedTotal(window.localStorage);
       let searches = 0;
       let pages = 0;
+      const notes: ResearchNote[] = [];
+
+      // Dev-only trace, one console line per hop: what was sent, what came back. The way to read a
+      // research run without digging through the Network tab — and the request size shows whether
+      // compaction is keeping the conversation flat.
+      let hop = 0;
+      const tracedPayAndSend: typeof payAndSend = async (sent, options) => {
+        const data = await payAndSend(sent, options);
+        if (import.meta.env.DEV) {
+          const choice = data.choices?.[0];
+          console.debug(`[assistant] hop ${++hop}`, {
+            requestBytes: new TextEncoder().encode(JSON.stringify(sent)).length,
+            offered: options?.tools?.map((t) => t.function.name) ?? "none",
+            finish: choice?.finish_reason,
+            content: choice?.message.content?.slice(0, 120) ?? null,
+            toolCalls: choice?.message.tool_calls?.map(
+              (call) => `${call.function.name} ${call.function.arguments.slice(0, 200)}`,
+            ),
+          });
+        }
+        return data;
+      };
 
       const { finalContent, finalImageUrl, sources } = await runToolLoop<ToolSource>(convo, offeredTools, {
         ensureReady: async () => {
@@ -1037,17 +1094,25 @@ export function AssistantChat() {
             throw new Error(getSwitchError() ?? `Please switch your wallet to ${getViemChain(network).name}`);
           }
         },
-        payAndSend,
+        payAndSend: tracedPayAndSend,
         runToolCall,
         shouldStop: () => stopRequestedRef.current,
         onPhase: (phase) => {
           setLoopPhase(phase);
           if (phase.kind === "tool" && phase.name === searchWebTool.function.name) searches++;
           if (phase.kind === "tool" && phase.name === fetchUrlTool.function.name) pages++;
+          if (phase.kind === "tool" && phase.name === noteFindingsTool.function.name) {
+            notes.push(...parseNotes(phase.args));
+          }
           // Every earlier hop and tool call has settled by the time the next phase starts, so the
           // channel record already carries their charges.
-          if (searches + pages > 0) {
-            setResearch({ searches, pages, spent: readChargedTotal(window.localStorage) - chargedAtStart });
+          if (searches + pages + notes.length > 0) {
+            setResearch({
+              searches,
+              pages,
+              spent: readChargedTotal(window.localStorage) - chargedAtStart,
+              notes: [...notes],
+            });
           }
         },
       });
@@ -1398,6 +1463,21 @@ export function AssistantChat() {
                         {stopAndAnswerLabel}
                       </button>
                     </div>
+                  )}
+                  {/* The model's notes so far, so a long run is something to watch rather than
+                      wait out. Native <details>: collapsed by default, no state of its own. */}
+                  {research && research.notes.length > 0 && (
+                    <details className={chat.researchNotes}>
+                      <summary>{researchNotesLabel.replaceAll("{n}", String(research.notes.length))}</summary>
+                      <ul>
+                        {research.notes.map((note, i) => (
+                          <li key={i}>
+                            {note.claim}
+                            {note.source && ` — ${note.source}`}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
                   )}
                 </div>
               </div>

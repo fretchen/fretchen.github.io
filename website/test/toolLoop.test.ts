@@ -121,6 +121,61 @@ describe("runToolLoop", () => {
     expect(result.finalContent).toBe("from my notes");
   });
 
+  describe("text alongside bookkeeping calls", () => {
+    const withNotepad: OfferedTool<Source>[] = [
+      { tool: tool("note_tool"), source: null, bookkeeping: true },
+      { tool: tool("plain_tool"), source: null },
+    ];
+
+    /** One response carrying both text and tool calls — what Mistral sends when it answers and
+     *  files its last notes at once. */
+    function textWithCalls(content: string, names: string[]) {
+      return {
+        choices: [
+          {
+            message: {
+              role: "assistant",
+              content,
+              tool_calls: names.map((name, i) => ({
+                id: `c${i}`,
+                type: "function",
+                function: { name, arguments: "{}" },
+              })),
+            },
+            finish_reason: "tool_calls",
+          },
+        ],
+      };
+    }
+
+    it("ends the turn with that text, after running the calls", async () => {
+      const payAndSend = vi
+        .fn()
+        .mockResolvedValueOnce(textWithCalls("The full answer.", ["note_tool"]))
+        .mockResolvedValue(textTurn("The answer above covers it."));
+      const runToolCall = vi.fn().mockResolvedValue({ result: { status: "ok" } });
+
+      const result = await runToolLoop<Source>(convo(), withNotepad, deps(payAndSend, runToolCall));
+
+      expect(result.finalContent).toBe("The full answer.");
+      expect(runToolCall).toHaveBeenCalledOnce();
+      expect(payAndSend).toHaveBeenCalledOnce();
+    });
+
+    it("keeps going when a call the model needs back is among them", async () => {
+      const payAndSend = vi
+        .fn()
+        .mockResolvedValueOnce(textWithCalls("Let me look that up.", ["note_tool", "plain_tool"]))
+        .mockResolvedValue(textTurn("done"));
+      const runToolCall = vi.fn().mockResolvedValue({ result: { status: "ok" } });
+
+      const result = await runToolLoop<Source>(convo(), withNotepad, deps(payAndSend, runToolCall));
+
+      expect(result.finalContent).toBe("done");
+      expect(payAndSend).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe("compaction of ephemeral results", () => {
     const ephemeralOffered: OfferedTool<Source>[] = [
       { tool: tool("read_tool"), source: null, ephemeral: true },
@@ -279,7 +334,11 @@ describe("runToolLoop", () => {
 
     await runToolLoop<Source>(convo(), OFFERED, { ...deps(payAndSend, runToolCall), onPhase: (p) => phases.push(p) });
 
-    expect(phases).toEqual([{ kind: "waiting" }, { kind: "tool", name: "alpha_tool" }, { kind: "waiting" }]);
+    expect(phases).toEqual([
+      { kind: "waiting" },
+      { kind: "tool", name: "alpha_tool", args: "{}" },
+      { kind: "waiting" },
+    ]);
   });
 
   it("checks readiness before every hop, and lets a refusal abort the turn", async () => {

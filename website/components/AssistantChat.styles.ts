@@ -372,6 +372,15 @@ export const researchStatus = css({
   color: "textMuted",
 });
 
+/** The research notes so far, collapsed under the status row. */
+export const researchNotes = css({
+  fontSize: "xs",
+  color: "textMuted",
+  "& summary": { cursor: "pointer" },
+  "& ul": { marginTop: "xs", paddingLeft: "md", listStyleType: "disc" },
+  "& li": { marginBottom: "xs" },
+});
+
 export const loadingBubble = css({
   // The 80% cap sits on `loadingColumn`, which holds this bubble and the research status row.
   maxWidth: "100%",

@@ -6,11 +6,11 @@ Implementation guide for turning the existing tool set (`search_web`, `fetch_url
 
 Do **not** build a monolithic `deep_research(query)` tool that internally searches, reads, and reflects. Keep the loop in the conversation.
 
-| Aspect | Tool | Skill (prompt module) |
-|---|---|
-| Responsibility | Stateless capability, one action per call | Behavior across many tool calls |
-| Examples | `search_web`, `fetch_url`, `get_page`, `add_note` | The research loop discipline |
-| Changes by | Writing code | Editing text |
+| Aspect         | Tool                                              | Skill (prompt module)           |
+| -------------- | ------------------------------------------------- | ------------------------------- |
+| Responsibility | Stateless capability, one action per call         | Behavior across many tool calls |
+| Examples       | `search_web`, `fetch_url`, `get_page`, `add_note` | The research loop discipline    |
+| Changes by     | Writing code                                      | Editing text                    |
 
 Reasons against a monolithic meta-tool:
 
@@ -27,7 +27,7 @@ Mature deep research systems (Open Deep Research, Tongyi, Skywork, Kimi-Research
 Two refinements matter, one of which is deferred here:
 
 - **Explicit reflection as its own step.** After each search/read round, evaluate: is this sufficient? Do sources conflict? What is missing? Next queries are derived from that reflection — not from "search again".
-- **Context isolation via sub-agents.** A supervisor spawns sub-agents with their own threads so tool results don't re-bill as input tokens on every hop. *Deferred:* only needed when a research run regularly exceeds the context window. The existing result caps (10 000 chars, 5 results, 900 chars/result) plus condensed notes keep 10–15 hops comfortably in a large context window.
+- **Context isolation via sub-agents.** A supervisor spawns sub-agents with their own threads so tool results don't re-bill as input tokens on every hop. _Deferred:_ only needed when a research run regularly exceeds the context window. The existing result caps (10 000 chars, 5 results, 900 chars/result) plus condensed notes keep 10–15 hops comfortably in a large context window.
 
 RL-trained agents (Search-o1, Kimi-Researcher, etc.) are irrelevant here — this build is prompt-orchestrated.
 
@@ -61,7 +61,7 @@ Trigger this when a question needs more than one search (research-shaped).
    b. fetch_url on the 1–2 most promising results.
    c. add_note: { claim, source_url, confidence, status: answered | blocked }
    d. REFLECT: Is this sufficient? Do sources contradict each other?
-      If not sufficient → a reformulated query, not the same one again.
+   If not sufficient → a reformulated query, not the same one again.
 3. BUDGET: Max N tool calls per run. At N−2, open no new sub-questions;
    fill gaps only.
 4. SYNTHESIZE: Answer only from notes. Every claim carries its source_url.
@@ -74,8 +74,8 @@ A plain JS object with a `notes[]` array and three handlers, following the exist
 
 ```typescript
 interface Note {
-  claim: string;        // one sentence, condensed
-  source_url: string;  // required for citation discipline
+  claim: string; // one sentence, condensed
+  source_url: string; // required for citation discipline
   confidence?: string; // high | medium | low
   status: "open" | "answered" | "blocked";
   sub_question?: string;

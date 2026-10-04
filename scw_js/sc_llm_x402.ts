@@ -35,6 +35,7 @@ import type { ScwEvent } from "./types.js";
 import openapiSpec from "./openapi.llm.json" with { type: "json" };
 import { faviconBase64, faviconContentType } from "./favicon.js";
 import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
+import { AGENT_REGISTRATION_PATH, buildAgentRegistration } from "./agent_registration.js";
 
 export type { ScwEvent };
 
@@ -124,6 +125,20 @@ function isHexAddress(addr: unknown): addr is `0x${string}` {
 export async function handle(event: ScwEvent, _context: unknown): Promise<ScwResponse> {
   if (event.httpMethod === "OPTIONS") {
     return { statusCode: 200, headers: CORS_HEADERS, body: "" };
+  }
+
+  if (
+    (event.httpMethod === "GET" || event.httpMethod === "HEAD") &&
+    (event.path ?? "").replace(/^\/+/, "") === AGENT_REGISTRATION_PATH
+  ) {
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      body:
+        event.httpMethod === "HEAD"
+          ? ""
+          : JSON.stringify(buildAgentRegistration(openapiSpec, "llm")),
+    };
   }
 
   if (event.httpMethod === "GET" && (event.path ?? "").replace(/^\/+/, "") === "openapi.json") {

@@ -5,7 +5,7 @@ Serverless functions for AI image generation and LLM services with blockchain in
 ## 📖 API Documentation
 
 - **OpenAPI Specs**: [`openapi.genimg.json`](./openapi.genimg.json) / [`openapi.llm.json`](./openapi.llm.json) - Per-service x402 discovery contracts, each served live at `GET /openapi.json` on its own origin
-- **EIP-8004 Registration**: [`agent-registration.json`](./agent-registration.json) - Agent discovery and trust
+- **EIP-8004 Registration**: built per service by [`agent_registration.ts`](./agent_registration.ts), served live at `GET /.well-known/agent-registration.json` on each origin; rollout in [`erc8004-plan.md`](./erc8004-plan.md)
 
 ### Quick Links
 

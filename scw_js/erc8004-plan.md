@@ -2,11 +2,11 @@
 
 Goal: register the three x402 origins as ERC-8004 agents on **Base**, one agent per origin.
 
-| Service      | Origin                             | Handler                |
-| ------------ | ---------------------------------- | ---------------------- |
-| Image gen    | `https://imagegen-agent.fretchen.eu` | `genimg_x402_token.ts` |
-| LLM chat     | `https://llm-agent.fretchen.eu`      | `sc_llm_x402.ts`       |
-| Web access   | `https://web-agent.fretchen.eu`      | `search_api.ts`        |
+| Service    | Origin                               | Handler                |
+| ---------- | ------------------------------------ | ---------------------- |
+| Image gen  | `https://imagegen-agent.fretchen.eu` | `genimg_x402_token.ts` |
+| LLM chat   | `https://llm-agent.fretchen.eu`      | `sc_llm_x402.ts`       |
+| Web access | `https://web-agent.fretchen.eu`      | `search_api.ts`        |
 
 Registry: Identity Registry on Base, `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` (`eip155:8453`).
 agentURI per agent: `https://<origin>/.well-known/agent-registration.json` (same origin as the endpoint ⇒ domain control is implied).

@@ -374,7 +374,11 @@ export async function handle(
     return {
       statusCode: 200,
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-      body: isHead ? "" : JSON.stringify(buildAgentRegistration(openapiSpec, "search")),
+      body: isHead
+        ? ""
+        : JSON.stringify(
+            buildAgentRegistration(openapiSpec, "search", process.env.NFT_WALLET_PUBLIC_KEY),
+          ),
     };
   }
 

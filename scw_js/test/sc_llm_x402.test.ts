@@ -270,6 +270,10 @@ describe("sc_llm_x402", () => {
       expect(JSON.parse(res.body).services[0].endpoint).toBe(
         "https://llm-agent.fretchen.eu/openapi.json",
       );
+      expect(JSON.parse(res.body).services).toContainEqual({
+        name: "agentWallet",
+        endpoint: `eip155:8453:${VALID_ADDRESS}`,
+      });
 
       const head = await handle(
         makeEvent({ httpMethod: "HEAD", path: "/.well-known/agent-registration.json" }) as never,

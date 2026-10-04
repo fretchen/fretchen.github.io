@@ -137,7 +137,9 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
       body:
         event.httpMethod === "HEAD"
           ? ""
-          : JSON.stringify(buildAgentRegistration(openapiSpec, "llm")),
+          : JSON.stringify(
+              buildAgentRegistration(openapiSpec, "llm", process.env.NFT_WALLET_PUBLIC_KEY),
+            ),
     };
   }
 

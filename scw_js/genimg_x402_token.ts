@@ -355,7 +355,9 @@ async function handle(
       body:
         event.httpMethod === "HEAD"
           ? ""
-          : JSON.stringify(buildAgentRegistration(openapiSpec, "genimg")),
+          : JSON.stringify(
+              buildAgentRegistration(openapiSpec, "genimg", process.env.NFT_WALLET_PUBLIC_KEY),
+            ),
     };
   }
 

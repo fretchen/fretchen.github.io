@@ -2,7 +2,7 @@
 
 All scripts are run with `npx hardhat run scripts/<name>.ts --network <network>`.
 
-Available networks: `optimisticEthereum`, `base`, `optsepolia` (testnet), `hardhat` (local).
+Available networks: `optimisticEthereum`, `base`, `optsepolia` and `baseSepolia` (testnets), `hardhat` (local).
 
 Detailed usage and config options are documented in JSDoc at the top of each file.
 
@@ -20,9 +20,9 @@ All deploy scripts support `validateOnly` and `dryRun` modes via their config fi
 
 ## Upgrade
 
-| Script                     | Contract                  | Config file                     |
-| -------------------------- | ------------------------- | ------------------------------- |
-| `upgrade-genimg-v4.ts`     | GenImNFTv4 implementation | `upgrade-genimg-v4.config.json` |
+| Script                 | Contract                  | Config file                     |
+| ---------------------- | ------------------------- | ------------------------------- |
+| `upgrade-genimg-v4.ts` | GenImNFTv4 implementation | `upgrade-genimg-v4.config.json` |
 
 ## Verify
 
@@ -33,8 +33,9 @@ All deploy scripts support `validateOnly` and `dryRun` modes via their config fi
 
 ## Utilities
 
-| Script                  | Purpose                                                           |
-| ----------------------- | ----------------------------------------------------------------- |
-| `export-abi.ts`         | Regenerate `abi/` TypeScript exports after contract changes       |
-| `validate-contract.ts`  | Validate on-chain state of a deployed contract                    |
-| `transfer-ownership.ts` | Transfer `owner()` of all contracts to a new EOA (safe to re-run) |
+| Script                  | Purpose                                                                                                                                                                                               |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `export-abi.ts`         | Regenerate `abi/` TypeScript exports after contract changes                                                                                                                                           |
+| `validate-contract.ts`  | Validate on-chain state of a deployed contract                                                                                                                                                        |
+| `transfer-ownership.ts` | Transfer `owner()` of all contracts to a new EOA (safe to re-run)                                                                                                                                     |
+| `register-agents.ts`    | Register the three x402 services as ERC-8004 agents on Base and clear or, with `BIND_PAYTO=true`, bind their agentWallet to the x402 payTo (dry run by default; `EXECUTE=true` sends, safe to re-run) |

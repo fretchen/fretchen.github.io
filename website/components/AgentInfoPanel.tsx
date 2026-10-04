@@ -3,11 +3,11 @@
  *
  * Shows agent information with transparency about the backend service.
  * Displays:
- * - Agent name and wallet address (clickable to show JSON)
- * - Service endpoints
+ * - Agent name and its ERC-8004 agent id (clickable to show details)
+ * - Service endpoint
  * - Trust mechanisms
  *
- * Following EIP-8004 (Trustless Agents) format.
+ * Read live from the agent's own ERC-8004 registration file (see useAgentInfo).
  *
  * Supports two variants:
  * - "footer": Horizontal layout for wide areas (default)
@@ -88,7 +88,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
     );
   }
 
-  if (error || !agent.wallet) {
+  if (error || agent.agentId === null) {
     // Fallback to basic display
     return (
       <div className={css({ fontSize: "xs", color: "gray.600", textAlign: isSidebar ? "left" : "center", mt: "2" })}>
@@ -110,8 +110,8 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
     );
   }
 
-  const serviceEndpoint = service === "genimg" ? agent.genimgEndpoint : agent.llmEndpoint;
-  const serviceHostname = serviceEndpoint ? new URL(serviceEndpoint).hostname : null;
+  const serviceHostname = agent.endpointHost;
+  const agentLabel = `ERC-8004 #${agent.agentId}`;
 
   // "llm" (x402 batch-settlement) has no dedicated deployed contract to link — the
   // canonical batch-settlement contract is shared infrastructure, not owned by this
@@ -136,7 +136,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
         >
           <span className={css({ display: "flex", alignItems: "center", gap: "1" })}>
             <span>🤖</span>
-            <span className={css({ fontFamily: "code", color: "blue.600" })}>{agent.walletShort}</span>
+            <span className={css({ fontFamily: "code", color: "blue.600" })}>{agentLabel}</span>
           </span>
           <span
             className={css({
@@ -203,7 +203,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
               })}
             >
               <a
-                href="/agent-registration.json"
+                href={agent.registrationUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={css({
@@ -213,7 +213,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
                   _hover: { textDecoration: "underline" },
                 })}
               >
-                📄 EIP-8004 JSON
+                📄 ERC-8004 registration
               </a>
               {contractAddress && (
                 <a
@@ -289,9 +289,9 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
               alignItems: "center",
               gap: "1",
             })}
-            title={`Agent: ${agent.wallet}`}
+            title={`ERC-8004 agent ${agent.agentId} in ${agent.agentRegistry}`}
           >
-            🤖 {agent.walletShort}
+            🤖 {agentLabel}
           </span>
           <span
             className={css({
@@ -363,9 +363,9 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
 
           {/* Details Grid */}
           <div className={css({ display: "grid", gap: "1", color: "gray.600" })}>
-            {/* Wallet */}
+            {/* ERC-8004 identity */}
             <div className={css({ display: "flex", gap: "2" })}>
-              <span className={css({ color: "gray.500", minWidth: "60px" })}>Wallet:</span>
+              <span className={css({ color: "gray.500", minWidth: "60px" })}>Agent:</span>
               <code
                 className={css({
                   fontFamily: "code",
@@ -374,7 +374,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
                   wordBreak: "break-all",
                 })}
               >
-                {agent.wallet}
+                #{agent.agentId} · {agent.agentRegistry}
               </code>
             </div>
 
@@ -413,7 +413,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
             })}
           >
             <a
-              href="/agent-registration.json"
+              href={agent.registrationUrl}
               target="_blank"
               rel="noopener noreferrer"
               className={css({
@@ -423,7 +423,7 @@ export function AgentInfoPanel({ service = "genimg", variant = "footer", agentCa
                 _hover: { textDecoration: "underline" },
               })}
             >
-              📄 EIP-8004 JSON
+              📄 ERC-8004 registration
             </a>
             {agent.openApiUrl && (
               <a

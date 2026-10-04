@@ -4,7 +4,9 @@
  * Registry address: erc-8004-contracts README, Base mainnet Identity Registry.
  */
 import { describe, it, expect } from "vitest";
-import { AGENT_IDS, REGISTRY, buildAgentRegistration } from "../agent_registration.js";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { AGENT_IDS, OASF, REGISTRY, buildAgentRegistration } from "../agent_registration.js";
 import genimgSpec from "../openapi.genimg.json" with { type: "json" };
 import llmSpec from "../openapi.llm.json" with { type: "json" };
 import searchSpec from "../openapi.search.json" with { type: "json" };
@@ -21,8 +23,20 @@ describe("agent registration file (EIP-8004)", () => {
     expect(REGISTRY.address).toBe("0x8004A169FB4a3325136EB29fA0ceB6D2e539a432");
   });
 
-  it("starts with no agent ids, so no registrations are claimed", () => {
-    expect(Object.values(AGENT_IDS)).toEqual([null, null, null]);
+  it("lists the ids recorded by the registration script on Base mainnet", () => {
+    const recorded = JSON.parse(
+      readFileSync(
+        fileURLToPath(
+          new URL("../../eth/scripts/deployments/erc8004-agents-base.json", import.meta.url),
+        ),
+        "utf8",
+      ),
+    ) as { registry: string; agents: Record<string, { agentId: string }> };
+
+    expect(recorded.registry).toBe(REGISTRY.address);
+    expect(
+      Object.fromEntries(Object.entries(recorded.agents).map(([k, v]) => [k, Number(v.agentId)])),
+    ).toEqual(AGENT_IDS);
   });
 
   describe.each(SERVICES)("$service", ({ service, spec, origin }) => {
@@ -55,25 +69,113 @@ describe("agent registration file (EIP-8004)", () => {
       });
     });
 
-    it("declares x402 support and an empty registrations list while unregistered", () => {
+    it("declares x402 support and its registration in the Base mainnet registry", () => {
       expect(file.x402Support).toBe(true);
       expect(file.active).toBe(true);
-      expect(file.registrations).toEqual([]);
+      expect(file.registrations).toEqual([
+        { agentId: AGENT_IDS[service], agentRegistry: `eip155:8453:${REGISTRY.address}` },
+      ]);
       expect(file.supportedTrust).toEqual(["reputation"]);
     });
   });
 
-  it("formats a filled registration as {agentId: number, agentRegistry: eip155:<chain>:<address>}", () => {
-    AGENT_IDS.llm = 42;
+  /**
+   * 8004scan Agent Metadata Standard: an OASF service names the taxonomy repo and a semver
+   * version, and carries at least one of skills/domains as `category/.../leaf` slugs.
+   */
+  describe.each(SERVICES)("$service OASF", ({ service, spec }) => {
+    const oasf = buildAgentRegistration(spec, service).services.find((s) => s.name === "OASF") as
+      | { endpoint: string; version: string; skills: string[]; domains?: string[] }
+      | undefined;
+
+    it("declares an OASF v0.8.0 service with skills from the pinned map", () => {
+      expect(oasf?.endpoint).toBe("https://github.com/agntcy/oasf/");
+      expect(oasf?.version).toBe("0.8.0");
+      expect(oasf?.skills).toEqual(OASF[service].skills);
+      expect(oasf?.skills.length).toBeGreaterThan(0);
+    });
+
+    it("uses slash-separated lowercase slugs only", () => {
+      for (const slug of [...(oasf?.skills ?? []), ...(oasf?.domains ?? [])]) {
+        expect(slug).toMatch(/^[a-z0-9_]+(\/[a-z0-9_]+)+$/);
+      }
+    });
+  });
+
+  it("pins the OASF capabilities per service (each slug checked against agntcy/oasf v0.8.0)", () => {
+    expect(OASF).toEqual({
+      genimg: {
+        skills: [
+          "multi_modal/image_processing/text_to_image",
+          "images_computer_vision/image_generation",
+          "images_computer_vision/image_to_image",
+        ],
+        domains: [
+          "media_and_entertainment/content_creation",
+          "media_and_entertainment/digital_media",
+        ],
+      },
+      llm: {
+        skills: [
+          "natural_language_processing/natural_language_generation/dialogue_generation",
+          "natural_language_processing/natural_language_generation/text_completion",
+          "natural_language_processing/information_retrieval_synthesis/question_answering",
+        ],
+        domains: [],
+      },
+      search: {
+        skills: [
+          "natural_language_processing/information_retrieval_synthesis/search",
+          "natural_language_processing/information_retrieval_synthesis/document_passage_retrieval",
+        ],
+        domains: [],
+      },
+    });
+  });
+
+  it("omits an empty domains list instead of publishing []", () => {
+    const oasf = buildAgentRegistration(llmSpec, "llm").services.find((s) => s.name === "OASF");
+    expect(oasf).not.toHaveProperty("domains");
+  });
+
+  describe("agentWallet (x402Support: true SHOULD declare one)", () => {
+    const PAY_TO = "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C";
+    const wallets = (payTo?: string) =>
+      buildAgentRegistration(searchSpec, "search", payTo).services.filter(
+        (s) => s.name === "agentWallet",
+      );
+
+    it("lists the payTo as CAIP-10 on Base and Optimism", () => {
+      expect(wallets(PAY_TO)).toEqual([
+        { name: "agentWallet", endpoint: `eip155:8453:${PAY_TO}` },
+        { name: "agentWallet", endpoint: `eip155:10:${PAY_TO}` },
+      ]);
+    });
+
+    it("leaves the wallet out rather than publishing a missing or malformed one", () => {
+      expect(wallets(undefined)).toEqual([]);
+      expect(wallets("")).toEqual([]);
+      expect(wallets("not-an-address")).toEqual([]);
+    });
+  });
+
+  it("claims no registration for a service without an id", () => {
+    const original = AGENT_IDS.llm;
+    AGENT_IDS.llm = null;
     try {
-      const { registrations } = buildAgentRegistration(llmSpec, "llm");
+      expect(buildAgentRegistration(llmSpec, "llm").registrations).toEqual([]);
+    } finally {
+      AGENT_IDS.llm = original;
+    }
+  });
+
+  it("formats a registration as {agentId: number, agentRegistry: eip155:<chain>:<address>}", () => {
+    for (const { service, spec } of SERVICES) {
+      const { registrations } = buildAgentRegistration(spec, service);
       expect(registrations).toHaveLength(1);
       expect(Object.keys(registrations[0]).sort()).toEqual(["agentId", "agentRegistry"]);
-      expect(registrations[0].agentId).toBe(42);
+      expect(typeof registrations[0].agentId).toBe("number");
       expect(registrations[0].agentRegistry).toMatch(/^eip155:\d+:0x[0-9a-fA-F]{40}$/);
-      expect(registrations[0].agentRegistry).toBe(`eip155:8453:${REGISTRY.address}`);
-    } finally {
-      AGENT_IDS.llm = null;
     }
   });
 });

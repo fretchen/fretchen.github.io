@@ -437,8 +437,13 @@ describe("discovery", () => {
     expect(res.statusCode).toBe(200);
     expect(res.headers["Content-Type"]).toBe("application/json");
     expect(res.headers["Access-Control-Allow-Origin"]).toBe("*");
-    const file = JSON.parse(res.body) as { services: { endpoint: string }[] };
+    const file = JSON.parse(res.body) as { services: { name: string; endpoint: string }[] };
     expect(file.services[0].endpoint).toBe("https://web-agent.fretchen.eu/openapi.json");
+    // The offchain agentWallet is the same payTo the 402 quotes.
+    expect(file.services).toContainEqual({
+      name: "agentWallet",
+      endpoint: `eip155:8453:${RECEIVER}`,
+    });
     expect(mockCreateBatchSettlementPaymentRequirements).not.toHaveBeenCalled();
 
     const head = await handle(discoveryEvent("HEAD", ".well-known/agent-registration.json"), {});

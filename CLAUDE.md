@@ -79,7 +79,7 @@ See [`.github/THREAT_MODEL.md`](.github/THREAT_MODEL.md) for the full asset inve
 
 **Key hierarchy** (highest-value first):
 
-- `CONTRACT_OWNER_PRIVATE_KEY` (Hardhat keystore) — dedicated EOA `0x1af51D…fBB20`, controls every upgradeable contract. Never use it for anything else.
+- `CONTRACT_OWNER_PRIVATE_KEY` (Hardhat keystore) — dedicated EOA `0x1af51D…fBB20`, controls every upgradeable contract and owns the three ERC-8004 agent identities (Base). Never use it for anything else.
 - `SEPOLIA_PRIVATE_KEY` (Hardhat keystore) — deployment/script signing key `0x073f26…`. Does NOT own contracts.
 - Agent wallet `0xAAEBC1…` — backend-only, whitelisted on GenImNFTv4 via `authorizeAgentWallet()`.
 - Facilitator wallet — stored as a Scaleway secret, receives USDC fees only.

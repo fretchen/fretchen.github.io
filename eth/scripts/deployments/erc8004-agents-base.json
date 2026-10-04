@@ -1,0 +1,19 @@
+{
+  "network": "base",
+  "registry": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
+  "owner": "0x1af51D6D7E0926f42d3595cBA2eE4218af5fBB20",
+  "agents": {
+    "genimg": {
+      "agentId": "97598",
+      "registerTx": "0x78194abfa3118639ad6ddb2c18d29f07c33107f0dbc5d4373cf1132944ee7c62"
+    },
+    "llm": {
+      "agentId": "97599",
+      "registerTx": "0x5abec67bbecc6b65aa42507c8754a8bf1f666f35af34ef19a3bd5cf02add488b"
+    },
+    "search": {
+      "agentId": "97600",
+      "registerTx": "0x2a275796441296d347b7db131f3c9550cc96ca383928c5e6fd96f81daf451cb9"
+    }
+  }
+}

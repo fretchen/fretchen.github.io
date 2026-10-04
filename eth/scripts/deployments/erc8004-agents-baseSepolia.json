@@ -1,0 +1,19 @@
+{
+  "network": "baseSepolia",
+  "registry": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+  "owner": "0x1af51D6D7E0926f42d3595cBA2eE4218af5fBB20",
+  "agents": {
+    "genimg": {
+      "agentId": "9546",
+      "registerTx": "0xeaf5701e0b87d4df300597716edba8e65e164d93631d5fa62b661375b014d448"
+    },
+    "llm": {
+      "agentId": "9547",
+      "registerTx": "0x3f3fe0300f93ccc788841b7d1754bed8156bb9b987176cf8d06a318d177acfd8"
+    },
+    "search": {
+      "agentId": "9548",
+      "registerTx": "0xde8a64767287c238bba2aad12823db709ba403f2d0f32d1d545f4054966c6673"
+    }
+  }
+}

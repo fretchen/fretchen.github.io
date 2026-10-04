@@ -471,6 +471,29 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         "https://imagegen-agent.fretchen.eu/openapi.json",
       );
 
+      // The offchain agentWallet comes from NFT_WALLET_PUBLIC_KEY, the wallet the 402 pays.
+      const payTo = "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C";
+      const previous = process.env.NFT_WALLET_PUBLIC_KEY;
+      process.env.NFT_WALLET_PUBLIC_KEY = payTo;
+      try {
+        const withWallet = await handle(
+          {
+            httpMethod: "GET",
+            headers: {},
+            body: "",
+            path: "/.well-known/agent-registration.json",
+          },
+          {},
+        );
+        expect(JSON.parse(withWallet.body).services).toContainEqual({
+          name: "agentWallet",
+          endpoint: `eip155:8453:${payTo}`,
+        });
+      } finally {
+        if (previous === undefined) delete process.env.NFT_WALLET_PUBLIC_KEY;
+        else process.env.NFT_WALLET_PUBLIC_KEY = previous;
+      }
+
       const head = await handle(
         { httpMethod: "HEAD", headers: {}, body: "", path: "/.well-known/agent-registration.json" },
         {},

@@ -74,9 +74,7 @@ describe("trackHit", () => {
     interact();
 
     expect(navigator.sendBeacon).toHaveBeenCalledTimes(2);
-    const paths = vi
-      .mocked(navigator.sendBeacon)
-      .mock.calls.map(([, body]) => JSON.parse(body as string).path);
+    const paths = vi.mocked(navigator.sendBeacon).mock.calls.map(([, body]) => JSON.parse(body as string).path);
     expect(paths).toEqual(["/blog/first", "/blog/second"]);
   });
 

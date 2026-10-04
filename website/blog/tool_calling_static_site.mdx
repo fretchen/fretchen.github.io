@@ -191,7 +191,7 @@ I have added four tools by now.
 - **`get_analytics`** — this site's own visitor numbers. Only I can use this one.
 - **`generate_image`** — makes a picture from a description, for seven cents.
 
-The first three are all the same shape: fetch something, throw most of it away, hand back the rest. 
+The first three are all the same shape: fetch something, throw most of it away, hand back the rest.
 
 `generate_image` is a bit more complex, because it spends real money — so the model ordering it does not make it happen. Instead, the code puts a confirmation card on screen with the prompt, the size and the price, and then the loop simply stops at that line and waits. It can wait indefinitely. Whatever the person decides — confirm, rewrite the prompt, cancel — comes back to the model as a status like `user_declined`, and the model writes the sentence explaining it.
 

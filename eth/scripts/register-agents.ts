@@ -1,12 +1,20 @@
 /**
- * Registers the three x402 services (imagegen, llm, web) as ERC-8004 agents on Base and
- * clears the registry's default agentWallet.
+ * Registers the three x402 services (imagegen, llm, web) as ERC-8004 agents on Base and sets
+ * the registry's agentWallet: cleared by default, or bound to the x402 payTo with BIND_PAYTO.
  *
  * Usage (dry run is the default and sends nothing):
  *   npx hardhat run scripts/register-agents.ts --network baseSepolia            # simulate
  *   EXECUTE=true npx hardhat run scripts/register-agents.ts --network baseSepolia
  *   npx hardhat run scripts/register-agents.ts --network base                   # simulate
  *   EXECUTE=true npx hardhat run scripts/register-agents.ts --network base
+ *
+ * Bind the agentWallet to the x402 payTo (NFT_WALLET), instead of clearing it:
+ *   env $(grep '^NFT_WALLET_' ../scw_js/.env | xargs) BIND_PAYTO=true \
+ *     npx hardhat run scripts/register-agents.ts --network baseSepolia          # simulate
+ *   env $(grep '^NFT_WALLET_' ../scw_js/.env | xargs) BIND_PAYTO=true EXECUTE=true \
+ *     npx hardhat run scripts/register-agents.ts --network baseSepolia
+ * The grep passes only the two NFT_WALLET_ variables to this one process; never source the whole
+ * .env, which holds other keys. Safe on agents that are already registered: they are converted.
  *
  * Rollout order:
  *   1. Run on baseSepolia first (EXECUTE). Testnet agentIds are NOT for production use.
@@ -15,19 +23,26 @@
  *      scw_js/agent_registration.ts and redeploy scw_js. Each origin's
  *      /.well-known/agent-registration.json then lists its registration; check with curl that
  *      agentRegistry is eip155:8453:<registry>.
+ *   4. Optionally run again with BIND_PAYTO=true (sepolia first), then check for each origin
+ *      that getAgentWallet(agentId) equals the payTo in its 402 response.
  *
  * Prerequisites:
  *   - The services serve /.well-known/agent-registration.json on their origins (scw_js).
  *   - CONTRACT_OWNER_PRIVATE_KEY in the Hardhat keystore (accounts[1] in hardhat.config.ts).
  *     The agents are owned by it, so it must hold a little ETH on the target network (about
  *     0.0005 ETH covers all six transactions on Base).
+ *   - With BIND_PAYTO: NFT_WALLET_PRIVATE_KEY and NFT_WALLET_PUBLIC_KEY in the environment.
  *
- * Per service: register(agentURI), then unsetAgentWallet(agentId), then a read-back of
- * ownerOf / tokenURI / getAgentWallet that must match. The registry sets agentWallet to the
- * owner at registration, and the owner key never receives payments, so the default would
- * advertise the wrong payee. Clearing it makes no payee claim; the x402 payTo (NFT_WALLET) is
- * untouched. Binding payTo instead is setAgentWallet, which needs an EIP-712 signature from
- * that hot key and is deliberately not done here.
+ * Per service: register(agentURI), then the agentWallet step, then a read-back of ownerOf /
+ * tokenURI / getAgentWallet that must match. The registry sets agentWallet to the owner at
+ * registration, and the owner key never receives payments, so the default would advertise the
+ * wrong payee. Without BIND_PAYTO it is cleared (unsetAgentWallet): no payee claim, and the x402
+ * payTo is untouched. With BIND_PAYTO it is set to the payTo (setAgentWallet): the registry
+ * requires an EIP-712 signature by that wallet, produced locally from NFT_WALLET_PRIVATE_KEY
+ * (deadline: block time + 4 min, the registry allows 5), and the owner sends the transaction.
+ * The key's address must equal NFT_WALLET_PUBLIC_KEY, the address the services quote, or
+ * nothing is sent. The key is never logged or written. A dry run signs and simulates
+ * setAgentWallet, which checks the typed data against the registry without spending gas.
  *
  * Safety: the signer is checked against CONTRACT_OWNER_ADDRESS, the chain id against the
  * network, and the registry for code, before anything is sent. The result file
@@ -51,6 +66,7 @@ import {
   createWalletClient,
   custom,
   getAddress,
+  isAddress,
   parseAbi,
   parseEventLogs,
   zeroAddress,
@@ -58,7 +74,7 @@ import {
   type PublicClient,
   type WalletClient,
 } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
+import { privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -85,11 +101,23 @@ export const agentUri = (service: Service) => `${SERVICES[service]}/.well-known/
 const REGISTRY_ABI = parseAbi([
   "function register(string agentURI) returns (uint256 agentId)",
   "function unsetAgentWallet(uint256 agentId)",
+  "function setAgentWallet(uint256 agentId, address newWallet, uint256 deadline, bytes signature)",
   "function getAgentWallet(uint256 agentId) view returns (address)",
   "function ownerOf(uint256 tokenId) view returns (address)",
   "function tokenURI(uint256 tokenId) view returns (string)",
   "event Registered(uint256 indexed agentId, string agentURI, address indexed owner)",
 ]);
+
+/** EIP-712 type the registry checks in setAgentWallet (IdentityRegistryUpgradeable.sol). */
+const AGENT_WALLET_TYPES = {
+  AgentWalletSet: [
+    { name: "agentId", type: "uint256" },
+    { name: "newWallet", type: "address" },
+    { name: "owner", type: "address" },
+    { name: "deadline", type: "uint256" },
+  ],
+} as const;
+const DEADLINE_SECONDS = 240n; // the registry rejects anything beyond 5 minutes
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -128,6 +156,11 @@ export interface RegisterOptions {
   /** Where registered ids are recorded between runs. */
   resultFile: string;
   network: string;
+  /**
+   * Bind the agentWallet to this wallet instead of clearing it. `account` signs the EIP-712
+   * message; its address must equal `expectedAddress` (the payTo the services quote).
+   */
+  payTo?: { account: PrivateKeyAccount; expectedAddress: Address };
   pollTries?: number;
   pollDelayMs?: number;
   log?: (message: string) => void;
@@ -136,6 +169,7 @@ export interface RegisterOptions {
 export interface RegisterResult {
   registered: Service[];
   cleared: Service[];
+  bound: Service[];
 }
 
 export async function registerAgents(options: RegisterOptions): Promise<RegisterResult> {
@@ -153,12 +187,19 @@ export async function registerAgents(options: RegisterOptions): Promise<Register
   if (getAddress(account.address) !== getAddress(expectedOwner)) {
     throw new Error(`Wrong signer: expected ${expectedOwner}, got ${account.address}`);
   }
+  if (options.payTo && getAddress(options.payTo.account.address) !== getAddress(options.payTo.expectedAddress)) {
+    throw new Error(
+      `payTo key is for ${options.payTo.account.address}, but the services quote ${options.payTo.expectedAddress}`,
+    );
+  }
+  const targetWallet = options.payTo ? getAddress(options.payTo.account.address) : zeroAddress;
 
   const balance = await publicClient.getBalance({ address: account.address });
   log(`Network:  ${network} (chain ${chainId})`);
   log(`Registry: ${registry}`);
   log(`Owner:    ${account.address}  balance ${balance} wei`);
   log(`Mode:     ${execute ? "EXECUTE (sends transactions)" : "dry run (simulation only)"}`);
+  log(`Wallet:   ${options.payTo ? `bind agentWallet to ${targetWallet}` : "clear agentWallet"}`);
   if (execute && balance < MIN_BALANCE_WEI) {
     throw new Error(`Owner balance below ${MIN_BALANCE_WEI} wei; fund it first`);
   }
@@ -168,8 +209,8 @@ export async function registerAgents(options: RegisterOptions): Promise<Register
     : {};
 
   const send = async (
-    functionName: "register" | "unsetAgentWallet",
-    args: readonly [string] | readonly [bigint],
+    functionName: "register" | "unsetAgentWallet" | "setAgentWallet",
+    args: readonly unknown[],
   ): Promise<`0x${string}`> => {
     const request = { address: registry, abi: REGISTRY_ABI, functionName, args, account } as never;
     const estimate = await publicClient.estimateContractGas(request);
@@ -179,7 +220,7 @@ export async function registerAgents(options: RegisterOptions): Promise<Register
     return hash;
   };
 
-  const result: RegisterResult = { registered: [], cleared: [] };
+  const result: RegisterResult = { registered: [], cleared: [], bound: [] };
 
   for (const service of Object.keys(SERVICES) as Service[]) {
     const uri = agentUri(service);
@@ -227,18 +268,45 @@ export async function registerAgents(options: RegisterOptions): Promise<Register
     // registration, so wait for it before trusting any other read.
     await poll(readOwner, (o) => getAddress(o) === getAddress(expectedOwner), "ownerOf", pollTries, pollDelayMs);
 
-    if ((await readWallet()) !== zeroAddress) {
-      if (!execute) {
-        log("   would clear the default agentWallet");
-        continue;
+    if (getAddress(await readWallet()) !== targetWallet) {
+      if (!options.payTo) {
+        if (!execute) {
+          log("   would clear the default agentWallet");
+          continue;
+        }
+        const hash = await send("unsetAgentWallet", [agentId]);
+        log(`   cleared default agentWallet (tx ${hash})`);
+        result.cleared.push(service);
+      } else {
+        const { timestamp } = await publicClient.getBlock();
+        const deadline = timestamp + DEADLINE_SECONDS;
+        const signature = await options.payTo.account.signTypedData({
+          domain: { name: "ERC8004IdentityRegistry", version: "1", chainId, verifyingContract: registry },
+          types: AGENT_WALLET_TYPES,
+          primaryType: "AgentWalletSet",
+          message: { agentId, newWallet: targetWallet, owner: expectedOwner, deadline },
+        });
+        const args = [agentId, targetWallet, deadline, signature] as const;
+        if (!execute) {
+          // Checks the typed data against the registry's own verification, without gas.
+          await publicClient.simulateContract({
+            address: registry,
+            abi: REGISTRY_ABI,
+            functionName: "setAgentWallet",
+            args,
+            account,
+          });
+          log(`   would bind agentWallet to ${targetWallet} (simulation OK)`);
+          continue;
+        }
+        const hash = await send("setAgentWallet", args);
+        log(`   bound agentWallet to ${targetWallet} (tx ${hash})`);
+        result.bound.push(service);
       }
-      const hash = await send("unsetAgentWallet", [agentId]);
-      log(`   cleared default agentWallet (tx ${hash})`);
-      result.cleared.push(service);
     }
 
     // Verify against the chain, not against what we just wrote.
-    const wallet = await poll(readWallet, (w) => w === zeroAddress, "agentWallet cleared", pollTries, pollDelayMs);
+    const wallet = await poll(readWallet, (w) => getAddress(w) === targetWallet, "agentWallet", pollTries, pollDelayMs);
     const tokenUri = await poll(readUri, (u) => u === uri, "tokenURI", pollTries, pollDelayMs);
     log(`   verify: owner ${expectedOwner}, tokenURI ${tokenUri}, agentWallet ${wallet} -> OK`);
   }
@@ -274,7 +342,21 @@ async function main() {
     chain: publicClient.chain,
   });
 
+  let payTo: RegisterOptions["payTo"];
+  if (process.env.BIND_PAYTO === "true") {
+    const key = process.env.NFT_WALLET_PRIVATE_KEY?.trim();
+    const expectedAddress = process.env.NFT_WALLET_PUBLIC_KEY?.trim();
+    if (!key || !/^(0x)?[0-9a-fA-F]{64}$/.test(key)) throw new Error("BIND_PAYTO needs a valid NFT_WALLET_PRIVATE_KEY");
+    if (!expectedAddress || !isAddress(expectedAddress))
+      throw new Error("BIND_PAYTO needs a valid NFT_WALLET_PUBLIC_KEY");
+    payTo = {
+      account: privateKeyToAccount((key.startsWith("0x") ? key : `0x${key}`) as `0x${string}`),
+      expectedAddress,
+    };
+  }
+
   await registerAgents({
+    payTo,
     publicClient,
     walletClient,
     registry: target.registry,

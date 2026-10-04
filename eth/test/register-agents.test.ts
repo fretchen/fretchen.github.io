@@ -15,6 +15,7 @@ import os from "node:os";
 import path from "node:path";
 import hre from "hardhat";
 import { getAddress, zeroAddress, type PublicClient, type WalletClient } from "viem";
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { SERVICES, agentUri, registerAgents, type Service } from "../scripts/register-agents";
 
 const SERVICE_NAMES = Object.keys(SERVICES) as Service[];
@@ -85,7 +86,7 @@ describe("register-agents script", function () {
     it("sends nothing and writes no result file", async () => {
       const result = await registerAgents({ ...ctx.options, execute: false });
 
-      expect(result).to.deep.equal({ registered: [], cleared: [] });
+      expect(result).to.deep.equal({ registered: [], cleared: [], bound: [] });
       expect(await agentCount()).to.equal(0n);
       expect(fs.existsSync(ctx.resultFile)).to.equal(false);
       expect(ctx.logs.filter((l) => l.includes("would register"))).to.have.length(3);
@@ -133,7 +134,7 @@ describe("register-agents script", function () {
       await registerAgents({ ...ctx.options, execute: true });
       const second = await registerAgents({ ...ctx.options, execute: true });
 
-      expect(second).to.deep.equal({ registered: [], cleared: [] });
+      expect(second).to.deep.equal({ registered: [], cleared: [], bound: [] });
       expect(await agentCount()).to.equal(3n);
     });
 
@@ -156,6 +157,71 @@ describe("register-agents script", function () {
       for (const id of [1n, 2n, 3n]) {
         expect(await ctx.registry.read.getAgentWallet([id])).to.equal(zeroAddress);
       }
+    });
+  });
+
+  describe("bind agentWallet to the payTo", () => {
+    // Stands in for NFT_WALLET: a separate key that only signs, never sends or pays gas.
+    const payToAccount = privateKeyToAccount(generatePrivateKey());
+    const payTo = () => ({ account: payToAccount, expectedAddress: payToAccount.address });
+    const wallet = (id: bigint) => ctx.registry.read.getAgentWallet([id]);
+
+    it("registers and binds each agent to the payTo, without clearing first", async () => {
+      const result = await registerAgents({ ...ctx.options, payTo: payTo(), execute: true });
+
+      expect(result.registered).to.deep.equal(SERVICE_NAMES);
+      expect(result.bound).to.deep.equal(SERVICE_NAMES);
+      expect(result.cleared).to.deep.equal([]);
+      for (const id of [1n, 2n, 3n]) {
+        expect(getAddress(await wallet(id))).to.equal(payToAccount.address);
+      }
+    });
+
+    it("converts agents that are already registered with a cleared wallet", async () => {
+      await registerAgents({ ...ctx.options, execute: true });
+      expect(await wallet(1n)).to.equal(zeroAddress);
+
+      const result = await registerAgents({ ...ctx.options, payTo: payTo(), execute: true });
+
+      expect(result).to.deep.equal({ registered: [], cleared: [], bound: SERVICE_NAMES });
+      expect(await agentCount()).to.equal(3n);
+      expect(getAddress(await wallet(3n))).to.equal(payToAccount.address);
+    });
+
+    it("is a no-op when the wallet is already bound", async () => {
+      await registerAgents({ ...ctx.options, payTo: payTo(), execute: true });
+      const second = await registerAgents({ ...ctx.options, payTo: payTo(), execute: true });
+
+      expect(second).to.deep.equal({ registered: [], cleared: [], bound: [] });
+    });
+
+    it("dry run simulates the binding against the registry and changes nothing", async () => {
+      await registerAgents({ ...ctx.options, execute: true });
+
+      const result = await registerAgents({ ...ctx.options, payTo: payTo(), execute: false });
+
+      expect(result.bound).to.deep.equal([]);
+      expect(await wallet(1n)).to.equal(zeroAddress);
+      expect(ctx.logs.filter((l) => l.includes("(simulation OK)"))).to.have.length(3);
+    });
+
+    it("binds even when the RPC serves reads from a node behind the receipt", async () => {
+      const result = await registerAgents({ ...withLag(2), payTo: payTo(), execute: true });
+
+      expect(result.bound).to.deep.equal(SERVICE_NAMES);
+      expect(getAddress(await wallet(1n))).to.equal(payToAccount.address);
+    });
+
+    it("refuses when the key is not the address the services quote", async () => {
+      await assert.rejects(
+        registerAgents({
+          ...ctx.options,
+          payTo: { account: payToAccount, expectedAddress: ctx.other.account.address },
+          execute: true,
+        }),
+        /payTo key is for/,
+      );
+      expect(await agentCount()).to.equal(0n);
     });
   });
 

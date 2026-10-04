@@ -694,6 +694,32 @@ describe("the paid path", () => {
     expect(mockReleaseLock).toHaveBeenCalledOnce();
   });
 
+  /**
+   * A page that never answers is the caller's choice of url, not our failure: the caller gets a
+   * 400 that names the host, is not charged, and nothing pages us. On 2026-10-04 this was a 500
+   * "Internal server error" and a ServicesNeedAttention alert.
+   */
+  test("explains a page that timed out, charges nothing, and does not alert", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new DOMException("The operation timed out.", "TimeoutError")),
+    );
+    // The instance search_api.ts logs through: beforeEach reset the registry before importing it.
+    const { logger } = await import("../logger.js");
+    const errorLog = vi.spyOn(logger, "error");
+
+    const res = await handle(
+      makeEvent("GET", "fetch", { auth: null, query: { url: "https://slow.example/" } }),
+      {},
+    );
+
+    expect(res.statusCode).toBe(400);
+    expect(JSON.parse(res.body).error).toBe("Could not reach slow.example: no response within 8 s");
+    expect(mockSettlePayment).not.toHaveBeenCalled();
+    expect(mockReleaseLock).toHaveBeenCalledOnce();
+    expect(errorLog).not.toHaveBeenCalled();
+  });
+
   test("does not release a lock on success", async () => {
     vi.stubGlobal(
       "fetch",

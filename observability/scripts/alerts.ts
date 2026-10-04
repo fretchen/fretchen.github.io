@@ -15,13 +15,16 @@
  * Usage (from observability/):
  *   npx tsx scripts/alerts.ts                  # list the rule groups on the ruler
  *   npx tsx scripts/alerts.ts --push           # upload alerts/payments.yaml
- *   npx tsx scripts/alerts.ts --push alerts/experiment.yaml
+ *   npx tsx scripts/alerts.ts --push alerts/services.yaml
  *   npx tsx scripts/alerts.ts --delete payments
+ *
+ * `--push` refuses a file with uncommitted changes (see assertCommitted): commit, then push.
  *
  * Push is never wired into deploy. Alerting config that changes as a side effect of shipping code
  * is its own kind of surprise — and a rule silently removed by a deploy is indistinguishable from
  * a system that is simply quiet.
  */
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import dotenv from "dotenv";
 
@@ -65,7 +68,29 @@ async function list(): Promise<void> {
   console.log(`\nPush with:  npx tsx scripts/alerts.ts --push`);
 }
 
+/**
+ * Cockpit must run what git holds. On 2026-10-04 a three-rule consolidation was live that had only
+ * ever existed in an uncommitted file, while git still held the twelve-rule version; pushing git
+ * then silently undid the consolidation (and quadrupled the per-rule bill). Refusing to push
+ * anything uncommitted — modified, staged or untracked — keeps the ruler and the repo from
+ * diverging in the first place. No override: a throwaway test group is committed first too.
+ */
+function assertCommitted(file: string): void {
+  const status = execFileSync("git", ["status", "--porcelain", "--", file], {
+    encoding: "utf8",
+  }).trim();
+  if (status) {
+    console.error(
+      `refusing to push ${file}: it has uncommitted changes (${status}). Cockpit must run what ` +
+        `git holds — on 2026-10-04 an uncommitted 3-rule file was live while git held 12, and ` +
+        `pushing git silently undid the consolidation. Commit first.`,
+    );
+    process.exit(1);
+  }
+}
+
 async function push(file: string): Promise<void> {
+  assertCommitted(file);
   const yaml = readFileSync(file, "utf8");
   await ruler(`/${NAMESPACE}`, {
     method: "POST",

@@ -25,10 +25,10 @@ import path from "node:path";
  *     alerts/services.yaml's header on `.+llmx402` never matching `…llmx402cron`), so this
  *     is more permissive than the deployed rules. That direction of error is the safe one: it can
  *     under-report a genuine gap far less easily than it can wrongly flag a covered message. The
- *     one place this repo has hit the imprecision in practice — PaidPathBroken's selector textually
- *     mentions "llmx402" but never actually matches the cron — is handled by keeping the REAL
- *     alerting correct (PaymentCronFailed carries the cron's own copy of that phrase), not by
- *     relying on this test to catch it.
+ *     one place this repo has hit the imprecision in practice — ServicesNeedAttention's selector
+ *     textually mentions "llmx402" but never actually matches the cron — is handled by keeping the
+ *     REAL alerting correct (PaymentCronNeedsAttention carries the cron's own copy of that phrase),
+ *     not by relying on this test to catch it.
  */
 
 export interface LoggedMessage {

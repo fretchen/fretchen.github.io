@@ -50,8 +50,11 @@ describe("scw_js alert coverage", () => {
     expect(messages.length).toBeGreaterThanOrEqual(15);
   });
 
+  // A sanity check that the parser found anything, not a rule count: the rules are deliberately
+  // few (each is billed — see observability/test/alerts_budget.test.ts), so a new phrase extends an
+  // existing rule's alternation rather than adding a rule.
   it("found this package's alert rules", () => {
-    expect(scwJsRules.length).toBeGreaterThanOrEqual(4);
+    expect(scwJsRules.length).toBeGreaterThan(0);
   });
 
   it("every EXEMPT entry still names a real logger.error message", () => {

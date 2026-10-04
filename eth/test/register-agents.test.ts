@@ -247,6 +247,19 @@ describe("register-agents script", function () {
     });
   });
 
+  it("stops on a corrupt result file instead of registering everything again", async () => {
+    fs.writeFileSync(ctx.resultFile, "{ not json");
+
+    await assert.rejects(registerAgents({ ...ctx.options, execute: true }), SyntaxError);
+    expect(await agentCount()).to.equal(0n);
+  });
+
+  it("leaves no temp file behind after writing the result file", async () => {
+    await registerAgents({ ...ctx.options, execute: true });
+
+    expect(fs.readdirSync(path.dirname(ctx.resultFile))).to.deep.equal(["result.json"]);
+  });
+
   it("fails verification when the chain does not match the recorded agent", async () => {
     // agentId 1 exists but with a different URI than the one the script expects for genimg.
     await ctx.registry.write.register(["https://elsewhere.example/agent.json"]);

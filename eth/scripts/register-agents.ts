@@ -143,6 +143,33 @@ async function poll<T>(
   throw new Error(`${what}: not as expected after ${tries} tries (last: ${last})`);
 }
 
+type Recorded = Record<string, { agentId: string; registerTx: string }>;
+
+/**
+ * Ids recorded by earlier runs. Reads directly and treats only a missing file as empty: an
+ * existsSync-then-read would be a check-then-use race, and a corrupt file must stop the run
+ * (an empty record would register every service again), so any other error propagates.
+ */
+function readRecorded(resultFile: string): Recorded {
+  try {
+    return JSON.parse(fs.readFileSync(resultFile, "utf8")).agents;
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return {};
+    throw e;
+  }
+}
+
+/** Writes via a temp file and an atomic rename, so an interrupted write cannot truncate the record of registered ids. */
+function writeRecorded(
+  resultFile: string,
+  record: { network: string; registry: Address; owner: Address; agents: Recorded },
+): void {
+  fs.mkdirSync(path.dirname(resultFile), { recursive: true });
+  const tmp = `${resultFile}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(record, null, 2) + "\n");
+  fs.renameSync(tmp, resultFile);
+}
+
 export interface RegisterOptions {
   publicClient: PublicClient;
   /** Must carry the signing account. */
@@ -204,9 +231,7 @@ export async function registerAgents(options: RegisterOptions): Promise<Register
     throw new Error(`Owner balance below ${MIN_BALANCE_WEI} wei; fund it first`);
   }
 
-  const done: Record<string, { agentId: string; registerTx: string }> = fs.existsSync(resultFile)
-    ? JSON.parse(fs.readFileSync(resultFile, "utf8")).agents
-    : {};
+  const done = readRecorded(resultFile);
 
   const send = async (
     functionName: "register" | "unsetAgentWallet" | "setAgentWallet",
@@ -247,11 +272,7 @@ export async function registerAgents(options: RegisterOptions): Promise<Register
       log(`   registered agentId ${agentId} (tx ${hash})`);
       done[service] = { agentId: agentId.toString(), registerTx: hash };
       result.registered.push(service);
-      fs.mkdirSync(path.dirname(resultFile), { recursive: true });
-      fs.writeFileSync(
-        resultFile,
-        JSON.stringify({ network, registry, owner: account.address, agents: done }, null, 2) + "\n",
-      );
+      writeRecorded(resultFile, { network, registry, owner: account.address, agents: done });
     } else {
       log(`   already registered as agentId ${done[service].agentId}`);
     }

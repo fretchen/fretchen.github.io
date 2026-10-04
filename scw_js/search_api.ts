@@ -12,6 +12,7 @@ import {
 } from "./search_schemas.js";
 import { CORS_HEADERS } from "./utils.js";
 import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
+import { AGENT_REGISTRATION_PATH, buildAgentRegistration } from "./agent_registration.js";
 import { faviconBase64, faviconContentType } from "./favicon.js";
 import openapiSpec from "./openapi.search.json" with { type: "json" };
 import {
@@ -368,6 +369,14 @@ export async function handle(
   // HTML is what makes the crawler index this origin at all (see discovery.ts).
   const isGetOrHead = method === "GET" || method === "HEAD";
   const isHead = method === "HEAD";
+
+  if (isGetOrHead && path === AGENT_REGISTRATION_PATH) {
+    return {
+      statusCode: 200,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      body: isHead ? "" : JSON.stringify(buildAgentRegistration(openapiSpec, "search")),
+    };
+  }
 
   if (isGetOrHead && path === "openapi.json") {
     // Served verbatim, unlike the chat's, which rewrites its price ceiling at serve time because

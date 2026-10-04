@@ -432,6 +432,20 @@ describe("discovery", () => {
     return { httpMethod: method, path: `/${path}`, queryStringParameters: {}, headers };
   }
 
+  test("serves the ERC-8004 registration file, unpaid, and an empty body on HEAD", async () => {
+    const res = await handle(discoveryEvent("GET", ".well-known/agent-registration.json"), {});
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["Content-Type"]).toBe("application/json");
+    expect(res.headers["Access-Control-Allow-Origin"]).toBe("*");
+    const file = JSON.parse(res.body) as { services: { endpoint: string }[] };
+    expect(file.services[0].endpoint).toBe("https://web-agent.fretchen.eu/openapi.json");
+    expect(mockCreateBatchSettlementPaymentRequirements).not.toHaveBeenCalled();
+
+    const head = await handle(discoveryEvent("HEAD", ".well-known/agent-registration.json"), {});
+    expect(head.statusCode).toBe(200);
+    expect(head.body).toBe("");
+  });
+
   test("serves the generated spec, unpaid and unauthenticated", async () => {
     const res = await handle(discoveryEvent("GET", "openapi.json"), {});
 

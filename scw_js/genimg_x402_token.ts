@@ -43,6 +43,7 @@ import type { ScwEvent } from "./types.js";
 import openapiSpec from "./openapi.genimg.json" with { type: "json" };
 import { faviconBase64, faviconContentType } from "./favicon.js";
 import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
+import { AGENT_REGISTRATION_PATH, buildAgentRegistration } from "./agent_registration.js";
 import { logger } from "./logger.js";
 import { offeredStablecoins, resolvePaidStablecoin, type PriceList } from "./stablecoin_pricing.js";
 
@@ -342,6 +343,20 @@ async function handle(
 }> {
   if (event.httpMethod === "OPTIONS") {
     return { statusCode: 200, headers: CORS_HEADERS, body: "" };
+  }
+
+  if (
+    (event.httpMethod === "GET" || event.httpMethod === "HEAD") &&
+    (event.path ?? "").replace(/^\/+/, "") === AGENT_REGISTRATION_PATH
+  ) {
+    return {
+      statusCode: 200,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      body:
+        event.httpMethod === "HEAD"
+          ? ""
+          : JSON.stringify(buildAgentRegistration(openapiSpec, "genimg")),
+    };
   }
 
   if (event.httpMethod === "GET" && (event.path ?? "").replace(/^\/+/, "") === "openapi.json") {

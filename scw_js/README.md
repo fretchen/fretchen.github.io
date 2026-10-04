@@ -5,7 +5,7 @@ Serverless functions for AI image generation and LLM services with blockchain in
 ## 📖 API Documentation
 
 - **OpenAPI Specs**: [`openapi.genimg.json`](./openapi.genimg.json) / [`openapi.llm.json`](./openapi.llm.json) - Per-service x402 discovery contracts, each served live at `GET /openapi.json` on its own origin
-- **EIP-8004 Registration**: built per service by [`agent_registration.ts`](./agent_registration.ts), served live at `GET /.well-known/agent-registration.json` on each origin; rollout in [`erc8004-plan.md`](./erc8004-plan.md)
+- **EIP-8004 Registration**: built per service by [`agent_registration.ts`](./agent_registration.ts), served live at `GET /.well-known/agent-registration.json` on each origin (see [ERC-8004 agent registration](#erc-8004-agent-registration))
 
 ### Quick Links
 
@@ -195,6 +195,31 @@ Set a dedicated provider (e.g. Alchemy) as a Scaleway secret for production:
 - `RPC_URL_EIP155_8453` — Base mainnet
 - `RPC_URL_EIP155_11155420` — Optimism Sepolia
 - `RPC_URL_EIP155_84532` — Base Sepolia
+
+### ERC-8004 agent registration
+
+Each x402 origin is a registered ERC-8004 agent on **Base** (Identity Registry `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`, `eip155:8453`). The on-chain `agentURI` is the origin's own `https://<origin>/.well-known/agent-registration.json`, so the endpoint and the identity share a domain.
+
+| Service    | Origin                               | agentId |
+| ---------- | ------------------------------------ | ------- |
+| Image gen  | `https://imagegen-agent.fretchen.eu` | 97598   |
+| LLM chat   | `https://llm-agent.fretchen.eu`      | 97599   |
+| Web access | `https://web-agent.fretchen.eu`      | 97600   |
+
+- **The file** is built per request by [`agent_registration.ts`](./agent_registration.ts) from the committed `openapi.*.json` (`info.title`, `info.description`, `servers[0].url`), so it cannot drift from the published API document. The ids live in `AGENT_IDS` there; `test/agent_registration.test.ts` pins them to `eth/scripts/deployments/erc8004-agents-base.json`.
+- **Ownership:** the agents are owned by the contract-owner EOA (`0x1af51D…fBB20`), not by a key in the function secrets, so a leaked server secret cannot repoint or transfer an identity. The registry's `agentWallet` is bound to the x402 `payTo` (`NFT_WALLET`), so `getAgentWallet(agentId)` equals the `payTo` in every 402.
+- **Changing it:** registering, clearing or re-binding the wallet is `eth/scripts/register-agents.ts` (usage, rollout and safety are in its JSDoc; dry run by default). Updating an `agentURI` is `setAgentURI` from the owner key.
+- **Check a deployment:**
+
+```bash
+for o in imagegen-agent llm-agent web-agent; do
+  curl -sS "https://$o.fretchen.eu/.well-known/agent-registration.json" | jq '{name, registrations}'
+done
+```
+
+Each file must list its `agentId` and `eip155:8453:0x8004A169…` as `agentRegistry`. On the registry, `tokenURI(agentId)` must return the same URL and `getAgentWallet(agentId)` the 402 `payTo`.
+
+Later, if wanted: tell paying clients they can leave feedback for the `agentId` (Reputation Registry); reference the ids from `x-discovery` in the OpenAPI specs; move the `agentURI` to IPFS or a `data:` URI if the domain dependency becomes a concern. The Validation Registry waits on its spec section.
 
 ### Stablecoins and pricing (USDC, EURC)
 

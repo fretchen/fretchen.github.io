@@ -4,6 +4,8 @@
  * Registry address: erc-8004-contracts README, Base mainnet Identity Registry.
  */
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { AGENT_IDS, REGISTRY, buildAgentRegistration } from "../agent_registration.js";
 import genimgSpec from "../openapi.genimg.json" with { type: "json" };
 import llmSpec from "../openapi.llm.json" with { type: "json" };
@@ -21,8 +23,20 @@ describe("agent registration file (EIP-8004)", () => {
     expect(REGISTRY.address).toBe("0x8004A169FB4a3325136EB29fA0ceB6D2e539a432");
   });
 
-  it("lists the ids registered on Base mainnet (eth/scripts/deployments/erc8004-agents-base.json)", () => {
-    expect(AGENT_IDS).toEqual({ genimg: 97598, llm: 97599, search: 97600 });
+  it("lists the ids recorded by the registration script on Base mainnet", () => {
+    const recorded = JSON.parse(
+      readFileSync(
+        fileURLToPath(
+          new URL("../../eth/scripts/deployments/erc8004-agents-base.json", import.meta.url),
+        ),
+        "utf8",
+      ),
+    ) as { registry: string; agents: Record<string, { agentId: string }> };
+
+    expect(recorded.registry).toBe(REGISTRY.address);
+    expect(
+      Object.fromEntries(Object.entries(recorded.agents).map(([k, v]) => [k, Number(v.agentId)])),
+    ).toEqual(AGENT_IDS);
   });
 
   describe.each(SERVICES)("$service", ({ service, spec, origin }) => {

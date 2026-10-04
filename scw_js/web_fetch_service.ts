@@ -45,15 +45,39 @@ const REQUEST_TIMEOUT_MS = 8_000;
 const ALLOWED_CONTENT_TYPES = ["text/html", "application/xhtml+xml", "text/plain"];
 
 /**
- * A refusal the caller can act on — bad url, wrong type, too big, or an upstream status like 404
- * or 403 — as distinct from this function actually malfunctioning. `search_api.ts` answers 400
- * with the message; anything else is a logged 500 and a generic body.
+ * A refusal the caller can act on — bad url, wrong type, too big, an upstream status like 404
+ * or 403, or a site that did not answer in time — as distinct from this function actually
+ * malfunctioning. `search_api.ts` answers 400 with the message, and charges nothing; anything else
+ * is a logged 500 and a generic body.
  */
 export class FetchUrlError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "FetchUrlError";
   }
+}
+
+/**
+ * A site that never answered, or refused the connection, is as much the caller's choice of url as
+ * its 404 is. Before this, the 8 s timeout surfaced as an unhandled 500 and paged us
+ * (`ServicesNeedAttention`, 2026-10-04) while the caller got "Internal server error" — no hint to
+ * pick another source. Anything not recognised here is ours and stays an unhandled error.
+ */
+function asUnreachable(err: unknown, host: string): unknown {
+  if (err instanceof FetchUrlError) {
+    return err;
+  }
+  const { name, cause } = (err ?? {}) as { name?: string; cause?: { code?: string } };
+  if (name === "TimeoutError") {
+    return new FetchUrlError(
+      `Could not reach ${host}: no response within ${REQUEST_TIMEOUT_MS / 1000} s`,
+    );
+  }
+  // undici's network failures: connection refused or reset, TLS certificate rejected.
+  if (err instanceof TypeError && err.message === "fetch failed") {
+    return new FetchUrlError(`Could not reach ${host}: ${cause?.code ?? "connection failed"}`);
+  }
+  return err;
 }
 
 export interface FetchedPage {
@@ -216,15 +240,21 @@ export async function fetchExternalHtml(raw: string): Promise<FetchedPage> {
   let url = await assertPublicUrl(raw);
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    const response = await fetch(url, {
-      redirect: "manual",
-      headers: {
-        // Named honestly. A fetcher that hides what it is invites being treated as one.
-        "User-Agent": "fretchen.eu-assistant/1.0 (+https://www.fretchen.eu/assistent)",
-        Accept: "text/html,application/xhtml+xml;q=0.9,text/plain;q=0.8",
-      },
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
+    const host = url.hostname;
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        redirect: "manual",
+        headers: {
+          // Named honestly. A fetcher that hides what it is invites being treated as one.
+          "User-Agent": "fretchen.eu-assistant/1.0 (+https://www.fretchen.eu/assistent)",
+          Accept: "text/html,application/xhtml+xml;q=0.9,text/plain;q=0.8",
+        },
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+    } catch (err) {
+      throw asUnreachable(err, host);
+    }
 
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get("location");
@@ -256,7 +286,10 @@ export async function fetchExternalHtml(raw: string): Promise<FetchedPage> {
       );
     }
 
-    const html = await readCapped(response);
+    // The timeout signal covers the body too: a site can answer the headers and then stall.
+    const html = await readCapped(response).catch((err: unknown) => {
+      throw asUnreachable(err, host);
+    });
     logger.info({ host: url.hostname, bytes: html.length, hops: hop }, "Fetched external page");
     return { finalUrl: url.toString(), html, contentType: mediaType };
   }

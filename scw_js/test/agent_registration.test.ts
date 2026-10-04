@@ -21,8 +21,8 @@ describe("agent registration file (EIP-8004)", () => {
     expect(REGISTRY.address).toBe("0x8004A169FB4a3325136EB29fA0ceB6D2e539a432");
   });
 
-  it("starts with no agent ids, so no registrations are claimed", () => {
-    expect(Object.values(AGENT_IDS)).toEqual([null, null, null]);
+  it("lists the ids registered on Base mainnet (eth/scripts/deployments/erc8004-agents-base.json)", () => {
+    expect(AGENT_IDS).toEqual({ genimg: 97598, llm: 97599, search: 97600 });
   });
 
   describe.each(SERVICES)("$service", ({ service, spec, origin }) => {
@@ -55,25 +55,33 @@ describe("agent registration file (EIP-8004)", () => {
       });
     });
 
-    it("declares x402 support and an empty registrations list while unregistered", () => {
+    it("declares x402 support and its registration in the Base mainnet registry", () => {
       expect(file.x402Support).toBe(true);
       expect(file.active).toBe(true);
-      expect(file.registrations).toEqual([]);
+      expect(file.registrations).toEqual([
+        { agentId: AGENT_IDS[service], agentRegistry: `eip155:8453:${REGISTRY.address}` },
+      ]);
       expect(file.supportedTrust).toEqual(["reputation"]);
     });
   });
 
-  it("formats a filled registration as {agentId: number, agentRegistry: eip155:<chain>:<address>}", () => {
-    AGENT_IDS.llm = 42;
+  it("claims no registration for a service without an id", () => {
+    const original = AGENT_IDS.llm;
+    AGENT_IDS.llm = null;
     try {
-      const { registrations } = buildAgentRegistration(llmSpec, "llm");
+      expect(buildAgentRegistration(llmSpec, "llm").registrations).toEqual([]);
+    } finally {
+      AGENT_IDS.llm = original;
+    }
+  });
+
+  it("formats a registration as {agentId: number, agentRegistry: eip155:<chain>:<address>}", () => {
+    for (const { service, spec } of SERVICES) {
+      const { registrations } = buildAgentRegistration(spec, service);
       expect(registrations).toHaveLength(1);
       expect(Object.keys(registrations[0]).sort()).toEqual(["agentId", "agentRegistry"]);
-      expect(registrations[0].agentId).toBe(42);
+      expect(typeof registrations[0].agentId).toBe("number");
       expect(registrations[0].agentRegistry).toMatch(/^eip155:\d+:0x[0-9a-fA-F]{40}$/);
-      expect(registrations[0].agentRegistry).toBe(`eip155:8453:${REGISTRY.address}`);
-    } finally {
-      AGENT_IDS.llm = null;
     }
   });
 });

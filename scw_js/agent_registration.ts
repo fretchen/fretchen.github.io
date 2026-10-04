@@ -17,11 +17,14 @@ export const REGISTRY = {
   address: "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
 } as const;
 
-/** Filled in after `register()` (Part B2). `null` = not registered yet. */
+/**
+ * Agent ids in the Base mainnet Identity Registry (`REGISTRY`), from
+ * `eth/scripts/deployments/erc8004-agents-base.json`. Owner: `0x1af51D…fBB20`. `null` = not registered.
+ */
 export const AGENT_IDS: Record<AgentService, number | null> = {
-  genimg: null,
-  llm: null,
-  search: null,
+  genimg: 97598,
+  llm: 97599,
+  search: 97600,
 };
 
 export const AGENT_REGISTRATION_PATH = ".well-known/agent-registration.json";

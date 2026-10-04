@@ -129,18 +129,17 @@ stacks. They remain valid tokens, so `fontFamily: "mono"` fails _silently_. Rule
 Prefer variable builds: one file per family, not one per weight. Headings take their hierarchy
 from weight and whitespace, not from a size ratio.
 
-
 ## Mark
 
 One figure, plus a teen variant for the assistant. Reasons in `IDENTITY.md`.
 
 Two source files in `public/`; everything else is derived from them. Edit only these.
 
-| File                | Use                                                                              |
-| ------------------- | -------------------------------------------------------------------------------- |
-| `fretchen-logo.svg` | on the page via `components/FretchenLogo.tsx` — nav, assistant, 404, about       |
-| `fretchen-teen.svg` | assistant in teen mode, via `FretchenLogo teen`                                  |
-| `fretchen.png`      | generated, gitignored — browser tab, iOS home screen, OG image, h-card photo     |
+| File                | Use                                                                          |
+| ------------------- | ---------------------------------------------------------------------------- |
+| `fretchen-logo.svg` | on the page via `components/FretchenLogo.tsx` — nav, assistant, 404, about   |
+| `fretchen-teen.svg` | assistant in teen mode, via `FretchenLogo teen`                              |
+| `fretchen.png`      | generated, gitignored — browser tab, iOS home screen, OG image, h-card photo |
 
 `FretchenLogo` uses the SVG as a CSS mask over the `brand` (or `teen`) colour, so the file's own
 fill does not matter. `fretchen.png` is rendered from `fretchen-logo.svg` (512px, brand blue on

@@ -121,11 +121,12 @@ for recent days that aren't rolled up yet (capped by `HOURLY_FALLBACK_DAYS`,
 late or missed run changes what a query costs, never what it returns.
 
 `source` is per day, not per month, because the changeover month holds both
-kinds. A second seam is *not* marked by `source`: since the dwell gate shipped
-(Sept 2026 — `git log website/utils/hitTracker.ts` for the date), a page counts
-only after 3s of dwell, so the beacon records engaged views rather than raw
-pageviews. Both sides carry `source: "beacon"`, so the step-down there is a
-definition change, not lost traffic.
+kinds. Further seams are *not* marked by `source`: the beacon counts engaged
+views rather than raw pageviews, first via a 3s dwell gate and — after a crawler
+simply out-waited it — via an interaction gate instead (`git log
+website/utils/hitTracker.ts` for the dates; the definition has moved twice while
+the filter is being tuned). Every side of those dates carries `source:
+"beacon"`, so a step-down there is a definition change, not lost traffic.
 
 **Path form.** The beacon sends `pageContext.urlPathname`, which Vike derives
 from `urlLogical` (`website/pages/+onBeforeRoute.ts`), so recorded paths are in

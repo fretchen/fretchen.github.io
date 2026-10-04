@@ -26,6 +26,7 @@
  *   npx tsx scripts/logs.ts                                    # what can I query? (labels + names)
  *   npx tsx scripts/logs.ts facilitator                        # last hour, by name fragment
  *   npx tsx scripts/logs.ts facilitator --since 36h --grep "Settlement failed"
+ *   npx tsx scripts/logs.ts searchapi --since 6h --grep "handler error|Could not reach"   # regex
  *   npx tsx scripts/logs.ts '{resource_name="…"}' --raw        # full LogQL, unformatted output
  */
 import dotenv from "dotenv";
@@ -115,8 +116,11 @@ async function query(target: string): Promise<void> {
   // namespace prefix nobody remembers (`mypersonaljscloudivnad9dy-llmx402`). Anything starting
   // with `{` is passed through as LogQL untouched.
   const selector = target.startsWith("{") ? target : `{resource_name=~".*${target}.*"}`;
+  // A regex (`|~`), not a substring (`|=`): the alert runbooks pass alternations like
+  // "handler error|Could not reach", which a substring match silently turns into "no lines".
+  // A plain phrase matches exactly as before.
   const grep = flag("grep");
-  const q = grep ? `${selector} |= ${JSON.stringify(grep)}` : selector;
+  const q = grep ? `${selector} |~ ${JSON.stringify(grep)}` : selector;
 
   const body = await loki("/loki/api/v1/query_range", {
     query: q,

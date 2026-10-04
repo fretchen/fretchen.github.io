@@ -415,7 +415,7 @@ async function handle(
     account = privateKeyToAccount(loadPrivateKey("NFT_WALLET_PRIVATE_KEY"));
   } catch (err) {
     // Every request fails identically until this is fixed — see
-    // observability/alerts/services.yaml's PaidPathBroken, which this phrase is matched by.
+    // observability/alerts/services.yaml's ServicesNeedAttention (paid-path branch), which matches this phrase.
     logger.error({ err }, "NFT_WALLET_PRIVATE_KEY not configured or invalid");
     return errorResponse(500, `Server configuration error: ${(err as Error).message}`);
   }
@@ -567,8 +567,8 @@ async function handle(
       paymentRequirements,
     );
   } catch (error) {
-    // Our call to the facilitator threw — see observability/alerts/services.yaml's
-    // SellerPaymentFailing, which this phrase (shared with llmx402/searchapi) is matched by.
+    // Our call to the facilitator threw — see observability/alerts/services.yaml's ServicesNeedAttention
+    // (seller-payment branch), which matches this phrase (shared with llmx402/searchapi).
     logger.error({ err: error }, "Payment verification error");
     return paymentError("facilitator_error", { details: (error as Error).message });
   }
@@ -616,8 +616,8 @@ async function handle(
     );
 
     if (!preFlightResult.success) {
-      // Our wallet or our RPC, never the caller's — see observability/alerts/services.yaml's
-      // PaidPathBroken.
+      // Our wallet or our RPC, never the caller's — see
+      // observability/alerts/services.yaml's ServicesNeedAttention (paid-path branch).
       logger.error(
         { reason: preFlightResult.error, details: preFlightResult.details },
         "Pre-flight check failed",
@@ -657,12 +657,14 @@ async function handle(
         paymentRequirements,
       );
     } catch (error) {
-      // See SellerPaymentFailing — same phrase as llmx402/searchapi's settle-call catch.
+      // See ServicesNeedAttention's seller-payment branch — same phrase as llmx402/searchapi's
+      // settle-call catch.
       logger.error({ err: error }, "Settlement error");
       return paymentError("settlement_failed", { details: (error as Error).message });
     }
     if (!settlement.success) {
-      // See SellerPaymentFailing — same phrase llmx402/searchapi use for a rejected settlement.
+      // See ServicesNeedAttention's seller-payment branch — same phrase llmx402/searchapi use for
+      // a rejected settlement.
       logger.error({ settlement }, "Settlement failed");
       return paymentError("settlement_failed", { details: settlement.errorReason });
     }
@@ -696,7 +698,7 @@ async function handle(
       // The payment HAS settled by this point — settlement deliberately precedes the mint, see
       // above — so the settlement headers are attached here too. The caller paid for a
       // generation they received; what they did not get is the NFT. See
-      // observability/alerts/services.yaml's PaidButUndelivered.
+      // observability/alerts/services.yaml's ServicesNeedAttention (paid-but-undelivered branch).
       logger.error(
         { err: mintError, payer: clientAddress, network: clientNetwork },
         "Mint failed after successful generation",
@@ -743,7 +745,7 @@ async function handle(
     };
   } catch (error) {
     // The outer catch: a bug, an upstream nobody has a rule for yet, or S3 failing. See
-    // observability/alerts/services.yaml's ServiceUnhandledError.
+    // observability/alerts/services.yaml's ServicesNeedAttention (unhandled-error branch).
     logger.error({ err: error }, "Error during operation");
     return errorResponse(500, `Operation failed: ${(error as Error).message}`);
   }

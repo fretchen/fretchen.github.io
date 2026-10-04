@@ -42,8 +42,17 @@ npx tsx scripts/alerts.ts --push alerts/services.yaml
 npx tsx scripts/alerts.ts --delete payments
 ```
 
-There are six rules in each of `payments.yaml` and `services.yaml`, deliberately few. The comments
-at the top of each file explain which rules exist and why the rest were left out.
+**Three rules in total, on purpose: Scaleway bills each active alert rule** (€0.015/day, checked
+2026-10-04), while the phrases a rule matches are free. `services.yaml` holds one rule
+(`ServicesNeedAttention`) and `payments.yaml` two (`PaymentCronNeedsAttention`,
+`FacilitatorNeedsAttention`). A new failure mode is a new alternative in the matching rule's line
+filter, never a new rule; `test/alerts_budget.test.ts` fails if the count grows. The comment at the
+top of each file explains the budget and what each branch of the filter means.
+
+**Push only what is committed.** `--push` refuses a file with uncommitted changes. On 2026-10-04 the
+three-rule consolidation was live from a file that had never been committed, git still held the
+twelve-rule version, and pushing git silently undid it. The guard keeps the ruler and the repo from
+diverging again.
 
 `logger.error` means "ours, and should be alertable"; a caller's fault is `logger.warn`.
 `scw_js/test/alert_coverage.test.ts` and `x402_facilitator/test/alert_coverage.test.ts` enforce two
@@ -68,7 +77,7 @@ system that is simply quiet.
 2. confirm the email arrives with the summary and description filled in;
 3. `--delete` the throwaway group.
 
-This is how `PaymentCronFailed` was proven to work, and the test rule also surfaced a real,
+This is how `PaymentCronNeedsAttention` (then still a separate `PaymentCronFailed`) was proven to work, and the test rule also surfaced a real,
 previously unnoticed `withdraw_delay_mismatch` failure on Base Sepolia.
 
 ## Credentials

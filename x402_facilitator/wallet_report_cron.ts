@@ -1,13 +1,13 @@
 /**
  * Weekly Facilitator Wallet Report (scheduled)
  *
- * The facilitator settles USDC payments on OP and Base mainnet, and EURC payments on Base,
+ * The facilitator settles USDC payments on OP and Base mainnet, and EURC and EURe payments on Base,
  * using a single hot wallet (FACILITATOR_WALLET_PRIVATE_KEY). That wallet needs native ETH to
  * pay gas for settlements/fee-collection, and accumulates fees in whichever token each payment
  * settled in. There is no database of facilitator activity, so this cron reads current balances
  * directly from chain:
  *   - native (ETH) balance       -> the real "will settlements keep working?" signal
- *   - USDC (and EURC) balance    -> accumulated fee revenue
+ *   - each fee token's balance   -> accumulated fee revenue (getFeeTokens: USDC; EURC, EURe on Base)
  *
  * It also reports week-over-week ACTIVITY (transactions sent, fees earned, gas spent)
  * by reading the same balances/nonce as of a block ~7 days ago and diffing against now.
@@ -37,9 +37,8 @@ import {
   type Abi,
 } from "viem";
 import pino from "pino";
-import { EURC_ADDRESSES } from "@fretchen/chain-utils";
-import { getFacilitatorAddress, getFeeAmount } from "./x402_fee";
-import { getChainConfig, getRpcUrl } from "./chain_utils";
+import { feeAmountFor, getFacilitatorAddress } from "./x402_fee";
+import { getChainConfig, getFeeTokens, getRpcUrl } from "./chain_utils";
 import type { ScalewayEvent, ScalewayResponse } from "./x402_facilitator";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
@@ -49,9 +48,6 @@ const REPORT_NETWORKS = ["eip155:10", "eip155:8453"] as const;
 
 // Low native-gas warning threshold (ETH). Overridable via env.
 const DEFAULT_LOW_GAS_THRESHOLD_ETH = "0.005";
-
-// USDC and EURC both use 6 decimals.
-const STABLECOIN_DECIMALS = 6;
 
 // Both report networks are OP-stack chains at a ~2s block time, so this is ~7 days.
 // Revisit if REPORT_NETWORKS ever gains a network with a different block time.
@@ -72,21 +68,20 @@ interface ActivityReport {
   /** Transactions the facilitator sent — the nonce delta over the lookback window. */
   txCount: number;
   /**
-   * Net USDC balance change over the window. Negative when more was withdrawn than
-   * earned — never render this as "earned" without checking the sign.
+   * Net balance change over the window per fee-token symbol (e.g. `{ USDC: "0.12" }`), in
+   * whole tokens. Negative when more was withdrawn than earned — never render this as
+   * "earned" without checking the sign.
    */
-  usdcDelta: string;
-  /** Same as `usdcDelta`, for EURC. Present only on networks where EURC exists (Base). */
-  eurcDelta?: string;
+  tokenDeltas: Record<string, string>;
   /** Positive = topped up over the window, negative = spent on gas. */
   ethDelta: string;
   /**
-   * Settlements implied by `(usdcDelta + eurcDelta) / flatFee` — an ESTIMATE, not a count of
-   * actual settlements. The fee is the same nominal flat amount in either token, so the two
-   * deltas add. Uses the CURRENT fee rate (`getFeeAmount()` at report time), not
-   * whatever rate was actually in effect during the window, and treats any non-fee USDC
-   * movement (a manual top-up, a refund, a withdrawal) as if it were settlement revenue.
-   * Present only when a fee is configured and `usdcDelta > 0`.
+   * Settlements implied by the sum over tokens of `delta / fee`, each token's fee in its own
+   * decimals (0.01 = 10000 for USDC/EURC, 10¹⁶ for EURe) — an ESTIMATE, not a count of actual
+   * settlements. Uses the CURRENT fee rate at report time, not whatever rate was actually in
+   * effect during the window, and treats any non-fee token movement (a manual top-up, a
+   * refund, a withdrawal) as if it were settlement revenue. Present only when a fee is
+   * configured and the summed estimate is positive.
    */
   estimatedSettlements?: number;
 }
@@ -95,9 +90,8 @@ interface NetworkReport {
   network: string;
   chainName: string;
   eth?: string;
-  usdc?: string;
-  /** Present only on networks where EURC exists (Base). */
-  eurc?: string;
+  /** Balance per fee-token symbol, in whole tokens — only the tokens deployed on this network. */
+  balances?: Record<string, string>;
   lowGas?: boolean;
   error?: string;
   /** Absent when the historical reads failed (e.g. no archive state) — balances above are
@@ -115,16 +109,15 @@ async function buildNetworkReport(network: string, facilitator: Address): Promis
       transport: http(getRpcUrl(network)),
     });
 
-    const usdc = getContract({
-      address: config.USDC_ADDRESS as Address,
-      abi: ERC20_BALANCE_ABI,
-      client: publicClient,
-    });
-    // EURC exists on Base only; elsewhere this stays undefined and the report is USDC-only.
-    const eurcAddress = EURC_ADDRESSES[network];
-    const eurc = eurcAddress
-      ? getContract({ address: eurcAddress, abi: ERC20_BALANCE_ABI, client: publicClient })
-      : undefined;
+    // USDC everywhere; EURC and EURe on Base only.
+    const tokens = getFeeTokens(network).map((token) => ({
+      ...token,
+      contract: getContract({
+        address: token.address,
+        abi: ERC20_BALANCE_ABI,
+        client: publicClient,
+      }),
+    }));
 
     // All the "current state" reads are fired here, before anything is awaited, so their
     // network round-trips overlap rather than serialize. They're still awaited in two
@@ -133,15 +126,15 @@ async function buildNetworkReport(network: string, facilitator: Address): Promis
     // only ever used for the optional activity block and must not be able to take the
     // balances down with them if they fail — see the inner try/catch below.
     const ethBalancePromise = publicClient.getBalance({ address: facilitator });
-    const usdcBalancePromise = usdc.read.balanceOf([facilitator]);
-    const eurcBalancePromise = eurc?.read.balanceOf([facilitator]);
+    const tokenBalancesPromise = Promise.all(
+      tokens.map((t) => t.contract.read.balanceOf([facilitator])),
+    );
     const currentBlockPromise = publicClient.getBlockNumber();
     const currentNoncePromise = publicClient.getTransactionCount({ address: facilitator });
 
-    const [ethBalance, usdcBalance, eurcBalance] = await Promise.all([
+    const [ethBalance, tokenBalances] = await Promise.all([
       ethBalancePromise,
-      usdcBalancePromise,
-      eurcBalancePromise,
+      tokenBalancesPromise,
     ]);
 
     const eth = formatEther(ethBalance);
@@ -156,30 +149,35 @@ async function buildNetworkReport(network: string, facilitator: Address): Promis
       if (currentBlock > LOOKBACK_BLOCKS) {
         const lookbackBlock = currentBlock - LOOKBACK_BLOCKS;
 
-        const [pastNonce, currentNonce, pastEth, pastUsdc, pastEurc] = await Promise.all([
+        const [pastNonce, currentNonce, pastEth, pastTokenBalances] = await Promise.all([
           publicClient.getTransactionCount({ address: facilitator, blockNumber: lookbackBlock }),
           currentNoncePromise,
           publicClient.getBalance({ address: facilitator, blockNumber: lookbackBlock }),
-          usdc.read.balanceOf([facilitator], { blockNumber: lookbackBlock }),
-          eurc?.read.balanceOf([facilitator], { blockNumber: lookbackBlock }),
+          Promise.all(
+            tokens.map((t) =>
+              t.contract.read.balanceOf([facilitator], { blockNumber: lookbackBlock }),
+            ),
+          ),
         ]);
 
-        const usdcDelta = usdcBalance - pastUsdc;
-        const eurcDelta =
-          eurcBalance !== undefined && pastEurc !== undefined ? eurcBalance - pastEurc : undefined;
-        const ethDelta = ethBalance - pastEth;
-        const feeAmount = getFeeAmount();
-        const feeDelta = usdcDelta + (eurcDelta ?? 0n);
+        const tokenDeltas: Record<string, string> = {};
+        // Each token's delta divided by the fee in that token's own decimals: an EURe delta
+        // divided by the 6-decimal 10000 would count 10¹² settlements per real one.
+        let settlements = 0n;
+        tokens.forEach((t, i) => {
+          const delta = tokenBalances[i] - pastTokenBalances[i];
+          tokenDeltas[t.symbol] = formatUnits(delta, t.decimals);
+          const fee = feeAmountFor(t.decimals);
+          if (fee > 0n) {
+            settlements += delta / fee;
+          }
+        });
 
         activity = {
           txCount: currentNonce - pastNonce,
-          usdcDelta: formatUnits(usdcDelta, STABLECOIN_DECIMALS),
-          ...(eurcDelta !== undefined && {
-            eurcDelta: formatUnits(eurcDelta, STABLECOIN_DECIMALS),
-          }),
-          ethDelta: formatEther(ethDelta),
-          ...(feeAmount > 0n &&
-            feeDelta > 0n && { estimatedSettlements: Number(feeDelta / feeAmount) }),
+          tokenDeltas,
+          ethDelta: formatEther(ethBalance - pastEth),
+          ...(settlements > 0n && { estimatedSettlements: Number(settlements) }),
         };
       }
     } catch (err) {
@@ -190,8 +188,9 @@ async function buildNetworkReport(network: string, facilitator: Address): Promis
       network,
       chainName,
       eth,
-      usdc: formatUnits(usdcBalance, STABLECOIN_DECIMALS),
-      ...(eurcBalance !== undefined && { eurc: formatUnits(eurcBalance, STABLECOIN_DECIMALS) }),
+      balances: Object.fromEntries(
+        tokens.map((t, i) => [t.symbol, formatUnits(tokenBalances[i], t.decimals)]),
+      ),
       lowGas: Number(eth) < threshold,
       ...(activity && { activity }),
     };
@@ -216,26 +215,23 @@ function renderEmailText(facilitator: Address, reports: NetworkReport[]): string
     lines.push(
       `  Gas (ETH):    ${r.eth}${r.lowGas ? "   ⚠️ LOW — top up to avoid stalled settlements" : ""}`,
     );
-    lines.push(`  USDC balance: ${r.usdc}`);
-    if (r.eurc !== undefined) {
-      lines.push(`  EURC balance: ${r.eurc}`);
+    for (const [symbol, balance] of Object.entries(r.balances ?? {})) {
+      lines.push(`  ${`${symbol} balance:`.padEnd(14)}${balance}`);
     }
     lines.push("");
     lines.push(`  Last ~7 days:`);
     if (!r.activity) {
       lines.push(`    unavailable (RPC returned no historical state)`);
     } else {
-      const { txCount, usdcDelta, eurcDelta, ethDelta, estimatedSettlements } = r.activity;
+      const { txCount, tokenDeltas, ethDelta, estimatedSettlements } = r.activity;
       lines.push(`    Transactions:  ${txCount}`);
-      // Sign carries the meaning here — a negative delta is a withdrawal, not "earned".
-      const usdcSign = Number(usdcDelta) >= 0 ? "+" : "";
-      lines.push(`    USDC change:   ${usdcSign}${usdcDelta} USDC`);
-      if (eurcDelta !== undefined) {
-        const eurcSign = Number(eurcDelta) >= 0 ? "+" : "";
-        lines.push(`    EURC change:   ${eurcSign}${eurcDelta} EURC`);
+      for (const [symbol, delta] of Object.entries(tokenDeltas)) {
+        // Sign carries the meaning here — a negative delta is a withdrawal, not "earned".
+        const sign = Number(delta) >= 0 ? "+" : "";
+        lines.push(`    ${`${symbol} change:`.padEnd(15)}${sign}${delta} ${symbol}`);
       }
       if (estimatedSettlements !== undefined) {
-        // Its own line: on Base it is derived from both tokens' fee revenue.
+        // Its own line: on Base it is derived from every token's fee revenue.
         lines.push(`    Settlements:   ≈ ${estimatedSettlements} (estimated from fee revenue)`);
       }
       const ethSign = Number(ethDelta) >= 0 ? "+" : "";

@@ -146,10 +146,11 @@ describe("x402 /supported endpoint", () => {
     }
     expect(fees.version).toBe("1");
     expect(fees.model).toBe("flat");
-    // The fee is charged in whichever token settles — USDC, or EURC on Base.
+    // The fee is charged in whichever token settles — USDC; EURC and EURe on Base.
     expect(fees.asset).toBe("settled");
     expect(fees.fee.description).toContain("EURC");
-    expect(fees.setup.description).toContain("EURC");
+    expect(fees.fee.description).toContain("EURe");
+    expect(fees.setup.description).toContain("EURe");
     expect(fees.flatFee).toBe("10000");
     expect(fees.decimals).toBe(6);
     // Facilitator address (fee recipient / approval spender) lives here now, not in `extensions`.
@@ -174,6 +175,38 @@ describe("x402 /supported endpoint", () => {
     // figure IS the per-merchant blast radius of a key compromise. Bounded rather than
     // pinned to an exact value: the security property is "stays small", not "is 1 USDC".
     expect(settlementsCovered).toBeLessThanOrEqual(100n);
+    // The same bound per token, in each token's own units — EURe's 18 decimals included.
+    for (const asset of fees.assets) {
+      expect(BigInt(asset.recommended_amount) / BigInt(asset.flatFee)).toBeLessThanOrEqual(100n);
+    }
+  });
+
+  test("lists each fee token with its exact atomic fee — EURe in 18 decimals", () => {
+    process.env.FACILITATOR_WALLET_PRIVATE_KEY =
+      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+
+    const { assets } = getSupportedCapabilities().facilitatorFees!;
+    const on = (network: string) => assets.filter((a) => a.network === network);
+
+    expect(on("eip155:8453").map((a) => a.symbol)).toEqual(["USDC", "EURC", "EURe"]);
+    expect(on("eip155:10").map((a) => a.symbol)).toEqual(["USDC"]);
+    expect(on("eip155:8453").find((a) => a.symbol === "EURe")).toEqual({
+      network: "eip155:8453",
+      asset: "0xbf6e2966A9C3D99C9E4D069E04f7Bdb9C8aa762C",
+      symbol: "EURe",
+      decimals: 18,
+      flatFee: "10000000000000000", // 0.01 EURe
+      recommended_amount: "1000000000000000000", // 1 EURe
+    });
+    expect(on("eip155:8453").find((a) => a.symbol === "USDC")).toMatchObject({
+      flatFee: "10000",
+      recommended_amount: "1000000",
+    });
+  });
+
+  test("advertises EIP-2612 gas sponsoring, so EURe buyers need no separate approve()", () => {
+    delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
+    expect(getSupportedCapabilities().extensions).toContain("eip2612GasSponsoring");
   });
 
   test("omits fee extension keys and disclosure when private key is missing", () => {

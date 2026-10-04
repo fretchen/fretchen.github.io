@@ -9,7 +9,7 @@ import { verifyPayment } from "./x402_verify";
 import {
   collectFee,
   evaluateFeeGate,
-  getFeeAmount,
+  feeAmountForToken,
   type FeeGateDecision,
   type FeeResult,
 } from "./x402_fee";
@@ -252,7 +252,10 @@ async function collectAndReportFee(
   fee: NonNullable<SettleResult["fee"]>;
   extensions: SettleResult["extensions"];
 }> {
-  const feeAmount = getFeeAmount();
+  // In the settled token's own units: 0.01 EURe is 10¹⁶, not the 10000 a 6-decimal token uses.
+  // Null only for a token that is not a fee token, which the verify gate already refuses; were
+  // one to get here, collectFee charges nothing, so nothing is assessed either.
+  const feeAmount = feeAmountForToken(network, token) ?? 0n;
   const feeResult = await collectFee(recipient, network, token);
   const feeStatus = feeStatusOf(feeResult);
 
@@ -629,9 +632,10 @@ export async function settlePayment(
     // by sniffing the message — and sniffing once reported OUR wallet running out of gas
     // ("insufficient funds for gas") as the caller's fault.
     const payload = paymentPayload.payload as Record<string, unknown> | undefined;
-    // EIP-3009 shape only. Permit2 payloads (payer at permit2Authorization.from) are
-    // rejected at verify time (permit2_not_supported), so they never reach settle.
-    const authorization = payload?.authorization as Record<string, unknown> | undefined;
+    // The payer sits at authorization.from (EIP-3009) or permit2Authorization.from (Permit2).
+    const authorization = (payload?.authorization ?? payload?.permit2Authorization) as
+      | Record<string, unknown>
+      | undefined;
     const accepted = paymentPayload.accepted as Record<string, unknown> | undefined;
 
     return {

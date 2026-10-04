@@ -73,14 +73,52 @@ describe("hit handler", () => {
     expect(mockPutS3ObjectConditional).not.toHaveBeenCalled();
   });
 
-  it("does not flag an ordinary browser User-Agent as a bot", async () => {
+  // Every bot the hand-rolled 12-entry list used to catch must still be caught — this
+  // swap to `isbot` is meant to be strictly more coverage, never less.
+  it.each([
+    "googlebot",
+    "bingbot",
+    "ahrefsbot",
+    "semrushbot",
+    "mj12bot",
+    "gptbot",
+    "ccbot",
+    "claudebot",
+    "perplexitybot",
+    "yandexbot",
+    "petalbot",
+    "bytespider",
+  ])("still rejects %s, which the previous hand-rolled list caught", async (token) => {
+    const res = await handleHit(makeEvent({ headers: { "user-agent": `Mozilla/5.0 (compatible; ${token}/1.0)` } }), {});
+    expect(res.statusCode).toBe(400);
+    expect(mockPutS3ObjectConditional).not.toHaveBeenCalled();
+  });
+
+  // The point of the swap: declared crawlers that were never on the 12-entry list.
+  it.each([
+    "Mozilla/5.0 (compatible; Amazonbot/0.1; +https://developer.amazon.com/support/amazonbot)",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15 Applebot/0.1",
+    "meta-externalagent/1.1 (+https://developers.facebook.com/docs/sharing/webmasters/crawler)",
+    "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; OAI-SearchBot/1.0; +https://openai.com/searchbot",
+    "python-requests/2.31.0",
+  ])("rejects %s, which the previous list missed", async (userAgent) => {
+    const res = await handleHit(makeEvent({ headers: { "user-agent": userAgent } }), {});
+    expect(res.statusCode).toBe(400);
+    expect(mockPutS3ObjectConditional).not.toHaveBeenCalled();
+  });
+
+  // The failure mode that matters most: a false positive silently drops a real
+  // visitor's count, and nothing downstream would reveal it.
+  it.each([
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/120.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (X11; Linux x86_64; rv:121.0) Gecko/20100101 Firefox/121.0",
+  ])("does not flag an ordinary browser User-Agent as a bot: %s", async (userAgent) => {
     mockGetS3ObjectWithMeta.mockResolvedValue(null);
     mockPutS3ObjectConditional.mockResolvedValue({ ok: true, etag: '"new-etag"' });
 
-    const res = await handleHit(
-      makeEvent({ headers: { "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/120.0" } }),
-      {},
-    );
+    const res = await handleHit(makeEvent({ headers: { "user-agent": userAgent } }), {});
 
     expect(res.statusCode).toBe(204);
     expect(mockPutS3ObjectConditional).toHaveBeenCalled();

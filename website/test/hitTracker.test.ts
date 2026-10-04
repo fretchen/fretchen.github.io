@@ -1,21 +1,25 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import { trackHit } from "@utils/hitTracker";
 
-const DWELL_MS = 3000;
+/** What a real visitor does; `scroll` is deliberately excluded (see hitTracker.ts). */
+const interact = (type = "pointerdown") => window.dispatchEvent(new Event(type));
+
+const lastBody = () => JSON.parse(vi.mocked(navigator.sendBeacon).mock.calls[0][1] as string);
 
 describe("trackHit", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
     vi.stubGlobal("navigator", { sendBeacon: vi.fn() });
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
+  it("sends nothing until the visitor interacts", () => {
+    trackHit("/blog/foo", true);
+
+    expect(navigator.sendBeacon).not.toHaveBeenCalled();
   });
 
-  it("sends a beacon to /hit with the site and path", () => {
+  it("sends a beacon to /hit with the site and path on first interaction", () => {
     trackHit("/blog/foo", true);
-    vi.advanceTimersByTime(DWELL_MS);
+    interact();
 
     expect(navigator.sendBeacon).toHaveBeenCalledTimes(1);
     const [url, body] = vi.mocked(navigator.sendBeacon).mock.calls[0];
@@ -23,50 +27,65 @@ describe("trackHit", () => {
     expect(JSON.parse(body as string)).toEqual({ site: "fretchen.eu", path: "/blog/foo", landing: true });
   });
 
+  it.each(["pointerdown", "pointermove", "keydown", "touchstart"])("counts a %s as an interaction", (type) => {
+    trackHit("/blog/foo", true);
+    interact(type);
+
+    expect(navigator.sendBeacon).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not count a scroll — crawlers auto-scroll to trigger lazy loading", () => {
+    trackHit("/blog/foo", true);
+    interact("scroll");
+
+    expect(navigator.sendBeacon).not.toHaveBeenCalled();
+  });
+
+  it("sends only one beacon however much the visitor interacts", () => {
+    trackHit("/blog/foo", true);
+    interact("pointermove");
+    interact("pointermove");
+    interact("keydown");
+    interact("pointerdown");
+
+    expect(navigator.sendBeacon).toHaveBeenCalledTimes(1);
+  });
+
   it("forwards isLanding=false for an in-app navigation", () => {
     trackHit("/blog/foo", false);
-    vi.advanceTimersByTime(DWELL_MS);
+    interact();
 
-    const [, body] = vi.mocked(navigator.sendBeacon).mock.calls[0];
-    expect(JSON.parse(body as string)).toMatchObject({ landing: false });
+    expect(lastBody()).toMatchObject({ landing: false });
+  });
+
+  it("cancels the pending hit when the visitor navigates away before interacting", () => {
+    trackHit("/blog/first", true);
+    trackHit("/blog/second", false);
+    interact();
+
+    expect(navigator.sendBeacon).toHaveBeenCalledTimes(1);
+    expect(lastBody()).toMatchObject({ path: "/blog/second" });
+  });
+
+  it("counts each page separately when the visitor interacts on both", () => {
+    trackHit("/blog/first", true);
+    interact();
+    trackHit("/blog/second", false);
+    interact();
+
+    expect(navigator.sendBeacon).toHaveBeenCalledTimes(2);
+    const paths = vi
+      .mocked(navigator.sendBeacon)
+      .mock.calls.map(([, body]) => JSON.parse(body as string).path);
+    expect(paths).toEqual(["/blog/first", "/blog/second"]);
   });
 
   it("skips the beacon entirely when navigator.webdriver is set", () => {
     vi.stubGlobal("navigator", { sendBeacon: vi.fn(), webdriver: true });
 
     trackHit("/blog/foo", true);
-    vi.advanceTimersByTime(DWELL_MS);
+    interact();
 
     expect(navigator.sendBeacon).not.toHaveBeenCalled();
-  });
-
-  it("sends nothing before the dwell time elapses", () => {
-    trackHit("/blog/foo", true);
-    vi.advanceTimersByTime(DWELL_MS - 1);
-
-    expect(navigator.sendBeacon).not.toHaveBeenCalled();
-  });
-
-  it("cancels the pending hit when the visitor navigates away first", () => {
-    trackHit("/blog/first", true);
-    vi.advanceTimersByTime(1000);
-    trackHit("/blog/second", false);
-    vi.advanceTimersByTime(DWELL_MS);
-
-    expect(navigator.sendBeacon).toHaveBeenCalledTimes(1);
-    const [, body] = vi.mocked(navigator.sendBeacon).mock.calls[0];
-    expect(JSON.parse(body as string)).toMatchObject({ path: "/blog/second" });
-  });
-
-  it("counts a page that outlasts the dwell time after an earlier bounce", () => {
-    trackHit("/blog/bounced", true);
-    vi.advanceTimersByTime(500);
-    trackHit("/blog/read", false);
-    vi.advanceTimersByTime(DWELL_MS * 2);
-
-    expect(navigator.sendBeacon).toHaveBeenCalledTimes(1);
-    expect(JSON.parse(vi.mocked(navigator.sendBeacon).mock.calls[0][1] as string)).toMatchObject({
-      path: "/blog/read",
-    });
   });
 });

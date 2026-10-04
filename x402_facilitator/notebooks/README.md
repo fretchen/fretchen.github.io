@@ -6,11 +6,13 @@ There is **one notebook per payment scheme**, each testing that scheme's full fl
 against a locally running facilitator (`localhost:8080`), plus one buyer-side notebook
 that exercises a real deployed integration instead. Pick by what you want to test:
 
-| Notebook                      | Kernel  | Tests what                                                                                                                                                                                                                                                                            |
-| ----------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `x402_exact.ipynb`            | Deno/TS | The **`exact`** scheme, seller-side: `/supported` → approve the fee allowance → `/verify` → `/settle` → confirm the fee was collected. One on-chain transfer per request.                                                                                                             |
-| `x402_batch_settlement.ipynb` | Deno/TS | The **`batch-settlement`** scheme: open a channel with an escrowed deposit, accumulate off-chain vouchers, claim them in one transaction. Sections are labelled by role (buyer signs, seller claims). Runs on **Base Sepolia** — the canonical contract isn't deployed on OP Sepolia. |
-| `genimg_x402_buyer.ipynb`     | Deno/TS | A **buyer's** view of a real production integration: pays `scw_js`'s deployed genimg endpoint via `wrapFetchWithPayment`. Doesn't call the facilitator directly at all — it's "does my live integration work," not "does the facilitator's logic work."                               |
+| Notebook                              | Kernel  | Tests what                                                                                                                                                                                                                                                                                                 |
+| ------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `x402_exact.ipynb`                    | Deno/TS | The **`exact`** scheme, seller-side: `/supported` → approve the fee allowance → `/verify` → `/settle` → confirm the fee was collected. One on-chain transfer per request.                                                                                                                                  |
+| `x402_exact_permit2.ipynb`            | Deno/TS | The **`exact`** scheme's **Permit2** variant, paying **EURe** (no EIP-3009) on Base: `/supported` → seller approves the EURe fee (18 decimals) → buyer signs a Permit2 transfer plus an EIP-2612 permit → a misdirected payment is refused → `/verify` → `/settle`. `DRY_RUN=1` skips the on-chain writes. |
+| `x402_batch_settlement.ipynb`         | Deno/TS | The **`batch-settlement`** scheme: open a channel with an escrowed deposit, accumulate off-chain vouchers, claim them in one transaction. Sections are labelled by role (buyer signs, seller claims). Runs on **Base Sepolia** — the canonical contract isn't deployed on OP Sepolia.                      |
+| `x402_batch_settlement_permit2.ipynb` | Deno/TS | The **`batch-settlement`** scheme with **EURe** on Base, short version: Permit2 deposit (+ EIP-2612 permit) → two off-chain vouchers → seller approves the EURe fee → one claim. `DRY_RUN=1` skips the on-chain writes.                                                                                    |
+| `genimg_x402_buyer.ipynb`             | Deno/TS | A **buyer's** view of a real production integration: pays `scw_js`'s deployed genimg endpoint via `wrapFetchWithPayment`. Doesn't call the facilitator directly at all — it's "does my live integration work," not "does the facilitator's logic work."                                                    |
 
 The two scheme notebooks are the ones to reach for when changing facilitator code. The
 buyer notebook is for checking a deployed endpoint end-to-end.
@@ -39,6 +41,25 @@ Both scheme notebooks have a `TOKEN` switch (`"EURC"` by default, or `"USDC"`). 
 **Base Sepolia only** (Circle has no EURC on OP Sepolia), so for EURC the buyer needs testnet
 EURC from the same faucet, and the seller approves EURC — the facilitator charges its fee in
 the token that was paid.
+
+### Test EURe (Base Sepolia)
+
+`x402_exact_permit2.ipynb` pays in EURe. Test EURe on Base Sepolia
+(`0x29F37F6adCa168B79B8d9567eab9BE3fBF21db85`) comes from the Monerium sandbox, not a faucet:
+
+1. Sign up at <https://sandbox.monerium.dev>. Sandbox KYC accepts test data.
+2. Link the buyer address on Base Sepolia — `EURE_BUYER_PRIVATE_KEY` if set in `.env`, else
+   `TEST_WALLET_PRIVATE_KEY`. Linking signs a
+   message, so import that key into a wallet such as MetaMask first.
+3. Receive → _Simulate bank transfer_ → amount → _Add money_. EURe is minted to that address.
+
+Monerium's sandbox guide names only Sepolia, Chiado and Amoy. Base Sepolia is in its token list
+(`https://api.monerium.dev/tokens`), but linking there through the UI is untested so far. The
+buyer needs no ETH for EURe: the facilitator submits the permit and the transfer. The seller
+needs a little Base Sepolia ETH for its one EURe `approve()`.
+
+Until the Permit2 change is deployed, run this notebook against a local facilitator
+(`npm run dev`, below); the deployed one refuses Permit2 payments.
 
 Deno does not search upward for `.env` by default, so each notebook loads it explicitly:
 `load({ envPath: "../.env", examplePath: null, export: true })`. (`examplePath: null`

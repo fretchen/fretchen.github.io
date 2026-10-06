@@ -113,9 +113,18 @@ their own — propose deciding after a first draft.
 
 ## Tone & Style
 
-- First-person, investigative register — "I built a model to test this, and the model forced a
-  correction," in the spirit of `sprit_national`'s opening ("that motivated me to dive deeper
-  and the answer was more nuanced than expected").
+- **Language: German.** The post is strongly about Germany (East/West divide, Länder-level
+  voting, AfD Landtag entries), so the body, title, description, section headings, and chart
+  labels are all in German — following `sprit_national.mdx`, the German precedent this plan
+  already anchors on (German frontmatter values, standard frontmatter shape unchanged).
+  `kuesten_dimension.mdx` is the blog's second German post, so this is an established pattern,
+  not a first. Established English technical terms stay English where the literature uses them
+  in German texts too (*Populismus*, *Angebot* und *Nachfrage* for supply/demand, but e.g.
+  "PopuList" as a dataset name); paper titles stay in the original and are cited as such.
+- First-person, investigative register — "Ich habe ein Modell gebaut, um das zu prüfen, und
+  das Modell hat mich eines Besseren belehrt," in the spirit of `sprit_national`'s opening
+  ("Das motivierte mich tiefer in das Thema reinzuschauen und die Antwort war differenzierter,
+  als ich erwartet hatte").
 - Natural language over notation in the main text: "how much trust moved" not "β"; "the model
   that separates a national trend from a regional one" not "two-way fixed effects."
   Terminology like *latent trust*, *supply-side*, *demand-side* is fine once introduced in
@@ -157,7 +166,8 @@ hand from this session's research.
 - **`sprit_national.mdx`** is the closest relative: same East-Germany anchor, same "a
   conversation prompted me to look closer than I expected to need to" opening move, same
   pattern of real data tables in the body with a full-methodology appendix at the end. Reuse
-  that appendix convention directly.
+  that appendix convention directly — and match its language: German throughout, German
+  frontmatter values, German chart labels.
 - **`common_pool_patience.mdx`** establishes that this blog's "others" category already accepts
   real quantitative rigor when the topic earns it — useful precedent for not over-simplifying
   the appendix.

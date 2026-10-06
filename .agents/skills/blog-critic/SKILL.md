@@ -1,4 +1,5 @@
 ---
+name: "blog-critic"
 description: "Use when: reviewing a blog post draft, critiquing blog content, finding boring passages, checking audience fit, identifying inconsistencies, reviewing introductions, assessing pacing or tone. Read-only critic for blog posts — outputs a .todos.md file with actionable feedback."
 allowed-tools: [Read, Write, Bash]
 ---

@@ -1,4 +1,5 @@
 ---
+name: "chat-tools"
 description: "Use when: adding, changing or reviewing a tool for the /assistent chat — anything touching website/tools/*.ts, TOOL_REGISTRY or toolRunners in AssistantChat.tsx, the tool loop and its hops, web research (note_findings, compaction, Stop & answer), or the MAX_TOOLS_BYTES / MAX_MESSAGES_BYTES caps in scw_js/llm_schemas.ts. Carries the two-part tool contract, why tool modules stay React-free, and the three constraints that bite silently."
 ---
 

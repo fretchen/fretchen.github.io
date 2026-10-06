@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Repo instructions for coding agents working in this repository.
 
 ## Repository Overview
 
@@ -8,8 +8,8 @@ Monorepo for a blockchain-based AI service platform. Each subdirectory is an ind
 
 | Directory             | Purpose                                                     | Further reading                                                  |
 | --------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------- |
-| `website/`            | Frontend (Vike SSR + React 19 + Panda CSS)                  | [`README`](website/README.md) · [`CLAUDE.md`](website/CLAUDE.md) |
-| `eth/`                | Solidity smart contracts (Hardhat, Optimism L2)             | [`README`](eth/README.md) · [`CLAUDE.md`](eth/CLAUDE.md)         |
+| `website/`            | Frontend (Vike SSR + React 19 + Panda CSS)                  | [`README`](website/README.md) · [`AGENTS.md`](website/AGENTS.md) |
+| `eth/`                | Solidity smart contracts (Hardhat, Optimism L2)             | [`README`](eth/README.md) · [`AGENTS.md`](eth/AGENTS.md)         |
 | `scw_js/`             | Serverless backend (Scaleway Functions, AI image gen + LLM) | [`README`](scw_js/README.md)                                     |
 | `x402_facilitator/`   | EIP-3009 USDC payment facilitator (Scaleway Functions)      | [`README`](x402_facilitator/README.md)                           |
 | `comment_service/`    | Blog comment backend (Scaleway Functions)                   | [`README`](comment_service/README.md)                            |
@@ -47,7 +47,7 @@ All NFT contracts use the **OpenZeppelin UUPS upgradeable proxy pattern** — ne
 
 Hardhat here uses **Viem, not Ethers** — contract calls return `bigint`.
 
-Repo-specific conventions (the two test categories, the deploy-script export guard, the storage-layout rule) are in [`eth/CLAUDE.md`](eth/CLAUDE.md).
+Repo-specific conventions (the two test categories, the deploy-script export guard, the storage-layout rule) are in [`eth/AGENTS.md`](eth/AGENTS.md).
 
 ### Serverless (`scw_js/`, `x402_facilitator/`, `comment_service/`, `analytics/`)
 
@@ -69,7 +69,7 @@ Two things that silently break payments if you get them wrong, both documented i
 
 **Vike SSR** with file-based routing: pages in `pages/`, renderer in `renderer/`. Client-only components need `{ ssr: false }` in imports.
 
-**Panda CSS** compiles `css({})` at build time, so several ways of writing a style fail _silently_ — the component renders, the tests pass, only the CSS is missing. The rules are in [`website/CLAUDE.md`](website/CLAUDE.md), enforced by `website/test/styleConventions.test.ts`. The design system itself — colours and their jobs, the button recipe, the scales — is in [`website/README.md`](website/README.md); read it before adding any style.
+**Panda CSS** compiles `css({})` at build time, so several ways of writing a style fail _silently_ — the component renders, the tests pass, only the CSS is missing. The rules are in [`website/AGENTS.md`](website/AGENTS.md), enforced by `website/test/styleConventions.test.ts`. The design system itself — colours and their jobs, the button recipe, the scales — is in [`website/README.md`](website/README.md); read it before adding any style.
 
 **Wagmi v2 + TanStack Query** for blockchain state; hooks are auto-generated from `wagmi.config.ts`, not hand-written.
 

@@ -1,4 +1,5 @@
 ---
+name: "x402"
 description: "Use when: writing or reviewing anything about x402 in this repo — the /x402 pages, blog posts on payments, the facilitator, the paid Scaleway endpoints, the imagegen/assistant buyers, EIP-3009, batch-settlement, or any code touching @x402/fetch, x402_server.ts, or x402_facilitator. Carries the role vocabulary, the repo's role map, and where the official spec lives."
 ---
 

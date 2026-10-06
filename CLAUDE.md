@@ -15,6 +15,7 @@ Monorepo for a blockchain-based AI service platform. Each subdirectory is an ind
 | `comment_service/`    | Blog comment backend (Scaleway Functions)                   | [`README`](comment_service/README.md)                            |
 | `analytics/`          | Serverless pageview counter (Scaleway Functions, S3-backed) | [`README`](analytics/README.md)                                  |
 | `growth-agent/`       | AI growth agent cron container (Python, LangGraph)          | [`README`](growth-agent/README.md)                               |
+| `observability/`      | Log CLI + Loki alert rules for all Scaleway functions       | [`README`](observability/README.md)                              |
 | `shared/chain-utils/` | Shared blockchain utility library (Viem peer dep)           | —                                                                |
 | `notebooks/`          | Python Jupyter notebooks for analysis                       | [`README`](notebooks/README.md)                                  |
 
@@ -25,6 +26,18 @@ Each package documents its own commands in its `README.md`. Three ordering rules
 - **`website/`** — run `npm run prepare` (Panda codegen) before the first dev or build.
 - **`shared/chain-utils/`** — it is a local file dependency (`"file:../shared/chain-utils"`). Run `npm run build` there before rebuilding any dependent package.
 - **`eth/`** — after changing a contract, run `npx hardhat run scripts/export-abi.ts`, then update the website's ABI imports.
+
+## Git Workflow
+
+**Branching off `origin/main`: always pass `--no-track`.** `git switch -c <branch> origin/main`
+(no `--no-track`) makes Git auto-configure the new branch's upstream as `origin/main` itself
+(`branch.autoSetupMerge`), not a future same-named remote branch. Symptom: `git status` compares
+against `origin/main` instead of showing the branch as unpublished, and a bare `git push` fails
+with "the upstream branch ... does not match the name of your current branch" — or, with a
+different `push.default`, could push straight onto `main`. Use
+`git switch -c <branch> --no-track origin/main`, or fix an already-created branch with
+`git branch --unset-upstream`. Set the correct tracking on first push with
+`git push -u origin <branch>`.
 
 ## Architecture Patterns
 
@@ -66,7 +79,7 @@ See [`.github/THREAT_MODEL.md`](.github/THREAT_MODEL.md) for the full asset inve
 
 **Key hierarchy** (highest-value first):
 
-- `CONTRACT_OWNER_PRIVATE_KEY` (Hardhat keystore) — dedicated EOA `0x1af51D…fBB20`, controls every upgradeable contract. Never use it for anything else.
+- `CONTRACT_OWNER_PRIVATE_KEY` (Hardhat keystore) — dedicated EOA `0x1af51D…fBB20`, controls every upgradeable contract and owns the three ERC-8004 agent identities (Base). Never use it for anything else.
 - `SEPOLIA_PRIVATE_KEY` (Hardhat keystore) — deployment/script signing key `0x073f26…`. Does NOT own contracts.
 - Agent wallet `0xAAEBC1…` — backend-only, whitelisted on GenImNFTv4 via `authorizeAgentWallet()`.
 - Facilitator wallet — stored as a Scaleway secret, receives USDC fees only.

@@ -50,10 +50,10 @@ const paidRequestPaymentHeader = {
 };
 
 describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
-  let handle;
-  let create402Response;
-  let createPaymentRequirements;
-  let mockContract;
+  let handle: (typeof import("../genimg_x402_token.js"))["handle"];
+  let create402Response: (typeof import("../genimg_x402_token.js"))["create402Response"];
+  let createPaymentRequirements: (typeof import("../x402_server.js"))["createPaymentRequirements"];
+  let mockContract: ReturnType<typeof createMockContract>;
 
   beforeAll(async () => {
     // Create mock contract
@@ -145,7 +145,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "https://api.example.com/genimg",
         description: "AI Image Generation",
         mimeType: "application/json",
-        amount: "1000",
+        price: { USDC: "1000", EURC: "900" },
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
       });
       const response = create402Response(paymentRequirements);
@@ -177,7 +177,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/genimg",
         description: "AI Image Generation",
         mimeType: "application/json",
-        amount: "1000",
+        price: { USDC: "1000", EURC: "900" },
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
       });
       const response = create402Response(paymentRequirements);
@@ -207,7 +207,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/genimg",
         description: "AI Image Generation",
         mimeType: "application/json",
-        amount: "1000",
+        price: { USDC: "1000", EURC: "900" },
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
       });
       const response = create402Response(paymentRequirements);
@@ -223,7 +223,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/genimg",
         description: "AI Image Generation",
         mimeType: "application/json",
-        amount: "1000",
+        price: { USDC: "1000", EURC: "900" },
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
       });
       const response = create402Response(paymentRequirements);
@@ -241,7 +241,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/genimg",
         description: "AI Image Generation",
         mimeType: "application/json",
-        amount: "1000",
+        price: { USDC: "1000", EURC: "900" },
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
         networks: ["eip155:11155420"], // Only Sepolia
       });
@@ -261,7 +261,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/genimg",
         description: "AI Image Generation",
         mimeType: "application/json",
-        amount: "1000",
+        price: { USDC: "1000", EURC: "900" },
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
         networks: undefined, // Default: all networks
       });
@@ -358,9 +358,17 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
       // Default is production mode: Optimism + Base
       expect(body.accepts).toBeInstanceOf(Array);
-      expect(body.accepts.length).toBe(2);
-      expect(body.accepts[0].network).toBe("eip155:10"); // Optimism Mainnet
-      expect(body.accepts[1].network).toBe("eip155:8453"); // Base Mainnet
+      // Optimism: USDC. Base: EURC first (the preference), then USDC.
+      expect(
+        body.accepts.map((a: { network: string; extra: { name: string } }) => [
+          a.network,
+          a.extra.name,
+        ]),
+      ).toEqual([
+        ["eip155:10", "USD Coin"],
+        ["eip155:8453", "EURC"],
+        ["eip155:8453", "USD Coin"],
+      ]);
     });
 
     test("should reject an unsupported network instead of offering mainnet", async () => {
@@ -449,6 +457,49 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(response.statusCode).toBe(400);
       const body = JSON.parse(response.body);
       expect(body.error).toContain("Only POST");
+    });
+
+    test("should serve the ERC-8004 registration file on GET and HEAD /.well-known/agent-registration.json", async () => {
+      const get = await handle(
+        { httpMethod: "GET", headers: {}, body: "", path: "/.well-known/agent-registration.json" },
+        {},
+      );
+      expect(get.statusCode).toBe(200);
+      expect(get.headers["Content-Type"]).toBe("application/json");
+      expect(get.headers["Access-Control-Allow-Origin"]).toBe("*");
+      expect(JSON.parse(get.body).services[0].endpoint).toBe(
+        "https://imagegen-agent.fretchen.eu/openapi.json",
+      );
+
+      // The offchain agentWallet comes from NFT_WALLET_PUBLIC_KEY, the wallet the 402 pays.
+      const payTo = "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C";
+      const previous = process.env.NFT_WALLET_PUBLIC_KEY;
+      process.env.NFT_WALLET_PUBLIC_KEY = payTo;
+      try {
+        const withWallet = await handle(
+          {
+            httpMethod: "GET",
+            headers: {},
+            body: "",
+            path: "/.well-known/agent-registration.json",
+          },
+          {},
+        );
+        expect(JSON.parse(withWallet.body).services).toContainEqual({
+          name: "agentWallet",
+          endpoint: `eip155:8453:${payTo}`,
+        });
+      } finally {
+        if (previous === undefined) delete process.env.NFT_WALLET_PUBLIC_KEY;
+        else process.env.NFT_WALLET_PUBLIC_KEY = previous;
+      }
+
+      const head = await handle(
+        { httpMethod: "HEAD", headers: {}, body: "", path: "/.well-known/agent-registration.json" },
+        {},
+      );
+      expect(head.statusCode).toBe(200);
+      expect(head.body).toBe("");
     });
 
     test("should serve the OpenAPI discovery document on GET /openapi.json", async () => {
@@ -1058,14 +1109,82 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(response.statusCode).toBe(200);
 
       // Verify facilitator was called with correct network
-      const verifyCall = global.fetch.mock.calls.find((call) => call[0].includes("/verify"));
-      expect(verifyCall).toBeDefined();
+      const verifyCall = vi
+        .mocked(global.fetch)
+        .mock.calls.find((call) => String(call[0]).includes("/verify"));
+      if (!verifyCall) {
+        throw new Error("verify call not found");
+      }
 
-      const verifyBody = JSON.parse(verifyCall[1].body);
+      const verifyBody = JSON.parse(String(verifyCall[1]?.body));
       expect(verifyBody.paymentRequirements.network).toBe("eip155:10");
       expect(verifyBody.paymentRequirements.asset).toBe(
         "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
       );
+    });
+
+    describe("paid in EURC on Base", () => {
+      const BASE_EURC = "0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42";
+
+      function eurcEvent() {
+        const payment = {
+          x402Version: 2,
+          accepted: {
+            scheme: "exact",
+            network: "eip155:8453",
+            amount: "60000",
+            asset: BASE_EURC,
+            payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+          },
+          payload: {
+            authorization: {
+              from: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+              to: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+              value: "60000",
+            },
+          },
+        };
+        return {
+          httpMethod: "POST",
+          headers: { "x-payment": JSON.stringify(payment) },
+          body: JSON.stringify({ prompt: "Test EURC" }),
+          path: "/genimg",
+        };
+      }
+
+      test("verifies against EURC requirements at the EURC price", async () => {
+        setupSuccessfulMintingFlow(102, "eip155:8453");
+
+        const response = await handle(eurcEvent(), {});
+        expect(response.statusCode).toBe(200);
+
+        const verifyCall = vi
+          .mocked(global.fetch)
+          .mock.calls.find((call) => String(call[0]).includes("/verify"));
+        const verifyBody = JSON.parse(String(verifyCall?.[1]?.body));
+        // The image's own EURC price (0.06 EURC), not its USDC price and not a conversion of it.
+        expect(verifyBody.paymentRequirements).toMatchObject({
+          network: "eip155:8453",
+          asset: BASE_EURC,
+          amount: "60000",
+          extra: { name: "EURC", version: "2" },
+        });
+      });
+
+      test("refuses EURC on a network without EURC, before contacting the facilitator", async () => {
+        global.fetch = vi.fn();
+        const event = eurcEvent();
+        const payment = JSON.parse(event.headers["x-payment"]);
+        payment.accepted.network = "eip155:10";
+        event.headers["x-payment"] = JSON.stringify(payment);
+        event.body = JSON.stringify({ prompt: "Test EURC", network: "eip155:10" });
+
+        const response = await handle(event, {});
+
+        expect(response.statusCode).toBe(402);
+        expect(JSON.parse(response.body).reason).toBe("invalid_payment_asset");
+        expect(global.fetch).not.toHaveBeenCalled();
+      });
     });
 
     test("should verify Optimism Sepolia payment (test mode)", async () => {
@@ -1122,10 +1241,14 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(response.statusCode).toBe(200);
 
       // Verify facilitator was called with correct network
-      const verifyCall = global.fetch.mock.calls.find((call) => call[0].includes("/verify"));
-      expect(verifyCall).toBeDefined();
+      const verifyCall = vi
+        .mocked(global.fetch)
+        .mock.calls.find((call) => String(call[0]).includes("/verify"));
+      if (!verifyCall) {
+        throw new Error("verify call not found");
+      }
 
-      const verifyBody = JSON.parse(verifyCall[1].body);
+      const verifyBody = JSON.parse(String(verifyCall[1]?.body));
       expect(verifyBody.paymentRequirements.network).toBe("eip155:11155420");
       expect(verifyBody.paymentRequirements.asset).toBe(
         "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
@@ -1613,7 +1736,9 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
       const result = extractPaymentPayload(headers);
 
-      expect(result).not.toBeNull();
+      if (!result) {
+        throw new Error("expected a decoded payload");
+      }
       expect(result.scheme).toBe("exact");
       expect(result.network).toBe("eip155:11155420");
     });
@@ -1635,7 +1760,9 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
       const result = extractPaymentPayload(headers);
 
-      expect(result).not.toBeNull();
+      if (!result) {
+        throw new Error("expected a decoded payload");
+      }
       expect(result.network).toBe("eip155:11155420");
     });
   });
@@ -1649,20 +1776,24 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/test",
         description: "Test Resource",
         mimeType: "application/json",
-        amount: "1000",
+        price: { USDC: "1000", EURC: "900" },
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
       });
 
       expect(requirements.x402Version).toBe(2);
-      expect(requirements.accepts).toHaveLength(4);
+      // USDC on all four networks, plus EURC on Base and Base Sepolia.
+      expect(requirements.accepts).toHaveLength(6);
 
       const networks = requirements.accepts.map((a) => a.network);
       expect(networks).toContain("eip155:10");
       expect(networks).toContain("eip155:11155420");
 
-      for (const accept of requirements.accepts) {
-        const config = getUSDCConfig(accept.network);
-        expect(accept.asset).toBe(config.address);
+      // Every network offers USDC at the USDC price.
+      for (const network of new Set(networks)) {
+        const usdc = requirements.accepts.find(
+          (a) => a.network === network && a.asset === getUSDCConfig(network).address,
+        );
+        expect(usdc?.amount).toBe("1000");
       }
     });
 
@@ -1720,13 +1851,16 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/test",
         description: "Test",
         mimeType: "application/json",
-        amount: "1000",
+        price: { USDC: "1000", EURC: "900" },
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
       });
 
       // Find mainnet and sepolia accepts
       const mainnetAccept = requirements.accepts.find((a) => a.network === "eip155:10");
       const sepoliaAccept = requirements.accepts.find((a) => a.network === "eip155:11155420");
+      if (!mainnetAccept || !sepoliaAccept) {
+        throw new Error("expected both a mainnet and a sepolia accept entry");
+      }
 
       // Verify extra field contains correct EIP-712 domain info
       expect(mainnetAccept.extra).toEqual({
@@ -1737,6 +1871,39 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(sepoliaAccept.extra).toEqual({
         name: "USDC", // Different from mainnet!
         version: "2",
+      });
+    });
+
+    describe("USDC and EURC as two parallel price lists", () => {
+      test("lists EURC before USDC on Base, and only USDC on Optimism", async () => {
+        const { createPaymentRequirements } = await import("../x402_server.js");
+
+        const { accepts } = createPaymentRequirements({
+          resourceUrl: "/test",
+          description: "Test",
+          mimeType: "application/json",
+          price: { USDC: "1001", EURC: "850" },
+          payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+        });
+
+        const byNetwork = (network: string) =>
+          accepts.filter((a) => a.network === network).map((a) => a.extra.name);
+        // The order is the preference: a stock client pays with the first entry it allows.
+        expect(byNetwork("eip155:8453")).toEqual(["EURC", "USD Coin"]);
+        expect(byNetwork("eip155:84532")).toEqual(["EURC", "USDC"]);
+        expect(byNetwork("eip155:10")).toEqual(["USD Coin"]);
+        expect(byNetwork("eip155:11155420")).toEqual(["USDC"]);
+
+        const baseEurc = accepts.find(
+          (a) => a.network === "eip155:8453" && a.extra.name === "EURC",
+        );
+        const baseUsdc = accepts.find(
+          (a) => a.network === "eip155:8453" && a.extra.name === "USD Coin",
+        );
+        // Each entry carries its own token's price — no conversion between the two.
+        expect(baseEurc?.amount).toBe("850");
+        expect(baseEurc?.asset).toBe("0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42");
+        expect(baseUsdc?.amount).toBe("1001");
       });
     });
   });
@@ -1860,9 +2027,6 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       const mockTokenId = 88;
       setupSuccessfulMintingFlow(mockTokenId);
 
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-      const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-
       const event = {
         httpMethod: "POST",
         headers: {
@@ -1894,15 +2058,11 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
       // Verify settlement actually resolved successfully, not just that the facilitator was
       // called. Catches schema drift in the settle response (e.g. a required field missing from
-      // the mock).
-      expect(consoleErrorSpy).not.toHaveBeenCalled();
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        "✅ Payment settled:",
-        expect.objectContaining({ success: true, transaction: "0xsettlement" }),
-      );
-
-      consoleErrorSpy.mockRestore();
-      consoleLogSpy.mockRestore();
+      // the mock): a settle failure returns 402 with no Payment-Response header (see the next
+      // test), so a 200 carrying that header already proves settlement succeeded and the NFT
+      // flow ran on top of it.
+      expect(response.headers["Payment-Response"]).toBeDefined();
+      expect(JSON.parse(response.body).x_nft.status).toBe("minted");
     });
 
     test("should answer 402 and never mint when settlement fails", async () => {
@@ -1912,7 +2072,6 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       // an NFT whose mintPrice and gas we already paid.
       const mockTokenId = 91;
       setupSuccessfulMintingFlow(mockTokenId);
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       // Same verify + metadata fixtures, but the facilitator refuses to settle.
       global.fetch = vi
@@ -1944,8 +2103,6 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       // The whole point: no NFT was minted and nothing was transferred.
       expect(mockContract.write.safeMint).not.toHaveBeenCalled();
       expect(mockContract.write.safeTransferFrom).not.toHaveBeenCalled();
-
-      consoleErrorSpy.mockRestore();
     });
   });
 });

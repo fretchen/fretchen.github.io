@@ -33,7 +33,8 @@ export const ADVERTISED_LLM_MODELS = advertisedModelIds() as [string, ...string[
 
 // ── Tools ──
 
-export const MAX_TOOLS = 8;
+/** Bytes, not a tool count: what is billed is the serialized definitions, on every hop. A count
+ *  cap on top of this bounded nothing the byte cap does not already bound. */
 export const MAX_TOOLS_BYTES = 8192;
 
 /** One tool call the model wants made. `arguments` is a JSON *string*, per OpenAI. */
@@ -51,8 +52,8 @@ export const LLMToolCallSchema = z.looseObject({
  * Schema the upstream model owns.
  *
  * The byte cap is a `.refine()`, which `z.toJSONSchema` does not render, so it is restated in the
- * `.describe()` on the request field. We enforce slightly more than we publish — the safe
- * direction, but a real gap: `maxItems` publishes itself, the byte cap cannot.
+ * `.describe()` on the request field. We enforce slightly more than the JSON Schema alone
+ * publishes — the safe direction, and the prose closes the gap for a reader.
  */
 export const LLMToolsSchema = z
   .array(
@@ -65,7 +66,6 @@ export const LLMToolsSchema = z
       }),
     }),
   )
-  .max(MAX_TOOLS)
   .refine((tools) => Buffer.byteLength(JSON.stringify(tools), "utf8") <= MAX_TOOLS_BYTES, {
     error: `tools must serialize to at most ${MAX_TOOLS_BYTES} bytes`,
   });
@@ -80,15 +80,16 @@ export const LLMToolsSchema = z
  * left the far larger of the two open: a request filling the model's context window cost several
  * times the ceiling it was charged, repeatably.
  *
- * Sized from the ceiling: 6000 output tokens ≈ 9000 atomic USDC, which at the $0.50/M *input*
- * rate buys ~18,000 input tokens ≈ ~72 KB of English. 64 KB stays under that with room for
- * `tools` (8 KB) and the system turn.
+ * Sized from the ceiling: 20000 output tokens ≈ 30000 atomic USDC, which at the $0.50/M *input*
+ * rate buys ~60,000 input tokens ≈ ~240 KB of English. 192 KB stays under that with room for
+ * `tools` (8 KB) and the system turn. Raised from 64 KB together with the ceiling, for multi-hop
+ * web research; the two move together or the cap stops matching what is charged.
  *
  * Enforced as a byte count rather than a character count because that is what the upstream bills
  * against; a `.refine()` here would not survive `z.toJSONSchema`, so the handler checks it and
  * the `messages` field restates it in prose below.
  */
-export const MAX_MESSAGES_BYTES = 65_536;
+export const MAX_MESSAGES_BYTES = 196_608;
 
 export const LLMChatMessageSchema = z
   .looseObject({
@@ -202,7 +203,7 @@ export const LLMChatRequestSchema = z
     n: z.literal(1).optional().describe(rejected("n").doc),
     max_tokens: z.never().optional().describe(rejected("max_tokens").doc),
     tools: LLMToolsSchema.optional().describe(
-      `Tool definitions offered to the model, OpenAI shape. At most ${MAX_TOOLS}, and at most ${MAX_TOOLS_BYTES} bytes serialized — tool definitions are input tokens charged on every hop, so an uncapped array inflates the metered cost. A tool call comes back as choices[].message.tool_calls with finish_reason: "tool_calls"; execute it and send the result back as a role:"tool" message. This endpoint never calls a tool itself.`,
+      `Tool definitions offered to the model, OpenAI shape. At most ${MAX_TOOLS_BYTES} bytes serialized — tool definitions are input tokens charged on every hop, so an uncapped array inflates the metered cost. A tool call comes back as choices[].message.tool_calls with finish_reason: "tool_calls"; execute it and send the result back as a role:"tool" message. This endpoint never calls a tool itself.`,
     ),
     tool_choice: z
       .enum(["auto", "none"])

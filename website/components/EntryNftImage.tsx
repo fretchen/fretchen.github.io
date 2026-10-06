@@ -73,7 +73,7 @@ export const EntryNftImage: React.FC<EntryNftImageProps> = ({ tokenId, fallbackI
 
         // Only reachable when build-time metadata is missing. Today every tokenID gets it,
         // so this is a fallback rather than a hot path — but it has to stay: the build-time
-        // loader queries one chain (utils/nodeChainUtils.ts getDefaultNetwork) while this
+        // loader queries Optimism mainnet only (utils/nodeNftLoader.ts) while this
         // component covers all mainnets, so a Base-minted NFT would land here.
         if (tokenId && publicClient) {
           // Get token URI using public client (same as NFTFloatImage)

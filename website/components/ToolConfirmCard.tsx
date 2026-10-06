@@ -16,6 +16,9 @@ interface ToolConfirmCardProps {
   /** No "failed" phase — see the type comment on ToolCardState in AssistantChat.tsx. */
   phase: "confirm" | "generating";
   network: string;
+  /** The price to show, already formatted with its currency (e.g. "€0.06 EURC") — see
+   *  `utils/x402Prices.ts`. What is actually charged is whatever the seller's 402 asks for. */
+  price: string;
   onConfirm: (prompt: string, size: ToolSize) => void;
   onCancel: () => void;
 }
@@ -24,14 +27,14 @@ const SIZE_OPTIONS: readonly ToolSize[] = IMAGE_SIZES;
 
 /**
  * Pauses the chat's tool-call loop for explicit approval before a paid, chain-writing action.
- * Never auto-executes: `generate_image` spends the user's USDC and mints an NFT, and the model
+ * Never auto-executes: `generate_image` spends the user's money and mints an NFT, and the model
  * writing the prompt is not consent to send it.
  *
  * Discloses the mint here, even though the resulting chat bubble does not surface the token
  * afterward (see `imagegen-in-chat-plan_1.md` §0.1) — informed consent before an irreversible
  * chain-write and UI clutter after it are different concerns.
  */
-export function ToolConfirmCard({ prompt, size, phase, network, onConfirm, onCancel }: ToolConfirmCardProps) {
+export function ToolConfirmCard({ prompt, size, phase, network, price, onConfirm, onCancel }: ToolConfirmCardProps) {
   const title = useLocale({ label: "assistent.toolConfirmTitle" });
   const promptLabel = useLocale({ label: "assistent.toolConfirmPromptLabel" });
   const sizeLabel = useLocale({ label: "assistent.toolConfirmSizeLabel" });
@@ -76,7 +79,7 @@ export function ToolConfirmCard({ prompt, size, phase, network, onConfirm, onCan
       </div>
 
       <div className={styles.metaRow}>
-        <span>$0.07 USDC</span>
+        <span>{price}</span>
         <ChainBadge network={network} size="sm" position="inline" />
       </div>
       <div className={styles.mintNotice}>{mintNotice}</div>

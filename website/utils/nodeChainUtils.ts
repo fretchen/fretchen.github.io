@@ -14,17 +14,6 @@ import CollectorNFTv1ABI from "../../eth/abi/contracts/CollectorNFTv1.json";
 // SSR/Node.js specific utilities
 // ═══════════════════════════════════════════════════════════════
 
-/**
- * Get default CAIP-2 network for server-side rendering.
- * Uses mainnet for production, testnet for development.
- *
- * @returns CAIP-2 network string (e.g., "eip155:10")
- */
-export function getDefaultNetwork(): string {
-  const isProd = process.env.NODE_ENV === "production";
-  return isProd ? "eip155:10" : "eip155:11155420";
-}
-
 // ═══════════════════════════════════════════════════════════════
 // Legacy exports (PR 2b may refactor these)
 // ═══════════════════════════════════════════════════════════════

@@ -109,6 +109,65 @@ export const USDC_NAMES: Record<string, string> = {
 };
 
 // ═══════════════════════════════════════════════════════════════
+// EURC (Base only — Circle has no EURC deployment on Optimism)
+// ═══════════════════════════════════════════════════════════════
+
+export const EURC_ADDRESSES: Record<string, `0x${string}`> = {
+  "eip155:8453": "0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42", // Base
+  "eip155:84532": "0x808456652fdb597867f38412077A9182bf77359F", // Base Sepolia
+};
+
+// Read on-chain (name(), version()): unlike USDC, mainnet and testnet share one name.
+export const EURC_NAMES: Record<string, string> = {
+  "eip155:8453": "EURC",
+  "eip155:84532": "EURC",
+};
+
+// ═══════════════════════════════════════════════════════════════
+// Stablecoin lookup (USDC + EURC)
+// ═══════════════════════════════════════════════════════════════
+
+export type StablecoinSymbol = "USDC" | "EURC";
+
+export interface StablecoinInfo {
+  symbol: StablecoinSymbol;
+  address: `0x${string}`;
+  /** EIP-712 domain name */
+  name: string;
+  /** EIP-712 domain version */
+  version: string;
+}
+
+/**
+ * Every stablecoin this project accepts on `network`, in registry order (USDC, then EURC).
+ * Empty for an unknown network. Which one a seller *prefers* is the seller's decision — this
+ * list deliberately carries no preference order.
+ */
+export function getStablecoins(network: string): StablecoinInfo[] {
+  const candidates: Array<[StablecoinSymbol, `0x${string}` | undefined, string | undefined]> = [
+    ["USDC", USDC_ADDRESSES[network], USDC_NAMES[network]],
+    ["EURC", EURC_ADDRESSES[network], EURC_NAMES[network]],
+  ];
+  const coins: StablecoinInfo[] = [];
+  for (const [symbol, address, name] of candidates) {
+    if (address && name) {
+      coins.push({ symbol, address, name, version: "2" });
+    }
+  }
+  return coins;
+}
+
+/**
+ * Identify a token address as one of the stablecoins this project accepts on `network`.
+ * Case-insensitive, since addresses arrive in mixed EIP-55 casing.
+ * @returns null for any other token, or for EURC on a network without EURC.
+ */
+export function findStablecoin(network: string, address: string): StablecoinInfo | null {
+  const wanted = address.toLowerCase();
+  return getStablecoins(network).find((coin) => coin.address.toLowerCase() === wanted) ?? null;
+}
+
+// ═══════════════════════════════════════════════════════════════
 // EIP3009 Splitter
 // ═══════════════════════════════════════════════════════════════
 

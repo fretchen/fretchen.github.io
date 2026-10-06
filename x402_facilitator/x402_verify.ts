@@ -105,8 +105,9 @@ export async function verifyPayment(
       remainingSettlements: resultWithExtras.remainingSettlements as number | undefined,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    logger.error({ message }, "Unexpected error during payment verification");
+    // { err: error } (not just the message) so pino serializes the stack trace too — this
+    // is the unclassified path, so the stack is what makes it debuggable.
+    logger.error({ err: error }, "Unexpected error during payment verification");
     return {
       isValid: false,
       invalidReason: "unexpected_verify_error",

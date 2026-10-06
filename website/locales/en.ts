@@ -17,8 +17,9 @@ export default {
     switchingNetwork: "Switching Network...",
     creating: "Creating...",
     generating: "Generating...",
+    // {cost} is the price with its currency, e.g. "€0.06 EURC"; {chain} the payment network.
     mintingInfo:
-      "Pays with USDC on Optimism (network fee < 1¢). Sovereign generation — your prompt can only be used for your NFT, not stored elsewhere.",
+      "Pays {cost} on {chain} (network fee < 1¢). Sovereign generation — your prompt can only be used for your NFT, not stored elsewhere.",
     myArtworks: "My Artworks",
     allPublicArtworks: "All Public Artworks",
     artwork: "Artwork",
@@ -38,11 +39,10 @@ export default {
     unknownError: "An unknown error occurred",
     chainSwitchFailed: "Failed to switch network - please try again",
     // x402 Payment
-    awaitingSignature: "Sign USDC payment in wallet...",
+    awaitingSignature: "Sign the payment in your wallet...",
     processingPayment: "Processing payment...",
     mintingNft: "Minting your NFT...",
     paymentConfirmed: "Payment confirmed!",
-    usdcCost: "Cost: $0.07 USDC",
     // File upload
     uploadReferenceImage: "Upload Reference Image (Optional)",
     dragDropHere: "Drag & drop an image here, or click to browse",
@@ -84,14 +84,59 @@ export default {
   assistent: {
     title: "Chat Assistant",
     connectWalletMessage: "Connect your account to send.",
-    actions: "Actions",
-    clearChat: "🗑️ Clear Chat",
+    clearChat: "Clear chat",
+    capabilities: "What I can do",
+    noToolsNote: "No tools offered — the assistant will answer from its own knowledge.",
+    advanced: "Advanced",
+    // These seven stay byte-identical to the literals they replaced in TOOL_REGISTRY:
+    // test/AssistantChat.test.tsx queries by "Image generation" and "Site analytics", and
+    // LocaleText resolves real English in tests (only useLocale is mocked). Rewording them
+    // is a separate pass that updates those queries with it.
+    toolImageGeneration: "Image generation",
+    toolBundestagSessions: "Bundestag sessions",
+    toolFactChecks: "Fact-checks",
+    toolSiteContent: "Site content",
+    toolWebSearch: "Web search",
+    toolFetchUrl: "Fetch URL",
+    toolSiteAnalytics: "Site analytics",
+    toolImageGenerationDesc: "Creates a picture from your description.",
+    // The one actually shown: the grouped Bundestag row's description comes from the first
+    // entry in that group (see TOOL_REGISTRY), and that is this one.
+    toolBundestagSessionsDesc: "What was said or decided in the Bundestag — and whether a statement is true.",
+    toolFactChecksDesc: "Checks whether something a member of parliament said is true.",
+    toolSiteContentDesc: "What this website itself says, like a blog post.",
+    toolWebSearchDesc: "Looks up current information on the web.",
+    toolFetchUrlDesc: "Reads a page you link.",
+    toolSiteAnalyticsDesc: "How often this website is visited.",
+    capBundestag: "Bundestag",
     emptyState: "Start a conversation by typing a message below.",
+    // The greeting a first-time visitor sees from the default agent: what this is, what it
+    // assumes and costs, where it can be wrong (IDENTITY.md → welcoming, honest).
+    doorIntro: "Hi — I'm this website's AI assistant.",
+    doorCan: "I can read the posts on this site, look up what was said in the Bundestag, and search the web.",
+    doorCost:
+      "You need a wallet with {currency}. Your first message sets aside 0.50 {currency}; each message costs less than half a cent, and what you don't use goes back to your wallet automatically a few hours later.",
+    doorHonest: "I can be wrong, so I link my sources — check them.",
+    starter1: "What is this website about?",
+    starter2: "What did the Bundestag discuss this week?",
+    starter3: "Explain one of the quantum posts simply.",
+    tooltipConnect: "Connect a wallet with {currency}. Your first message sets aside 0.50 {currency}.",
+    fundsTitle: "Top up your wallet",
+    fundsBody: "To chat you need {currency} in your wallet: your first message sets aside 0.50 {currency}.",
+    fundsButton: "Get {currency}",
+    fundsNote: "Then send your message again.",
     you: "You",
     assistant: "Assistant",
-    typing: "Assistant is typing...",
+    typing: "Thinking…",
     toppingUp: "Topping up your payment channel…",
-    placeholder: "Type your message here...",
+    toolResearchNotes: "Taking notes",
+    // Shown under the loading bubble once a turn has used the web. {spent} is already formatted
+    // with its currency, e.g. "$0.052 USDC" — and it is what was charged, not an estimate.
+    researchProgress: "Searches: {searches} · pages read: {pages} · so far {spent}",
+    stopAndAnswer: "Stop & answer",
+    researchNotes: "Notes ({n})",
+    chatTotal: "This chat: {spent}",
+    placeholder: "Ask me something…",
     send: "Send",
     cancel: "Cancel",
     processing: "Processing...",
@@ -118,6 +163,46 @@ export default {
       "When a " +
       "question is relative in time, work it out against today's date before calling a tool and " +
       "pass the result as the von/bis arguments, rather than guessing a year.",
+    // Appended to `systemPrompt` rather than replacing it (see AssistantChat.tsx): the tool
+    // contract above still applies in teen mode. A second full copy would drift apart the first
+    // time a tool is added. German is the primary version of this text; see locales/de.ts.
+    systemPromptTeen:
+      "You are talking to teenagers. Speak to them as equals — neither childish nor lecturing, " +
+      "and without forced youth slang. Give a short, clear answer first, and go deeper only when " +
+      "asked. Say honestly when you are not sure of something, and do not pass moral judgement " +
+      "unless someone asks for your opinion. Do not dodge questions about sexuality, the body, " +
+      "drugs, relationships, mental health or politics; answer them factually and in an " +
+      "age-appropriate way, because the alternative is worse sources. Factually also means: no " +
+      "sexual content, and never the role of a romantic or sexual partner, not even in roleplay. " +
+      "Lean on sources that explain things and can be checked, and say what kind of source it is " +
+      "— reference work, public body, news outlet, blog, forum. Where your sources contradict " +
+      "each other, name the contradiction instead of quietly picking a side. For schoolwork, " +
+      "explain how the answer is reached and offer to quiz them on it — but do not withhold the " +
+      "answer itself when it is asked for. Where self-harm or an acute crisis comes up, stay " +
+      "calm, do not end the conversation, give no method details, and encourage them to talk to " +
+      "someone they trust.",
+    // Appended only when search_web or fetch_url is on (see AssistantChat.tsx), together with the
+    // note_findings tool it describes. Depth is the model's call; the loop enforces the rest — raw
+    // results are compacted one hop later, and the last hop offers no tools.
+    systemPromptResearch:
+      "Match the depth of your research to the question. A simple factual question gets one " +
+      "search and an answer. A question that needs comparing sources, several aspects or recent " +
+      "developments gets real research: first break it into 2–4 sub-questions. Do not write your " +
+      "plan as a message — record the sub-questions with note_findings as status open and call " +
+      "search_web for the first one in that same step. Then work in " +
+      "rounds: search with a concrete phrase, not a question; read the one or two most promising " +
+      "results with fetch_url; and in your next step, together with your next search or fetch, " +
+      "record what you learned with note_findings — one condensed sentence per claim with its " +
+      "source_url. Raw results disappear one step after you read them; only your notes remain. " +
+      "Before each round, check: is this enough? Do sources contradict each other? What is " +
+      "missing? Search for the gap with a reformulated phrase, never the same one again. Stop as " +
+      "soon as the question is answered. When you write your final answer, do not call any tool " +
+      "in the same step. When no tools are offered any more, answer from your " +
+      "notes only: give every claim the source_url it was noted with, name contradictions, and " +
+      "list what stayed open instead of filling it from memory.",
+    teenMode: "Teen mode",
+    teenModeOffer: "Switch on teen mode",
+    teenModeHint: "Shorter, straighter answers for teenagers — no lecturing.",
     noResponse: "No response received",
     imageReady: "Here's your image.",
     bundestaktSource: "Source: Bundestakt",
@@ -175,5 +260,12 @@ export default {
     modalOnChainBody: "You're on a supported network — you just need USDC to donate 0.50 USDC.",
     modalGetUsdcButton: "Get USDC",
     modalRetry: "Try again",
+  },
+  // Which stablecoin the site pays with, shared by /imagegen and /assistent.
+  payment: {
+    payWith: "Pay with",
+    eurcBaseOnly: "EURC is on Base only.",
+    // Followed by the currency actually used, e.g. "… so payment will use USDC."
+    currencyFallback: "This agent doesn't take that currency here, so payment will use",
   },
 };

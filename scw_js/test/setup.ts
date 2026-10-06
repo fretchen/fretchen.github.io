@@ -3,7 +3,7 @@
  * Provides shared mocks and utilities to ensure consistency across tests
  */
 
-import { vi } from "vitest";
+import { vi, expect } from "vitest";
 
 // ===== VIEM MOCKS =====
 export const mockViemFunctions = {
@@ -214,11 +214,11 @@ export function makeMockResponse(data: any, ok = true, status = 200) {
 }
 
 export function mockFetchResponse(data: any, options: any = {}) {
-  (global.fetch as any).mockResolvedValue({ ...makeMockResponse(data), ...options });
+  vi.mocked(global.fetch).mockResolvedValue({ ...makeMockResponse(data), ...options });
 }
 
 export function mockFetchError(error: string = "Network error") {
-  (global.fetch as any).mockRejectedValue(new Error(error));
+  vi.mocked(global.fetch).mockRejectedValue(new Error(error));
 }
 
 // ===== METADATA MOCK =====

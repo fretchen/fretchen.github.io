@@ -31,6 +31,7 @@ Unfixed vulnerabilities are tracked privately via GitHub Security Advisories. Th
 
 - **CVE-2025-11-26 fixed**: `requestImageUpdate()` requires `_whitelistedAgentWallets[msg.sender]`
 - **Owner key separated** (2026-06): ownership of all contracts transferred from daily MetaMask wallet to a dedicated EOA (`0x1af51D6D7E0926f42d3595cBA2eE4218af5fBB20`). Reduces blast radius of a compromised daily wallet. Full fix remains moving to a Gnosis Safe.
+- **ERC-8004 agent identities** (2026-10): the three x402 services are registered in the Base Identity Registry (`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`, agentIds 97598/97599/97600) and owned by the same owner EOA, never by the function-secret hot wallet. Their `agentWallet` is bound to that hot wallet, which is the x402 `payTo`. A transfer to a Safe clears `agentWallet`; re-bind with `scripts/register-agents.ts` (`BIND_PAYTO`). Registered via `scripts/register-agents.ts`.
 - `SupportV2.donate()` and `donateToken()` use `ReentrancyGuardTransient` (OZ 5.x transient storage)
 - Solidity 0.8.27 — built-in overflow/underflow protection
 - Storage layout preserved across v3→v4 upgrade (gap 49 → 48 slots)

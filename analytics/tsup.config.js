@@ -30,7 +30,7 @@ export default defineConfig({
   // @fretchen/chain-utils imports it directly) but tsup's noExternal doesn't
   // bundle a package's own dependencies unless they're named too — omitting
   // it here shipped a broken `import "viem"` straight to production.
-  noExternal: ["@fretchen/s3-utils", "@fretchen/chain-utils", "viem"],
+  noExternal: ["@fretchen/s3-utils", "@fretchen/chain-utils", "viem", "isbot"],
   banner: {
     js: `import { createRequire } from 'module'; const require = createRequire(import.meta.url);`,
   },

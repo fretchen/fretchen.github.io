@@ -24,9 +24,12 @@ type HookArgs = {
       permit2Authorization?: { witness?: { to?: string }; from?: string };
     };
   };
-  requirements?: { network?: string; scheme?: string; payTo?: string };
+  requirements?: { network?: string; scheme?: string; payTo?: string; asset?: string };
   result: Record<string, unknown>;
 };
+
+const OP_SEPOLIA_USDC = "0x5fd84259d66Cd46123540766Be93DFE6D43130D7";
+const BASE_EURC = "0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42";
 
 type RegisterCall = { network: unknown; scheme: { scheme?: string } };
 
@@ -84,8 +87,11 @@ vi.mock("viem/accounts", () => ({
   })),
 }));
 
-// Mock fee module — the hook's dependency
-vi.mock("../x402_fee.js", () => ({
+// Mock fee module — only what the hook's tests steer. Partial on purpose: loadFacilitatorAccount
+// stays real and runs against the viem/accounts mock above, so a missing key still throws as in
+// production and the signer is built exactly the way the facilitator builds it.
+vi.mock("../x402_fee.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../x402_fee.js")>()),
   evaluateFeeGate: vi.fn(),
   getFacilitatorAddress: vi.fn(),
 }));
@@ -132,13 +138,13 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
    * so the helper keeps both fields equal to `recipient`. The hook itself now reads
    * `requirements.payTo` (not the client payload), so `requirements` must be populated.
    */
-  function hookArgs(recipient: string, network: string): HookArgs {
+  function hookArgs(recipient: string, network: string, asset = OP_SEPOLIA_USDC): HookArgs {
     return {
       paymentPayload: {
         accepted: { network, scheme: "exact" },
         payload: { authorization: { to: recipient } },
       },
-      requirements: { network, scheme: "exact", payTo: recipient },
+      requirements: { network, scheme: "exact", payTo: recipient, asset },
       result: {
         isValid: true,
         payer: "0xSomePayer000000000000000000000000000000",
@@ -301,6 +307,7 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
     expect(evaluateFeeGate).toHaveBeenCalledWith(
       "0x1111111111111111111111111111111111111111",
       "eip155:11155420",
+      OP_SEPOLIA_USDC,
     );
   });
 
@@ -349,6 +356,7 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
     expect(evaluateFeeGate).toHaveBeenCalledWith(
       "0x1111111111111111111111111111111111111111",
       "eip155:11155420",
+      OP_SEPOLIA_USDC,
     );
   });
 
@@ -412,6 +420,31 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
 
     expect(args.result.isValid).toBe(false);
     expect(args.result.invalidReason).toBe("facilitator_not_configured");
+  });
+
+  it("gates the fee on requirements.asset, the token the settlement moves", async () => {
+    vi.mocked(evaluateFeeGate).mockResolvedValue({ kind: "charge" as const });
+
+    const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:8453", BASE_EURC);
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(true);
+    expect(evaluateFeeGate).toHaveBeenCalledWith(
+      "0x1111111111111111111111111111111111111111",
+      "eip155:8453",
+      BASE_EURC,
+    );
+  });
+
+  it("rejects when asset is missing from requirements", async () => {
+    const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
+    delete args.requirements!.asset;
+
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(false);
+    expect(args.result.invalidReason).toBe("invalid_payload");
+    expect(evaluateFeeGate).not.toHaveBeenCalled();
   });
 
   it("rejects when network is missing from requirements", async () => {

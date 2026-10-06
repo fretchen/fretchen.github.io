@@ -63,11 +63,6 @@ vi.mock("../utils/pageContext", () => ({
   getPageUrl: (context: { urlOriginal?: string }) => context.urlOriginal || "/",
 }));
 
-// Mock the favicon import
-vi.mock("../pages/image_3_1fc7cfc7b9e9.jpg", () => ({
-  default: "/mock-favicon.jpg",
-}));
-
 // locales/locales.ts is deliberately NOT mocked — these tests assert against the real
 // localizedPaths list, so adding a page there without translating it fails here.
 const render = (urlOriginal: string, config: Record<string, unknown> = {}) => {

@@ -12,8 +12,11 @@ import { useLocale } from "../hooks/useLocale";
 import { useUmami } from "../hooks/useUmami";
 import { useX402ImageGeneration } from "../hooks/useX402ImageGeneration";
 import { AgentInfoPanel } from "./AgentInfoPanel";
+import { CurrencyToggle } from "./CurrencyToggle";
 import { useWalletConnection } from "../hooks/useWalletConnection";
 import { button } from "../styled-system/recipes";
+import { usePaymentCurrency, networksForCurrency } from "../hooks/x402Currency";
+import { IMAGE_PRICE } from "../utils/x402Prices";
 
 // Image compression helpers
 const calculateOptimalDimensions = (originalWidth: number, originalHeight: number, maxDimension: number = 1920) => {
@@ -124,6 +127,10 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   // Analytics hook
   const { trackEvent } = useUmami();
 
+  // Which stablecoin to pay with — EURC narrows the eligible networks to Base (the only one
+  // Circle has deployed EURC on); USDC keeps every NFT network.
+  const currency = usePaymentCurrency();
+
   // x402 Image Generation Hook
   const {
     generateImage,
@@ -131,7 +138,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
     error: x402Error,
     paymentReceipt,
     reset: resetX402,
-  } = useX402ImageGeneration();
+  } = useX402ImageGeneration(currency);
 
   // Local state
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string>();
@@ -150,8 +157,10 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   // Blockchain interaction. `isConnected` is hydration-safe + reconnect-aware (see hook).
   const { address, isConnected, connectWallet } = useWalletConnection();
 
+  const eligibleNetworks = networksForCurrency(currency, GENAI_NFT_NETWORKS);
+
   // Determine target chain from useAutoNetwork (no auto-switch, switch at interaction)
-  const { network, switchIfNeeded } = useAutoNetwork(GENAI_NFT_NETWORKS);
+  const { network, switchIfNeeded } = useAutoNetwork(eligibleNetworks);
   const targetChainId = fromCAIP2(network);
   const targetChain = getViemChain(network);
 
@@ -213,7 +222,10 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
   // Options texts
   const squareText = useLocale({ label: "imagegen.square" });
   const wideText = useLocale({ label: "imagegen.wide" });
-  const mintingInfoText = useLocale({ label: "imagegen.mintingInfo" });
+  const mintingInfoTemplate = useLocale({ label: "imagegen.mintingInfo" });
+  const mintingInfoText = mintingInfoTemplate
+    .replace("{cost}", IMAGE_PRICE[currency])
+    .replace("{chain}", getViemChain(network).name);
   const artworkCreatedText = useLocale({ label: "imagegen.artworkCreated" });
   const checkGalleryText = useLocale({ label: "imagegen.checkGallery" });
   const mintFailedText = useLocale({ label: "imagegen.mintFailed" });
@@ -279,7 +291,6 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
       const isEditMode = referenceImageBase64 !== null;
       const mode = isEditMode ? "edit" : "generate";
 
-      // Use x402 to generate image with USDC payment
       // The hook handles 402 response, signature, and retry automatically
       const result = await generateImage({
         prompt,
@@ -333,7 +344,7 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
           attributes: [
             { trait_type: "Prompt", value: prompt },
             { trait_type: "Generation Method", value: "AI Generated" },
-            { trait_type: "Payment Method", value: "x402 USDC" },
+            { trait_type: "Payment Method", value: `x402 ${result.paidCurrency ?? currency}` },
           ],
         };
 
@@ -872,6 +883,8 @@ export function ImageGenerator({ onSuccess, onError }: ImageGeneratorProps) {
                     />
                     <LocaleText label="imagegen.listed" />
                   </label>
+
+                  <CurrencyToggle />
                 </div>
 
                 <CreateArtworkButton

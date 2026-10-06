@@ -35,6 +35,11 @@ $EDITOR .env   # add TEST_WALLET_PRIVATE_KEY (and NFT_WALLET_PUBLIC_KEY as the r
 `TEST_WALLET_PRIVATE_KEY` must be a wallet funded with testnet USDC (Optimism Sepolia /
 Base Sepolia — see `https://faucet.circle.com/`).
 
+Both scheme notebooks have a `TOKEN` switch (`"EURC"` by default, or `"USDC"`). EURC exists on
+**Base Sepolia only** (Circle has no EURC on OP Sepolia), so for EURC the buyer needs testnet
+EURC from the same faucet, and the seller approves EURC — the facilitator charges its fee in
+the token that was paid.
+
 Deno does not search upward for `.env` by default, so each notebook loads it explicitly:
 `load({ envPath: "../.env", examplePath: null, export: true })`. (`examplePath: null`
 disables dotenv's "every key in a local `.env.example` must be present" check — this

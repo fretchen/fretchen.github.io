@@ -203,7 +203,10 @@ async function handlePaymentRequest(
     try {
       rawBody = JSON.parse(event.body);
     } catch (error) {
-      logger.error({ err: error }, "Failed to parse request body");
+      // warn, not error: malformed JSON is the caller's fault, not ours. The alert-coverage
+      // convention is that logger.error means "ours, and should page" — see
+      // test/alert_coverage.test.ts.
+      logger.warn({ err: error }, "Failed to parse request body");
       return {
         statusCode: 400,
         headers: CORS_HEADERS,

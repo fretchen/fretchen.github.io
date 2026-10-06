@@ -6,22 +6,25 @@
  * `success: false` and the revert reason in the body. It was only ever visible as text in a log
  * line. See `logs.ts` for the companion read-only tool.
  *
- * Needs `SCW_COCKPIT_LOGS_URL` and `SCW_COCKPIT_RULES_TOKEN` in `scw_js/.env`. Deliberately a
+ * Needs `SCW_COCKPIT_LOGS_URL` and `SCW_COCKPIT_RULES_TOKEN` in `observability/.env`. Deliberately a
  * *different* token from `SCW_COCKPIT_LOGS_TOKEN`: `logs.ts` is run casually and often and should
  * keep a credential that can only read, while this one can write and delete alerting rules.
  *
  *   scw cockpit token create name=<name> token-scopes.0=full_access_logs_rules region=fr-par
  *
- * Usage (from scw_js/):
+ * Usage (from observability/):
  *   npx tsx scripts/alerts.ts                  # list the rule groups on the ruler
  *   npx tsx scripts/alerts.ts --push           # upload alerts/payments.yaml
- *   npx tsx scripts/alerts.ts --push alerts/experiment.yaml
+ *   npx tsx scripts/alerts.ts --push alerts/services.yaml
  *   npx tsx scripts/alerts.ts --delete payments
+ *
+ * `--push` refuses a file with uncommitted changes (see assertCommitted): commit, then push.
  *
  * Push is never wired into deploy. Alerting config that changes as a side effect of shipping code
  * is its own kind of surprise — and a rule silently removed by a deploy is indistinguishable from
  * a system that is simply quiet.
  */
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import dotenv from "dotenv";
 
@@ -32,14 +35,15 @@ const TOKEN = process.env.SCW_COCKPIT_RULES_TOKEN;
 
 if (!URL_BASE || !TOKEN) {
   console.error(
-    "Missing SCW_COCKPIT_LOGS_URL / SCW_COCKPIT_RULES_TOKEN in scw_js/.env — see this file's header.",
+    "Missing SCW_COCKPIT_LOGS_URL / SCW_COCKPIT_RULES_TOKEN in observability/.env — see this file's header.",
   );
   process.exit(1);
 }
 
-/** Loki namespaces its rule groups. One per package keeps `--delete` from reaching across
- *  packages, and keeps the listing readable once something other than scw_js has rules. */
-const NAMESPACE = "scw-js";
+/** Loki namespaces its rule groups. One namespace for the whole project: the rules cover several
+ *  services (facilitator, llmx402, searchapi, ...), and the group names inside it (`payments`,
+ *  `services`) already keep them apart. */
+const NAMESPACE = "fretchen";
 
 async function ruler(path: string, init: RequestInit = {}): Promise<string> {
   const res = await fetch(`${URL_BASE}/loki/api/v1/rules${path}`, {
@@ -64,7 +68,29 @@ async function list(): Promise<void> {
   console.log(`\nPush with:  npx tsx scripts/alerts.ts --push`);
 }
 
+/**
+ * Cockpit must run what git holds. On 2026-10-04 a three-rule consolidation was live that had only
+ * ever existed in an uncommitted file, while git still held the twelve-rule version; pushing git
+ * then silently undid the consolidation (and quadrupled the per-rule bill). Refusing to push
+ * anything uncommitted — modified, staged or untracked — keeps the ruler and the repo from
+ * diverging in the first place. No override: a throwaway test group is committed first too.
+ */
+function assertCommitted(file: string): void {
+  const status = execFileSync("git", ["status", "--porcelain", "--", file], {
+    encoding: "utf8",
+  }).trim();
+  if (status) {
+    console.error(
+      `refusing to push ${file}: it has uncommitted changes (${status}). Cockpit must run what ` +
+        `git holds — on 2026-10-04 an uncommitted 3-rule file was live while git held 12, and ` +
+        `pushing git silently undid the consolidation. Commit first.`,
+    );
+    process.exit(1);
+  }
+}
+
 async function push(file: string): Promise<void> {
+  assertCommitted(file);
   const yaml = readFileSync(file, "utf8");
   await ruler(`/${NAMESPACE}`, {
     method: "POST",
@@ -83,7 +109,9 @@ async function remove(group: string): Promise<void> {
 
 function flag(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
-  if (i === -1) return undefined;
+  if (i === -1) {
+    return undefined;
+  }
   const next = process.argv[i + 1];
   return next?.startsWith("--") ? undefined : next;
 }

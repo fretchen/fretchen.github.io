@@ -87,7 +87,9 @@ describe("openapi.search.json generation", () => {
       // Asserted as a relationship rather than two more literals, so the intent survives a
       // repricing: fetch is a tenth of search on purpose, to steer a model into searching once
       // and reading several results.
-      expect(BigInt(PRICE_ATOMIC.search)).toBe(BigInt(PRICE_ATOMIC.fetch) * 10n);
+      for (const token of ["USDC", "EURC"] as const) {
+        expect(BigInt(PRICE_ATOMIC.search[token])).toBe(BigInt(PRICE_ATOMIC.fetch[token]) * 10n);
+      }
     });
   });
 
@@ -142,10 +144,11 @@ describe("openapi.search.json generation", () => {
     /** Lifted to the parameter, not left inside `schema` — OpenAPI's own convention, and it should
      *  appear exactly once. */
     it("carries the description on the parameter rather than the schema", () => {
-      const param = paths["/fetch"]["get"]["parameters"][0] as {
+      const params = paths["/fetch"]["get"]["parameters"] as {
         description?: string;
         schema: Record<string, unknown>;
-      };
+      }[];
+      const param = params[0];
       expect(param.description).toBeDefined();
       expect(param.schema.description).toBeUndefined();
     });

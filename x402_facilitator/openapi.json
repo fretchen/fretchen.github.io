@@ -196,7 +196,7 @@
             "type": "string"
           },
           "remainingSettlements": {
-            "description": "How many more settlements the seller's current USDC approval for this facilitator still covers. Present only when a fee is configured and the allowance could be read — an early warning before it hits zero.",
+            "description": "How many more settlements the seller's current approval (in the payment's token) for this facilitator still covers. Present only when a fee is configured and the allowance could be read — an early warning before it hits zero.",
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
@@ -371,7 +371,7 @@
             "description": "Facilitator address(es) per network."
           },
           "facilitatorFees": {
-            "description": "The full fee model disclosure (amount, recipient, recommended USDC approval) — present only when a fee is configured.",
+            "description": "The full fee model disclosure (amount, recipient, recommended per-token approval) — present only when a fee is configured.",
             "type": "object",
             "properties": {
               "version": {
@@ -381,7 +381,8 @@
                 "type": "string"
               },
               "asset": {
-                "type": "string"
+                "type": "string",
+                "description": "\"settled\": the fee is charged in the token the payment settles in (USDC, or EURC on Base)."
               },
               "flatFee": {
                 "type": "string"

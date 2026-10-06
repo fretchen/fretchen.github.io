@@ -12,6 +12,13 @@ import { prose, table } from "../shared.styles";
 const IMAGEGEN_SPEC_URL = "https://imagegen-agent.fretchen.eu/openapi.json";
 const LLM_SPEC_URL = "https://llm-agent.fretchen.eu/openapi.json";
 
+/** Each origin's ERC-8004 registration file and its agentId on Base (scw_js/README.md). */
+const agentRef = (origin: string, agentId: number) => (
+  <a href={`https://${origin}/.well-known/agent-registration.json`} target="_blank" rel="noopener noreferrer">
+    #{agentId}
+  </a>
+);
+
 export default function Page() {
   const contentRef = useRef<HTMLElement>(null!);
 
@@ -52,6 +59,7 @@ export default function Page() {
                 <th>Scheme</th>
                 <th>Does</th>
                 <th>Price</th>
+                <th>ERC-8004 agent</th>
               </tr>
             </thead>
             <tbody>
@@ -62,6 +70,7 @@ export default function Page() {
                 <td>exact</td>
                 <td>Generates an image, mints it as an NFT</td>
                 <td>~$0.07 / call</td>
+                <td>{agentRef("imagegen-agent.fretchen.eu", 97598)}</td>
               </tr>
               <tr>
                 <td>
@@ -70,6 +79,7 @@ export default function Page() {
                 <td>batch-settlement</td>
                 <td>OpenAI-shaped chat completion</td>
                 <td>~$0.003 / message</td>
+                <td>{agentRef("llm-agent.fretchen.eu", 97599)}</td>
               </tr>
               <tr>
                 <td>
@@ -78,6 +88,7 @@ export default function Page() {
                 <td>batch-settlement</td>
                 <td>Web search with extracted page content</td>
                 <td>$0.01 / call</td>
+                <td>{agentRef("web-agent.fretchen.eu", 97600)}</td>
               </tr>
               <tr>
                 <td>
@@ -86,6 +97,7 @@ export default function Page() {
                 <td>batch-settlement</td>
                 <td>The readable text of one public web page</td>
                 <td>$0.001 / call</td>
+                <td>{agentRef("web-agent.fretchen.eu", 97600)}</td>
               </tr>
             </tbody>
           </table>
@@ -95,6 +107,12 @@ export default function Page() {
             code calls directly. The two <code>web-agent</code> routes bill onto the <em>same</em> payment channel as{" "}
             <code>llm-agent</code> when the payer and receiver match, so an agent already chatting there pays for web
             access without opening a second channel or signing another deposit.
+          </p>
+          <p>
+            Each endpoint&apos;s origin is a registered ERC-8004 agent in the Identity Registry on Base; the id in the
+            last column links to its registration file. For each id the registry&apos;s <code>agentWallet</code> is the{" "}
+            <code>payTo</code> in that endpoint&apos;s 402, so a client can check on-chain that it pays the registered
+            agent.
           </p>
 
           <h2>Which scheme, when</h2>

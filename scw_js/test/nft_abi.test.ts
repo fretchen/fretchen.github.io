@@ -6,7 +6,7 @@ import { describe, test, expect, beforeAll } from "vitest";
 import { GenImNFTv4ABI } from "@fretchen/chain-utils";
 
 describe("NFT ABI Tests", () => {
-  let nftAbi;
+  let nftAbi: typeof GenImNFTv4ABI;
 
   beforeAll(async () => {
     nftAbi = GenImNFTv4ABI;
@@ -34,21 +34,25 @@ describe("NFT ABI Tests", () => {
       const ownerOfFunction = nftAbi.find(
         (item) => item.type === "function" && item.name === "ownerOf",
       );
+      if (!ownerOfFunction || ownerOfFunction.type !== "function") {
+        throw new Error("ownerOf not found in ABI");
+      }
 
-      expect(ownerOfFunction).toBeDefined();
       expect(ownerOfFunction.inputs).toHaveLength(1);
-      expect(ownerOfFunction.inputs[0].type).toBe("uint256");
+      expect(ownerOfFunction.inputs[0]!.type).toBe("uint256");
       expect(ownerOfFunction.outputs).toHaveLength(1);
-      expect(ownerOfFunction.outputs[0].type).toBe("address");
+      expect(ownerOfFunction.outputs[0]!.type).toBe("address");
 
       const requestImageUpdateFunction = nftAbi.find(
         (item) => item.type === "function" && item.name === "requestImageUpdate",
       );
+      if (!requestImageUpdateFunction || requestImageUpdateFunction.type !== "function") {
+        throw new Error("requestImageUpdate not found in ABI");
+      }
 
-      expect(requestImageUpdateFunction).toBeDefined();
       expect(requestImageUpdateFunction.inputs).toHaveLength(2);
-      expect(requestImageUpdateFunction.inputs[0].type).toBe("uint256");
-      expect(requestImageUpdateFunction.inputs[1].type).toBe("string");
+      expect(requestImageUpdateFunction.inputs[0]!.type).toBe("uint256");
+      expect(requestImageUpdateFunction.inputs[1]!.type).toBe("string");
     });
 
     test("sollte Events definiert haben", () => {

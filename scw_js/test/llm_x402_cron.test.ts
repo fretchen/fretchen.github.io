@@ -56,6 +56,7 @@ vi.mock("viem", async () => {
 // ===== Import after mocks =====
 
 import { handle } from "../llm_x402_cron.js";
+import { USDC_ADDRESSES, EURC_ADDRESSES } from "@fretchen/chain-utils";
 
 // ===== Helpers =====
 
@@ -65,13 +66,22 @@ function makeEvent() {
   return { httpMethod: "GET", headers: {}, body: null };
 }
 
+/** One claim run per (network, token): Optimism has USDC only, Base and Base Sepolia both. */
+const RUNS: Array<[string, string]> = [
+  ["eip155:10", USDC_ADDRESSES["eip155:10"]],
+  ["eip155:8453", USDC_ADDRESSES["eip155:8453"]],
+  ["eip155:8453", EURC_ADDRESSES["eip155:8453"]],
+  ["eip155:84532", USDC_ADDRESSES["eip155:84532"]],
+  ["eip155:84532", EURC_ADDRESSES["eip155:84532"]],
+];
+
 // ===== Tests =====
 
 describe("llm_x402_cron", () => {
   let mockCreateChannelManager: ReturnType<typeof vi.fn>;
   let mockClaimAndSettle: ReturnType<typeof vi.fn>;
   let mockRefundIdleChannels: ReturnType<typeof vi.fn>;
-  let mockSchemeFor: ReturnType<typeof vi.fn>;
+  let mockClaimSchemeFor: ReturnType<typeof vi.fn>;
   let mockStorageList: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
@@ -88,11 +98,12 @@ describe("llm_x402_cron", () => {
       refundIdleChannels: mockRefundIdleChannels,
     });
 
-    // One scheme per network, each owning storage scoped to that network's S3 prefix.
+    // One scheme per (network, token), each owning storage that lists only that network's
+    // prefix and that token's channels.
     // list() is read by the post-condition check after every sweep. Default: nothing left
     // behind, which is what a healthy run looks like.
     mockStorageList = vi.fn().mockResolvedValue([]);
-    mockSchemeFor = vi.fn().mockReturnValue({
+    mockClaimSchemeFor = vi.fn().mockReturnValue({
       createChannelManager: mockCreateChannelManager,
       getStorage: vi.fn().mockReturnValue({ list: mockStorageList }),
     });
@@ -100,7 +111,7 @@ describe("llm_x402_cron", () => {
     mockUseEnhancedRefundRequirements.mockResolvedValue(undefined);
     mockCreateLLMResourceServer.mockReturnValue({
       resourceServer: {},
-      schemeFor: mockSchemeFor,
+      claimSchemeFor: mockClaimSchemeFor,
       scheme: { createChannelManager: mockCreateChannelManager },
     });
     mockCreateFacilitatorClient.mockReturnValue({});
@@ -134,16 +145,25 @@ describe("llm_x402_cron", () => {
     expect(res.statusCode).toBe(500);
   });
 
-  it("runs claimAndSettle once per batch-settlement network and returns 200", async () => {
+  it("runs claimAndSettle once per batch-settlement network and token, and returns 200", async () => {
     const res = await handle(makeEvent() as never, {});
     expect(res.statusCode).toBe(200);
-    expect(mockCreateChannelManager).toHaveBeenCalledTimes(3);
-    expect(mockClaimAndSettle).toHaveBeenCalledTimes(3);
+    expect(mockCreateChannelManager).toHaveBeenCalledTimes(RUNS.length);
+    expect(mockClaimAndSettle).toHaveBeenCalledTimes(RUNS.length);
 
-    const body = JSON.parse(res.body) as { results: Array<{ network: string; claims: number }> };
-    expect(body.results).toHaveLength(3);
+    const body = JSON.parse(res.body) as {
+      results: Array<{ network: string; asset: string; claims: number }>;
+    };
+    expect(body.results.map((r) => [r.network, r.asset])).toEqual([
+      ["eip155:10", "USDC"],
+      ["eip155:8453", "USDC"],
+      ["eip155:8453", "EURC"],
+      ["eip155:84532", "USDC"],
+      ["eip155:84532", "EURC"],
+    ]);
     expect(body.results[0]).toEqual({
       network: "eip155:10",
+      asset: "USDC",
       claims: 1,
       settled: true,
       refunds: 0,
@@ -161,7 +181,7 @@ describe("llm_x402_cron", () => {
    * which has no eip155:10 entry and throws "No default asset configured". The cron would
    * then silently stop claiming revenue on Optimism.
    */
-  it("passes each network's USDC address explicitly, never relying on the SDK registry", async () => {
+  it("passes each token address explicitly, never relying on the SDK registry", async () => {
     await handle(makeEvent() as never, {});
 
     expect(mockCreateChannelManager).toHaveBeenNthCalledWith(
@@ -176,6 +196,14 @@ describe("llm_x402_cron", () => {
       "eip155:8453",
       "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
     );
+    // The registry would answer USDC for a EURC channel manager — the explicit token is the
+    // only thing that makes it settle in EURC.
+    expect(mockCreateChannelManager).toHaveBeenNthCalledWith(
+      3,
+      expect.anything(),
+      "eip155:8453",
+      "0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42",
+    );
     // Every call must have a third argument — the fallback is never acceptable.
     for (const call of mockCreateChannelManager.mock.calls) {
       expect(call[2]).toMatch(/^0x[a-fA-F0-9]{40}$/);
@@ -188,6 +216,7 @@ describe("llm_x402_cron", () => {
     const body = JSON.parse(res.body) as { results: Array<{ claims: number; settled: boolean }> };
     expect(body.results[0]).toEqual({
       network: "eip155:10",
+      asset: "USDC",
       claims: 0,
       settled: false,
       refunds: 0,
@@ -200,12 +229,11 @@ describe("llm_x402_cron", () => {
   it("continues to other networks and returns 500 when one network's claimAndSettle throws", async () => {
     mockClaimAndSettle
       .mockRejectedValueOnce(new Error("facilitator unreachable"))
-      .mockResolvedValueOnce({ claims: [], settle: undefined })
-      .mockResolvedValueOnce({ claims: [], settle: undefined });
+      .mockResolvedValue({ claims: [], settle: undefined });
 
     const res = await handle(makeEvent() as never, {});
     expect(res.statusCode).toBe(500);
-    expect(mockClaimAndSettle).toHaveBeenCalledTimes(3);
+    expect(mockClaimAndSettle).toHaveBeenCalledTimes(RUNS.length);
 
     const body = JSON.parse(res.body) as { results: Array<{ network: string; error?: string }> };
     expect(body.results[0].error).toBe("facilitator unreachable");
@@ -213,24 +241,20 @@ describe("llm_x402_cron", () => {
   });
 
   // ═══════════════════════════════════════════════════════════
-  // Per-network scoping
+  // Per-(network, token) scoping
   //
   // The outage this guards against: one `S3ChannelStorage` was shared by every network, so
   // `list()` fed Base channels into Optimism claim batches. Every batch reverted with
   // claim_simulation_failed — 3 failures per run, 14 runs, zero claims — while USDC kept
-  // accumulating in escrow. Each network must now get its own scheme, and therefore its own
-  // storage prefix.
+  // accumulating in escrow. Tokens are the same trap one level down: the SDK's manager claims
+  // every channel its storage lists and settles them in its one token, and the facilitator
+  // refuses a batch that mixes tokens. So each (network, token) gets its own scoped scheme.
   // ═══════════════════════════════════════════════════════════
 
-  it("asks for a scheme scoped to each network, never reusing one across networks", async () => {
+  it("asks for a scheme scoped to each network and token, never reusing one", async () => {
     await handle(makeEvent() as never, {});
 
-    expect(mockSchemeFor).toHaveBeenCalledTimes(3);
-    expect(mockSchemeFor.mock.calls.map((c) => c[0])).toEqual([
-      "eip155:10",
-      "eip155:8453",
-      "eip155:84532",
-    ]);
+    expect(mockClaimSchemeFor.mock.calls).toEqual(RUNS);
   });
 
   // ═══════════════════════════════════════════════════════════
@@ -245,7 +269,7 @@ describe("llm_x402_cron", () => {
 
     const res = await handle(makeEvent() as never, {});
 
-    expect(mockRefundIdleChannels).toHaveBeenCalledTimes(3);
+    expect(mockRefundIdleChannels).toHaveBeenCalledTimes(RUNS.length);
     expect(mockRefundIdleChannels).toHaveBeenCalledWith({ idleSecs: 21600 });
 
     const body = JSON.parse(res.body) as { results: Array<{ refunds?: number }> };
@@ -273,7 +297,7 @@ describe("llm_x402_cron", () => {
     // receiverAuthorizer, so ordering here is load-bearing, not cosmetic.
     await handle(makeEvent() as never, {});
 
-    expect(mockUseEnhancedRefundRequirements).toHaveBeenCalledTimes(3);
+    expect(mockUseEnhancedRefundRequirements).toHaveBeenCalledTimes(RUNS.length);
     expect(mockUseEnhancedRefundRequirements.mock.invocationCallOrder[0]).toBeLessThan(
       mockRefundIdleChannels.mock.invocationCallOrder[0],
     );
@@ -451,11 +475,16 @@ describe("llm_x402_cron", () => {
     const res = await handle(makeEvent() as never, {});
 
     expect(mockLoggerWarn).toHaveBeenCalledWith(
-      expect.objectContaining({ network: "eip155:10", claimsLeft: 5 }),
+      expect.objectContaining({ network: "eip155:10", asset: "USDC", claimsLeft: 5 }),
       expect.stringContaining("insufficient_fee_allowance"),
     );
+    // Each token has its own approval, so the warning names the one to top up.
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      expect.objectContaining({ network: "eip155:8453", asset: "EURC" }),
+      expect.stringContaining("approve more EURC"),
+    );
     // The warning is advisory — collection must still happen.
-    expect(mockClaimAndSettle).toHaveBeenCalledTimes(3);
+    expect(mockClaimAndSettle).toHaveBeenCalledTimes(RUNS.length);
     expect(res.statusCode).toBe(200);
   });
 
@@ -471,7 +500,7 @@ describe("llm_x402_cron", () => {
     const res = await handle(makeEvent() as never, {});
 
     expect(res.statusCode).toBe(200);
-    expect(mockClaimAndSettle).toHaveBeenCalledTimes(3);
+    expect(mockClaimAndSettle).toHaveBeenCalledTimes(RUNS.length);
     // Unreadable is not "low": no warning, and no runway reported rather than a made-up 0.
     const body = JSON.parse(res.body) as { results: Array<Record<string, unknown>> };
     expect(body.results[0].feeAllowanceClaimsLeft).toBeUndefined();
@@ -484,6 +513,6 @@ describe("llm_x402_cron", () => {
 
     expect(mockReadContract).not.toHaveBeenCalled();
     expect(res.statusCode).toBe(200);
-    expect(mockClaimAndSettle).toHaveBeenCalledTimes(3);
+    expect(mockClaimAndSettle).toHaveBeenCalledTimes(RUNS.length);
   });
 });

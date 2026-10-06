@@ -76,7 +76,7 @@ export const VerifyResponseSchema = z.object({
     .int()
     .optional()
     .describe(
-      "How many more settlements the seller's current USDC approval for this facilitator " +
+      "How many more settlements the seller's current approval (in the payment's token) for this facilitator " +
         "still covers. Present only when a fee is configured and the allowance could be " +
         "read — an early warning before it hits zero.",
     ),
@@ -189,7 +189,11 @@ export type SettleResponseBody = z.infer<typeof SettleResponseSchema>;
 export const FacilitatorFeesDisclosureSchema = z.object({
   version: z.string(),
   model: z.string(),
-  asset: z.string(),
+  asset: z
+    .string()
+    .describe(
+      '"settled": the fee is charged in the token the payment settles in (USDC, or EURC on Base).',
+    ),
   flatFee: z.string(),
   decimals: z.number().int(),
   recipient: z
@@ -236,7 +240,7 @@ export const SupportedResponseSchema = z.object({
     .record(z.string(), z.array(z.string()))
     .describe("Facilitator address(es) per network."),
   facilitatorFees: FacilitatorFeesDisclosureSchema.optional().describe(
-    "The full fee model disclosure (amount, recipient, recommended USDC approval) — " +
+    "The full fee model disclosure (amount, recipient, recommended per-token approval) — " +
       "present only when a fee is configured.",
   ),
   /**

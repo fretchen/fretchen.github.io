@@ -18,7 +18,7 @@ export default {
     creating: "Wird erstellt...",
     generating: "Wird generiert...",
     mintingInfo:
-      "Zahlung mit USDC auf Optimism (Netzwerkgebühr < 1¢). Souveräne Generierung — Dein Prompt kann nur für Dein NFT verwendet werden, nicht anderswo gespeichert.",
+      "Zahlung: {cost} auf {chain} (Netzwerkgebühr < 1¢). Souveräne Generierung — Dein Prompt kann nur für Dein NFT verwendet werden, nicht anderswo gespeichert.",
     myArtworks: "Meine Kunstwerke",
     allPublicArtworks: "Alle öffentlichen Kunstwerke",
     artwork: "Kunstwerk",
@@ -38,11 +38,10 @@ export default {
     unknownError: "Ein unbekannter Fehler ist aufgetreten",
     chainSwitchFailed: "Netzwerkwechsel fehlgeschlagen - bitte erneut versuchen",
     // x402 Zahlung
-    awaitingSignature: "USDC-Zahlung in Wallet signieren...",
+    awaitingSignature: "Zahlung in der Wallet signieren...",
     processingPayment: "Zahlung wird verarbeitet...",
     mintingNft: "Dein NFT wird erstellt...",
     paymentConfirmed: "Zahlung bestätigt!",
-    usdcCost: "Kosten: $0,07 USDC",
     // File upload
     uploadReferenceImage: "Referenzbild hochladen (Optional)",
     dragDropHere: "Bild hierher ziehen oder klicken zum Durchsuchen",
@@ -84,14 +83,65 @@ export default {
   assistent: {
     title: "Chat-Assistent",
     connectWalletMessage: "Verbinde dein Konto, um zu starten",
-    actions: "Aktionen",
-    clearChat: "🗑️ Chat löschen",
+    clearChat: "Chat löschen",
+    // Überschrift über der Werkzeugliste. Sie beschreibt, was der Assistent kann — dass man
+    // die Punkte auch abschalten kann, ist der Nebenzweck, nicht die Überschrift wert.
+    capabilities: "Was ich kann",
+    noToolsNote: "Nichts ausgewählt — ich antworte nur aus meinem eigenen Wissen.",
+    advanced: "Erweitert",
+    // Die Werkzeugnamen. Stehen hier statt in TOOL_REGISTRY, damit sie übersetzt werden
+    // können; dort steht nur noch der Schlüssel.
+    toolImageGeneration: "Bilder machen",
+    toolBundestagSessions: "Bundestagssitzungen",
+    toolFactChecks: "Faktenchecks",
+    toolSiteContent: "Seiten dieser Website",
+    toolWebSearch: "Im Web suchen",
+    toolFetchUrl: "Links öffnen",
+    toolSiteAnalytics: "Website-Statistik",
+    // Eine Zeile pro Fähigkeit — der Anlass war ein Test, in dem jemand nicht wusste, was
+    // "Bundestagssitzungen" bedeutet. Kurz und konkret, keine Fachbegriffe ohne Erklärung.
+    toolImageGenerationDesc: "Erstellt ein Bild aus deiner Beschreibung.",
+    // Diese hier ist die, die tatsächlich angezeigt wird: die Zeile für die zusammengefasste
+    // Bundestag-Zeile in ToolSelector kommt vom ersten Eintrag der Gruppe (siehe TOOL_REGISTRY),
+    // und das ist dieser.
+    toolBundestagSessionsDesc: "Was im Bundestag gesagt oder beschlossen wurde – und ob eine Aussage stimmt.",
+    toolFactChecksDesc: "Prüft, ob eine Aussage einer Abgeordneten stimmt.",
+    toolSiteContentDesc: "Was auf dieser Website selbst steht, zum Beispiel ein Blogbeitrag.",
+    toolWebSearchDesc: "Sucht aktuelle Informationen im Internet.",
+    toolFetchUrlDesc: "Liest eine Seite, die du verlinkst.",
+    toolSiteAnalyticsDesc: "Wie oft diese Website besucht wird.",
+    // Zeilentitel für die zusammengefasste Zeile in ToolSelector (get_sitzungen +
+    // search_claims). Eigener Name statt "Bundestagssitzungen": kurz, ein Eigenname, den
+    // niemand nachschlagen muss — die Beschreibung darunter erklärt, was es tut.
+    capBundestag: "Bundestag",
     emptyState: "Starte eine Unterhaltung, indem du unten eine Nachricht eingibst.",
+    doorIntro: "Hallo — ich bin der KI-Assistent dieser Website.",
+    doorCan:
+      "Ich kann die Beiträge dieser Seite lesen, nachschlagen, was im Bundestag gesagt wurde, und im Web suchen.",
+    doorCost:
+      "Du brauchst eine Wallet mit {currency}. Deine erste Nachricht legt 0,50 {currency} zurück; jede Nachricht kostet weniger als einen halben Cent, und was du nicht verbrauchst, geht ein paar Stunden später automatisch an deine Wallet zurück.",
+    doorHonest: "Ich kann mich irren, darum verlinke ich meine Quellen — prüf sie nach.",
+    starter1: "Worum geht es auf dieser Website?",
+    starter2: "Worüber hat der Bundestag diese Woche gesprochen?",
+    starter3: "Erklär mir einen der Quanten-Beiträge einfach.",
+    tooltipConnect: "Verbinde eine Wallet mit {currency}. Deine erste Nachricht legt 0,50 {currency} zurück.",
+    fundsTitle: "Wallet aufladen",
+    fundsBody:
+      "Zum Chatten brauchst du {currency} in deiner Wallet: Deine erste Nachricht legt 0,50 {currency} zurück.",
+    fundsButton: "{currency} besorgen",
+    fundsNote: "Danach schick deine Nachricht noch einmal.",
     you: "Du",
     assistant: "Assistent",
-    typing: "Assistent tippt...",
+    typing: "Denke nach…",
     toppingUp: "Zahlungskanal wird aufgefüllt…",
-    placeholder: "Gib hier deine Nachricht ein...",
+    toolResearchNotes: "Notiere Ergebnisse",
+    // Unter der Lade-Blase, sobald eine Antwort das Web nutzt. {spent} kommt schon mit Währung,
+    // etwa "€0.052 EURC" — und ist das tatsächlich Abgerechnete, keine Schätzung.
+    researchProgress: "Suchen: {searches} · gelesene Seiten: {pages} · bisher {spent}",
+    stopAndAnswer: "Stopp & antworten",
+    researchNotes: "Notizen ({n})",
+    chatTotal: "Dieser Chat: {spent}",
+    placeholder: "Frag mich etwas…",
     send: "Senden",
     cancel: "Abbrechen",
     processing: "Wird verarbeitet...",
@@ -121,6 +171,53 @@ export default {
       "Wenn eine Frage zeitlich relativ ist, rechne sie gegen das " +
       "heutige Datum aus, bevor du ein Tool aufrufst, und übergib das Ergebnis als von/bis — rate " +
       "kein Jahr.",
+    // Wird an `systemPrompt` angehängt, nicht an dessen Stelle gesetzt (siehe AssistantChat.tsx):
+    // der Tool-Vertrag oben gilt im Teen-Modus unverändert weiter. Eine zweite Vollfassung würde
+    // beim nächsten neuen Tool auseinanderlaufen.
+    systemPromptTeen:
+      "Du sprichst mit Jugendlichen. Antworte auf Augenhöhe — weder kindlich noch belehrend, und " +
+      "ohne aufgesetzte Jugendsprache. Gib zuerst eine kurze, klare Antwort und vertiefe erst, " +
+      "wenn danach gefragt wird. Sag ehrlich, wenn du etwas nicht sicher weißt, und bewerte nicht " +
+      "moralisch, solange niemand nach deiner Meinung fragt. Weiche Fragen zu Sexualität, Körper, " +
+      "Drogen, Beziehungen, psychischer Gesundheit oder Politik nicht aus, sondern beantworte sie " +
+      "sachlich und altersgerecht — die Alternative sind schlechtere Quellen. Sachlich heißt auch: " +
+      "keine sexuellen Inhalte, und nie die Rolle eines romantischen oder sexuellen Gegenübers, " +
+      "auch nicht im Rollenspiel. Stütz dich bevorzugt auf Quellen, die etwas erklären und " +
+      "nachprüfbar sind, und sag dazu, um was für eine Quelle es sich handelt — Nachschlagewerk, " +
+      "Behörde, Nachrichtenmedium, Blog, Forum. Widersprechen sich deine Quellen, benenne den " +
+      "Widerspruch, statt still eine Seite zu wählen. Bei Schulaufgaben erkläre den Lösungsweg und " +
+      "biete an, den Stoff abzufragen — die Lösung selbst verweigerst du aber nicht, wenn sie " +
+      "verlangt wird. Wenn es um Selbstverletzung oder eine akute Krise geht, bleib ruhig, brich " +
+      "das Gespräch nicht ab, nenne keine Methoden und ermutige dazu, mit einer Vertrauensperson " +
+      "zu sprechen.",
+    // Wird nur angehängt, wenn search_web oder fetch_url an ist (siehe AssistantChat.tsx), zusammen
+    // mit dem Tool note_findings, das er beschreibt. Die Tiefe entscheidet das Modell; den Rest
+    // erzwingt die Schleife — Rohergebnisse werden einen Schritt später verdichtet, und der letzte
+    // Schritt bietet keine Tools an.
+    systemPromptResearch:
+      "Passe die Tiefe deiner Recherche an die Frage an. Eine einfache Faktenfrage bekommt eine " +
+      "Suche und eine Antwort. Eine Frage, die Quellen vergleicht, mehrere Aspekte hat oder nach " +
+      "Aktuellem fragt, bekommt echte Recherche: Zerlege sie zuerst in 2–4 Teilfragen. Schreib " +
+      "deinen Plan nicht als Nachricht — halte die Teilfragen mit note_findings als status open " +
+      "fest und rufe im selben Schritt search_web für die erste davon auf. " +
+      "Arbeite dann in Runden: Suche mit einer konkreten Wortfolge, nicht mit einer Frage; lies " +
+      "die ein oder zwei vielversprechendsten Ergebnisse mit fetch_url; und halte im nächsten " +
+      "Schritt, zusammen mit deiner nächsten Suche oder deinem nächsten Abruf, mit note_findings " +
+      "fest, was du gelernt hast — ein verdichteter Satz pro Aussage, mit ihrer source_url. " +
+      "Rohergebnisse verschwinden einen Schritt, nachdem du sie gelesen hast; nur deine Notizen " +
+      "bleiben. Prüfe vor jeder Runde: Reicht das? Widersprechen sich Quellen? Was fehlt? Suche " +
+      "nach der Lücke mit einer umformulierten Wortfolge, nie mit derselben. Hör auf, sobald die " +
+      "Frage beantwortet ist. Rufe im selben Schritt wie deine abschließende Antwort kein Tool " +
+      "auf. Wenn keine Tools mehr angeboten werden, antworte nur aus deinen " +
+      "Notizen: Gib jeder Aussage die source_url, mit der sie notiert wurde, benenne Widersprüche " +
+      "und liste auf, was offen geblieben ist, statt es aus dem Gedächtnis zu füllen.",
+    // "Jugendmodus", not a translation of "Teen mode" — testers with the actual audience found
+    // "Teen-Modus" strange. The English string and every `teen*` identifier in the code
+    // (the colour token, `teenMode` state, the `x402-chat-teen-mode` storage key) stay as they
+    // are: this was reported and fixed as a German-wording issue, not a concept rename.
+    teenMode: "Jugendmodus",
+    teenModeOffer: "Jugendmodus einschalten",
+    teenModeHint: "Kürzere, direktere Antworten für Jugendliche — ohne Belehrung.",
     noResponse: "Keine Antwort erhalten",
     imageReady: "Hier ist dein Bild.",
     bundestaktSource: "Quelle: Bundestakt",
@@ -179,5 +276,11 @@ export default {
     modalOnChainBody: "Du bist im richtigen Netzwerk — dir fehlt nur USDC, um 0,50 USDC zu spenden.",
     modalGetUsdcButton: "USDC besorgen",
     modalRetry: "Erneut versuchen",
+  },
+  // Mit welchem Stablecoin die Seite bezahlt, gemeinsam für /imagegen und /assistent.
+  payment: {
+    payWith: "Bezahlen mit",
+    eurcBaseOnly: "EURC gibt es nur auf Base.",
+    currencyFallback: "Dieser Agent nimmt diese Währung hier nicht an, die Zahlung läuft daher über",
   },
 };

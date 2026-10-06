@@ -5,7 +5,7 @@ When a rule stops serving a reason in here, the rule is wrong.
 
 ## Claim
 
-> **fretchen.eu is where I build my way through a topic.**
+> **fretchen.eu is where I build my way through a topic, so you can join in.**
 
 Building is how the thinking happens, not the reward at the end. What gets published is
 finished; the topic it opens usually isn't.
@@ -13,24 +13,39 @@ finished; the topic it opens usually isn't.
 It follows that the built thing — a widget, a derivation, a running tool — is the content
 itself, not decoration around it.
 
+And _joining in_ takes a way in. Work nobody can follow can't be joined, only watched. It
+follows that a page owes the person arriving a door: what this is, what it assumes, and
+where the loose end is.
+
 ## Character
+
+Everything below is decided against this table. The left column says what to do; the right
+is the test — any one word there can kill a decision on its own.
 
 | Is        | Is not      |
 | --------- | ----------- |
 | deep      | dense       |
 | clean     | decorated   |
-| unhurried | polemical   |
+| welcoming | insular     |
 | honest    | pretentious |
 
-The right column does the work — any one word can kill a decision on its own.
-`deep` and `clean` pull against each other on purpose. That tension is the design problem.
+**deep** — go to the bottom of a thing, and publish what is down there.
+**dense** — depth made unusable. Too much at once.
 
-## Principle
+**clean** — every element earns its place by carrying information.
+**decorated** — it doesn't. Useful _here_, now, not "eventually".
 
-> **Everything on a page is useful to the person on that page. Everything else goes.**
+**welcoming** — give the person arriving a door: what this is, what it assumes, where the
+loose end is. "Person", not "reader" — someone operating a tool in `/lab` isn't reading.
+**insular** — a page that only works if you already know the rest. A derivation with
+unstated prerequisites; a screen that never says what to do.
 
-The scope is the point: useful _here_, now — not "useful to someone eventually", which
-justifies everything. "Person", not "reader": someone operating a tool in `/lab` isn't reading.
+**honest** — say which step you are least sure of, so it can be answered.
+**pretentious** — claiming more than you are.
+
+`deep` and `welcoming` pull against each other on purpose — depth is exactly what makes a
+thing hard to enter, and the quantum notes are most of the prose. That tension is the design
+problem.
 
 ## Typography
 
@@ -64,8 +79,8 @@ the _article_: a `/lab` page title is a label on a tool, not something you read,
 sans. That boundary is drawn in exactly one component.
 
 **Type is sized for reading, not for interface.** Framework defaults are set for pages of
-links and forms. Prose gets a larger size and looser leading; that is what `unhurried`
-looks like in practice.
+links and forms. Prose gets a larger size and looser leading; that is hospitality toward the
+person reading, and it is what `welcoming` looks like at body-text scale.
 
 **Prose gets a bounded measure**, set in characters rather than pixels so it survives a
 size change. Figures and tools may exceed it — they are the content, not decoration.
@@ -75,10 +90,10 @@ size change. Figures and tools may exceed it — they are the content, not decor
 Reasons only — the contract lives in `README.md`.
 
 **Figures sit on the page ground.** No box, no tint, no framing rule. A container carries
-no information about what it contains; it is the `decorated` failure, and the Principle
-deletes it. Separation is whitespace, which costs nothing and says the same thing. This
-follows from the Claim more than from taste: if the built thing _is_ the content, boxing it
-says the opposite — that it is an exhibit set apart from the writing.
+no information about what it contains; it is the `decorated` failure. Separation is
+whitespace, which costs nothing and says the same thing. This follows from the Claim more
+than from taste: if the built thing _is_ the content, boxing it says the opposite — that it
+is an exhibit set apart from the writing.
 
 The failure mode is specific and worth naming, because it has shipped here. A tint too faint
 to read as a deliberate hue does not read as subtle, it reads as dirty — the surface looks
@@ -89,7 +104,7 @@ strong enough to be visibly a choice, which is `decorated`, or it should not be 
 across blog posts, quantum notes and lab pages is what makes figures read as a single kind
 of object rather than as whatever each component invented.
 
-**A caption earns its place or it goes** — the Principle applied to the figure's own label.
+**A caption earns its place or it goes** — `decorated`, applied to the figure's own label.
 A caption that renames what the paragraph above just said is not a caption, it is an echo,
 and it makes the figure feel bolted on rather than belonging. So the caption is where you
 say the thing the surrounding prose _cannot_: what to notice, what the shape means, why the
@@ -101,6 +116,34 @@ serif with the rest of the writing, not least because several of them carry equa
 the actors name them, the structural lines are scaffolding. Rank them by value rather than
 by weight — a scaffold drawn as heavily as the content asserts that the grid matters as much
 as what sits on it. This is the same instinct as recessive gridlines on a chart.
+
+## Mark
+
+Reasons only — the placements live in `README.md`.
+
+**The mark is a door, not a signature.** It sits in the nav because most arrivals are not
+on the homepage — someone lands on a blog post from a search with no idea what the rest is,
+and the mark is the way back. That is `welcoming` doing the work. It is not in the hero:
+the homepage already says what it is in words, so a mark above that repeats the wordmark
+(`decorated`) and announces the site (`pretentious` — the same failure as a large `h1`).
+Once the nav carries it, the footer copy goes; the second mark on a page is the decorative
+one.
+
+**It labels a speaker, not a page.** In the assistant it says who is talking, which is
+information, and saves prefixing every turn with a name. It marks the default agent only —
+a visitor who brings their own agent gets a neutral marker, because a face over someone
+else's model claims authorship it does not have. One mark per run of turns, not per
+message: repeated down a transcript it stops identifying and becomes texture.
+
+**It thins by value, not by weight** — the same three tiers as a diagram. The goggles are
+the content and never drop. The square, the ears and the smile name what the goggles sit
+on. Cheeks, nose, cut corners and temple arms are scaffolding and go first; below about
+48px they stop resolving, and depth that cannot be read is `dense`.
+
+**The scaffolding is the warmth, and that is the argument for keeping it.** Cheeks and a
+nose carry no information about the site, so `clean` would delete them. They stay because
+in a mark the character is the payload — it is the only thing the mark is for. Worth
+stating outright, because without it the next audit deletes them correctly.
 
 ## References
 
@@ -114,6 +157,9 @@ nothing for the design to be _for_.
 All five sit on one axis: how much does the page do? vitalik does nothing, gwern does
 everything. Aim between Ciechanowski and distill.
 
+That axis cannot settle a `welcoming` question — none of the five is cited here for being
+easy to arrive at cold. A sixth reference, chosen on that axis instead, is missing.
+
 ## Not decided
 
 Everything below is expression, not identity — it gets decided against the sections above.
@@ -124,4 +170,14 @@ Everything below is expression, not identity — it gets decided against the sec
 - Layout: how much the page does around the content. distill.pub is admired visually, but
   it publishes only finished, authorless papers — the fit here is unproven. **Figures came
   off this list** (see above); how much chrome the _page_ carries is still open.
-- Whether the colour system as it stands still follows from any of the above.
+- Whether the colour system as it stands still follows from any of the above. Now pulled on
+  from a second direction: if the mark and the links are the same blue, they compete for the
+  same signal.
+- Whether pages address the person in the second person, or keep to the third. The Claim
+  says "you"; the pages need not.
+- Whether the mark speaks. Silent, it is a signature. In first person at the dead ends, it
+  is a host — and then every dead end owes a line in that voice, or the silent ones read as
+  unfinished. **Where the mark appears came off this list** (see above); whether it talks
+  did not.
+- What marks a visitor-supplied agent. The face cannot, and "neutral" is not yet a thing
+  that exists.

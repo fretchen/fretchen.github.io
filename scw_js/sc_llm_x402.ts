@@ -1,6 +1,6 @@
 import {
   callLLMAPI,
-  convertTokensToUsdcCost,
+  tokensToCost,
   resolveModel,
   advertisedModelIds,
   type LLMMessage,
@@ -15,8 +15,9 @@ import {
   FORWARDED_OWN_KEYS,
   MAX_MESSAGES_BYTES,
 } from "./llm_schemas.js";
-import { getUSDCConfig, isTestnet } from "@fretchen/chain-utils";
-import pino from "pino";
+import { isTestnet, type StablecoinSymbol } from "@fretchen/chain-utils";
+import { logger } from "./logger.js";
+import { offeredStablecoins, resolvePaidStablecoin, type PriceList } from "./stablecoin_pricing.js";
 import {
   createLLMResourceServer,
   createBatchSettlementPaymentRequirements,
@@ -26,11 +27,15 @@ import {
   getBatchSettlementNetworks,
   formatUsdcAtomicAsDecimalUsd,
   LLM_MAX_TIMEOUT_SECONDS,
+  releaseLock,
+  type SdkPaymentPayload,
+  type SdkPaymentRequirements,
 } from "./x402_server.js";
 import type { ScwEvent } from "./types.js";
 import openapiSpec from "./openapi.llm.json" with { type: "json" };
 import { faviconBase64, faviconContentType } from "./favicon.js";
 import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
+import { AGENT_REGISTRATION_PATH, buildAgentRegistration } from "./agent_registration.js";
 
 export type { ScwEvent };
 
@@ -40,8 +45,6 @@ interface ScwResponse {
   headers: Record<string, string>;
   isBase64Encoded?: boolean;
 }
-
-const logger = pino({ level: process.env.LOG_LEVEL ?? "info" });
 
 // Ceiling price per message, in USDC atomic units (6 decimals) — the *maximum* a message
 // can cost, not what it actually costs. This is what the 402 advertises and what the
@@ -76,29 +79,42 @@ const STRIPPED_REQUEST_KEYS = new Set(
 //
 // Raising it costs plain-chat callers nothing: this is the *authorization* bound the 402
 // advertises and verifyPayment checks, while settlement is still usage-derived. It only means a
-// larger per-message voucher. At 6000: ceiling = 6000 × $1.50/M = $0.009, covering ~18,000 input
-// tokens or ~6000 output tokens.
-const MAX_TOKENS_PER_MESSAGE = process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE ?? "6000";
+// larger per-message voucher.
+//
+// Raised again from 6000 for multi-hop web research: a research turn carries notes plus the
+// latest fetched pages, and at 6000 (~18,000 input tokens) MAX_MESSAGES_BYTES had to stay at
+// 64 KB — six page reads. At 20000: ceiling = 20000 × $1.50/M = $0.03, covering ~60,000 input
+// tokens or ~20,000 output tokens. Raise it together with MAX_MESSAGES_BYTES, never alone.
+const MAX_TOKENS_PER_MESSAGE = process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE ?? "20000";
 // No real prompt/completion split exists yet for the ceiling, so price the entire
 // estimate as completion (output) tokens — the pricier of the two rates for a
 // provider with an asymmetric split like Mistral's. This guarantees the ceiling is
 // never an underestimate relative to whatever the real split turns out to be;
 // getSettleAmount's cap below still protects the ceiling from ever being exceeded.
-const USDC_MAX_PRICE_PER_MESSAGE = convertTokensToUsdcCost(
-  { prompt_tokens: 0, completion_tokens: MAX_TOKENS_PER_MESSAGE },
-  LLM_PROVIDER,
-).toString();
+//
+// One ceiling per token, each priced on the provider's own rate card in that currency — two
+// parallel price systems, no conversion (see llm_service.ts).
+const maxPriceFor = (symbol: StablecoinSymbol): string =>
+  tokensToCost(
+    { prompt_tokens: 0, completion_tokens: MAX_TOKENS_PER_MESSAGE },
+    LLM_PROVIDER,
+    symbol,
+  ).toString();
+const MAX_PRICE_ATOMIC: PriceList = { USDC: maxPriceFor("USDC"), EURC: maxPriceFor("EURC") };
 
 /**
- * Real, usage-derived charge for this message, capped at the pre-authorized ceiling
- * (`USDC_MAX_PRICE_PER_MESSAGE`) — a response that somehow runs over the estimate still
- * settles for the max rather than aborting with cap_exceeded; the difference is absorbed
- * as under-billing, not a fund-safety issue (the client is always protected by the
- * voucher's signed ceiling).
+ * Real, usage-derived charge for this message in `symbol`'s atomic units, from that currency's
+ * rate card, capped at the same currency's pre-authorized ceiling (`MAX_PRICE_ATOMIC`) — a
+ * response that somehow runs over the estimate still settles for the max rather than aborting
+ * with cap_exceeded; the difference is absorbed as under-billing, not a fund-safety issue (the
+ * client is always protected by the voucher's signed ceiling).
  */
-function getSettleAmount(usage: { prompt_tokens: number; completion_tokens: number }): string {
-  const actualCost = convertTokensToUsdcCost(usage, LLM_PROVIDER);
-  const maxCost = BigInt(USDC_MAX_PRICE_PER_MESSAGE);
+function getSettleAmount(
+  usage: { prompt_tokens: number; completion_tokens: number },
+  symbol: StablecoinSymbol,
+): string {
+  const actualCost = tokensToCost(usage, LLM_PROVIDER, symbol);
+  const maxCost = BigInt(MAX_PRICE_ATOMIC[symbol]);
   return (actualCost > maxCost ? maxCost : actualCost).toString();
 }
 
@@ -111,14 +127,31 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     return { statusCode: 200, headers: CORS_HEADERS, body: "" };
   }
 
+  if (
+    (event.httpMethod === "GET" || event.httpMethod === "HEAD") &&
+    (event.path ?? "").replace(/^\/+/, "") === AGENT_REGISTRATION_PATH
+  ) {
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      body:
+        event.httpMethod === "HEAD"
+          ? ""
+          : JSON.stringify(
+              buildAgentRegistration(openapiSpec, "llm", process.env.NFT_WALLET_PUBLIC_KEY),
+            ),
+    };
+  }
+
   if (event.httpMethod === "GET" && (event.path ?? "").replace(/^\/+/, "") === "openapi.json") {
     // The static file's x-payment-info.price.max is a documentation-only baseline —
-    // USDC_MAX_PRICE_PER_MESSAGE (derived from LLM_ESTIMATED_TOKENS_PER_MESSAGE and the
+    // MAX_PRICE_ATOMIC (derived from LLM_ESTIMATED_TOKENS_PER_MESSAGE and the
     // LLM provider's rate card) is the real, live ceiling, so override it here rather than
     // let the served discovery doc silently drift from the actual runtime 402 behavior.
+    // The discovery spec prices in USD, so this is the USDC ceiling.
     const spec = structuredClone(openapiSpec) as typeof openapiSpec;
     spec.paths["/"].post["x-payment-info"].price.max = formatUsdcAtomicAsDecimalUsd(
-      USDC_MAX_PRICE_PER_MESSAGE,
+      MAX_PRICE_ATOMIC.USDC,
     );
     return {
       statusCode: 200,
@@ -200,7 +233,7 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
       resourceUrl: event.path ?? process.env.LLM_SERVICE_URL ?? "https://api.example.com/llm",
       description: "AI Assistant chat message",
       mimeType: "application/json",
-      amount: USDC_MAX_PRICE_PER_MESSAGE,
+      price: MAX_PRICE_ATOMIC,
       payTo: receiverAddressForChallenge,
       scheme: challengeScheme,
     });
@@ -214,7 +247,7 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
   // `temperature`, `top_p`, `stop`, `seed` and friends work rather than being silently dropped.
   //
   // The exceptions below are the params that move cost past the fixed per-message ceiling
-  // (USDC_MAX_PRICE_PER_MESSAGE, ~$0.003 at 2000 output tokens). Rejecting is the honest answer:
+  // (MAX_PRICE_ATOMIC, ~$0.003 at 2000 output tokens). Rejecting is the honest answer:
   // ignoring them would charge for a request we did not fulfil as asked, and a caller who sets
   // max_tokens expects it to bound something. See llm_schemas.ts for the full reasoning.
   //
@@ -362,17 +395,31 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
   // x402 verify/settle but gets a mock completion instead of a paid API call.
   const useMock = useDummyData === true || isTestnet(clientNetwork);
 
-  const usdcConfig = getUSDCConfig(clientNetwork);
-  const baseRequirements = {
+  // Price the stablecoin the buyer's channel is in, not a fixed one: the requirements below must
+  // match the 402 entry the client signed its channelConfig against.
+  const accepted = (paymentPayload as Record<string, unknown>)["accepted"] as
+    | Record<string, unknown>
+    | undefined;
+  const coin = resolvePaidStablecoin(clientNetwork, accepted?.["asset"]);
+  if (!coin) {
+    logger.warn({ clientNetwork, asset: accepted?.["asset"] }, "Payment asset not offered");
+    return errorResponse(
+      402,
+      `Unsupported payment asset on ${clientNetwork} — offered: ${offeredStablecoins(clientNetwork)
+        .map((offered) => `${offered.symbol} ${offered.address}`)
+        .join(", ")}`,
+    );
+  }
+  const baseRequirements: SdkPaymentRequirements = {
     scheme: "batch-settlement",
-    network: clientNetwork,
-    amount: USDC_MAX_PRICE_PER_MESSAGE,
-    asset: usdcConfig.address,
+    network: clientNetwork as `${string}:${string}`,
+    amount: MAX_PRICE_ATOMIC[coin.symbol],
+    asset: coin.address,
     payTo: receiverAddress,
     // Must match the value advertised in the 402 (createBatchSettlementPaymentRequirements)
     // — the SDK treats maxTimeoutSeconds as immutable between advertise and verify.
     maxTimeoutSeconds: LLM_MAX_TIMEOUT_SECONDS,
-    extra: { name: usdcConfig.usdcName, version: usdcConfig.usdcVersion },
+    extra: { name: coin.name, version: coin.version },
   };
   // Must be the SAME enhanced requirements (extra.receiverAuthorizer/withdrawDelay) the
   // client signed its channelConfig against when it saw the 402 — a raw, un-enhanced
@@ -380,8 +427,7 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
   // deposit with receiver_authorizer_mismatch, since it treats a missing extra field as a
   // mismatch rather than "not required". Confirmed via a real Base Sepolia run.
   const paymentRequirements = await scheme.enhancePaymentRequirements(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    baseRequirements as any,
+    baseRequirements,
     {
       x402Version: 2,
       scheme: "batch-settlement",
@@ -399,8 +445,7 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
   };
   try {
     verification = await resourceServer.verifyPayment(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      paymentPayload as any,
+      paymentPayload as SdkPaymentPayload,
       paymentRequirements,
     );
   } catch (error) {
@@ -435,8 +480,7 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
       verification.invalidReason,
       verification.payer ? { payer: verification.payer } : undefined,
       undefined,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      paymentPayload as any,
+      paymentPayload as SdkPaymentPayload,
     );
     return create402Response(paymentRequired);
   }
@@ -449,9 +493,9 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     logger.debug({ prompt }, "Generating answer for prompt");
     // Route to the provider that serves the requested model. Today only mistral is
     // advertised (resolved.provider === LLM_PROVIDER), so pricing (getSettleAmount /
-    // USDC_MAX_PRICE_PER_MESSAGE, which use LLM_PROVIDER) stays correct. When a second
+    // MAX_PRICE_ATOMIC, which use LLM_PROVIDER) stays correct. When a second
     // provider is advertised, per-provider pricing must follow suit here.
-    // TODO: getSettleAmount() and USDC_MAX_PRICE_PER_MESSAGE (above) are hardcoded to
+    // TODO: getSettleAmount() and MAX_PRICE_ATOMIC (above) are hardcoded to
     // LLM_PROVIDER = "mistral" and do NOT use resolved.provider. The moment a second model
     // is added to advertisedModelIds(), a request routed to that provider here will still be
     // priced/settled at Mistral's rate — fix pricing to key off resolved.provider before
@@ -467,6 +511,9 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     llmData = await callLLMAPI(prompt, useMock, resolved.provider, forwardedParams);
   } catch (error) {
     logger.error({ err: error }, "Error during answer generation");
+    // Verified but never settled: release the channel lock, or the next message waits out
+    // LLM_MAX_TIMEOUT_SECONDS behind `channel_busy` for an answer that was never charged.
+    await releaseLock(resourceServer, paymentPayload as SdkPaymentPayload, paymentRequirements);
     return errorResponse(500, (error as Error).message);
   }
 
@@ -477,13 +524,13 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
   // Settling with a DIFFERENT (smaller, real-usage) amount than what verifyPayment() used
   // is intentional — see getSettleAmount()'s comment above. handleBeforeSettle only checks
   // this against the voucher's signed ceiling, not against what verify saw.
-  const settleAmount = getSettleAmount(llmData.usage);
+  // Priced and capped in the channel's own currency — the same ceiling the voucher signed.
+  const settleAmount = getSettleAmount(llmData.usage, coin.symbol);
   const settleRequirements = { ...paymentRequirements, amount: settleAmount };
 
   try {
     const settlement = await resourceServer.settlePayment(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      paymentPayload as any,
+      paymentPayload as SdkPaymentPayload,
       settleRequirements,
     );
     if (!settlement.success) {
@@ -561,10 +608,12 @@ if (process.env.NODE_ENV === "test" && !process.env.CI) {
 
           fastify.listen({ port: 8085, host: "0.0.0.0" }, (err: unknown, address: string) => {
             if (err) {
-              console.error("Failed to start server:", err);
+              // Local dev only — never deployed. Same phrase the other packages' local server
+              // bootstraps use; see EXEMPT in test/alert_coverage.test.ts.
+              logger.error({ err }, "Error starting local server");
               process.exit(1);
             }
-            console.log(`🚀 LLM x402 batch-settlement Local Server listening at ${address}`);
+            logger.info({ address }, "Local server listening");
           });
         });
       });

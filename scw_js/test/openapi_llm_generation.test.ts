@@ -45,7 +45,7 @@ describe("openapi.llm.json generation", () => {
       // (llm_schemas.ts), so the drift this originally caught — `n` and `max_tokens` becoming 400
       // causes the spec never mentioned — is structurally gone. What it still checks is the prose
       // assembly in the generator: that joinOr() renders the list into a readable sentence.
-      const paths = spec.paths as Record<string, never>;
+      const paths = spec.paths as Record<string, any>;
       const desc: string = paths["/"]["post"]["responses"]["400"]["description"];
       expect(desc).toContain("stream");
       expect(desc).toContain("n other than 1");
@@ -60,7 +60,7 @@ describe("openapi.llm.json generation", () => {
    */
   describe("fields the hand-written spec had drifted away from", () => {
     const props = (
-      (committedSpec as Record<string, never>).components["schemas"]["LLMChatRequest"] as {
+      (committedSpec as unknown as Record<string, any>).components["schemas"]["LLMChatRequest"] as {
         properties: Record<string, unknown>;
       }
     ).properties;
@@ -82,7 +82,7 @@ describe("openapi.llm.json generation", () => {
    * than forwarding upstream extras.
    */
   describe("advertised strictness matches actual behaviour", () => {
-    const schemas = (committedSpec as Record<string, never>).components["schemas"];
+    const schemas = (committedSpec as unknown as Record<string, any>).components["schemas"];
 
     it("leaves the request permissive", () => {
       expect(schemas["LLMChatRequest"]["additionalProperties"]).toEqual({});

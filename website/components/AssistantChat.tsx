@@ -11,6 +11,7 @@ import remarkGfm from "remark-gfm";
 import { AgentInfoPanel } from "./AgentInfoPanel";
 import { AgentSelector } from "./AgentSelector";
 import { ToolSelector } from "./ToolSelector";
+import { LocaleText } from "./LocaleText";
 import { ToolConfirmCard, type ToolSize } from "./ToolConfirmCard";
 import * as chat from "./AssistantChat.styles";
 import { useLocale } from "../hooks/useLocale";
@@ -20,6 +21,9 @@ import { useWalletConnection } from "../hooks/useWalletConnection";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
 import { useX402Chat, DEFAULT_LLM_AGENT_URL } from "../hooks/useX402Chat";
 import { useX402ImageGeneration } from "../hooks/useX402ImageGeneration";
+import { usePaymentCurrency, networksForCurrency, type PaymentCurrency } from "../hooks/x402Currency";
+import { CurrencyToggle } from "./CurrencyToggle";
+import { IMAGE_PRICE, formatSpend } from "../utils/x402Prices";
 import { fetchAgentCard, precheckLlmV1Agent, type AgentCard } from "../hooks/x402Discovery";
 import { generateImageTool, runImageTool } from "../tools/generateImage";
 import {
@@ -68,10 +72,11 @@ import {
   type FetchToolResult,
 } from "../tools/webFetch";
 import { paymentFailed } from "../tools/failure";
+import { noteFindingsTool, readFindings, validateFindings } from "../tools/notes";
 import { useWalletAuth } from "../hooks/useWalletAuth";
 import { isOwnerAddress, type OwnerScope } from "../utils/getChain";
 import type { X402ChatMessage, X402Tool, X402ToolCall } from "../types/x402";
-import { runToolLoop, type ToolRunResult } from "../utils/toolLoop";
+import { runToolLoop, type ToolRunResult, type LoopPhase, type OfferedTool } from "../utils/toolLoop";
 import { formatDateContext } from "../utils/dateContext";
 import { createLocalStorageStore } from "../utils/localStorageStore";
 import { useQueryClient } from "@tanstack/react-query";
@@ -80,6 +85,9 @@ import { useChainId } from "wagmi";
 import { ChainBadge, getChainName } from "./ChainBadge";
 import { button } from "../styled-system/recipes";
 import { PageHeader } from "./PageHeader";
+import { FretchenLogo } from "./FretchenLogo";
+import { GetFundsModal } from "./GetFundsModal";
+import { PaymentError, readChargedTotal } from "../utils/x402PaidFetch";
 
 /**
  * Which tools oblige the answer to name where it got its facts. Bundestakt is a CC BY licence
@@ -113,15 +121,30 @@ type ToolSource = "bundestakt" | "analytics" | "brave";
 export const TOOL_REGISTRY = [
   {
     tool: generateImageTool,
-    label: "Image generation",
+    label: "assistent.toolImageGeneration",
+    description: "assistent.toolImageGenerationDesc",
+    // Explicit `undefined`, not simply omitted: `as const satisfies` keeps each entry's own
+    // literal shape rather than widening to the shared type, so an optional field present on
+    // only some entries stops TypeScript narrowing `TOOL_REGISTRY[number].group` at all — every
+    // entry states the key so the union stays uniform.
+    group: undefined,
     ownerScope: null,
     defaultAgentOnly: false,
     paid: false,
     source: null,
   },
+  // Two distinct tools and schemas — the model still calls them separately, and each still goes
+  // on the wire as its own entry — but one UX decision: a visitor does not experience "sessions"
+  // and "fact-checks" as different capabilities, they experience "Bundestakt". `group` collapses
+  // them to one row in the selector without collapsing them for the model. The row's own label
+  // and description come from the *first* member in registry order — see `toolSelectorOptions` —
+  // so `getSitzungenTool`'s pair below is written to stand for the pair together; the second
+  // member keeps its own, honest description in case the two are ever split again.
   {
     tool: getSitzungenTool,
-    label: "Bundestag sessions",
+    label: "assistent.toolBundestagSessions",
+    description: "assistent.toolBundestagSessionsDesc",
+    group: "assistent.capBundestag",
     ownerScope: null,
     defaultAgentOnly: false,
     paid: false,
@@ -129,19 +152,32 @@ export const TOOL_REGISTRY = [
   },
   {
     tool: searchClaimsTool,
-    label: "Fact-checks",
+    label: "assistent.toolFactChecks",
+    description: "assistent.toolFactChecksDesc",
+    group: "assistent.capBundestag",
     ownerScope: null,
     defaultAgentOnly: false,
     paid: false,
     source: "bundestakt",
   },
-  { tool: getPageTool, label: "Site content", ownerScope: null, defaultAgentOnly: false, paid: false, source: null },
+  {
+    tool: getPageTool,
+    label: "assistent.toolSiteContent",
+    description: "assistent.toolSiteContentDesc",
+    group: undefined,
+    ownerScope: null,
+    defaultAgentOnly: false,
+    paid: false,
+    source: null,
+  },
   // Open to anyone — the visitor pays $0.01 per search from the channel their chat already
   // funded — but never offered to a third-party agent, which would be spending someone else's
   // escrow on prompts of its own choosing.
   {
     tool: searchWebTool,
-    label: "Web search",
+    label: "assistent.toolWebSearch",
+    description: "assistent.toolWebSearchDesc",
+    group: undefined,
     ownerScope: null,
     defaultAgentOnly: true,
     paid: true,
@@ -149,10 +185,21 @@ export const TOOL_REGISTRY = [
   },
   // Same terms as search, at a tenth the price. `source: null` because the citation *is* the url,
   // which the result carries and the prompt already requires the answer to link.
-  { tool: fetchUrlTool, label: "Fetch URL", ownerScope: null, defaultAgentOnly: true, paid: true, source: null },
+  {
+    tool: fetchUrlTool,
+    label: "assistent.toolFetchUrl",
+    description: "assistent.toolFetchUrlDesc",
+    group: undefined,
+    ownerScope: null,
+    defaultAgentOnly: true,
+    paid: true,
+    source: null,
+  },
   {
     tool: getAnalyticsTool,
-    label: "Site analytics",
+    label: "assistent.toolSiteAnalytics",
+    description: "assistent.toolSiteAnalyticsDesc",
+    group: undefined,
     ownerScope: "analytics",
     defaultAgentOnly: true,
     paid: false,
@@ -160,8 +207,25 @@ export const TOOL_REGISTRY = [
   },
 ] as const satisfies readonly {
   tool: X402Tool;
-  /** Shown in the ToolSelector. Required, so a new tool cannot arrive without a readable name. */
+  /**
+   * Locale key for the name shown in the ToolSelector, resolved there with `LocaleText`.
+   * Required, so a new tool cannot arrive without a readable name — a key rather than a literal
+   * because this list is read by visitors as "what I can do", and that has to be German on the
+   * German routes. Metadata beside the tool, never on the wire.
+   */
   label: string;
+  /**
+   * Locale key for the one-line explanation shown under the label — what "Bundestagssitzungen"
+   * means to someone who has never heard the word. Required for the same reason `label` is: a
+   * tool that arrives unexplained is exactly the confusion a tester ran into.
+   */
+  description: string;
+  /**
+   * Locale key that rows sharing it collapse under in the selector — the presentation grouping
+   * from the comment above `getSitzungenTool`. Absent means "its own row", keyed by `label`.
+   * Never reaches the wire: each tool is still offered to the model individually.
+   */
+  group?: string;
   ownerScope: OwnerScope | null;
   /** Withheld while a custom agent is selected, whoever the user is. */
   defaultAgentOnly: boolean;
@@ -173,6 +237,47 @@ export const TOOL_REGISTRY = [
 // Hoisted so the array identity is stable across renders. Mainnet-only on purpose — see the
 // useAutoNetwork call in the component for why a testnet entry here would be a real hazard.
 const IMAGE_TOOL_NETWORKS = getGenAiNFTMainnetNetworks();
+
+/**
+ * Wire tool name → the same locale key `ToolSelector` shows for it, so the loading bubble can
+ * say "Im Web suchen …" while `search_web` runs instead of a generic "typing". Built from the
+ * full registry rather than from `availableTools`: the loop can only ever be running a tool that
+ * was offered, so every name it reports is a real key here regardless of which subset a given
+ * render offered.
+ */
+const TOOL_LABEL_BY_NAME = new Map<string, string>([
+  ...TOOL_REGISTRY.map((entry) => [entry.tool.function.name, entry.label] as const),
+  [noteFindingsTool.function.name, "assistent.toolResearchNotes"],
+]);
+
+/**
+ * The web tools — what makes a turn a possible research run. `note_findings` rides along with
+ * them rather than sitting in `TOOL_REGISTRY`: it is not a capability anyone chooses, only the
+ * notepad research needs, so it is on exactly when one of these is offered. It is free, so it
+ * costs nothing when the model does not use it beyond its definition's bytes.
+ */
+const WEB_TOOL_NAMES = new Set([searchWebTool.function.name, fetchUrlTool.function.name]);
+
+/** One note as the loading bubble lists it: the claim, and the site it came from. */
+type ResearchNote = { claim: string; source?: string };
+
+/** The claims out of a `note_findings` call's raw arguments, for display. Lenient on purpose —
+ *  `validateFindings` is what tells the model a batch is wrong; this only shows what was there. */
+function parseNotes(args: string): ResearchNote[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(args);
+  } catch {
+    return [];
+  }
+  return readFindings(parsed).map(({ claim, source_url }) => {
+    try {
+      return { claim, source: source_url ? new URL(source_url).hostname : undefined };
+    } catch {
+      return { claim };
+    }
+  });
+}
 
 /**
  * The execution half of the tool contract. `TOOL_REGISTRY` above says what exists and who may use
@@ -216,7 +321,13 @@ interface ChatMessage {
    *  back to the model. Filled only from successful lookups, since a failed one contributed
    *  nothing to cite. See TOOL_SOURCES for why each one is named. */
   sources?: ToolSource[];
+  /** What this turn charged the payment channel. Display only, never sent to the model. Carries
+   *  its own currency because the user can switch currency mid-chat. Image generation pays on its
+   *  own scheme and is not in here — its card states its own price. */
+  cost?: MessageCost;
 }
+
+type MessageCost = { atomic: bigint; currency: PaymentCurrency };
 
 /** The confirm card's lifecycle. No "failed" phase: a cancel or error clears the card
  *  immediately and the tool result carries the status — the *next* hop's assistant text
@@ -270,6 +381,25 @@ const readStoredDisabledTools = (): string => disabledToolsStore.read() ?? "";
 
 const storeDisabledTools = (names: ReadonlySet<string>): void => disabledToolsStore.write([...names].join(","));
 
+/**
+ * Teen mode: a tone-and-behaviour profile, chosen by whoever is using the chat.
+ *
+ * A feature, not a parental control — nothing enforces it, and it is deliberately not tied to the
+ * wallet, the payment or any notion of identity. It therefore needs nothing more than a stored
+ * boolean: everything it changes lives in the appended system prompt (`assistent.systemPromptTeen`),
+ * so there is no server-side profile to keep honest and no request parameter a browser could lie
+ * about anyway.
+ *
+ * The stored value is the string "on" or nothing at all, mirroring the two preferences above.
+ */
+const TEEN_MODE_KEY = "x402-chat-teen-mode";
+
+const teenModeStore = createLocalStorageStore(TEEN_MODE_KEY);
+
+const readStoredTeenMode = (): string => teenModeStore.read() ?? "";
+
+const storeTeenMode = (enabled: boolean): void => teenModeStore.write(enabled ? "on" : "");
+
 /** Build a block-explorer tx link for the given CAIP-2 network via its viem chain config. */
 function explorerTxUrl(network: string, txHash: string): string | null {
   if (!txHash) return null;
@@ -285,12 +415,50 @@ export function AssistantChat() {
   const { trackEvent } = useUmami();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const lastAssistantIndex = messages.findLastIndex((m) => m.role === "assistant");
+  // What this chat has cost so far, per currency, summed from the answers' own cost lines.
+  const chatTotals = [
+    ...messages
+      .reduce((totals, m) => {
+        if (m.cost && m.cost.atomic > 0n) {
+          totals.set(m.cost.currency, (totals.get(m.cost.currency) ?? 0n) + m.cost.atomic);
+        }
+        return totals;
+      }, new Map<PaymentCurrency, bigint>())
+      .entries(),
+  ];
   const [currentInput, setCurrentInput] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  // What the loop is doing right now, for the loading bubble. Cleared in `sendMessage`'s
+  // `finally` alongside `isLoading` — a phase from a finished turn must never survive into the
+  // next one's "waiting" moment before the loop has had a chance to set its own first phase.
+  const [loopPhase, setLoopPhase] = useState<LoopPhase | null>(null);
+  // A research run's visible cost, for the loading bubble: web calls so far and what the turn has
+  // actually been charged (see `readChargedTotal`). Null until the first paid web call, so a plain
+  // chat message looks exactly as it always did. Cleared in the same `finally` as `loopPhase`.
+  const [research, setResearch] = useState<{
+    searches: number;
+    pages: number;
+    spent: bigint;
+    notes: ResearchNote[];
+  } | null>(null);
+  // Read by the loop before each hop. A ref, not state: the loop is already running inside an
+  // event handler and must see the press without waiting for a re-render. `stopPressed` is only the
+  // button's own feedback.
+  const stopRequestedRef = useRef(false);
+  const [stopPressed, setStopPressed] = useState(false);
 
   // Localized messages (reuse the existing assistent.* namespace)
   const systemPromptMessage = useLocale({ label: "assistent.systemPrompt" });
+  const teenPromptMessage = useLocale({ label: "assistent.systemPromptTeen" });
+  const researchPromptMessage = useLocale({ label: "assistent.systemPromptResearch" });
+  const researchProgressLabel = useLocale({ label: "assistent.researchProgress" });
+  const stopAndAnswerLabel = useLocale({ label: "assistent.stopAndAnswer" });
+  const researchNotesLabel = useLocale({ label: "assistent.researchNotes" });
+  const chatTotalLabel = useLocale({ label: "assistent.chatTotal" });
+  const teenModeLabel = useLocale({ label: "assistent.teenMode" });
+  const teenModeOfferLabel = useLocale({ label: "assistent.teenModeOffer" });
   const noResponseMessage = useLocale({ label: "assistent.noResponse" });
   const imageReadyMessage = useLocale({ label: "assistent.imageReady" });
   const bundestaktSourceLabel = useLocale({ label: "assistent.bundestaktSource" });
@@ -309,16 +477,31 @@ export function AssistantChat() {
   const unknownErrorLabel = useLocale({ label: "assistent.unknownError" });
   const typingLabel = useLocale({ label: "assistent.typing" });
   const toppingUpLabel = useLocale({ label: "assistent.toppingUp" });
-  const actionsLabel = useLocale({ label: "assistent.actions" });
+  const advancedLabel = useLocale({ label: "assistent.advanced" });
   const clearChatLabel = useLocale({ label: "assistent.clearChat" });
   const titleLabel = useLocale({ label: "assistent.title" });
   const emptyStateLabel = useLocale({ label: "assistent.emptyState" });
+  const doorLines = [
+    useLocale({ label: "assistent.doorIntro" }),
+    useLocale({ label: "assistent.doorCan" }),
+    useLocale({ label: "assistent.doorCost" }),
+    useLocale({ label: "assistent.doorHonest" }),
+  ];
+  const starters = [
+    useLocale({ label: "assistent.starter1" }),
+    useLocale({ label: "assistent.starter2" }),
+    useLocale({ label: "assistent.starter3" }),
+  ];
+  const tooltipConnectLabel = useLocale({ label: "assistent.tooltipConnect" });
+  const teenModeHintLabel = useLocale({ label: "assistent.teenModeHint" });
   const youLabel = useLocale({ label: "assistent.you" });
   const assistantLabel = useLocale({ label: "assistent.assistant" });
   const placeholderLabel = useLocale({ label: "assistent.placeholder" });
   const viewPaymentLabel = useLocale({ label: "assistent.viewPayment" });
   const networkLabel = useLocale({ label: "assistent.network" });
   const networkFallbackLabel = useLocale({ label: "assistent.networkFallback" });
+  const eurcBaseOnlyLabel = useLocale({ label: "payment.eurcBaseOnly" });
+  const currencyFallbackLabel = useLocale({ label: "payment.currencyFallback" });
 
   // Mobile detection
   React.useEffect(() => {
@@ -344,6 +527,10 @@ export function AssistantChat() {
     () => new Set(disabledToolsRaw.split(",").filter((name) => name.length > 0)),
     [disabledToolsRaw],
   );
+
+  // Server snapshot is "" — off — so the SSR markup and the first client render agree about an
+  // unchecked box, and localStorage takes over only once it exists.
+  const teenMode = useSyncExternalStore(teenModeStore.subscribe, readStoredTeenMode, () => "") === "on";
 
   // A custom agent, once one has been pre-checked and accepted. Null = the default agent.
   // Declared above `availableTools` because the owner-scope gate below reads it.
@@ -378,32 +565,95 @@ export function AssistantChat() {
 
   /** Rendered in two places (sidebar and mobile footer) with identical props — computed once so
    *  the two can't quietly drift. */
-  const toolSelectorOptions = availableTools.map((entry) => ({ name: entry.tool.function.name, label: entry.label }));
+  /**
+   * `availableTools` in registry order, collapsed onto `group ?? label`. A `Map` keyed that way
+   * preserves first-seen order and first-seen `description`, which is what makes the comment on
+   * `getSitzungenTool` true: the row's label and description are simply whichever member's the
+   * `Map` saw first, no separate "pick a representative" step needed.
+   */
+  const toolSelectorOptions = useMemo(() => {
+    const rows = new Map<string, { names: string[]; label: string; description: string }>();
+    for (const entry of availableTools) {
+      const key = entry.group ?? entry.label;
+      const row = rows.get(key);
+      if (row) row.names.push(entry.tool.function.name);
+      else rows.set(key, { names: [entry.tool.function.name], label: key, description: entry.description });
+    }
+    return [...rows.values()];
+  }, [availableTools]);
 
-  const toggleTool = (name: string, enabled: boolean) => {
+  /**
+   * Built once for the same reason as `toolSelectorOptions`: it renders in the sidebar and in the
+   * mobile footer, and the two must not drift.
+   *
+   * Sits at the *top* of the panel, above the agent and the tools, because it is a mode rather
+   * than a tool — it governs everything below it. It spent a version under the tool checkboxes,
+   * where it read as a sixth tool and nobody would ever have scrolled to it.
+   *
+   * A native checkbox on purpose: keyboard behaviour, focus and screen-reader semantics come
+   * free, and `accentColor` is all it takes to put it in the mode's hue.
+   */
+  const teenToggle = (
+    <label
+      className={css({
+        display: "flex",
+        alignItems: "center",
+        gap: "2",
+        fontSize: "sm",
+        fontWeight: "semibold",
+        color: "text",
+        cursor: "pointer",
+        accentColor: "teen",
+      })}
+    >
+      <input type="checkbox" checked={teenMode} onChange={(event) => storeTeenMode(event.target.checked)} />
+      <span>{teenModeLabel}</span>
+    </label>
+  );
+  const teenToggleWithHint = (
+    <>
+      {teenToggle}
+      <p className={chat.teenModeHint}>{teenModeHintLabel}</p>
+    </>
+  );
+
+  // Takes every wire name a row stands for, not one — a grouped row toggles all its members
+  // together, since the visitor never chose to have two checkboxes for "Bundestakt" in the
+  // first place. A single-tool row just passes an array of one.
+  const toggleTool = (names: string[], enabled: boolean) => {
     const next = new Set(disabledTools);
-    if (enabled) next.delete(name);
-    else next.add(name);
+    for (const name of names) {
+      if (enabled) next.delete(name);
+      else next.add(name);
+    }
     storeDisabledTools(next);
   };
 
-  // Precedence: explicit choice → the wallet's own chain if we support it → Optimism.
+  // Which stablecoin to pay with. Narrows the eligible chat networks first — EURC only exists on
+  // Base, so it always wins that network regardless of the stored/wallet preference below.
+  const currency = usePaymentCurrency();
+  const currencyNetworks = networksForCurrency(currency, CHAT_NETWORKS);
+
+  // Precedence: explicit choice (if still valid for this currency) → the wallet's own chain if
+  // we support it → the first network this currency pays on.
   const walletNetwork = toCAIP2(useChainId());
+  const validPreferred = preferredNetwork && currencyNetworks.includes(preferredNetwork) ? preferredNetwork : null;
   const desiredNetwork =
-    preferredNetwork ??
-    ((CHAT_NETWORKS as readonly string[]).includes(walletNetwork) ? walletNetwork : CHAT_NETWORKS[0]);
+    validPreferred ?? (currencyNetworks.includes(walletNetwork) ? walletNetwork : currencyNetworks[0]);
 
   const agentUrl = customUrl ?? DEFAULT_LLM_AGENT_URL;
-  // The hook may negotiate away from `desiredNetwork` when the agent doesn't offer it (e.g. a
-  // Base-only third-party agent while the user prefers Optimism), so the wallet must be
+  const isDefaultAgent = customUrl === null;
+  // The hook may negotiate away from `desiredNetwork`/`currency` when the agent doesn't offer them
+  // (e.g. a USDC-only third-party agent while the user prefers EURC), so the wallet must be
   // switched to what will actually be paid — `paymentNetwork`, not the preference.
   const {
     sendMessage: payAndSend,
     paidFetch,
     paymentReceipt,
     paymentNetwork,
+    paymentCurrency,
     status: chatStatus,
-  } = useX402Chat(desiredNetwork, agentUrl);
+  } = useX402Chat(desiredNetwork, agentUrl, currency);
   const { network, switchIfNeeded, getSwitchError } = useAutoNetwork([paymentNetwork]);
 
   // The image tool pays on a different network/scheme (exact, genimg's own wallet signature)
@@ -421,8 +671,8 @@ export function AssistantChat() {
     network: imageNetwork,
     switchIfNeeded: switchImageIfNeeded,
     getSwitchError: getImageSwitchError,
-  } = useAutoNetwork(IMAGE_TOOL_NETWORKS);
-  const { generateImage } = useX402ImageGeneration();
+  } = useAutoNetwork(networksForCurrency(currency, IMAGE_TOOL_NETWORKS));
+  const { generateImage } = useX402ImageGeneration(currency);
   // Bundestakt's caching lives here rather than in tools/bundestakt.ts — see loadBundestakt().
   const queryClient = useQueryClient();
   // Same auth prefix as useAnalyticsStats, so a visit to /analytics in the last 4 minutes leaves
@@ -434,6 +684,7 @@ export function AssistantChat() {
   // user click without turning into a state machine: waitForConfirmation() below stores the
   // Promise's resolve function here, and the card's own buttons call it.
   const [toolCard, setToolCard] = useState<ToolCardState | null>(null);
+  const [showFundsModal, setShowFundsModal] = useState(false);
   const confirmResolverRef = useRef<
     ((r: { action: "confirm"; prompt: string; size: ToolSize } | { action: "cancel" }) => void) | null
   >(null);
@@ -738,6 +989,9 @@ export function AssistantChat() {
   toolRunners[searchWebTool.function.name] = loadSearch;
   toolRunners[fetchUrlTool.function.name] = loadFetch;
   toolRunners[getAnalyticsTool.function.name] = async (args) => ({ result: await loadAnalytics(args) });
+  // `invalid` is an answer — resend a corrected batch — so it must not withdraw the notepad.
+  toolRunners[noteFindingsTool.function.name] = (args) =>
+    Promise.resolve({ result: validateFindings(args), recoverable: true });
 
   /** Dispatches one tool call by name, or tells the model it invented one. */
   async function runToolCall(call: X402ToolCall): Promise<ToolRunResult> {
@@ -770,7 +1024,30 @@ export function AssistantChat() {
     setMessages((prev) => [...prev, userMsg]);
     setCurrentInput("");
 
+    // Baseline for this turn's spend. Read from the channel records the SDK keeps, so the figure
+    // shown is what was charged, not an estimate from a mirrored rate card. Outside the `try`, so a
+    // turn that fails halfway still reports what it had already spent.
+    const chargedAtStart = readChargedTotal(window.localStorage);
+    const turnCost = (): MessageCost => ({
+      atomic: readChargedTotal(window.localStorage) - chargedAtStart,
+      currency: paymentCurrency,
+    });
+
     try {
+      // The loop itself lives in utils/toolLoop.ts — this component keeps state and rendering.
+      // `availableTools` already applies the owner gate; what is left to subtract here is what the
+      // user switched off in the ToolSelector. Failures within the turn are the loop's business.
+      //
+      const offeredTools: OfferedTool<ToolSource>[] = availableTools
+        .filter((entry) => !disabledTools.has(entry.tool.function.name))
+        .map((entry) => ({ tool: entry.tool, source: entry.source, paid: entry.paid }));
+      const canResearch = offeredTools.some((entry) => WEB_TOOL_NAMES.has(entry.tool.function.name));
+      // `bookkeeping`: the model never needs the notepad's answer, so text filed alongside notes is
+      // the final answer — see toolLoop.ts.
+      if (canResearch) {
+        offeredTools.push({ tool: noteFindingsTool, source: null, paid: false, bookkeeping: true });
+      }
+
       // Full conversation history, as the OpenAI `messages[]` array sc_llm_x402 expects. Tool
       // turns pushed inside the loop below live only in this local array — never in `messages`
       // state, so a previous tool call is never replayed to the model on a later message. Its
@@ -780,19 +1057,53 @@ export function AssistantChat() {
           role: "system",
           // Read at send time, not at render time: `sendMessage` is an event handler, so there is
           // no server/client clock mismatch to hydrate, and a session left open over midnight
-          // picks up the new date by itself on the next message.
-          content: `${systemPromptMessage}\n\n${formatDateContext(new Date(), Intl.DateTimeFormat().resolvedOptions().timeZone)}`,
+          // picks up the new date by itself on the next message. Teen mode is read here for the
+          // same reason, so toggling it mid-conversation takes effect on the very next message.
+          //
+          // Appended, never substituted: the base prompt is this chat's tool contract — the
+          // get_sitzungen slug flow, get_page truncation, the fetch_url injection defence — and a
+          // parallel teen copy of all that would drift the first time a tool is added.
+          content: [
+            systemPromptMessage,
+            teenMode ? teenPromptMessage : null,
+            // How to research, only when there is something to research with — it is input
+            // tokens on every hop, and without web tools it would describe tools that are absent.
+            canResearch ? researchPromptMessage : null,
+            formatDateContext(new Date(), Intl.DateTimeFormat().resolvedOptions().timeZone),
+          ]
+            .filter(Boolean)
+            .join("\n\n"),
         },
         ...messages.map((msg) => ({ role: msg.role, content: msg.content })),
         { role: "user", content: userMessage.trim() },
       ];
 
-      // The loop itself lives in utils/toolLoop.ts — this component keeps state and rendering.
-      // `availableTools` already applies the owner gate; what is left to subtract here is what the
-      // user switched off in the ToolSelector. Failures within the turn are the loop's business.
-      const offeredTools = availableTools
-        .filter((entry) => !disabledTools.has(entry.tool.function.name))
-        .map((entry) => ({ tool: entry.tool, source: entry.source, paid: entry.paid }));
+      stopRequestedRef.current = false;
+      setStopPressed(false);
+      let searches = 0;
+      let pages = 0;
+      const notes: ResearchNote[] = [];
+
+      // Dev-only trace, one console line per hop: what was sent, what came back. The way to read a
+      // research run without digging through the Network tab — and the request size shows whether
+      // compaction is keeping the conversation flat.
+      let hop = 0;
+      const tracedPayAndSend: typeof payAndSend = async (sent, options) => {
+        const data = await payAndSend(sent, options);
+        if (import.meta.env.DEV) {
+          const choice = data.choices?.[0];
+          console.log(`[assistant] hop ${++hop}`, {
+            requestBytes: new TextEncoder().encode(JSON.stringify(sent)).length,
+            offered: options?.tools?.map((t) => t.function.name) ?? "none",
+            finish: choice?.finish_reason,
+            content: choice?.message.content?.slice(0, 120) ?? null,
+            toolCalls: choice?.message.tool_calls?.map(
+              (call) => `${call.function.name} ${call.function.arguments.slice(0, 200)}`,
+            ),
+          });
+        }
+        return data;
+      };
 
       const { finalContent, finalImageUrl, sources } = await runToolLoop<ToolSource>(convo, offeredTools, {
         ensureReady: async () => {
@@ -801,8 +1112,27 @@ export function AssistantChat() {
             throw new Error(getSwitchError() ?? `Please switch your wallet to ${getViemChain(network).name}`);
           }
         },
-        payAndSend,
+        payAndSend: tracedPayAndSend,
         runToolCall,
+        shouldStop: () => stopRequestedRef.current,
+        onPhase: (phase) => {
+          setLoopPhase(phase);
+          if (phase.kind === "tool" && phase.name === searchWebTool.function.name) searches++;
+          if (phase.kind === "tool" && phase.name === fetchUrlTool.function.name) pages++;
+          if (phase.kind === "tool" && phase.name === noteFindingsTool.function.name) {
+            notes.push(...parseNotes(phase.args));
+          }
+          // Every earlier hop and tool call has settled by the time the next phase starts, so the
+          // channel record already carries their charges.
+          if (searches + pages + notes.length > 0) {
+            setResearch({
+              searches,
+              pages,
+              spent: readChargedTotal(window.localStorage) - chargedAtStart,
+              notes: [...notes],
+            });
+          }
+        },
       });
 
       const assistantMsg: ChatMessage = {
@@ -813,18 +1143,25 @@ export function AssistantChat() {
         timestamp: Date.now(),
         imageUrl: finalImageUrl,
         sources: sources.length > 0 ? sources : undefined,
+        // Every hop has settled by now — `payAndSend` resolves only after its settle response —
+        // so the channel record already carries the whole turn.
+        cost: turnCost(),
       };
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (error) {
+      if (error instanceof PaymentError && error.isInsufficientBalance) setShowFundsModal(true);
       const errorMsg: ChatMessage = {
         role: "assistant",
         content: `${errorPrefixMessage} ${error instanceof Error ? error.message : unknownErrorLabel}`,
         timestamp: Date.now(),
+        cost: turnCost(),
       };
       setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setToolCard(null);
       setIsLoading(false);
+      setLoopPhase(null);
+      setResearch(null);
     }
   };
 
@@ -861,69 +1198,108 @@ export function AssistantChat() {
 
   const receiptUrl = paymentReceipt ? explorerTxUrl(paymentReceipt.network, paymentReceipt.transaction) : null;
 
+  /**
+   * The side panel's contents, built once and rendered in both the desktop sidebar and the mobile
+   * footer — they showed the same controls in the same order before, as two copies that had to be
+   * kept in step by hand.
+   *
+   * Ordered by the questions someone actually asks, in that order: how do I want it to talk to me,
+   * what can it do, and only then how the thing works underneath. The last group is behind a
+   * disclosure because a payment network and a bring-your-own-agent URL are machinery — but a
+   * reachable one, since `/agent-onboarding` invites people to plug in their own agent and
+   * hiding that behind an owner check would quietly withdraw the invitation.
+   *
+   * Clear chat is deliberately absent: it is an action, not a setting, and it lives in the title
+   * row next to the conversation it clears.
+   */
+  const sidebarBlocks = (
+    <>
+      {/* The chat's running total, from the per-answer costs — so it resets with "Clear chat" and
+          needs no storage of its own. One figure per currency, since the user can switch. */}
+      {chatTotals.length > 0 && (
+        <div className={`${chat.sidebarSection} ${chat.messageSource}`}>
+          {chatTotalLabel.replaceAll(
+            "{spent}",
+            chatTotals.map(([currency, atomic]) => formatSpend(atomic, currency)).join(" + "),
+          )}
+        </div>
+      )}
+
+      <div className={chat.sidebarSection}>{teenToggleWithHint}</div>
+
+      <div className={chat.sidebarSection}>
+        <ToolSelector options={toolSelectorOptions} disabled={disabledTools} onToggle={toggleTool} />
+      </div>
+
+      <details className={chat.sidebarSection}>
+        <summary className={chat.advancedSummary}>{advancedLabel}</summary>
+        <div className={chat.advancedBody}>
+          <div className={chat.sidebarSection}>
+            <CurrencyToggle />
+          </div>
+
+          <div className={chat.sidebarSection}>
+            <h4 className={chat.sidebarHeading}>{networkLabel}</h4>
+            <div className={chat.networkOptions}>
+              {currencyNetworks.map((option) => {
+                const selected = paymentNetwork === option;
+                return (
+                  <button
+                    key={option}
+                    onClick={() => storeNetwork(option)}
+                    aria-pressed={selected}
+                    aria-label={getChainName(option)}
+                    className={button({ visual: "secondary", size: "sm", active: selected })}
+                  >
+                    <span className={selected ? undefined : chat.networkOptionMuted}>
+                      <ChainBadge network={option} size="sm" position="inline" />
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            {/* EURC narrows the picker to one button; say why rather than leaving Optimism looking
+                like an oversight. */}
+            {currencyNetworks.length === 1 && <p className={chat.networkNote}>{eurcBaseOnlyLabel}</p>}
+            {/* Only surfaced when the agent forced our hand — otherwise the buttons speak
+                for themselves and a permanent caption would just be noise. */}
+            {paymentNetwork !== desiredNetwork && (
+              <p className={chat.networkNote}>
+                {networkFallbackLabel} <ChainBadge network={paymentNetwork} size="sm" position="inline" />.
+              </p>
+            )}
+            {/* Separately from the network fallback above: the agent may accept the negotiated
+                network but only in the other currency (e.g. USDC-only on Base). */}
+            {paymentCurrency !== currency && (
+              <p className={chat.networkNote}>
+                {currencyFallbackLabel} {paymentCurrency}.
+              </p>
+            )}
+          </div>
+
+          <div className={chat.sidebarSection}>
+            <h4 className={chat.sidebarHeading}>Agent</h4>
+            <AgentInfoPanel service="llm" variant="sidebar" agentCard={activeCard} />
+            <AgentSelector
+              customUrlInput={customUrlInput}
+              onCustomUrlInputChange={setCustomUrlInput}
+              customCard={customCard}
+              checkState={checkState}
+              checkError={checkError}
+              onTryCustomAgent={() => void tryCustomAgent()}
+              onUseDefaultAgent={useDefaultAgent}
+            />
+          </div>
+        </div>
+      </details>
+    </>
+  );
+
   return (
     <div className={chat.pageContainer}>
       <div className={`${chat.grid} ${isMobile ? chat.gridMobile : chat.gridDesktop}`}>
         {/* Sidebar - desktop only */}
-        {!isMobile && (
-          <div className={chat.sidebar}>
-            {/* Actions Section */}
-            <div className={chat.sidebarSection}>
-              <h4 className={chat.sidebarHeading}>{actionsLabel}</h4>
-              <div className={chat.actionsContainer}>
-                <button onClick={clearChat} className={button({ visual: "ghost", size: "sm" })}>
-                  {clearChatLabel}
-                </button>
-              </div>
-            </div>
-
-            {/* Network Section */}
-            <div className={chat.sidebarSection}>
-              <h4 className={chat.sidebarHeading}>{networkLabel}</h4>
-              <div className={chat.networkOptions}>
-                {CHAT_NETWORKS.map((option) => {
-                  const selected = paymentNetwork === option;
-                  return (
-                    <button
-                      key={option}
-                      onClick={() => storeNetwork(option)}
-                      aria-pressed={selected}
-                      aria-label={getChainName(option)}
-                      className={button({ visual: "secondary", size: "sm", active: selected })}
-                    >
-                      <span className={selected ? undefined : chat.networkOptionMuted}>
-                        <ChainBadge network={option} size="sm" position="inline" />
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              {/* Only surfaced when the agent forced our hand — otherwise the buttons speak
-                  for themselves and a permanent caption would just be noise. */}
-              {paymentNetwork !== desiredNetwork && (
-                <p className={chat.networkNote}>
-                  {networkFallbackLabel} <ChainBadge network={paymentNetwork} size="sm" position="inline" />.
-                </p>
-              )}
-            </div>
-
-            {/* Agent Info Section */}
-            <div className={chat.sidebarSection}>
-              <h4 className={chat.sidebarHeading}>Agent</h4>
-              <AgentInfoPanel service="llm" variant="sidebar" agentCard={activeCard} />
-              <AgentSelector
-                customUrlInput={customUrlInput}
-                onCustomUrlInputChange={setCustomUrlInput}
-                customCard={customCard}
-                checkState={checkState}
-                checkError={checkError}
-                onTryCustomAgent={() => void tryCustomAgent()}
-                onUseDefaultAgent={useDefaultAgent}
-              />
-              <ToolSelector options={toolSelectorOptions} disabled={disabledTools} onToggle={toggleTool} />
-            </div>
-          </div>
-        )}
+        {!isMobile && <div className={chat.sidebar({ teen: teenMode })}>{sidebarBlocks}</div>}
 
         {/* Chat Area */}
         <div className={chat.chatArea}>
@@ -934,35 +1310,104 @@ export function AssistantChat() {
               beside it, which is what the old mobile-only header existed for. */}
           <div className={chat.titleRow}>
             <div>
-              <PageHeader title={titleLabel} territory="explore" />
+              {/* Teen mode repaints the rule, which is the only place this site expresses
+                  "you are somewhere else". The route is still the lab, so utils/territory.ts
+                  is untouched — `teen` is a variant of the rule, not a territory. */}
+              <PageHeader title={titleLabel} territory={teenMode ? "teen" : "explore"} />
             </div>
-            {isMobile && (
-              <div className={chat.mobileActions}>
-                <button onClick={clearChat} className={button({ visual: "secondary", size: "sm" })} title="Clear Chat">
-                  🗑️
-                </button>
-              </div>
-            )}
+            {/* Both viewports: clearing the chat is an action on the conversation, so it sits
+                beside it rather than in the settings panel, which used to carry a whole
+                "Actions" section for this one button. */}
+            <div className={chat.mobileActions}>
+              <button
+                onClick={clearChat}
+                className={button({ visual: "secondary", size: "sm" })}
+                title={clearChatLabel}
+                aria-label={clearChatLabel}
+              >
+                🗑️
+              </button>
+            </div>
           </div>
 
           {/* Messages Container */}
-          <div className={chat.messagesContainer}>
+          <div className={chat.messagesContainer({ teen: teenMode })}>
             {messages.length === 0 ? (
-              <div className={chat.emptyState}>{emptyStateLabel}</div>
+              <div className={isDefaultAgent ? undefined : chat.emptyState}>
+                {/* The door (IDENTITY.md → welcoming, honest): the default agent greets first and
+                    says what it is, what it can do, what it costs and that it can be wrong. A
+                    visitor's own agent gets the neutral line — the face and "this website's
+                    assistant" would claim authorship it does not have. */}
+                {isDefaultAgent ? (
+                  <>
+                    <div className={`${chat.messageContainer({ teen: teenMode })} ${chat.messageContainerAssistant}`}>
+                      <div className={chat.assistantAvatar}>
+                        <FretchenLogo size={32} label={assistantLabel} teen={teenMode} />
+                      </div>
+                      <div className={`${chat.messageBubble} ${chat.messageBubbleAssistant}`}>
+                        <div className={`${chat.messageContent} ${chat.messageContentReading} ${chat.door}`}>
+                          {doorLines.map((line) => (
+                            <p key={line}>{line.replaceAll("{currency}", paymentCurrency)}</p>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    {/* Fill the box, never send: sending costs money, so the visitor presses Send. */}
+                    <div className={chat.starters}>
+                      {starters.map((starter) => (
+                        <button
+                          key={starter}
+                          onClick={() => setCurrentInput(starter)}
+                          className={button({ visual: "secondary", size: "sm" })}
+                        >
+                          {starter}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  emptyStateLabel
+                )}
+                {/* The one moment someone is looking at the middle of an empty screen with
+                    nothing to read. Offered here rather than only in the sidebar, which is
+                    the difference between a mode that exists and one anybody finds.
+                    `visual: "teen"`, not "secondary": a closed door shows the colour of the room
+                    before anyone has opened it. */}
+                {!teenMode && (
+                  <div className={chat.emptyStateOffer}>
+                    <button onClick={() => storeTeenMode(true)} className={button({ visual: "teen", size: "sm" })}>
+                      {teenModeOfferLabel}
+                    </button>
+                    <p className={chat.teenModeHint}>{teenModeHintLabel}</p>
+                  </div>
+                )}
+              </div>
             ) : (
               messages.map((message, index) => (
                 <div
                   key={index}
-                  className={`${chat.messageContainer} ${
+                  className={`${chat.messageContainer({ teen: teenMode })} ${
                     message.role === "user" ? chat.messageContainerUser : chat.messageContainerAssistant
                   }`}
                 >
+                  {/* The mark names the default agent, once, beside its latest reply; the empty
+                      slot on earlier replies keeps one left edge. A visitor's own agent gets the
+                      text label instead — README → Mark. */}
+                  {message.role === "assistant" && isDefaultAgent && (
+                    <div className={chat.assistantAvatar}>
+                      {index === lastAssistantIndex && (
+                        <FretchenLogo size={32} label={assistantLabel} teen={teenMode} />
+                      )}
+                    </div>
+                  )}
                   <div
                     className={`${chat.messageBubble} ${
                       message.role === "user" ? chat.messageBubbleUser : chat.messageBubbleAssistant
                     }`}
                   >
-                    <div className={chat.messageRole}>{message.role === "user" ? youLabel : assistantLabel}</div>
+                    {(message.role === "user" || !isDefaultAgent) && (
+                      <div className={chat.messageRole}>{message.role === "user" ? youLabel : assistantLabel}</div>
+                    )}
                     {/* The assistant's reply is prose, so it takes the serif; your own message
                         is input to a tool and stays in the sans. See IDENTITY.md. */}
                     <div
@@ -998,6 +1443,12 @@ export function AssistantChat() {
                           </a>
                         </div>
                       ))}
+                      {/* What this answer charged the channel — exact, not estimated. */}
+                      {message.cost && message.cost.atomic > 0n && (
+                        <div className={chat.messageSource}>
+                          {formatSpend(message.cost.atomic, message.cost.currency)}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1006,9 +1457,68 @@ export function AssistantChat() {
 
             {isLoading && (
               <div className={chat.loadingMessage}>
-                {/* A drained channel tops itself up mid-send (see useX402Chat). Saying so keeps
-                    the wallet signature that follows from arriving unexplained. */}
-                <div className={chat.loadingBubble}>{chatStatus === "topping-up" ? toppingUpLabel : typingLabel}</div>
+                {isDefaultAgent && <div className={chat.assistantAvatar} />}
+                <div className={chat.loadingColumn}>
+                  <div className={chat.loadingBubble}>
+                    {/* Three states, in the order they actually happen within one turn: a drained
+                      channel tops itself up first (see useX402Chat) — saying so keeps the wallet
+                      signature that follows from arriving unexplained; then the model runs a
+                      tool, named from the same key ToolSelector shows for it, so "running" and
+                      "offered" always agree; otherwise it is just thinking. */}
+                    {chatStatus === "topping-up" ? (
+                      toppingUpLabel
+                    ) : loopPhase?.kind === "tool" ? (
+                      <LocaleText label={TOOL_LABEL_BY_NAME.get(loopPhase.name) ?? "assistent.typing"} />
+                    ) : (
+                      typingLabel
+                    )}
+                    <span className={chat.typingDots} aria-hidden="true">
+                      <span className={`${chat.typingDot} typing-dot`} style={{ animationDelay: "0s" }} />
+                      <span className={`${chat.typingDot} typing-dot`} style={{ animationDelay: "0.2s" }} />
+                      <span className={`${chat.typingDot} typing-dot`} style={{ animationDelay: "0.4s" }} />
+                    </span>
+                  </div>
+                  {/* Only once the turn has touched the web: what it has done and really cost so
+                    far, and a way to end it. Stop does not cancel the call in flight — a paid
+                    call cannot be taken back halfway — it makes the next hop answer from the
+                    notes. */}
+                  {research && (
+                    <div className={chat.researchStatus}>
+                      <span>
+                        {researchProgressLabel
+                          .replaceAll("{searches}", String(research.searches))
+                          .replaceAll("{pages}", String(research.pages))
+                          .replaceAll("{spent}", formatSpend(research.spent, paymentCurrency))}
+                      </span>
+                      <button
+                        type="button"
+                        className={button({ visual: "ghost", size: "sm" })}
+                        disabled={stopPressed}
+                        onClick={() => {
+                          stopRequestedRef.current = true;
+                          setStopPressed(true);
+                        }}
+                      >
+                        {stopAndAnswerLabel}
+                      </button>
+                    </div>
+                  )}
+                  {/* The model's notes so far, so a long run is something to watch rather than
+                      wait out. Native <details>: collapsed by default, no state of its own. */}
+                  {research && research.notes.length > 0 && (
+                    <details className={chat.researchNotes}>
+                      <summary>{researchNotesLabel.replaceAll("{n}", String(research.notes.length))}</summary>
+                      <ul>
+                        {research.notes.map((note, i) => (
+                          <li key={i}>
+                            {note.claim}
+                            {note.source && ` — ${note.source}`}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
+                </div>
               </div>
             )}
 
@@ -1018,6 +1528,7 @@ export function AssistantChat() {
                 size={toolCard.size}
                 phase={toolCard.phase}
                 network={imageNetwork}
+                price={IMAGE_PRICE[currency]}
                 onConfirm={handleToolConfirm}
                 onCancel={handleToolCancel}
               />
@@ -1041,7 +1552,7 @@ export function AssistantChat() {
               onKeyPress={handleKeyPress}
               placeholder={placeholderLabel}
               disabled={isLoading}
-              className={chat.messageInput}
+              className={chat.messageInput({ teen: teenMode })}
             />
             <button
               onClick={handleSendClick}
@@ -1051,30 +1562,18 @@ export function AssistantChat() {
                 }
               }}
               disabled={isLoading || (!isConnected ? false : !currentInput.trim())}
-              className={button()}
+              className={button({ visual: teenMode ? "teen" : "primary" })}
+              title={isConnected ? undefined : tooltipConnectLabel.replaceAll("{currency}", paymentCurrency)}
             >
               {getButtonText(buttonState)}
             </button>
           </div>
 
-          {/* Agent Info - Mobile Footer */}
-          {isMobile && (
-            <>
-              <AgentInfoPanel service="llm" variant="sidebar" agentCard={activeCard} />
-              <AgentSelector
-                customUrlInput={customUrlInput}
-                onCustomUrlInputChange={setCustomUrlInput}
-                customCard={customCard}
-                checkState={checkState}
-                checkError={checkError}
-                onTryCustomAgent={() => void tryCustomAgent()}
-                onUseDefaultAgent={useDefaultAgent}
-              />
-              <ToolSelector options={toolSelectorOptions} disabled={disabledTools} onToggle={toggleTool} />
-            </>
-          )}
+          {/* The same panel as the desktop sidebar, below the composer rather than beside it. */}
+          {isMobile && sidebarBlocks}
         </div>
       </div>
+      {showFundsModal && <GetFundsModal currency={paymentCurrency} onClose={() => setShowFundsModal(false)} />}
     </div>
   );
 }

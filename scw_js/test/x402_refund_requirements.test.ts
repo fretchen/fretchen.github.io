@@ -57,7 +57,7 @@ describe("useEnhancedRefundRequirements", () => {
     const manager = makeManager();
     expect(manager.buildPaymentRequirements().extra).toEqual({});
 
-    await useEnhancedRefundRequirements(scheme as never, manager, {
+    await useEnhancedRefundRequirements(scheme as never, manager as never, {
       network: "eip155:10",
       asset: USDC,
       payTo: PAY_TO,
@@ -90,7 +90,7 @@ describe("useEnhancedRefundRequirements", () => {
     const scheme = makeScheme();
     const manager = makeManager();
 
-    await useEnhancedRefundRequirements(scheme as never, manager, {
+    await useEnhancedRefundRequirements(scheme as never, manager as never, {
       network: "eip155:10",
       asset: USDC,
       payTo: PAY_TO,
@@ -109,7 +109,7 @@ describe("useEnhancedRefundRequirements", () => {
     const extras = await Promise.all(
       [900, 86400, 2592000].map(async (delay) => {
         const manager = makeManager();
-        await useEnhancedRefundRequirements(makeScheme(delay) as never, manager, {
+        await useEnhancedRefundRequirements(makeScheme(delay) as never, manager as never, {
           network: "eip155:10",
           asset: USDC,
           payTo: PAY_TO,
@@ -128,7 +128,7 @@ describe("useEnhancedRefundRequirements", () => {
     const scheme = makeScheme();
     const manager = makeManager();
 
-    await useEnhancedRefundRequirements(scheme as never, manager, {
+    await useEnhancedRefundRequirements(scheme as never, manager as never, {
       network: "eip155:10",
       asset: USDC,
       payTo: PAY_TO,

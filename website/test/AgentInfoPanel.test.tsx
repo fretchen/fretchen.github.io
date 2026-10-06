@@ -10,7 +10,7 @@
 
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { AgentInfoPanel } from "../components/AgentInfoPanel";
 
 // Mock useAgentInfo with different states
@@ -44,6 +44,21 @@ vi.mock("../styled-system/css", () => ({
   css: () => "mock-css-class",
 }));
 
+const REGISTRATION_URL = "https://imagegen-agent.fretchen.eu/.well-known/agent-registration.json";
+
+const registeredAgent = {
+  name: "Test Agent",
+  description: "",
+  image: "",
+  agentId: 97598,
+  agentRegistry: "eip155:8453:0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
+  registrationUrl: REGISTRATION_URL,
+  endpointHost: "imagegen-agent.fretchen.eu",
+  openApiUrl: "https://imagegen-agent.fretchen.eu/openapi.json",
+  supportedTrust: ["reputation"],
+  raw: null,
+};
+
 describe("AgentInfoPanel Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -69,7 +84,7 @@ describe("AgentInfoPanel Component", () => {
 
     it("should render without hooks error in error state", () => {
       mockUseAgentInfo.mockReturnValue({
-        agent: { wallet: null },
+        agent: { agentId: null },
         isLoading: false,
         error: new Error("Failed to fetch"),
       });
@@ -80,13 +95,7 @@ describe("AgentInfoPanel Component", () => {
 
     it("should render without hooks error in success state", () => {
       mockUseAgentInfo.mockReturnValue({
-        agent: {
-          wallet: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
-          walletShort: "0xAAEB...239C",
-          name: "Test Agent",
-          genimgEndpoint: "https://genimg.example.com/api",
-          llmEndpoint: "https://llm.example.com/api",
-        },
+        agent: registeredAgent,
         isLoading: false,
         error: null,
       });
@@ -108,11 +117,7 @@ describe("AgentInfoPanel Component", () => {
 
       // Then: success
       mockUseAgentInfo.mockReturnValue({
-        agent: {
-          wallet: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
-          walletShort: "0xAAEB...239C",
-          genimgEndpoint: "https://genimg.example.com/api",
-        },
+        agent: registeredAgent,
         isLoading: false,
         error: null,
       });
@@ -120,7 +125,7 @@ describe("AgentInfoPanel Component", () => {
 
       // Then: error
       mockUseAgentInfo.mockReturnValue({
-        agent: { wallet: null },
+        agent: { agentId: null },
         isLoading: false,
         error: new Error("Network error"),
       });
@@ -139,11 +144,7 @@ describe("AgentInfoPanel Component", () => {
   describe("Variants", () => {
     it("should render footer variant", () => {
       mockUseAgentInfo.mockReturnValue({
-        agent: {
-          wallet: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
-          walletShort: "0xAAEB...239C",
-          genimgEndpoint: "https://genimg.example.com/api",
-        },
+        agent: registeredAgent,
         isLoading: false,
         error: null,
       });
@@ -153,11 +154,7 @@ describe("AgentInfoPanel Component", () => {
 
     it("should render sidebar variant", () => {
       mockUseAgentInfo.mockReturnValue({
-        agent: {
-          wallet: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
-          walletShort: "0xAAEB...239C",
-          genimgEndpoint: "https://genimg.example.com/api",
-        },
+        agent: registeredAgent,
         isLoading: false,
         error: null,
       });
@@ -169,11 +166,7 @@ describe("AgentInfoPanel Component", () => {
   describe("Service Types", () => {
     it("should render genimg service", () => {
       mockUseAgentInfo.mockReturnValue({
-        agent: {
-          wallet: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
-          walletShort: "0xAAEB...239C",
-          genimgEndpoint: "https://genimg.example.com/api",
-        },
+        agent: registeredAgent,
         isLoading: false,
         error: null,
       });
@@ -183,16 +176,37 @@ describe("AgentInfoPanel Component", () => {
 
     it("should render llm service", () => {
       mockUseAgentInfo.mockReturnValue({
-        agent: {
-          wallet: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
-          walletShort: "0xAAEB...239C",
-          llmEndpoint: "https://llm.example.com/api",
-        },
+        agent: registeredAgent,
         isLoading: false,
         error: null,
       });
 
       expect(() => render(<AgentInfoPanel service="llm" />)).not.toThrow();
+    });
+  });
+
+  describe("ERC-8004 identity", () => {
+    it("shows the agent id instead of a wallet, and links the live registration file", () => {
+      mockUseAgentInfo.mockReturnValue({ agent: registeredAgent, isLoading: false, error: null });
+
+      render(<AgentInfoPanel service="genimg" />);
+      expect(screen.getByText(/ERC-8004 #97598/)).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText(/ERC-8004 #97598/));
+      expect(screen.getByText(/ERC-8004 registration/).closest("a")).toHaveAttribute("href", REGISTRATION_URL);
+      expect(document.querySelector('a[href="/agent-registration.json"]')).toBeNull();
+    });
+
+    it("falls back to the plain Optimism line while the file lists no registration", () => {
+      mockUseAgentInfo.mockReturnValue({
+        agent: { ...registeredAgent, agentId: null, agentRegistry: null },
+        isLoading: false,
+        error: null,
+      });
+
+      render(<AgentInfoPanel service="genimg" />);
+      expect(screen.queryByText(/ERC-8004 #/)).toBeNull();
+      expect(screen.getByText("Optimism")).toBeInTheDocument();
     });
   });
 });

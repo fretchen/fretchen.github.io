@@ -8,6 +8,8 @@ on:
     paths:
       - "x402_facilitator/**"
       - "shared/chain-utils/**"
+      - "observability/alerts/**"
+      - "observability/alertCoverage.ts"
       - ".github/workflows/test-facilitator.yml"
   push:
     branches:
@@ -15,6 +17,8 @@ on:
     paths:
       - "x402_facilitator/**"
       - "shared/chain-utils/**"
+      - "observability/alerts/**"
+      - "observability/alertCoverage.ts"
       - ".github/workflows/test-facilitator.yml"
 
 jobs:

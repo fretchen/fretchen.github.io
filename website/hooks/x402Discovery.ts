@@ -154,6 +154,43 @@ export interface AgentCard {
   network: string | null;
 }
 
+/**
+ * An agent's ERC-8004 identity as its origin publishes it at
+ * `/.well-known/agent-registration.json` (EIP-8004 registration-v1). Only the first entry of
+ * `registrations` is read; `agentRegistry` is `eip155:<chainId>:<registry address>`.
+ */
+export interface Erc8004Registration {
+  agentId: number;
+  agentRegistry: string;
+  name: string | null;
+  image: string | null;
+}
+
+/**
+ * Best-effort read of an origin's ERC-8004 registration file. Returns `null` when the file is
+ * missing, unreadable (CORS/network), or lists no registration yet. Never throws. This reads
+ * only what the origin claims; it does not check the registry on-chain.
+ */
+export async function fetchAgentRegistration(origin: string): Promise<Erc8004Registration | null> {
+  try {
+    const res = await fetch(`${origin}/.well-known/agent-registration.json`, { method: "GET" });
+    if (!res.ok) return null;
+    const file = (await res.json()) as { name?: unknown; image?: unknown; registrations?: unknown };
+    const first = (Array.isArray(file.registrations) ? file.registrations[0] : undefined) as
+      | { agentId?: unknown; agentRegistry?: unknown }
+      | undefined;
+    if (typeof first?.agentId !== "number" || typeof first.agentRegistry !== "string") return null;
+    return {
+      agentId: first.agentId,
+      agentRegistry: first.agentRegistry,
+      name: typeof file.name === "string" ? file.name : null,
+      image: typeof file.image === "string" ? file.image : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export interface PreCheckResult {
   ok: boolean;
   reason?: string;
@@ -430,6 +467,24 @@ export async function checkLlmV1Agent(agentUrl: string): Promise<CheckReport> {
         "Recommended: sign your origin and add it to x-discovery.ownershipProofs so clients can verify you control the payTo address.",
       );
     }
+  }
+
+  // 8. ERC-8004 registration (warn-only — optional, makes the agent findable and verifiable).
+  const registration = await fetchAgentRegistration(origin);
+  if (registration) {
+    push(
+      "erc8004",
+      "Registered as an ERC-8004 agent",
+      "pass",
+      `Agent #${registration.agentId} in ${registration.agentRegistry}.`,
+    );
+  } else {
+    push(
+      "erc8004",
+      "Registered as an ERC-8004 agent",
+      "warn",
+      "Optional: serve /.well-known/agent-registration.json and register it in the ERC-8004 Identity Registry so clients can find your agent and check its payTo on-chain.",
+    );
   }
 
   const ok = steps.every((s) => s.status !== "fail");

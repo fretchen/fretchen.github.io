@@ -857,6 +857,29 @@ export default function Page() {
                 </p>
               </Foldable>
             </Step>
+
+            <Step n={7} title="Optional: register as an ERC-8004 agent">
+              <p>
+                ERC-8004 is an on-chain registry of agent identities. Registering gives your endpoint a permanent{" "}
+                <code className={inlineCode}>agentId</code> that clients can look up, and lets them check on-chain that
+                the <code className={inlineCode}>payTo</code> in your 402 belongs to you. Nothing above depends on it.
+              </p>
+              <p>
+                Serve a registration file at{" "}
+                <code className={inlineCode}>GET /.well-known/agent-registration.json</code> on your origin, call{" "}
+                <code className={inlineCode}>register(agentURI)</code> on the Identity Registry with that URL, and add
+                the returned <code className={inlineCode}>agentId</code> to the file&apos;s{" "}
+                <code className={inlineCode}>registrations</code>. Then bind the registry&apos;s{" "}
+                <code className={inlineCode}>agentWallet</code> to your <code className={inlineCode}>payTo</code> with{" "}
+                <code className={inlineCode}>setAgentWallet</code>, which needs an EIP-712 signature from that wallet.
+                Keep the identity in a key that is not on your server: whoever owns it can repoint the URL.
+              </p>
+              <p className={caption}>
+                Ours: <SrcRef path="scw_js/agent_registration.ts" /> builds the file,{" "}
+                <SrcRef path="eth/scripts/register-agents.ts" /> registers and binds. Our endpoint is agent #97599 on
+                Base.
+              </p>
+            </Step>
           </section>
 
           {/* SECTION — test it */}
@@ -963,7 +986,8 @@ export default function Page() {
             <p>
               The endpoint contract is stable; what&apos;s filling in is the ecosystem around it — a drop-in client,
               more facilitators, more agents. The assistant already lets you point it at any compatible agent by URL; a
-              curated picker only makes sense once there are enough of them to list.
+              curated picker only makes sense once there are enough of them to list, and it would read them from the
+              ERC-8004 registry (step 7).
             </p>
             <p className={css({ mb: "0" })}>
               Built one, or want to be listed when a picker ships? Reach out at{" "}

@@ -40,6 +40,7 @@ vi.mock("viem", async (importOriginal) => {
 // ===== Import after mocks =====
 
 import { handle } from "../wallet_report_cron";
+import { EURC_ADDRESSES } from "@fretchen/chain-utils";
 
 // ===== Helpers =====
 
@@ -56,6 +57,7 @@ function makeEvent() {
 interface ActivityRow {
   txCount: number;
   usdcDelta: string;
+  eurcDelta?: string;
   ethDelta: string;
   estimatedSettlements?: number;
 }
@@ -64,6 +66,7 @@ interface ReportRow {
   network: string;
   eth?: string;
   usdc?: string;
+  eurc?: string;
   lowGas?: boolean;
   error?: string;
   activity?: ActivityRow;
@@ -115,11 +118,27 @@ function setupClient(opts: {
   return { getBalance, getBlockNumber, getTransactionCount };
 }
 
-/** Configure the USDC contract mock's balanceOf, distinguishing current vs. historical reads. */
-function usdcBalanceOf(current: bigint, past: bigint = current) {
+/** A token contract's balanceOf, distinguishing current vs. historical reads. */
+function balanceOf(current: bigint, past: bigint = current) {
   return vi.fn((_args: unknown[], readOpts?: { blockNumber?: bigint }) =>
     Promise.resolve(readOpts?.blockNumber !== undefined ? past : current),
   );
+}
+
+const BASE_EURC = EURC_ADDRESSES["eip155:8453"];
+
+/**
+ * Route getContract by token address: USDC is the mocked config's "0xUSDC", EURC is the real
+ * registry address (Base only). Defaults: 1.5 USDC and 0.25 EURC, no change over the window.
+ */
+function setupTokens(
+  opts: { usdc?: ReturnType<typeof balanceOf>; eurc?: ReturnType<typeof balanceOf> } = {},
+) {
+  const usdc = opts.usdc ?? balanceOf(1_500_000n);
+  const eurc = opts.eurc ?? balanceOf(250_000n);
+  mockGetContract.mockImplementation(({ address }: { address: string }) => ({
+    read: { balanceOf: address === BASE_EURC ? eurc : usdc },
+  }));
 }
 
 describe("wallet_report_cron", () => {
@@ -143,8 +162,8 @@ describe("wallet_report_cron", () => {
     }));
     mockGetRpcUrl.mockReturnValue("https://rpc.example");
 
-    // Default: no USDC change (past === current) — matches the real zero-activity state.
-    mockGetContract.mockReturnValue({ read: { balanceOf: usdcBalanceOf(1_500_000n) } });
+    // Default: no token change (past === current) — matches the real zero-activity state.
+    setupTokens();
 
     fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, text: async () => "" });
     vi.stubGlobal("fetch", fetchMock);
@@ -183,6 +202,9 @@ describe("wallet_report_cron", () => {
     expect(op.eth).toBe("1");
     expect(op.usdc).toBe("1.5");
     expect(op.lowGas).toBe(false);
+    // EURC exists on Base only.
+    expect(op.eurc).toBeUndefined();
+    expect(body.reports[1].eurc).toBe("0.25");
 
     // Email sent once via Scaleway TEM
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -191,6 +213,19 @@ describe("wallet_report_cron", () => {
     const payload = JSON.parse(init.body);
     expect(payload.to[0].email).toBe("me@example.com");
     expect(payload.subject).toContain("Facilitator weekly report");
+    expect(payload.text).toContain("EURC balance: 0.25");
+  });
+
+  it("fails Base's row when its EURC read fails, like any other balance read", async () => {
+    mockCreatePublicClient.mockReturnValue(setupClient({ ethBalance: 1_000_000_000_000_000_000n }));
+    setupTokens({ eurc: vi.fn(() => Promise.reject(new Error("eurc rpc down"))) });
+
+    const res = await handle(makeEvent(), {});
+    expect(res.statusCode).toBe(200);
+
+    const body = JSON.parse(res.body) as { reports: ReportRow[] };
+    expect(body.reports[0].error).toBeUndefined(); // OP has no EURC to read
+    expect(body.reports[1].error).toBe("eurc rpc down");
   });
 
   it("flags lowGas when native balance is below the threshold", async () => {
@@ -258,9 +293,7 @@ describe("wallet_report_cron", () => {
         }),
       );
       // +0.12 USDC over the window == 12 settlements at the mocked 0.01 USDC fee.
-      mockGetContract.mockReturnValue({
-        read: { balanceOf: usdcBalanceOf(1_620_000n, 1_500_000n) },
-      });
+      setupTokens({ usdc: balanceOf(1_620_000n, 1_500_000n) });
 
       const res = await handle(makeEvent(), {});
       const body = JSON.parse(res.body) as { reports: ReportRow[] };
@@ -276,14 +309,14 @@ describe("wallet_report_cron", () => {
       const emailText = JSON.parse(fetchMock.mock.calls[0][1].body).text as string;
       expect(emailText).toContain("Transactions:  12");
       expect(emailText).toContain("+0.12 USDC");
-      expect(emailText).toContain("≈ 12 settlements");
+      expect(emailText).toContain("≈ 12 (estimated from fee revenue)");
     });
 
     it("renders zero activity cleanly — today's real-world state", async () => {
       mockCreatePublicClient.mockReturnValue(
         setupClient({ ethBalance: 1_000_000_000_000_000_000n }),
       );
-      // beforeEach's default USDC mock already has past === current (zero delta).
+      // beforeEach's default token mocks already have past === current (zero delta).
 
       const res = await handle(makeEvent(), {});
       const body = JSON.parse(res.body) as { reports: ReportRow[] };
@@ -302,9 +335,7 @@ describe("wallet_report_cron", () => {
         setupClient({ ethBalance: 1_000_000_000_000_000_000n }),
       );
       // Balance went DOWN over the window — e.g. an operator withdrawal.
-      mockGetContract.mockReturnValue({
-        read: { balanceOf: usdcBalanceOf(1_000_000n, 1_500_000n) },
-      });
+      setupTokens({ usdc: balanceOf(1_000_000n, 1_500_000n) });
 
       const res = await handle(makeEvent(), {});
       const body = JSON.parse(res.body) as { reports: ReportRow[] };
@@ -314,7 +345,34 @@ describe("wallet_report_cron", () => {
 
       const emailText = JSON.parse(fetchMock.mock.calls[0][1].body).text as string;
       expect(emailText).toContain("-0.5 USDC");
-      expect(emailText).not.toContain("settlements)");
+      expect(emailText).not.toContain("Settlements:");
+    });
+
+    it("counts fees earned in both USDC and EURC on Base", async () => {
+      mockCreatePublicClient.mockReturnValue(
+        setupClient({ ethBalance: 1_000_000_000_000_000_000n, currentNonce: 5 }),
+      );
+      // +0.02 USDC and +0.03 EURC == 5 settlements at the 0.01 flat fee.
+      setupTokens({
+        usdc: balanceOf(1_520_000n, 1_500_000n),
+        eurc: balanceOf(280_000n, 250_000n),
+      });
+
+      const res = await handle(makeEvent(), {});
+      const body = JSON.parse(res.body) as { reports: ReportRow[] };
+      const [op, base] = body.reports;
+
+      expect(base.activity).toMatchObject({
+        usdcDelta: "0.02",
+        eurcDelta: "0.03",
+        estimatedSettlements: 5,
+      });
+      // Optimism has no EURC, so its estimate comes from USDC alone.
+      expect(op.activity?.eurcDelta).toBeUndefined();
+      expect(op.activity?.estimatedSettlements).toBe(2);
+
+      const emailText = JSON.parse(fetchMock.mock.calls[0][1].body).text as string;
+      expect(emailText).toContain("+0.03 EURC");
     });
 
     it("omits activity (but still reports balances) when historical reads fail", async () => {

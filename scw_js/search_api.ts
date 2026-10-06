@@ -1,5 +1,5 @@
-import pino from "pino";
-import { getUSDCConfig } from "@fretchen/chain-utils";
+import { logger } from "./logger.js";
+import { offeredStablecoins, resolvePaidStablecoin } from "./stablecoin_pricing.js";
 import { searchWeb, QueryError } from "./search_service.js";
 import { fetchExternalHtml, FetchUrlError, parseHttpsUrl } from "./web_fetch_service.js";
 import {
@@ -12,6 +12,7 @@ import {
 } from "./search_schemas.js";
 import { CORS_HEADERS } from "./utils.js";
 import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
+import { AGENT_REGISTRATION_PATH, buildAgentRegistration } from "./agent_registration.js";
 import { faviconBase64, faviconContentType } from "./favicon.js";
 import openapiSpec from "./openapi.search.json" with { type: "json" };
 import {
@@ -20,6 +21,9 @@ import {
   createLLMResourceServer,
   createSettlementHeaders,
   extractPaymentPayload,
+  releaseLock,
+  type SdkPaymentPayload,
+  type SdkPaymentRequirements,
 } from "./x402_server.js";
 
 /**
@@ -53,8 +57,6 @@ import {
  * settlement, which is the whole price of a search and ten times the price of a fetch. Batch
  * settlement pays that fee once per claim instead.
  */
-
-const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
 /**
  * Mainnet only, unlike the chat, which also accepts Base Sepolia.
@@ -184,6 +186,17 @@ async function servePaid(
     });
   }
 
+  // Price the stablecoin the buyer's channel is in (see sc_llm_x402.ts) — checked before any
+  // server setup, since an unoffered asset is the caller's error, not ours.
+  const paidAsset = (payload["accepted"] as Record<string, unknown> | undefined)?.["asset"];
+  const coin = resolvePaidStablecoin(network, paidAsset);
+  if (!coin) {
+    return jsonResponse(402, {
+      error: `Unsupported payment asset on ${network}`,
+      accepted: offeredStablecoins(network).map((offered) => offered.address),
+    });
+  }
+
   let resourceServer: ReturnType<typeof createLLMResourceServer>["resourceServer"];
   let scheme: ReturnType<typeof createLLMResourceServer>["scheme"];
   try {
@@ -193,22 +206,20 @@ async function servePaid(
     return jsonResponse(500, { error: "Internal server error" });
   }
 
-  const usdcConfig = getUSDCConfig(network);
-  const baseRequirements = {
+  const baseRequirements: SdkPaymentRequirements = {
     scheme: "batch-settlement",
-    network,
-    amount: PRICE_ATOMIC[route],
-    asset: usdcConfig.address,
+    network: network as `${string}:${string}`,
+    amount: PRICE_ATOMIC[route][coin.symbol],
+    asset: coin.address,
     payTo: receiverAddress,
     maxTimeoutSeconds: MAX_TIMEOUT_SECONDS,
-    extra: { name: usdcConfig.usdcName, version: usdcConfig.usdcVersion },
+    extra: { name: coin.name, version: coin.version },
   };
   // The ENHANCED requirements, not the base ones: the facilitator's validateChannelConfig treats a
   // missing `extra.receiverAuthorizer` as a mismatch rather than as "not required", so a raw object
   // here makes every deposit fail with receiver_authorizer_mismatch. Same trap as sc_llm_x402.ts.
   const paymentRequirements = await scheme.enhancePaymentRequirements(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    baseRequirements as any,
+    baseRequirements,
     {
       x402Version: 2,
       scheme: "batch-settlement",
@@ -226,8 +237,7 @@ async function servePaid(
   };
   try {
     verification = await resourceServer.verifyPayment(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      payload as any,
+      payload as SdkPaymentPayload,
       paymentRequirements,
     );
   } catch (err) {
@@ -253,8 +263,7 @@ async function servePaid(
       verification.invalidReason,
       verification.payer ? { payer: verification.payer } : undefined,
       undefined,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      payload as any,
+      payload as SdkPaymentPayload,
     );
     return create402Response(paymentRequired);
   }
@@ -263,7 +272,12 @@ async function servePaid(
   try {
     data = await run(args);
   } catch (err) {
-    // Nothing is settled: an upstream that failed is not something to charge for.
+    // Nothing is settled: an upstream that failed is not something to charge for. But verify took
+    // the channel lock, which the chat shares — release it, or the user's next message is
+    // rejected with `channel_busy`. Logged here because a page-level 400 is otherwise silent,
+    // which is how this stayed invisible.
+    logger.warn({ err, route }, "Run failed after verify; lock released");
+    await releaseLock(resourceServer, payload as SdkPaymentPayload, paymentRequirements);
     return errorResponseFor(err);
   }
 
@@ -272,8 +286,7 @@ async function servePaid(
   let settlement: Record<string, unknown> & { success: boolean; errorReason?: string };
   try {
     settlement = await resourceServer.settlePayment(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      payload as any,
+      payload as SdkPaymentPayload,
       paymentRequirements,
     );
   } catch (err) {
@@ -288,7 +301,10 @@ async function servePaid(
     });
   }
 
-  logger.info({ route, network, amount: PRICE_ATOMIC[route] }, "Served and settled");
+  logger.info(
+    { route, network, asset: coin.symbol, amount: baseRequirements.amount },
+    "Served and settled",
+  );
   return {
     statusCode: 200,
     headers: { ...CORS_HEADERS, ...createSettlementHeaders(settlement) },
@@ -312,7 +328,7 @@ async function challenge(route: Route, receiverAddress: `0x${string}`) {
     resourceUrl: `${SERVICE_URL}/${route}`,
     description: DESCRIPTION[route],
     mimeType: "application/json",
-    amount: PRICE_ATOMIC[route],
+    price: PRICE_ATOMIC[route],
     payTo: receiverAddress,
     scheme,
     networks: MAINNET_NETWORKS,
@@ -353,6 +369,18 @@ export async function handle(
   // HTML is what makes the crawler index this origin at all (see discovery.ts).
   const isGetOrHead = method === "GET" || method === "HEAD";
   const isHead = method === "HEAD";
+
+  if (isGetOrHead && path === AGENT_REGISTRATION_PATH) {
+    return {
+      statusCode: 200,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      body: isHead
+        ? ""
+        : JSON.stringify(
+            buildAgentRegistration(openapiSpec, "search", process.env.NFT_WALLET_PUBLIC_KEY),
+          ),
+    };
+  }
 
   if (isGetOrHead && path === "openapi.json") {
     // Served verbatim, unlike the chat's, which rewrites its price ceiling at serve time because

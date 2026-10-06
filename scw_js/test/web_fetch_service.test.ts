@@ -273,6 +273,61 @@ describe("fetchExternalHtml", () => {
     await expect(fetchExternalHtml("https://example.com/")).rejects.toThrow(/403/);
   });
 
+  /**
+   * A slow or dead site is the caller's choice of url, like its 403. Before these were mapped,
+   * the 8 s timeout escaped as an unhandled error: a 500 "Internal server error" for the caller
+   * and a page for us (ServicesNeedAttention, 2026-10-04).
+   */
+  describe("a site that does not answer", () => {
+    test("reports a timeout as unreachable, naming the host and the limit", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockRejectedValue(new DOMException("The operation timed out.", "TimeoutError")),
+      );
+
+      const err = await fetchExternalHtml("https://example.com/").catch((e: unknown) => e);
+
+      expect(err).toBeInstanceOf(FetchUrlError);
+      expect((err as Error).message).toBe("Could not reach example.com: no response within 8 s");
+    });
+
+    test("reports a body that stalls past the timeout the same way", async () => {
+      // Headers arrive, then the same timeout signal aborts the body mid-read.
+      const stalled = new ReadableStream({
+        start(controller) {
+          controller.error(new DOMException("The operation timed out.", "TimeoutError"));
+        },
+      });
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ...htmlResponse(""), body: stalled }));
+
+      await expect(fetchExternalHtml("https://example.com/")).rejects.toThrow(
+        new FetchUrlError("Could not reach example.com: no response within 8 s"),
+      );
+    });
+
+    test("reports a refused connection with its code", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi
+          .fn()
+          .mockRejectedValue(new TypeError("fetch failed", { cause: { code: "ECONNREFUSED" } })),
+      );
+
+      await expect(fetchExternalHtml("https://example.com/")).rejects.toThrow(
+        new FetchUrlError("Could not reach example.com: ECONNREFUSED"),
+      );
+    });
+
+    test("leaves an error of our own unhandled, so it still alerts", async () => {
+      vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("boom")));
+
+      const err = await fetchExternalHtml("https://example.com/").catch((e: unknown) => e);
+
+      expect(err).not.toBeInstanceOf(FetchUrlError);
+      expect((err as Error).message).toBe("boom");
+    });
+  });
+
   test("never calls fetch when the url fails validation", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);

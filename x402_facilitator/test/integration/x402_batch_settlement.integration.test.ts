@@ -65,16 +65,20 @@ describe("x402 batch-settlement — deposit verify (integration, live RPC)", () 
         receiverAuthorizer: receiverAuthorizer.address,
         withdrawDelay: 86400,
       },
-    };
+    } as const;
 
     const partial = await scheme.createPaymentPayload(2, paymentRequirements);
 
     // Sanity: the client produced a deposit + cumulative voucher for a new channel.
-    expect(partial.payload.type).toBe("deposit");
-    expect(partial.payload.channelConfig.receiverAuthorizer.toLowerCase()).toBe(
+    // partial.payload is scheme-specific and typed `unknown` by the SDK.
+    const channelConfig = (partial.payload as { channelConfig: { receiverAuthorizer: string } })
+      .channelConfig;
+    const voucher = (partial.payload as { voucher: { channelId: string } }).voucher;
+    expect((partial.payload as { type: string }).type).toBe("deposit");
+    expect(channelConfig.receiverAuthorizer.toLowerCase()).toBe(
       receiverAuthorizer.address.toLowerCase(),
     );
-    expect(partial.payload.voucher.channelId).toMatch(/^0x[0-9a-fA-F]{64}$/);
+    expect(voucher.channelId).toMatch(/^0x[0-9a-fA-F]{64}$/);
 
     const paymentPayload = {
       x402Version: 2,
@@ -87,6 +91,6 @@ describe("x402 batch-settlement — deposit verify (integration, live RPC)", () 
     // Wiring is accepted end-to-end; only the empty balance stops it.
     expect(result.isValid).toBe(false);
     expect(result.invalidReason).toBe("invalid_batch_settlement_evm_insufficient_balance");
-    expect(result.payer.toLowerCase()).toBe(payer.address.toLowerCase());
+    expect(result.payer!.toLowerCase()).toBe(payer.address.toLowerCase());
   });
 });

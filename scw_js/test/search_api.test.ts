@@ -6,6 +6,7 @@ import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 // never have reached it anyway — and a hand-faked token would not prove the point, since the thing
 // being asserted is that even a CORRECT signature is ignored.
 import { privateKeyToAccount } from "viem/accounts";
+import { USDC_ADDRESSES, EURC_ADDRESSES } from "@fretchen/chain-utils";
 
 // DNS is stubbed so these stay hermetic: /fetch resolves every hostname before connecting, and a
 // test that needs a working resolver fails on an offline machine for reasons that have nothing to
@@ -15,7 +16,8 @@ vi.mock("node:dns/promises", () => ({ lookup: mockLookup }));
 
 // The x402 seller is mocked the way sc_llm_x402.test.ts mocks it: the SDK wants S3, a receiver
 // authorizer key and a chain, none of which belong in a unit test. `@fretchen/chain-utils` stays
-// REAL here — the signature checks above depend on it, and `getUSDCConfig` is a pure lookup.
+// REAL here — the signature checks above depend on it, and the stablecoin registry is a pure
+// lookup whose answer (which asset is priced how) is part of what these tests check.
 const {
   mockCreateLLMResourceServer,
   mockCreateBatchSettlementPaymentRequirements,
@@ -26,6 +28,7 @@ const {
   mockSettlePayment,
   mockCreatePaymentRequiredResponse,
   mockEnhancePaymentRequirements,
+  mockReleaseLock,
 } = vi.hoisted(() => ({
   mockCreateLLMResourceServer: vi.fn(),
   mockCreateBatchSettlementPaymentRequirements: vi.fn(),
@@ -36,6 +39,7 @@ const {
   mockSettlePayment: vi.fn(),
   mockCreatePaymentRequiredResponse: vi.fn(),
   mockEnhancePaymentRequirements: vi.fn(),
+  mockReleaseLock: vi.fn(),
 }));
 
 vi.mock("../x402_server.js", () => ({
@@ -44,6 +48,7 @@ vi.mock("../x402_server.js", () => ({
   create402Response: mockCreate402Response,
   extractPaymentPayload: mockExtractPaymentPayload,
   createSettlementHeaders: mockCreateSettlementHeaders,
+  releaseLock: mockReleaseLock,
 }));
 
 /** The seller's own address — `NFT_WALLET_PUBLIC_KEY`, shared with the chat so both land on one
@@ -51,8 +56,8 @@ vi.mock("../x402_server.js", () => ({
 const RECEIVER = "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC";
 
 /** A payment payload, as the SDK would hand it over after decoding the header. */
-function payment(network = "eip155:10") {
-  return { accepted: { network }, payload: { voucher: "0xsigned" } };
+function payment(network = "eip155:10", asset: string = USDC_ADDRESSES[network]) {
+  return { accepted: { network, asset }, payload: { voucher: "0xsigned" } };
 }
 
 // Anvil account #0 — a well-known test key, never used for anything real.
@@ -139,7 +144,7 @@ beforeEach(async () => {
   mockCreateBatchSettlementPaymentRequirements.mockImplementation(
     (opts: {
       resourceUrl: string;
-      amount: string;
+      price: { USDC: string; EURC: string };
       payTo: string;
       networks: string[];
       maxTimeoutSeconds: number;
@@ -148,7 +153,7 @@ beforeEach(async () => {
       resource: { url: opts.resourceUrl },
       accepts: opts.networks.map((network) => ({
         network,
-        amount: opts.amount,
+        amount: opts.price.USDC,
         payTo: opts.payTo,
         maxTimeoutSeconds: opts.maxTimeoutSeconds,
       })),
@@ -427,6 +432,25 @@ describe("discovery", () => {
     return { httpMethod: method, path: `/${path}`, queryStringParameters: {}, headers };
   }
 
+  test("serves the ERC-8004 registration file, unpaid, and an empty body on HEAD", async () => {
+    const res = await handle(discoveryEvent("GET", ".well-known/agent-registration.json"), {});
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["Content-Type"]).toBe("application/json");
+    expect(res.headers["Access-Control-Allow-Origin"]).toBe("*");
+    const file = JSON.parse(res.body) as { services: { name: string; endpoint: string }[] };
+    expect(file.services[0].endpoint).toBe("https://web-agent.fretchen.eu/openapi.json");
+    // The offchain agentWallet is the same payTo the 402 quotes.
+    expect(file.services).toContainEqual({
+      name: "agentWallet",
+      endpoint: `eip155:8453:${RECEIVER}`,
+    });
+    expect(mockCreateBatchSettlementPaymentRequirements).not.toHaveBeenCalled();
+
+    const head = await handle(discoveryEvent("HEAD", ".well-known/agent-registration.json"), {});
+    expect(head.statusCode).toBe(200);
+    expect(head.body).toBe("");
+  });
+
   test("serves the generated spec, unpaid and unauthenticated", async () => {
     const res = await handle(discoveryEvent("GET", "openapi.json"), {});
 
@@ -444,7 +468,7 @@ describe("discovery", () => {
 
     const spec = JSON.parse(res.body) as Record<
       string,
-      Record<string, Record<string, Record<string, Record<string, string>>>>
+      Record<string, Record<string, Record<string, Record<string, Record<string, string>>>>>
     >;
     expect(spec["paths"]["/search"]["get"]["x-payment-info"]["price"]["amount"]).toBe("0.01");
     expect(spec["paths"]["/fetch"]["get"]["x-payment-info"]["price"]["amount"]).toBe("0.001");
@@ -592,6 +616,46 @@ describe("the paid path", () => {
     expect(mockSettlePayment.mock.calls[0][1]).toEqual(mockVerifyPayment.mock.calls[0][1]);
   });
 
+  describe("paid in EURC", () => {
+    const BASE_EURC = EURC_ADDRESSES["eip155:8453"];
+
+    // Search costs 0.01 in both lists today, so a test with the real values could not tell which
+    // list was read. Give EURC a distinct price for the duration of the test. Imported here, after
+    // the outer beforeEach's resetModules + handler import, so it is the instance the handler reads.
+    beforeEach(async () => {
+      const { PRICE_ATOMIC } = await import("../search_schemas.js");
+      PRICE_ATOMIC.search.EURC = "9000";
+    });
+
+    test("prices the search from the EURC price list", async () => {
+      mockExtractPaymentPayload.mockReturnValue(payment("eip155:8453", BASE_EURC));
+
+      const res = await handle(
+        makeEvent("GET", "search", { auth: null, query: { q: "x402" } }),
+        {},
+      );
+
+      expect(res.statusCode).toBe(200);
+      expect(mockVerifyPayment.mock.calls[0][1]).toMatchObject({
+        asset: BASE_EURC,
+        amount: "9000",
+        extra: { name: "EURC", version: "2" },
+      });
+    });
+
+    test("refuses EURC on a network where it does not exist", async () => {
+      mockExtractPaymentPayload.mockReturnValue(payment("eip155:10", BASE_EURC));
+
+      const res = await handle(
+        makeEvent("GET", "search", { auth: null, query: { q: "x402" } }),
+        {},
+      );
+
+      expect(res.statusCode).toBe(402);
+      expect(mockVerifyPayment).not.toHaveBeenCalled();
+    });
+  });
+
   /** An upstream failure is not something to charge for. */
   test("does not settle when Brave fails", async () => {
     vi.stubGlobal(
@@ -603,6 +667,8 @@ describe("the paid path", () => {
 
     expect(res.statusCode).toBe(500);
     expect(mockSettlePayment).not.toHaveBeenCalled();
+    // Verified but unsettled: the channel lock is released, not left to block the next message.
+    expect(mockReleaseLock).toHaveBeenCalledOnce();
   });
 
   /** Nor is a request we refused to attempt — and it is refused before the channel is touched. */
@@ -631,7 +697,12 @@ describe("the paid path", () => {
     expect(mockSettlePayment).not.toHaveBeenCalled();
   });
 
-  test("does not settle a paid request for a private address", async () => {
+  /**
+   * The failure that ended real research turns: a fetch rejected after verify (here the private
+   * address, found only by resolving the name) returns a quiet 400. The lock that verify took must
+   * be released, or the user's next chat message on the shared channel gets `channel_busy`.
+   */
+  test("does not settle a paid request for a private address, and releases the lock", async () => {
     const res = await handle(
       makeEvent("GET", "fetch", { auth: null, query: { url: "https://169.254.169.254/" } }),
       {},
@@ -639,6 +710,44 @@ describe("the paid path", () => {
 
     expect(res.statusCode).toBe(400);
     expect(mockSettlePayment).not.toHaveBeenCalled();
+    expect(mockReleaseLock).toHaveBeenCalledOnce();
+  });
+
+  /**
+   * A page that never answers is the caller's choice of url, not our failure: the caller gets a
+   * 400 that names the host, is not charged, and nothing pages us. On 2026-10-04 this was a 500
+   * "Internal server error" and a ServicesNeedAttention alert.
+   */
+  test("explains a page that timed out, charges nothing, and does not alert", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new DOMException("The operation timed out.", "TimeoutError")),
+    );
+    // The instance search_api.ts logs through: beforeEach reset the registry before importing it.
+    const { logger } = await import("../logger.js");
+    const errorLog = vi.spyOn(logger, "error");
+
+    const res = await handle(
+      makeEvent("GET", "fetch", { auth: null, query: { url: "https://slow.example/" } }),
+      {},
+    );
+
+    expect(res.statusCode).toBe(400);
+    expect(JSON.parse(res.body).error).toBe("Could not reach slow.example: no response within 8 s");
+    expect(mockSettlePayment).not.toHaveBeenCalled();
+    expect(mockReleaseLock).toHaveBeenCalledOnce();
+    expect(errorLog).not.toHaveBeenCalled();
+  });
+
+  test("does not release a lock on success", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: async () => braveResponse() }),
+    );
+
+    await handle(makeEvent("GET", "search", { auth: null, query: { q: "x402" } }), {});
+
+    expect(mockReleaseLock).not.toHaveBeenCalled();
   });
 
   test("refuses a payment on a network it does not sell on", async () => {

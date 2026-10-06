@@ -1,10 +1,16 @@
 import { x402ResourceServer, HTTPFacilitatorClient } from "@x402/core/server";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
-import { BatchSettlementEvmScheme } from "@x402/evm/batch-settlement/server";
-import { getUSDCConfig, loadPrivateKey } from "@fretchen/chain-utils";
+import {
+  BatchSettlementEvmScheme,
+  type AuthorizerSigner,
+  type BatchSettlementChannelManager,
+} from "@x402/evm/batch-settlement/server";
+import { loadPrivateKey } from "@fretchen/chain-utils";
 import { privateKeyToAccount } from "viem/accounts";
 import { S3ChannelStorage } from "./x402_channel_storage.js";
 import { EXPOSED_X402_HEADERS } from "./utils.js";
+import { logger } from "./logger.js";
+import { offeredStablecoins, type PriceList } from "./stablecoin_pricing.js";
 
 const FACILITATOR_URL = process.env.FACILITATOR_URL ?? "https://facilitator.fretchen.eu";
 
@@ -75,7 +81,8 @@ export function createFacilitatorClient(): HTTPFacilitatorClient {
 export interface FacilitatorFeeConfig {
   /** Spender to approve — the facilitator wallet that runs `transferFrom`. */
   recipient: `0x${string}`;
-  /** Flat fee per settlement, in USDC atomic units. */
+  /** Flat fee per settlement, in the settled token's atomic units (the same nominal amount in
+   *  USDC and EURC — the facilitator charges the fee in whichever token the payment settles in). */
   flatFee: bigint;
 }
 
@@ -102,6 +109,9 @@ export async function getFacilitatorFeeConfig(): Promise<FacilitatorFeeConfig | 
       signal: AbortSignal.timeout(FEE_CONFIG_FETCH_TIMEOUT_MS),
     });
     if (!res.ok) {
+      // Still advisory-only (returns null, same as every other branch here) — this just stops
+      // the facilitator being unreachable from being completely silent.
+      logger.warn({ status: res.status }, "Could not read facilitator fee config");
       return null;
     }
     const body: unknown = await res.json();
@@ -116,8 +126,52 @@ export async function getFacilitatorFeeConfig(): Promise<FacilitatorFeeConfig | 
       return null;
     }
     return { recipient: fees.recipient as `0x${string}`, flatFee };
-  } catch {
+  } catch (err) {
+    logger.warn({ err }, "Could not read facilitator fee config");
     return null;
+  }
+}
+
+/**
+ * The SDK's own per-request payload/requirements types, read off its public method signatures
+ * rather than hand-copied — `@x402/core` uses both throughout its API (verify/settle,
+ * enhancePaymentRequirements, ...) but does not export either from any of its public entry
+ * points (`.`, `/client`, `/server`, `/facilitator` all checked). This is the stable way to name
+ * them without depending on the internal, hash-named chunk file they actually live in, and it
+ * stays correct across an SDK version bump since it reads whatever the installed `.d.ts` says.
+ *
+ * Named distinctly from this file's own `PaymentRequirements` below, which is the *whole* 402
+ * challenge document (`{ x402Version, resource, accepts: [...] }`) — confusingly similar name,
+ * different shape: the SDK's type here is what one entry of that `accepts` array looks like.
+ */
+export type SdkPaymentPayload = Parameters<x402ResourceServer["verifyPayment"]>[0];
+export type SdkPaymentRequirements = Parameters<x402ResourceServer["verifyPayment"]>[1];
+
+/**
+ * Release the channel lock a verified-but-unsettled request holds, charging nothing.
+ *
+ * `verifyPayment` takes the channel's `pendingRequest` lock and only `settlePayment` clears it, so
+ * a request that fails in between left the lock to its TTL (`LLM_MAX_TIMEOUT_SECONDS`, or the
+ * search routes' 30 s). The chat and the paid web tools share one channel, so a single failed
+ * `fetch_url` then rejected the user's next chat message with `channel_busy` — which really ended
+ * research turns. Cancelling fires the scheme's `onVerifiedPaymentCanceled`, which clears exactly
+ * this request's reservation. Must get the same `resourceServer` and payload object the verify
+ * used: the scheme looks up the request context verify stored.
+ *
+ * Best effort: a failure here only leaves the lock to its TTL, today's behaviour, so it is logged
+ * and never thrown.
+ */
+export async function releaseLock(
+  resourceServer: x402ResourceServer,
+  payload: SdkPaymentPayload,
+  requirements: SdkPaymentRequirements,
+): Promise<void> {
+  try {
+    await resourceServer
+      .createPaymentCancellationDispatcher(payload, requirements)
+      .cancel({ reason: "handler_failed" });
+  } catch (err) {
+    logger.warn({ err }, "Could not release channel lock; it expires with its TTL");
   }
 }
 
@@ -136,6 +190,12 @@ export interface LLMResourceServer {
    * Use this wherever channel storage is touched — settlement and the claim/settle cron.
    */
   schemeFor: (network: string) => BatchSettlementEvmScheme;
+  /**
+   * A scheme whose storage lists only `token`'s channels on `network` — for the claim/settle
+   * cron, which must claim one token at a time (see S3ChannelStorage). Not registered with the
+   * resource server: serving keeps one scheme per network, writing both tokens to one prefix.
+   */
+  claimSchemeFor: (network: string, token: string) => BatchSettlementEvmScheme;
   /**
    * Convenience handle for storage-independent work only — building the 402 `accepts`
    * array, where `enhancePaymentRequirements` just stamps on `receiverAuthorizer`,
@@ -160,20 +220,29 @@ export function createLLMResourceServer(receiverAddress: `0x${string}`): LLMReso
   const resourceServer = new x402ResourceServer(createFacilitatorClient());
 
   const authorizerAccount = privateKeyToAccount(loadPrivateKey("RECEIVER_AUTHORIZER_PRIVATE_KEY"));
-  const receiverAuthorizerSigner = {
+  const receiverAuthorizerSigner: AuthorizerSigner = {
     address: authorizerAccount.address,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    signTypedData: (params: any) => authorizerAccount.signTypedData(params),
+    signTypedData: (params) =>
+      // AuthorizerSigner's own params shape (domain/types/message as Record<string, unknown>)
+      // is looser than viem's TypedDataDefinition — the two libraries just don't share one
+      // canonical typed-data type. Safe: viem validates the real EIP-712 structure at runtime
+      // regardless of how loosely this bridge sees it.
+      authorizerAccount.signTypedData(
+        params as Parameters<typeof authorizerAccount.signTypedData>[0],
+      ),
   };
 
-  const schemes = new Map<string, BatchSettlementEvmScheme>();
-  for (const network of BATCH_SETTLEMENT_NETWORKS) {
-    const scheme = new BatchSettlementEvmScheme(receiverAddress, {
-      storage: new S3ChannelStorage(network),
+  const makeScheme = (storage: S3ChannelStorage) =>
+    new BatchSettlementEvmScheme(receiverAddress, {
+      storage,
       receiverAuthorizerSigner,
       onchainStateTtlMs: ONCHAIN_STATE_TTL_MS,
       withdrawDelay: WITHDRAW_DELAY_SECONDS,
     });
+
+  const schemes = new Map<string, BatchSettlementEvmScheme>();
+  for (const network of BATCH_SETTLEMENT_NETWORKS) {
+    const scheme = makeScheme(new S3ChannelStorage(network));
     schemes.set(network, scheme);
     resourceServer.register(network as `${string}:${string}`, scheme);
   }
@@ -189,7 +258,17 @@ export function createLLMResourceServer(receiverAddress: `0x${string}`): LLMReso
     return scheme;
   };
 
-  return { resourceServer, schemeFor, scheme: schemeFor(BATCH_SETTLEMENT_NETWORKS[0]) };
+  const claimSchemeFor = (network: string, token: string): BatchSettlementEvmScheme => {
+    schemeFor(network); // same unsupported-network error as the serving path
+    return makeScheme(new S3ChannelStorage(network, token));
+  };
+
+  return {
+    resourceServer,
+    schemeFor,
+    claimSchemeFor,
+    scheme: schemeFor(BATCH_SETTLEMENT_NETWORKS[0]),
+  };
 }
 
 /**
@@ -217,12 +296,12 @@ export function createLLMResourceServer(receiverAddress: `0x${string}`): LLMReso
  */
 export async function useEnhancedRefundRequirements(
   scheme: BatchSettlementEvmScheme,
-  manager: object,
+  manager: BatchSettlementChannelManager,
   opts: { network: string; asset: string; payTo: string },
 ): Promise<void> {
-  const base = {
+  const base: SdkPaymentRequirements = {
     scheme: "batch-settlement",
-    network: opts.network,
+    network: opts.network as `${string}:${string}`,
     asset: opts.asset,
     amount: "0",
     payTo: opts.payTo,
@@ -230,8 +309,7 @@ export async function useEnhancedRefundRequirements(
     extra: {},
   };
   const enhanced = await scheme.enhancePaymentRequirements(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    base as any,
+    base,
     {
       x402Version: 2,
       scheme: "batch-settlement",
@@ -265,15 +343,16 @@ export async function useEnhancedRefundRequirements(
   const { withdrawDelay: _configuredDelay, ...extraWithoutDelay } = enhancedExtra;
   const refundRequirements = { ...enhanced, extra: extraWithoutDelay };
 
-  (manager as { buildPaymentRequirements: () => unknown }).buildPaymentRequirements = () =>
-    refundRequirements;
+  (manager as unknown as { buildPaymentRequirements: () => unknown }).buildPaymentRequirements =
+    () => refundRequirements;
 }
 
 export interface BatchSettlementPaymentRequirementsOptions {
   resourceUrl: string;
   description: string;
   mimeType: string;
-  amount: string;
+  /** The price in each stablecoin's own atomic units — two parallel lists, no conversion. */
+  price: PriceList;
   payTo: string;
   scheme: BatchSettlementEvmScheme;
   networks?: readonly string[];
@@ -287,16 +366,17 @@ export interface BatchSettlementPaymentRequirementsOptions {
 }
 
 /**
- * Builds the 402 `accepts` array for batch-settlement: each network's base requirements
- * must be run through the scheme's own `enhancePaymentRequirements` so the client
- * receives the `receiverAuthorizer`/`withdrawDelay`/EIP-712 domain fields it needs to
- * build a deposit payload (confirmed necessary in the B0 spike).
+ * Builds the 402 `accepts` array for batch-settlement: one entry per (network, offered
+ * stablecoin), most preferred coin first (see STABLECOIN_PREFERENCE). Each entry must be run
+ * through the scheme's own `enhancePaymentRequirements` so the client receives the
+ * `receiverAuthorizer`/`withdrawDelay`/EIP-712 domain fields it needs to build a deposit
+ * payload (confirmed necessary in the B0 spike).
  */
 export async function createBatchSettlementPaymentRequirements({
   resourceUrl,
   description,
   mimeType,
-  amount,
+  price,
   payTo,
   scheme,
   networks = BATCH_SETTLEMENT_NETWORKS,
@@ -307,29 +387,29 @@ export async function createBatchSettlementPaymentRequirements({
   accepts: unknown[];
 }> {
   const accepts = await Promise.all(
-    networks.map(async (network) => {
-      const config = getUSDCConfig(network);
-      const base = {
-        scheme: "batch-settlement",
-        network,
-        amount,
-        asset: config.address,
-        payTo,
-        maxTimeoutSeconds,
-        extra: { name: config.usdcName, version: config.usdcVersion },
-      };
-      return scheme.enhancePaymentRequirements(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        base as any,
-        {
-          x402Version: 2,
+    networks.flatMap((network) =>
+      offeredStablecoins(network).map((coin) => {
+        const base: SdkPaymentRequirements = {
           scheme: "batch-settlement",
           network: network as `${string}:${string}`,
-          extra: base.extra,
-        },
-        [],
-      );
-    }),
+          amount: price[coin.symbol],
+          asset: coin.address,
+          payTo,
+          maxTimeoutSeconds,
+          extra: { name: coin.name, version: coin.version },
+        };
+        return scheme.enhancePaymentRequirements(
+          base,
+          {
+            x402Version: 2,
+            scheme: "batch-settlement",
+            network: network as `${string}:${string}`,
+            extra: base.extra,
+          },
+          [],
+        );
+      }),
+    ),
   );
 
   return {
@@ -343,7 +423,8 @@ export interface PaymentRequirementsOptions {
   resourceUrl: string;
   description: string;
   mimeType: string;
-  amount: string;
+  /** The price in each stablecoin's own atomic units — two parallel lists, no conversion. */
+  price: PriceList;
   payTo: string;
   networks?: readonly string[];
 }
@@ -362,29 +443,26 @@ export interface PaymentRequirements {
   }>;
 }
 
+/** The exact-scheme 402: one entry per (network, offered stablecoin), most preferred first. */
 export function createPaymentRequirements({
   resourceUrl,
   description,
   mimeType,
-  amount,
+  price,
   payTo,
   networks = getSupportedNetworks(),
 }: PaymentRequirementsOptions): PaymentRequirements {
-  const accepts = networks.map((network) => {
-    const config = getUSDCConfig(network);
-    return {
+  const accepts = networks.flatMap((network) =>
+    offeredStablecoins(network).map((coin) => ({
       scheme: "exact",
       network,
-      amount,
-      asset: config.address,
+      amount: price[coin.symbol],
+      asset: coin.address,
       payTo,
       maxTimeoutSeconds: 60,
-      extra: {
-        name: config.usdcName,
-        version: config.usdcVersion,
-      },
-    };
-  });
+      extra: { name: coin.name, version: coin.version },
+    })),
+  );
 
   return {
     x402Version: 2,
@@ -434,7 +512,8 @@ export function extractPaymentPayload(
       const decoded = Buffer.from(v2Header, "base64").toString("utf-8");
       return JSON.parse(decoded) as Record<string, unknown>;
     } catch {
-      console.error("Failed to parse PAYMENT-SIGNATURE header");
+      // The caller's fault (malformed header), not ours — warn, not error.
+      logger.warn("Failed to parse PAYMENT-SIGNATURE header");
       return null;
     }
   }
@@ -444,7 +523,7 @@ export function extractPaymentPayload(
     try {
       return JSON.parse(v1Header) as Record<string, unknown>;
     } catch {
-      console.error("Failed to parse X-PAYMENT header");
+      logger.warn("Failed to parse X-PAYMENT header");
       return null;
     }
   }

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { MAX_QUERY_CHARS } from "./search_service.js";
+import type { PriceList } from "./stablecoin_pricing.js";
 
 /**
  * The query strings `search_api.ts` accepts, as schemas rather than hand-written checks.
@@ -40,8 +41,8 @@ export const ROUTES = ["search", "fetch"] as const;
 export type Route = (typeof ROUTES)[number];
 
 /**
- * Price per call, in USDC atomic units (6 decimals), as `USDC_PAYMENT_AMOUNT` is in
- * `genimg_x402_token.ts` — never a dollar float.
+ * Price per call, quoted separately in each token's atomic units (6 decimals) — two parallel
+ * price lists, as in `genimg_x402_token.ts`, never a float and never a converted amount.
  *
  * Search is ten times fetch on purpose. Brave costs ~$0.005 a query, so $0.01 covers it twice over
  * with the invoke and a share of settlement; a fetch is egress only and priced to mean "not open"
@@ -53,9 +54,9 @@ export type Route = (typeof ROUTES)[number];
  * entrypoint under NODE_ENV=test, so importing it from a build script would bind a port as a side
  * effect of generating a document. This module has no side effects.
  */
-export const PRICE_ATOMIC: Record<Route, string> = {
-  search: "10000",
-  fetch: "1000",
+export const PRICE_ATOMIC: Record<Route, PriceList> = {
+  search: { USDC: "10000", EURC: "10000" },
+  fetch: { USDC: "1000", EURC: "1000" },
 };
 
 /** What each route sells, used both in the 402 challenge and in the published spec. */

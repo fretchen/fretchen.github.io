@@ -9,6 +9,7 @@ import {
   negotiateNetwork,
   precheckLlmV1Agent,
   checkLlmV1Agent,
+  fetchAgentRegistration,
   probeAccepts,
   resetAcceptsCache,
   type AcceptsEntry,
@@ -222,11 +223,16 @@ describe("checkLlmV1Agent (build-your-own-agent diagnostic)", () => {
   function mockFetch(handlers: {
     openapi?: { status: number; body?: unknown; throws?: boolean };
     probe?: { status: number; accepts?: AcceptsEntry[] | null; header?: string | null; throws?: boolean };
+    registration?: { status: number; body?: unknown };
   }) {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: string) => {
         const url = String(input);
+        if (url.endsWith("/.well-known/agent-registration.json")) {
+          const h = handlers.registration ?? { status: 404 };
+          return { ok: h.status >= 200 && h.status < 300, status: h.status, json: async () => h.body ?? {} };
+        }
         if (url.endsWith("/openapi.json")) {
           const h = handlers.openapi ?? { status: 200, body: { "x-service-type": "llm/v1" } };
           if (h.throws) throw new TypeError("Failed to fetch");
@@ -242,13 +248,14 @@ describe("checkLlmV1Agent (build-your-own-agent diagnostic)", () => {
 
   const stepStatus = (r: CheckReport, id: string) => r.steps.find((s) => s.id === id)?.status;
 
-  it("passes every step for a well-formed agent (with ownership proof)", async () => {
+  it("passes every step for a well-formed agent (with ownership proof and ERC-8004 registration)", async () => {
     mockFetch({
       openapi: {
         status: 200,
         body: { "x-service-type": "llm/v1", "x-discovery": { ownershipProofs: ["0xsig"] } },
       },
       probe: { status: 402, accepts: [floorEntry] },
+      registration: { status: 200, body: registrationFile },
     });
     const r = await checkLlmV1Agent("https://agent.example");
     expect(r.ok).toBe(true);
@@ -298,10 +305,80 @@ describe("checkLlmV1Agent (build-your-own-agent diagnostic)", () => {
     expect(stepStatus(r, "floor")).toBe("fail");
   });
 
+  it("warns (not fails) when the agent has no ERC-8004 registration", async () => {
+    mockFetch({});
+    const r = await checkLlmV1Agent("https://agent.example");
+    expect(stepStatus(r, "erc8004")).toBe("warn");
+    expect(r.ok).toBe(true);
+  });
+
+  it("names the agent id when the ERC-8004 registration is present", async () => {
+    mockFetch({ registration: { status: 200, body: registrationFile } });
+    const r = await checkLlmV1Agent("https://agent.example");
+    const step = r.steps.find((s) => s.id === "erc8004");
+    expect(step?.status).toBe("pass");
+    expect(step?.detail).toContain("#97599");
+  });
+
   it("fails cleanly on a malformed URL with a single step", async () => {
     const r = await checkLlmV1Agent("not a url");
     expect(r.ok).toBe(false);
     expect(r.steps).toHaveLength(1);
     expect(r.steps[0].id).toBe("url");
+  });
+});
+
+const registrationFile = {
+  type: "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
+  name: "Fretchen AI Assistant (LLM) Service",
+  image: "https://agent.example/favicon.png",
+  registrations: [{ agentId: 97599, agentRegistry: "eip155:8453:0x8004A169FB4a3325136EB29fA0ceB6D2e539a432" }],
+};
+
+describe("fetchAgentRegistration", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  function respond(response: { status: number; body?: unknown } | "throws") {
+    const fetchMock = vi.fn(async () => {
+      if (response === "throws") throw new TypeError("Failed to fetch");
+      return { ok: response.status >= 200 && response.status < 300, json: async () => response.body };
+    });
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+    return fetchMock;
+  }
+
+  it("reads the first registration from the origin's well-known file", async () => {
+    const fetchMock = respond({ status: 200, body: registrationFile });
+    expect(await fetchAgentRegistration("https://agent.example")).toEqual({
+      agentId: 97599,
+      agentRegistry: "eip155:8453:0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
+      name: "Fretchen AI Assistant (LLM) Service",
+      image: "https://agent.example/favicon.png",
+    });
+    expect(fetchMock).toHaveBeenCalledWith("https://agent.example/.well-known/agent-registration.json", {
+      method: "GET",
+    });
+  });
+
+  it("returns null while the file lists no registration yet", async () => {
+    respond({ status: 200, body: { ...registrationFile, registrations: [] } });
+    expect(await fetchAgentRegistration("https://agent.example")).toBeNull();
+  });
+
+  it("returns null for a malformed registration entry", async () => {
+    respond({ status: 200, body: { registrations: [{ agentId: "97599", agentRegistry: 1 }] } });
+    expect(await fetchAgentRegistration("https://agent.example")).toBeNull();
+  });
+
+  it("returns null when the file is missing", async () => {
+    respond({ status: 404 });
+    expect(await fetchAgentRegistration("https://agent.example")).toBeNull();
+  });
+
+  it("returns null instead of throwing when the fetch fails (CORS or network)", async () => {
+    respond("throws");
+    expect(await fetchAgentRegistration("https://agent.example")).toBeNull();
   });
 });

@@ -5,7 +5,7 @@ Serverless functions for AI image generation and LLM services with blockchain in
 ## 📖 API Documentation
 
 - **OpenAPI Specs**: [`openapi.genimg.json`](./openapi.genimg.json) / [`openapi.llm.json`](./openapi.llm.json) - Per-service x402 discovery contracts, each served live at `GET /openapi.json` on its own origin
-- **EIP-8004 Registration**: [`agent-registration.json`](./agent-registration.json) - Agent discovery and trust
+- **EIP-8004 Registration**: built per service by [`agent_registration.ts`](./agent_registration.ts), served live at `GET /.well-known/agent-registration.json` on each origin (see [ERC-8004 agent registration](#erc-8004-agent-registration))
 
 ### Quick Links
 
@@ -196,6 +196,74 @@ Set a dedicated provider (e.g. Alchemy) as a Scaleway secret for production:
 - `RPC_URL_EIP155_11155420` — Optimism Sepolia
 - `RPC_URL_EIP155_84532` — Base Sepolia
 
+### ERC-8004 agent registration
+
+Each x402 origin is a registered ERC-8004 agent on **Base** (Identity Registry `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`, `eip155:8453`). The on-chain `agentURI` is the origin's own `https://<origin>/.well-known/agent-registration.json`, so the endpoint and the identity share a domain.
+
+| Service    | Origin                               | agentId |
+| ---------- | ------------------------------------ | ------- |
+| Image gen  | `https://imagegen-agent.fretchen.eu` | 97598   |
+| LLM chat   | `https://llm-agent.fretchen.eu`      | 97599   |
+| Web access | `https://web-agent.fretchen.eu`      | 97600   |
+
+- **The file** is built per request by [`agent_registration.ts`](./agent_registration.ts) from the committed `openapi.*.json` (`info.title`, `info.description`, `servers[0].url`), so it cannot drift from the published API document. Beyond the EIP fields it carries the two services the [8004scan Agent Metadata Standard](https://best-practices.8004scan.io/docs/01-agent-metadata-standard.html) recommends: `OASF` (skills and domains from the OASF v0.8.0 taxonomy, pinned in `OASF`; check a new slug exists in agntcy/oasf before adding it) and `agentWallet` (the 402 `payTo` as CAIP-10 on Base and Optimism, from `NFT_WALLET_PUBLIC_KEY`). The ids live in `AGENT_IDS` there; `test/agent_registration.test.ts` pins them to `eth/scripts/deployments/erc8004-agents-base.json`.
+- **Ownership:** the agents are owned by the contract-owner EOA (`0x1af51D…fBB20`), not by a key in the function secrets, so a leaked server secret cannot repoint or transfer an identity. The registry's `agentWallet` is bound to the x402 `payTo` (`NFT_WALLET`), so `getAgentWallet(agentId)` equals the `payTo` in every 402.
+- **Changing it:** registering, clearing or re-binding the wallet is `eth/scripts/register-agents.ts` (usage, rollout and safety are in its JSDoc; dry run by default). Updating an `agentURI` is `setAgentURI` from the owner key.
+- **Check a deployment:**
+
+```bash
+for o in imagegen-agent llm-agent web-agent; do
+  curl -sS "https://$o.fretchen.eu/.well-known/agent-registration.json" | jq '{name, registrations}'
+done
+```
+
+Each file must list its `agentId` and `eip155:8453:0x8004A169…` as `agentRegistry`. On the registry, `tokenURI(agentId)` must return the same URL and `getAgentWallet(agentId)` the 402 `payTo`.
+
+8004scan is the external validator. Its API shows how it parsed each agent; `errors` and `warnings` should be empty:
+
+```bash
+for id in 97598 97599 97600; do
+  curl -sS "https://8004scan.io/api/v1/agents/8453/$id" | jq '{name, parse_status, metadata_completeness_score, is_endpoint_verified}'
+done
+```
+
+8004scan serves what it last parsed (`parse_status.last_parsed_at`), so a change to the file shows there only after it parses the file again.
+
+Later, if wanted: tell paying clients they can leave feedback for the `agentId` (Reputation Registry); reference the ids from `x-discovery` in the OpenAPI specs; move the `agentURI` to IPFS or a `data:` URI if the domain dependency becomes a concern. The Validation Registry waits on its spec section.
+
+### Stablecoins and pricing (USDC, EURC)
+
+All three sellers (image, chat, search) take **USDC on every network and EURC on Base / Base
+Sepolia**. Circle has no EURC on Optimism. USDC and EURC are **two parallel price lists**: every
+price is set explicitly in each token, and nothing is converted between them.
+
+| What           | USDC               | EURC               | Where it is set                                                |
+| -------------- | ------------------ | ------------------ | -------------------------------------------------------------- |
+| Image          | 0.07               | 0.06               | `USDC_PAYMENT_AMOUNT` / `EURC_PAYMENT_AMOUNT` (serverless.yml) |
+| Search / fetch | 0.01 / 0.001       | 0.01 / 0.001       | `PRICE_ATOMIC` in `search_schemas.ts`                          |
+| Chat           | Mistral's USD card | Mistral's EUR card | `pricePerMillion` in `llm_service.ts`                          |
+
+The chat price is computed per message from token usage, on the rate card of the currency the
+channel is in: $0.50 / $1.50 per million input/output tokens, or €0.44 / €1.50. Each card is the
+provider's own published price in that currency. OpenAPI `x-payment-info.price` must be quoted in
+USD, so it carries the USDC price; the EURC price is stated in the description.
+
+- **Preference:** on Base the 402 lists EURC first (`STABLECOIN_PREFERENCE`). A stock x402 client
+  pays with the first entry its spend controls allow, and the SDK's built-in asset registry only
+  knows USDC, so a default client keeps paying USDC until it allowlists EURC.
+- **Facilitator fee:** charged in the token the payment settled in, so the seller wallet
+  (`NFT_WALLET_PUBLIC_KEY`) needs an `approve()` for the facilitator for **every (network, token)
+  pair the sellers offer**. Without it every payment or claim in that pair fails with
+  `insufficient_fee_allowance`. `npm run fee-allowances` lists every offered pair and exits 1 if
+  any is below one fee; `npm run fee-allowances -- --approve` fixes the short ones (needs
+  `NFT_WALLET_PRIVATE_KEY` and a little gas). It runs as `predeploy`, so `npm run deploy` refuses to
+  ship an offer that cannot be paid. The claim cron still warns per token when an approval runs
+  low between deploys.
+- **Channels:** USDC and EURC channels share each network's `channels/<network>/` prefix (the
+  token is part of the channel id). The cron claims one token at a time, because a claim batch
+  must not mix tokens. `scripts/recover_channels.ts` takes the token as an argument for the same
+  reason.
+
 ## 🗄️ S3 Storage Layout & Data Classification
 
 All functions share the `my-imagestore` bucket (region `nl-ams`). Access is controlled **per object** (object ACL), independent of the bucket ACL. When writing, only publish what is meant to be public — the table below is the source of truth for whether a prefix is public.
@@ -224,65 +292,13 @@ npm run dev:llmx402
 npm run dev:llmx402cron
 ```
 
-## Reading the logs
+## Logs and alerting
 
-Not the Scaleway console, and not Grafana — both show nothing useful here. `scripts/logs.ts` queries
-Cockpit's Loki API directly:
-
-```bash
-npx tsx scripts/logs.ts                                      # which functions are logging
-npx tsx scripts/logs.ts facilitator --since 36h --grep "Settlement failed"
-npx tsx scripts/logs.ts llmx402cron --since 48h --grep "Refund sweep"
-```
-
-**It reads the whole Scaleway project, not just this package** — Cockpit is scoped per project, so
-the facilitator, analytics and comment-service logs come out of the same command. The script lives
-here only because this is where the operational scripts live.
-
-Needs `SCW_COCKPIT_LOGS_URL` and `SCW_COCKPIT_LOGS_TOKEN` in `.env`. That token is a **Cockpit**
-token with `read_only_logs` scope — `SCW_SECRET_KEY` is rejected with a 403 — created with
-`scw cockpit token create name=<name> token-scopes.0=read_only_logs region=fr-par`. Its secret is
-shown once, so save it immediately: a token whose secret is lost can only be deleted.
-
-Worth knowing before an incident: a function that has not run inside the `--since` window does not
-appear in the discovery listing at all, so widen the window before concluding anything is missing.
-
-## Alerting on log content
-
-Scaleway's built-in alerts are metric-based, and the failure that motivated this section produced no
-error metric at all — the facilitator answered HTTP 200 with `success: false` and the revert reason
-buried in the body. That is only ever visible as text in a log line, so `alerts/payments.yaml`
-defines Loki ruler rules that watch for it directly.
-
-```bash
-npx tsx scripts/alerts.ts                  # list the rule groups currently on the ruler
-npx tsx scripts/alerts.ts --push           # push alerts/payments.yaml
-npx tsx scripts/alerts.ts --delete payments
-```
-
-Needs `SCW_COCKPIT_RULES_TOKEN` in `.env` — a **separate** Cockpit token from the read-only one
-above, scoped `full_access_logs_rules`:
-`scw cockpit token create name=<name> token-scopes.0=full_access_logs_rules region=fr-par`. Kept
-separate because `logs.ts` is run casually and often and should only ever be able to read; this one
-can write and delete alerting rules.
-
-Four rules, deliberately few — see the comments at the top of `alerts/payments.yaml` for the
-reasoning on which four and why the rest were left out. One constraint worth knowing before writing
-a fifth: **Scaleway's Loki ruler caps a range-vector window at 1h.** `llmx402cron` runs every 12h,
-so a rule cannot stay pinned "firing" across the gap between runs the way a naive `[13h]` window
-would suggest — that gets rejected outright. Every rule here uses `[1h]`, which resolves after an
-hour and re-fires on the next cron run if the problem persists. Read a resolved notification as "no
-new occurrence in the last hour", not as "fixed".
-
-Push is a manual, explicit step — never wired into deploy. Alerting rules changing as a side effect
-of shipping code is its own kind of surprise, and a rule silently dropped by a deploy looks
-identical to a system that is simply quiet.
-
-**A rule that has never fired is not known to work.** Before trusting a new one, push a throwaway
-group matching a log line that occurs on every routine run (e.g. `"claimAndSettle completed"`),
-confirm the email arrives with the summary/description actually populated, then
-`--delete` it. This is exactly how `PaymentCronFailed` was proven to work in practice — pushing a
-test rule surfaced a real, previously-unnoticed `withdraw_delay_mismatch` failure on Base Sepolia.
+Reading logs and the Loki alert rules for these functions live in
+[`../observability/`](../observability/README.md), since they cover the whole Scaleway project.
+This package's part of it: `logger.error` means "ours, and should page", and
+`test/alert_coverage.test.ts` fails if a `logger.error` has no matching rule there or a file
+uses bare `console.*`. Log through the shared `logger.ts`.
 
 ## Deployment
 
@@ -368,6 +384,15 @@ USDC contracts use EIP-3009 (`transferWithAuthorization`) which requires EIP-712
 | Optimism Sepolia | `eip155:11155420` | `USDC`      | `2`     | ✅ 2025-12-26 |
 | Base Mainnet     | `eip155:8453`     | `USD Coin`  | `2`     | ✅ 2025-12-26 |
 | Base Sepolia     | `eip155:84532`    | `USDC`      | `2`     | ✅ 2025-12-26 |
+
+### Known EURC Domain Names
+
+EURC exists on Base only (Circle has no Optimism deployment). Unlike USDC, mainnet and testnet share one name.
+
+| Network      | CAIP-2 ID      | Address                                      | Domain Name | Version | Verified      |
+| ------------ | -------------- | -------------------------------------------- | ----------- | ------- | ------------- |
+| Base Mainnet | `eip155:8453`  | `0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42` | `EURC`      | `2`     | ✅ 2026-09-25 |
+| Base Sepolia | `eip155:84532` | `0x808456652fdb597867f38412077A9182bf77359F` | `EURC`      | `2`     | ✅ 2026-09-25 |
 
 > ⚠️ **Warning:** Mainnet and Testnet often have DIFFERENT domain names! Always verify.
 

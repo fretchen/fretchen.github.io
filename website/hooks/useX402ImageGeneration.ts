@@ -8,7 +8,8 @@
 import { useState, useCallback } from "react";
 import { useWalletClient } from "wagmi";
 import { useIsWalletConnected } from "./useIsWalletConnected";
-import { buildUsdcAllowedAssets } from "./x402SpendControls";
+import { buildStablecoinAllowedAssets } from "./x402SpendControls";
+import { DEFAULT_CURRENCY, preferCurrency, type PaymentCurrency } from "./x402Currency";
 import type { X402GenImgRequest, X402GenImgResponse, X402PaymentReceipt, X402GenerationStatus } from "../types/x402";
 import { normalizeImageResponse, type X402ImageResult } from "./x402ImageResponse";
 
@@ -17,32 +18,45 @@ const X402_API_URL =
   (import.meta.env.PUBLIC_ENV__IMAGE_URL as string | undefined) ??
   "https://mypersonaljscloudivnad9dy-genimgx402token.functions.fnc.fr-par.scw.cloud";
 
+/** The normalized result, plus the currency it was paid in — returned rather than only kept as
+ *  state, because a caller reading it right after `await generateImage()` would see stale state. */
+export type X402PaidImageResult = X402ImageResult & { paidCurrency: PaymentCurrency | null };
+
 export interface UseX402ImageGenerationResult {
   /**
    * Resolves to the *normalized* result, not the raw envelope — see `x402ImageResponse.ts`.
    * `tokenId` is optional there because a 200 does not guarantee the NFT was minted.
    */
-  generateImage: (request: X402GenImgRequest) => Promise<X402ImageResult>;
+  generateImage: (request: X402GenImgRequest) => Promise<X402PaidImageResult>;
   status: X402GenerationStatus;
   error: string | null;
   paymentReceipt: X402PaymentReceipt | null;
+  /** The currency the last payment was actually made in — the preference, unless the seller did
+   *  not offer it on this network and the selector fell back. Null before any payment. */
+  paidCurrency: PaymentCurrency | null;
   reset: () => void;
   isReady: boolean;
 }
 
-export function useX402ImageGeneration(): UseX402ImageGenerationResult {
+/**
+ * @param currency - The stablecoin to pay with when the seller offers it on the request's network
+ *   (see `x402Currency.ts`). The caller picks the network; this only picks between the tokens
+ *   offered on it.
+ */
+export function useX402ImageGeneration(currency: PaymentCurrency = DEFAULT_CURRENCY): UseX402ImageGenerationResult {
   const { data: walletClient } = useWalletClient();
   const isConnected = useIsWalletConnected();
 
   const [status, setStatus] = useState<X402GenerationStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [paymentReceipt, setPaymentReceipt] = useState<X402PaymentReceipt | null>(null);
+  const [paidCurrency, setPaidCurrency] = useState<PaymentCurrency | null>(null);
 
   // Ready when wallet is connected
   const isReady = isConnected && !!walletClient;
 
   const generateImage = useCallback(
-    async (request: X402GenImgRequest): Promise<X402ImageResult> => {
+    async (request: X402GenImgRequest): Promise<X402PaidImageResult> => {
       if (!walletClient) {
         throw new Error("Wallet not connected");
       }
@@ -50,6 +64,7 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
       setStatus("awaiting-signature");
       setError(null);
       setPaymentReceipt(null);
+      setPaidCurrency(null);
 
       try {
         // === Dynamic imports (browser-only, like the notebook) ===
@@ -65,10 +80,18 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
         };
 
         // === Setup x402 client (exactly like Quickstart) ===
-        const client = new x402Client();
-        // Explicitly allowlist USDC on every network this site pays on — the SDK's
-        // default spend controls reject Optimism USDC otherwise. See x402SpendControls.ts.
-        client.setSpendControls({ allowedAssets: buildUsdcAllowedAssets() });
+        // The selector picks the entry in `currency` among what the spend controls let through,
+        // and reports what it picked — the seller lists both tokens on Base.
+        let picked: PaymentCurrency | null = null;
+        const client = new x402Client(
+          preferCurrency(currency, (paid) => {
+            picked = paid;
+            setPaidCurrency(paid);
+          }),
+        );
+        // Explicitly allowlist every stablecoin this site pays with — the SDK's default spend
+        // controls reject Optimism USDC and all EURC otherwise. See x402SpendControls.ts.
+        client.setSpendControls({ allowedAssets: buildStablecoinAllowedAssets() });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment -- x402 SDK expects specific signer interface
         registerExactEvmScheme(client, { signer: signer as any });
 
@@ -144,7 +167,7 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
         }
 
         setStatus("success");
-        return result;
+        return { ...result, paidCurrency: picked };
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Unknown error";
         setError(errorMessage);
@@ -152,13 +175,14 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
         throw err;
       }
     },
-    [walletClient],
+    [walletClient, currency],
   );
 
   const reset = useCallback(() => {
     setStatus("idle");
     setError(null);
     setPaymentReceipt(null);
+    setPaidCurrency(null);
   }, []);
 
   return {
@@ -166,6 +190,7 @@ export function useX402ImageGeneration(): UseX402ImageGenerationResult {
     status,
     error,
     paymentReceipt,
+    paidCurrency,
     reset,
     isReady,
   };

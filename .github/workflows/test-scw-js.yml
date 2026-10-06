@@ -9,6 +9,8 @@ on:
       - "scw_js/**"
       - "shared/chain-utils/**"
       - "shared/s3-utils/**"
+      - "observability/alerts/**"
+      - "observability/alertCoverage.ts"
       - ".github/workflows/test-scw-js.yml"
   push:
     branches:
@@ -17,6 +19,8 @@ on:
       - "scw_js/**"
       - "shared/chain-utils/**"
       - "shared/s3-utils/**"
+      - "observability/alerts/**"
+      - "observability/alertCoverage.ts"
 
 jobs:
   test-scw-js:

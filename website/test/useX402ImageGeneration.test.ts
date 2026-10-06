@@ -13,7 +13,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useX402ImageGeneration } from "../hooks/useX402ImageGeneration";
-import { buildUsdcAllowedAssets } from "../hooks/x402SpendControls";
+import { buildStablecoinAllowedAssets } from "../hooks/x402SpendControls";
 import { useWalletClient, useAccount } from "wagmi";
 import type { X402GenImgRequest } from "../types/x402";
 import { buildAccountData, buildWalletClientData } from "./setup";
@@ -258,7 +258,7 @@ describe("useX402ImageGeneration", () => {
         await result.current.generateImage({ prompt: "A dog on Optimism", network: "eip155:10" });
       });
 
-      expect(mockSetSpendControls).toHaveBeenCalledWith({ allowedAssets: buildUsdcAllowedAssets() });
+      expect(mockSetSpendControls).toHaveBeenCalledWith({ allowedAssets: buildStablecoinAllowedAssets() });
       expect(mockSetSpendControls.mock.invocationCallOrder[0]).toBeLessThan(
         mockRegisterExactEvmScheme.mock.invocationCallOrder[0],
       );

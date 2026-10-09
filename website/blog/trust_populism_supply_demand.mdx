@@ -8,41 +8,43 @@ description: "Weniger politisches Vertrauen soll populistische Wahlerfolge erkl�
 import TrustAxisTuner from "../components/blog/TrustAxisTuner";
 import TrustVoteChart from "../components/blog/TrustVoteChart";
 
-Die Erklärung liegt so nahe, dass man sie kaum als These wahrnimmt: Wer der Politik nicht mehr vertraut, wählt populistisch. Nach der Bundestagswahl 2025, bei der die AfD in Ostdeutschland zur stärksten Kraft wurde, war sie wieder überall zu hören. Ich habe sie geprüft — mit Vertrauensdaten aus dem European Social Survey, den Ergebnissen von sieben Bundestagswahlen und einem Modell, das sauber trennt, was die Daten hergeben und was nicht. Die naheliegende Rechnung geht nicht auf. Das ist kein schwaches Ergebnis, sondern ein aufschlussreiches.
+In den letzten paar Wochen gab es in Deutschland eine Reihe ziemlich eindrucksvoller Wahlergebnisse in den populistische Parteien enorm an Zulauf gewonnen haben. 
+Zum selben Zeitpunkt fühlen sich einige Gespräche auch so an als würde das Vertrauen in die politischen Institutionen zunehmend sinken. Beide Beobachtungen zusammen legen irgendwie die Vermutung nahe,
+dass Bürger die bestimmten Institutionen nicht mehr vertrauen, populistisch wählen. 
+
+Dies habe ich in Vorbereitung dieses Post mal quantitativ modelliert — mit Vertrauensdaten aus dem European Social Survey, den Ergebnissen von sieben Bundestagswahlen und einem Modell, das sauber trennt, was die Daten hergeben und was nicht. Und hier geht die naheliegende Vermutung nicht auf. Ich diskutiere im Anschluss 
+auch den Stand der Literatur, welche von Angebot und Nachfrage für populistische Parteien spricht, und was für  quantitative Modelle fehlt.
 
 ## Das naheliegende Modell
 
-Der European Social Survey fragt alle zwei Jahre, wie sehr Menschen dem Bundestag, den Politikerinnen und Politikern und den Parteien vertrauen — auf einer Skala von 0 bis 10. Zwischen 2002 und 2023 habe ich dafür 35.081 deutsche Antworten ausgewertet (Berlin lasse ich beiseite, weil die Stadt in beiden Lagern ein Sonderfall ist). Auf der anderen Seite steht der Stimmenanteil der Parteien, die in der PopuList als populistisch klassifiziert sind: AfD, Die Linke, die Republikaner und ab 2025 das BSW.
-
-Auf den ersten Blick passt die Geschichte. Der Stimmenanteil der Populisten ist stark gestiegen, das Vertrauen in die politischen Institutionen ist in den letzten Jahrzehnten gesunken — Letzteres ist übrigens ein globaler Befund, für den Valgarðsson und Kollegen 2025 im *British Journal of Political Science* Daten aus 143 Ländern und 3.377 Umfragen zusammengetragen haben. Auf Ebene der Bundesländer liegen die Zahlen so:
-
-<TrustVoteChart />
-
-_Vertrauen: mittleres Vertrauen in den Bundestag, ESS-Erhebung der jeweiligen Wahlperiode, Skala 0–10. Populisten: Zweitstimmenanteil der als populistisch klassifizierten Parteien._
-
-Die nächste Figur überlässt dir die linke Achse. Die rechte — der populistische Stimmenanteil — bleibt fest bei 0 bis 60 Prozent; die linke zeigt das Vertrauen, und die darfst du verstellen. Versuche, sie so zu tunen, dass der Vertrauensrückgang seit 2016 wie die treibende Kraft des Stimmenanstiegs aussieht. Das gelingt — und genau das ist die Lehre: Eine Doppelachse lässt sich für jeden gewünschten Zusammenhang justieren. Geändert hat sich das Bild, nicht ein einziger Datenpunkt.
+Um das Vertrauen zu modellieren, habe ich den [European Social Survey](https://www.europeansocialsurvey.org/) genutzt. Er stellt alle zwei Jahre eine breite Anzahl an Fragen aus ganzen Europa, unter anderem auch wie sehr Menschen dem Bundestag, den Politikerinnen und Politikern oder den Parteien vertrauen. Auf der anderen Seite steht der Stimmenanteil der Parteien, die in der [PopuList](https://www.popu-list.org/) als populistisch klassifiziert sind: AfD, Die Linke, die Republikaner und ab 2025 das BSW. Ich habe beide Ergebnisse auf 
+der folgenden Grafik visualisiert.
 
 <TrustAxisTuner />
 
-Wo das Vertrauen niedriger ist, wählen mehr Menschen populistisch — und in Ostdeutschland ist beides ausgeprägter als im Westen. Fallende Kurve hier, steigende Kurve dort. Damit schien mir die Sache erledigt. Das war sie nicht.
+Ein paar grobe visuelle Punkte gehen in die Richtung der ursprünglichen Vermutung. Im Osten (rote Linien) ist das Vertrauen systematisch geringer und der Wahlanteil für populistische Parteien systematisch höher. 
 
-## Es ist nicht so einfach
+Wenn man aber in die Vertrauensdaten ein wenig reinzoomt wird der Zusammenhang deutlich unklarer.
+Denn bis 2017 gibt es minimal steigendes Vertrauen in die Institutionen, sowohl im Osten als auch im Westen. Und schon in der Zeit steigt der Populismusanteil Stück für Stück. Mit 2017 kehrt sich die Tendenz beim Vertrauen um die Werte fallen leicht. 
+Diese Umkehr ist in den Stimmanteilen in keinster Form wiedergespiegelt.
 
-Drei Beobachtungen sprengen die einfache Rechnung.
+Weiterhin ist die Vertrauenslücke zwischen Ost und West seit über zwanzig Jahre praktisch konstant. 
+Die Stimmenlücke hat sich im selben Zeitraum fast verdoppelt — von 15,2 auf 28,5 Prozentpunkte. 
+Wenn sinkendes Vertrauen innerhalb der Regionen den Stimmenanstieg antreiben würde, müsste die Vertrauenslücke mit wachsen.
 
-Erstens: Das Vertrauen ist gar nicht kontinuierlich gesunken. Es ist bis 2016 *gestiegen* — im Westen von 4,05 auf 4,60, im Osten von 3,43 auf 3,88 — und erst danach gefallen, bis auf 4,26 beziehungsweise 3,42 im Jahr 2023. Die großen Sprünge des populistischen Stimmenanteils (2017 und 2025) kamen nach dem Vertrauenshöhepunkt, nicht nach einem Absturz. Ein Muster, das als Erklärung taugt, muss in der richtigen Reihenfolge auftreten.
+Diese visuellen Beobachtungen fassen ganz gut zusammen, warum es mir auch quantativ nicht möglich war aus der Entwicklung des Vertrauens eine Entwicklung der Stimmanteile vorherzusagen.
 
-Zweitens: Die Vertrauenslücke zwischen Ost und West ist über zwanzig Jahre praktisch konstant. Sie lag 2002 bei 0,62 Punkten und 2025 bei 0,83 Punkten, ihre Schwankungsbreite um das Mittel liegt bei 0,17 Punkten. Die Stimmenlücke hat sich im selben Zeitraum fast verdoppelt — von 15,2 auf 28,5 Prozentpunkte. Wenn sinkendes Vertrauen innerhalb der Regionen den Stimmenanstieg antreiben würde, müsste die Vertrauenslücke mit wachsen. Sie tut es nicht.
+## Wissenschaftliche Befunde zum Thema
 
-Drittens, und das ist der Kern: Die naive Rechnung verwechselt zwei verschiedene Fragen. Die erste lautet: „Stimmt das Vertrauens*niveau* mit dem Stimmen*niveau* überein?" Das tut es klar — das zeigt die Figur oben. Die zweite lautet: „Sagt *sinkendes* Vertrauen vorher, dass der Stimmenanteil *steigt* — Region für Region, über die Zeit?" Genau diese Frage habe ich mit einem Modell getestet, das den nationalen Trend und die regionalen Niveaus herausrechnet. Das Ergebnis ist ernüchternd: Der geschätzte Effekt liegt bei +0,74 mit einem 90-Prozent-Intervall von −1,47 bis +2,99. Das Intervall enthält die Null, und die verbleibende Unsicherheit ist fast so groß wie vor der Analyse. Die Daten sagen zu dieser Frage im Wesentlichen: wir wissen es nicht.
+Interessanterweise, habe ich danach herausfinden müssen, dass dies ein bekanntes strukturelles Problem zu sein scheint.  
 
-Das ist keine Malkulation, sondern ein bekanntes strukturelles Problem. In der Finanzwelt entspricht die erste Frage der Bestimmung der Marktsensitivität eines Fonds — das geht mit den verfügbaren Daten zuverlässig. Die zweite Frage entspricht dem Nachweis, dass ein Fondsmanager echtes Können hat — dafür braucht es weit mehr Daten, als vorliegen, und die meisten behaupteten Antworten in dieser Literatur erweisen sich als Rauschen. Mit 14 Regionen-Wahl-Paaren steht die Politik hier vor derselben Grenze.
+Algan, Guriev, Papaioannou und Passari haben 2017 mit Regionsdaten aus 26 europäischen Ländern untersucht, wie die Finanzkrise von 2008 Vertrauen und populistisches Wählen verändert hat. Ihr Befund: Der Vertrauensverlust und der Aufstieg nicht-mainstreamiger Parteien gingen gemeinsam einher, weil beides vom selben Arbeitsmarktschock getrieben wurde. 
+Der Vertrauensverlust, so ihre Schlussfolgerung, kann nicht als eigenständiger Treiber des populistischen Aufstiegs gelten. 
 
-## Sind wir die Einzigen mit diesem Befund?
+Gidron und Hall kommen von der anderen Seite: Selbst die besten Individualmodelle, die Vertrauen, Einkommen, Bildung und Ideologie kombinieren, erklären weniger als ein Fünftel davon, wer eine radikale Partei wählt.
 
-Nein — und das ist beruhigend und verblüffend zugleich. Algan, Guriev, Papaioannou und Passari haben 2017 mit Regionsdaten aus 26 europäischen Ländern untersucht, wie die Finanzkrise von 2008 Vertrauen und populistisches Wählen verändert hat. Ihr Befund: Der Vertrauensverlust und der Aufstieg nicht-mainstreamiger Parteien gingen gemeinsam einher, weil beides vom selben Arbeitsmarktschock getrieben wurde. Der Vertrauensverlust, so ihre Schlussfolgerung, kann nicht als eigenständiger Treiber des populistischen Aufstiegs gelten. Gidron und Hall kommen von der anderen Seite: Selbst die besten Individualmodelle, die Vertrauen, Einkommen, Bildung und Ideologie kombinieren, erklären weniger als ein Fünftel davon, wer eine radikale Partei wählt.
-
-Die Metaanalyse von Scheiring und Kollegen 2024 im *British Journal of Political Science* zeigt nun, dass ökonomische Unsicherheit als Ursache populistischen Wählens auch nach Korrektur für Publikationsverzerrungen bestehen bleibt und grob ein Drittel der jüngsten Populismuswellen erklärt. Ökonomische Not wirkt also kausal — aber das ist eine andere Variable als politisches Vertrauen, dessen Korrelation mit Populismus breit repliziert ist, während der direkte kausale Pfeil von der Vertrauensseite her bislang niemand sauber gezeigt hat. Genau an dieser Stelle steht die Forschung, und genau an dieser Stelle steht meine Rechnung.
+Die Metaanalyse von Scheiring und Kollegen 2024 im *British Journal of Political Science* zeigt nun, dass ökonomische Unsicherheit als Ursache populistischen Wählens auch nach Korrektur für Publikationsverzerrungen bestehen bleibt und grob ein Drittel der jüngsten Populismuswellen erklärt. 
+Ökonomische Not wirkt also kausal — aber das ist eine andere Variable als politisches Vertrauen, dessen Korrelation mit Populismus breit repliziert ist, während der direkte kausale Pfeil von der Vertrauensseite her bislang niemand sauber gezeigt hat. Genau an dieser Stelle steht die Forschung, und genau an dieser Stelle steht meine Rechnung.
 
 ## Angebot und Nachfrage
 

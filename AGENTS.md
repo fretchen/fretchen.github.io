@@ -83,7 +83,7 @@ Two things that silently break payments if you get them wrong, both documented i
 
 ## Security
 
-See [`.github/THREAT_MODEL.md`](.github/THREAT_MODEL.md) for the full asset inventory, blast radius, and trust boundaries, and [`eth/SECURITY.md`](eth/SECURITY.md) for contract-level findings. Use the **`cve-triage`** skill to evaluate open Dependabot alerts against the threat model; the criteria are in [`.github/CVE_TRIAGE.md`](.github/CVE_TRIAGE.md).
+See [`.github/THREAT_MODEL.md`](.github/THREAT_MODEL.md) for the full asset inventory, blast radius, and trust boundaries, and [`eth/SECURITY.md`](eth/SECURITY.md) for contract-level findings. Use the **`cve-triage`** skill to evaluate open Dependabot alerts against the threat model; the criteria are in [`.github/CVE_TRIAGE.md`](.github/CVE_TRIAGE.md). Use the **`security-review`** skill for periodic deep audits of the agent and API layers — it operationalizes the threat model's review cadence with OWASP secure-agent-playbook procedures, vendored under `.agents/skills/security-review/` (CC-BY-4.0; keep it out of `skills-lock.json`).
 
 **Key hierarchy** (highest-value first):
 

@@ -21,14 +21,15 @@ What has monetary value, irreversibility, or trust significance in this system:
 |---|---|---|
 | ETH in GenImNFTv4 | On-chain | Accumulates mint fees until `withdraw()` is called |
 | ETH in LLMv1 (deprecated) | On-chain | User prepaid balances; withdrawable by users or claimable by providers. **No serverless code path calls this contract anymore** — `sc_llm.ts`/`leaf_history.ts` were retired in favor of `/assistent`'s x402 batch-settlement USDC channels. Final decommission (contract-level retirement) is pending confirmation that all balances have been withdrawn. |
-| USDC settlements | x402_facilitator | Per-request payments routed through the facilitator |
+| Stablecoin settlements | x402_facilitator | Per-request payments routed through the facilitator: USDC (any supported network), EURC and EURe on Base. EURe (Monerium, no EIP-3009, 18 decimals) settles via Permit2 through the x402 exact Permit2 proxy |
+| x402 exact Permit2 proxy + Uniswap Permit2 (external) | On-chain, Base and Base Sepolia (SDK-pinned addresses, not upgradeable by this project) | Third-party contracts the facilitator settles EURe through. A defect affects EURe settlement availability, not fund safety: `/verify` simulates `settleWithPermit` against the live proxy before anything is broadcast, and Permit2 enforces the buyer's signature over the witness on-chain |
 | EIP3009 Splitter contract (testnet) | On-chain, Optimism Sepolia only (`eip155:11155420`) | Routes USDC settlements via EIP-3009; owner-upgradeable. Not yet on mainnet — promotes to a live asset on mainnet deployment |
 | NFT metadata integrity | On-chain (token URIs) | Authoritative record of what image each token represents |
 | Owner EOA private key | Dedicated keystore account (`0x1af51D…fBB20`), separated from daily wallet since 2026-06 | Controls every upgradeable contract and owns the three ERC-8004 agent identities — the highest-value key in the system |
 | ERC-8004 agent identities (3) | On-chain, Base Identity Registry `0x8004A169…a432` (agentIds 97598, 97599, 97600) | Owned by the owner EOA. Owner can repoint `agentURI`, transfer, or change the bound `agentWallet`; holds no funds, but the identity is what discovery and reputation attach to |
 | Agent wallet private key | scw_js secrets | Can trigger `requestImageUpdate()` and receive mintPrice per call. Same address as the x402 `payTo` (`NFT_WALLET`), bound as the `agentWallet` of the three ERC-8004 agents |
 | Receiver-authorizer private key | scw_js secrets | Signs batch-settlement channel-config and refund authorizations (EIP-712) for the `/assistent` sellers (LLM, search, fetch) via `receiverAuthorizerSigner`. Never sends transactions, never needs funding |
-| Facilitator wallet private key | x402_facilitator secrets | Receives USDC fees from settlements |
+| Facilitator wallet private key | x402_facilitator secrets | Receives settlement fees (USDC; EURC and EURe on Base) |
 | Scaleway secrets (SCW_SECRET_KEY) | Serverless secrets | Access to S3 image bucket, transactional email, and analytics counters |
 | BFL / IONOS API keys | Serverless secrets | Image generation quota; no on-chain access |
 
@@ -44,7 +45,7 @@ If a component is fully compromised, what else falls with it:
 |---|---|---|
 | **Owner EOA** | Malicious upgrade to every upgradeable contract | Complete ETH drain from GenImNFTv4 + LLMv1; all NFT URIs replaceable; USDC fee wallet redirectable — total system compromise. The EIP3009 Splitter joins this blast radius once deployed to mainnet. Key is now a dedicated EOA (not daily wallet); full mitigation requires Gnosis Safe. The same key owns the three ERC-8004 agent identities (Base), so a compromise also lets an attacker repoint their `agentURI` to impersonate the services; a Safe migration must transfer them too, which clears each `agentWallet` and needs re-binding. |
 | **Agent wallet** (scw_js) | `requestImageUpdate()` callable arbitrarily; drains GenImNFTv4 at `mintPrice` per call | NFT metadata corruption for all tokens; contract ETH drained |
-| **Facilitator wallet** | USDC fees redirected | Financial only; no access to user funds or upgrade paths |
+| **Facilitator wallet** | Settlement fees redirected (USDC, EURC, EURe) | Financial only; no access to user funds or upgrade paths |
 | **Receiver-authorizer key** (scw_js) | Refund authorizations signable: buyer escrow returned early, claims stalled or unwound — revenue denial and channel DoS | No fund redirection (claims pay the channel's fixed receiver); no access to other contracts or upgrade paths |
 | **SCW_SECRET_KEY** | S3 bucket writable; email notifications spoofable | Generated images replaceable; no on-chain impact |
 | **BFL / IONOS key** | Image generation quota consumed | No on-chain or financial impact to users |
@@ -93,8 +94,10 @@ This is the attack-**surface** map: each arrow marks where data crosses from a l
 └─────────────────────────────────────────────────────────────┘
 
 x402_facilitator
-  │  EIP-712 sig verification ──────────► USDC contract
+  │  EIP-712 sig verification ──────────► USDC / EURC contract
   │                                        (nonce enforced on-chain)
+  │  Permit2 witness + EIP-2612 permit ─► x402 Permit2 proxy → EURe (Base)
+  │                                        (witness + nonce enforced on-chain)
   └─ fee collection ────────────────────► facilitator wallet
 
 scw_js
@@ -137,7 +140,7 @@ This is the **HOW** that complements §3 (WHO) and §4 (WHERE): the concrete cla
 
 | Technique (OWASP) | Where it applies | Status | Tracked in |
 |---|---|---|---|
-| Broken authentication (API2) | EIP-712/EIP-3009 sig verify (facilitator); agent-wallet whitelist (scw_js); `useWalletAuth` owner-sig bearer (growth **and analytics**); origin whitelist (comment_service) | Mitigated | §4; §7 |
+| Broken authentication (API2) | EIP-712/EIP-3009 sig verify (facilitator), plus Permit2-witness and EIP-2612-permit verify for EURe (facilitator); agent-wallet whitelist (scw_js); `useWalletAuth` owner-sig bearer (growth **and analytics**); origin whitelist (comment_service) | Mitigated | §4; §7 |
 | Broken function-level authz (API5) | x402 `Access-Control-Allow-Origin: *`; bounded by EIP-3009 crypto | Accepted (intentional open protocol) | §4 ★; §7 |
 | Unrestricted resource consumption (API4) | `/settle` spam gas drain; serverless cold starts (accepted); LLM pre-charge balance gate (batch-settlement stall; Open, medium); analytics `/hit` request volume (not rate-limited, and **CORS is not the control** — browser-only, and `sendBeacon` sends a simple request with no preflight; accepted, since the consequence is a skewed counter, not cost or exposure); analytics `pages` map cardinality abuse (mitigated via path validation + a 200-entry cap) | Mixed — gas drain and `/hit` volume accepted; balance-gate open; `pages` cardinality mitigated | §4; scw_js/SECURITY.md |
 | Unrestricted access to sensitive business flows (API6) | Deliver-before-payment in the LLM and genimg flows | Open (medium) | scw_js/SECURITY.md |

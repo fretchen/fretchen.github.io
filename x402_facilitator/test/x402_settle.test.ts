@@ -291,4 +291,34 @@ describe("settlePayment — batch-settlement wiring", () => {
       transaction: "",
     });
   });
+
+  it("attributes a payload carrying both authorization shapes to the Permit2 payer", async () => {
+    // The SDK's isPermit2Payload() settles such a payload as Permit2, so the catch path must
+    // read the payer from permit2Authorization.from — not the EIP-3009 field a crafted
+    // payload pairs with it, which would attribute the failure to someone else.
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({ isValid: true, payer: PAYER });
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockImplementation(() => {
+      throw new Error("Transaction failed: insufficient funds for gas");
+    });
+    const exactPayload = {
+      x402Version: 2,
+      accepted: { scheme: "exact", network: "eip155:11155420" },
+      payload: {
+        authorization: { from: PAYER },
+        permit2Authorization: { from: OTHER_SELLER },
+      },
+    };
+
+    const result = await settlePayment(exactPayload, {
+      scheme: "exact",
+      network: "eip155:11155420",
+    });
+
+    expect(result).toMatchObject({
+      success: false,
+      errorReason: "settlement_failed",
+      payer: OTHER_SELLER,
+      transaction: "",
+    });
+  });
 });

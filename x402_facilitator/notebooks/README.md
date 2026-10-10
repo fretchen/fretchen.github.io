@@ -58,8 +58,9 @@ Monerium's sandbox guide names only Sepolia, Chiado and Amoy. Base Sepolia is in
 buyer needs no ETH for EURe: the facilitator submits the permit and the transfer. The seller
 needs a little Base Sepolia ETH for its one EURe `approve()`.
 
-Until the Permit2 change is deployed, run this notebook against a local facilitator
-(`npm run dev`, below); the deployed one refuses Permit2 payments.
+The deployed facilitator (`https://facilitator.fretchen.eu`) accepts Permit2 payments, so
+point the notebook's `FACILITATOR_URL` at it — or run a local facilitator (`npm run dev`,
+below) when testing facilitator changes. The notebook's default stays local.
 
 Deno does not search upward for `.env` by default, so each notebook loads it explicitly:
 `load({ envPath: "../.env", examplePath: null, export: true })`. (`examplePath: null`

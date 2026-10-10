@@ -630,7 +630,10 @@ export async function settlePayment(
     // ("insufficient funds for gas") as the caller's fault.
     const payload = paymentPayload.payload as Record<string, unknown> | undefined;
     // The payer sits at authorization.from (EIP-3009) or permit2Authorization.from (Permit2).
-    const authorization = (payload?.authorization ?? payload?.permit2Authorization) as
+    // Permit2 wins when both shapes are present — the SDK's isPermit2Payload() discriminates
+    // the same way, so a crafted payload settling as Permit2 must be attributed to its payer,
+    // not to the EIP-3009 field paired with it.
+    const authorization = (payload?.permit2Authorization ?? payload?.authorization) as
       | Record<string, unknown>
       | undefined;
     const accepted = paymentPayload.accepted as Record<string, unknown> | undefined;

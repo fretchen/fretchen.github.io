@@ -39,6 +39,13 @@ different `push.default`, could push straight onto `main`. Use
 `git branch --unset-upstream`. Set the correct tracking on first push with
 `git push -u origin <branch>`.
 
+## Planning
+
+Use the **`planner`** skill before implementing any change that will touch more than one file or
+one sitting — it grills the open decisions (proportionality, blast radius, verification) in
+rounds with recommended answers, then writes a decisions-only plan with per-task verification
+commands. Blog posts go to **`blog-planner`** instead; review skills stay read-only.
+
 ## Code Review
 
 Use the **`code-review`** skill to review a change before pushing or merging — it layers

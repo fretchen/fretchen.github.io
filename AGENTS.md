@@ -39,6 +39,14 @@ different `push.default`, could push straight onto `main`. Use
 `git branch --unset-upstream`. Set the correct tracking on first push with
 `git push -u origin <branch>`.
 
+## Code Review
+
+Use the **`code-review`** skill to review a change before pushing or merging — it layers
+universal checks over this repo's own conventions (the nested `AGENTS.md` files and the
+skills) and emits a graded inline report with a machine-readable gate verdict. The skill is
+vendored in `.agents/skills/code-review/` (MIT; upstream origin and pin are in its SKILL.md) —
+keep it out of `skills-lock.json`, which is only for CLI-managed skills.
+
 ## Architecture Patterns
 
 ### Smart Contracts (`eth/`)

@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Repo instructions for coding agents working in this repository.
 
 ## Repository Overview
 
@@ -8,8 +8,8 @@ Monorepo for a blockchain-based AI service platform. Each subdirectory is an ind
 
 | Directory             | Purpose                                                     | Further reading                                                  |
 | --------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------- |
-| `website/`            | Frontend (Vike SSR + React 19 + Panda CSS)                  | [`README`](website/README.md) · [`CLAUDE.md`](website/CLAUDE.md) |
-| `eth/`                | Solidity smart contracts (Hardhat, Optimism L2)             | [`README`](eth/README.md) · [`CLAUDE.md`](eth/CLAUDE.md)         |
+| `website/`            | Frontend (Vike SSR + React 19 + Panda CSS)                  | [`README`](website/README.md) · [`AGENTS.md`](website/AGENTS.md) |
+| `eth/`                | Solidity smart contracts (Hardhat, Optimism L2)             | [`README`](eth/README.md) · [`AGENTS.md`](eth/AGENTS.md)         |
 | `scw_js/`             | Serverless backend (Scaleway Functions, AI image gen + LLM) | [`README`](scw_js/README.md)                                     |
 | `x402_facilitator/`   | EIP-3009 USDC payment facilitator (Scaleway Functions)      | [`README`](x402_facilitator/README.md)                           |
 | `comment_service/`    | Blog comment backend (Scaleway Functions)                   | [`README`](comment_service/README.md)                            |
@@ -39,6 +39,21 @@ different `push.default`, could push straight onto `main`. Use
 `git branch --unset-upstream`. Set the correct tracking on first push with
 `git push -u origin <branch>`.
 
+## Planning
+
+Use the **`planner`** skill before implementing any change that will touch more than one file or
+one sitting — it grills the open decisions (proportionality, blast radius, verification) in
+rounds with recommended answers, then writes a decisions-only plan with per-task verification
+commands. Blog posts go to **`blog-planner`** instead; review skills stay read-only.
+
+## Code Review
+
+Use the **`code-review`** skill to review a change before pushing or merging — it layers
+universal checks over this repo's own conventions (the nested `AGENTS.md` files and the
+skills) and emits a graded inline report with a machine-readable gate verdict. The skill is
+vendored in `.agents/skills/code-review/` (MIT; upstream origin and pin are in its SKILL.md) —
+keep it out of `skills-lock.json`, which is only for CLI-managed skills.
+
 ## Architecture Patterns
 
 ### Smart Contracts (`eth/`)
@@ -47,7 +62,7 @@ All NFT contracts use the **OpenZeppelin UUPS upgradeable proxy pattern** — ne
 
 Hardhat here uses **Viem, not Ethers** — contract calls return `bigint`.
 
-Repo-specific conventions (the two test categories, the deploy-script export guard, the storage-layout rule) are in [`eth/CLAUDE.md`](eth/CLAUDE.md).
+Repo-specific conventions (the two test categories, the deploy-script export guard, the storage-layout rule) are in [`eth/AGENTS.md`](eth/AGENTS.md).
 
 ### Serverless (`scw_js/`, `x402_facilitator/`, `comment_service/`, `analytics/`)
 
@@ -69,20 +84,21 @@ Two things that silently break payments if you get them wrong, both documented i
 
 **Vike SSR** with file-based routing: pages in `pages/`, renderer in `renderer/`. Client-only components need `{ ssr: false }` in imports.
 
-**Panda CSS** compiles `css({})` at build time, so several ways of writing a style fail _silently_ — the component renders, the tests pass, only the CSS is missing. The rules are in [`website/CLAUDE.md`](website/CLAUDE.md), enforced by `website/test/styleConventions.test.ts`. The design system itself — colours and their jobs, the button recipe, the scales — is in [`website/README.md`](website/README.md); read it before adding any style.
+**Panda CSS** compiles `css({})` at build time, so several ways of writing a style fail _silently_ — the component renders, the tests pass, only the CSS is missing. The rules are in [`website/AGENTS.md`](website/AGENTS.md), enforced by `website/test/styleConventions.test.ts`. The design system itself — colours and their jobs, the button recipe, the scales — is in [`website/README.md`](website/README.md); read it before adding any style.
 
 **Wagmi v2 + TanStack Query** for blockchain state; hooks are auto-generated from `wagmi.config.ts`, not hand-written.
 
 ## Security
 
-See [`.github/THREAT_MODEL.md`](.github/THREAT_MODEL.md) for the full asset inventory, blast radius, and trust boundaries, and [`eth/SECURITY.md`](eth/SECURITY.md) for contract-level findings. Use the **`cve-triage`** skill to evaluate open Dependabot alerts against the threat model; the criteria are in [`.github/CVE_TRIAGE.md`](.github/CVE_TRIAGE.md).
+See [`.github/THREAT_MODEL.md`](.github/THREAT_MODEL.md) for the full asset inventory, blast radius, and trust boundaries, and [`eth/SECURITY.md`](eth/SECURITY.md) for contract-level findings. Use the **`cve-triage`** skill to evaluate open Dependabot alerts against the threat model; the criteria are in [`.github/CVE_TRIAGE.md`](.github/CVE_TRIAGE.md). Use the **`security-review`** skill for periodic deep audits of the agent and API layers — it operationalizes the threat model's review cadence with OWASP secure-agent-playbook procedures, vendored under `.agents/skills/security-review/` (CC-BY-4.0; keep it out of `skills-lock.json`).
 
 **Key hierarchy** (highest-value first):
 
-- `CONTRACT_OWNER_PRIVATE_KEY` (Hardhat keystore) — dedicated EOA `0x1af51D…fBB20`, controls every upgradeable contract. Never use it for anything else.
+- `CONTRACT_OWNER_PRIVATE_KEY` (Hardhat keystore) — dedicated EOA `0x1af51D…fBB20`, controls every upgradeable contract and owns the three ERC-8004 agent identities (Base). Never use it for anything else.
 - `SEPOLIA_PRIVATE_KEY` (Hardhat keystore) — deployment/script signing key `0x073f26…`. Does NOT own contracts.
 - Agent wallet `0xAAEBC1…` — backend-only, whitelisted on GenImNFTv4 via `authorizeAgentWallet()`.
 - Facilitator wallet — stored as a Scaleway secret, receives USDC fees only.
+- Receiver-authorizer key (`RECEIVER_AUTHORIZER_PRIVATE_KEY`, scw_js Scaleway secret) — signs batch-settlement channel-config and refund authorizations for the `/assistent` sellers; never sends transactions. Compromise means revenue denial (early refunds, stalled claims), not fund redirection.
 
 Rules that apply everywhere:
 

@@ -43,6 +43,7 @@ import type { ScwEvent } from "./types.js";
 import openapiSpec from "./openapi.genimg.json" with { type: "json" };
 import { faviconBase64, faviconContentType } from "./favicon.js";
 import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
+import { AGENT_REGISTRATION_PATH, buildAgentRegistration } from "./agent_registration.js";
 import { logger } from "./logger.js";
 import { offeredStablecoins, resolvePaidStablecoin, type PriceList } from "./stablecoin_pricing.js";
 
@@ -344,6 +345,22 @@ async function handle(
     return { statusCode: 200, headers: CORS_HEADERS, body: "" };
   }
 
+  if (
+    (event.httpMethod === "GET" || event.httpMethod === "HEAD") &&
+    (event.path ?? "").replace(/^\/+/, "") === AGENT_REGISTRATION_PATH
+  ) {
+    return {
+      statusCode: 200,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      body:
+        event.httpMethod === "HEAD"
+          ? ""
+          : JSON.stringify(
+              buildAgentRegistration(openapiSpec, "genimg", process.env.NFT_WALLET_PUBLIC_KEY),
+            ),
+    };
+  }
+
   if (event.httpMethod === "GET" && (event.path ?? "").replace(/^\/+/, "") === "openapi.json") {
     return {
       statusCode: 200,
@@ -400,7 +417,7 @@ async function handle(
     account = privateKeyToAccount(loadPrivateKey("NFT_WALLET_PRIVATE_KEY"));
   } catch (err) {
     // Every request fails identically until this is fixed — see
-    // observability/alerts/services.yaml's PaidPathBroken, which this phrase is matched by.
+    // observability/alerts/services.yaml's ServicesNeedAttention (paid-path branch), which matches this phrase.
     logger.error({ err }, "NFT_WALLET_PRIVATE_KEY not configured or invalid");
     return errorResponse(500, `Server configuration error: ${(err as Error).message}`);
   }
@@ -518,8 +535,7 @@ async function handle(
   // Price the stablecoin the buyer chose from the 402, not a fixed one: the requirements below
   // must match its `accepted` entry, or verify rejects the payment.
   const accepted = (paymentPayload as Record<string, unknown>)?.["accepted"] as
-    | Record<string, unknown>
-    | undefined;
+    Record<string, unknown> | undefined;
   const coin = resolvePaidStablecoin(clientNetwork!, accepted?.["asset"]);
   if (!coin) {
     logger.warn({ clientNetwork, asset: accepted?.["asset"] }, "Payment asset not offered");
@@ -552,8 +568,8 @@ async function handle(
       paymentRequirements,
     );
   } catch (error) {
-    // Our call to the facilitator threw — see observability/alerts/services.yaml's
-    // SellerPaymentFailing, which this phrase (shared with llmx402/searchapi) is matched by.
+    // Our call to the facilitator threw — see observability/alerts/services.yaml's ServicesNeedAttention
+    // (seller-payment branch), which matches this phrase (shared with llmx402/searchapi).
     logger.error({ err: error }, "Payment verification error");
     return paymentError("facilitator_error", { details: (error as Error).message });
   }
@@ -601,8 +617,8 @@ async function handle(
     );
 
     if (!preFlightResult.success) {
-      // Our wallet or our RPC, never the caller's — see observability/alerts/services.yaml's
-      // PaidPathBroken.
+      // Our wallet or our RPC, never the caller's — see
+      // observability/alerts/services.yaml's ServicesNeedAttention (paid-path branch).
       logger.error(
         { reason: preFlightResult.error, details: preFlightResult.details },
         "Pre-flight check failed",
@@ -642,12 +658,14 @@ async function handle(
         paymentRequirements,
       );
     } catch (error) {
-      // See SellerPaymentFailing — same phrase as llmx402/searchapi's settle-call catch.
+      // See ServicesNeedAttention's seller-payment branch — same phrase as llmx402/searchapi's
+      // settle-call catch.
       logger.error({ err: error }, "Settlement error");
       return paymentError("settlement_failed", { details: (error as Error).message });
     }
     if (!settlement.success) {
-      // See SellerPaymentFailing — same phrase llmx402/searchapi use for a rejected settlement.
+      // See ServicesNeedAttention's seller-payment branch — same phrase llmx402/searchapi use for
+      // a rejected settlement.
       logger.error({ settlement }, "Settlement failed");
       return paymentError("settlement_failed", { details: settlement.errorReason });
     }
@@ -681,7 +699,7 @@ async function handle(
       // The payment HAS settled by this point — settlement deliberately precedes the mint, see
       // above — so the settlement headers are attached here too. The caller paid for a
       // generation they received; what they did not get is the NFT. See
-      // observability/alerts/services.yaml's PaidButUndelivered.
+      // observability/alerts/services.yaml's ServicesNeedAttention (paid-but-undelivered branch).
       logger.error(
         { err: mintError, payer: clientAddress, network: clientNetwork },
         "Mint failed after successful generation",
@@ -728,85 +746,8 @@ async function handle(
     };
   } catch (error) {
     // The outer catch: a bug, an upstream nobody has a rule for yet, or S3 failing. See
-    // observability/alerts/services.yaml's ServiceUnhandledError.
+    // observability/alerts/services.yaml's ServicesNeedAttention (unhandled-error branch).
     logger.error({ err: error }, "Error during operation");
     return errorResponse(500, `Operation failed: ${(error as Error).message}`);
   }
-}
-
-if (process.env.NODE_ENV === "test" && !process.env.CI) {
-  import("dotenv").then((dotenv) => {
-    dotenv.config();
-    import("fastify").then((fastifyModule) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const fastify = (fastifyModule.default as any)({ bodyLimit: 10 * 1024 * 1024 });
-
-      import("@fastify/cors").then((corsModule) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        fastify.register((corsModule as any).default, {
-          origin: true,
-          methods: ["GET", "POST", "OPTIONS"],
-          allowedHeaders: "*",
-          exposedHeaders: ["Payment-Required", "PAYMENT-REQUIRED", "X-Payment", "PAYMENT-RESPONSE"],
-        });
-
-        import("@fastify/url-data").then((urlDataModule) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          fastify.register((urlDataModule as any).default);
-
-          fastify.addContentTypeParser(
-            "text/json",
-            { parseAs: "string" },
-            fastify.defaultTextParser,
-          );
-          fastify.addContentTypeParser(
-            "application/x-www-form-urlencoded",
-            { parseAs: "string" },
-            fastify.defaultTextParser,
-          );
-          fastify.addContentTypeParser(
-            "application/json",
-            { parseAs: "string" },
-            fastify.defaultTextParser,
-          );
-
-          fastify.route({
-            method: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-            url: "/*",
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            handler: async (request: any, reply: any) => {
-              try {
-                const event: ScwEvent = {
-                  httpMethod: request.method,
-                  headers: request.headers,
-                  body: request.body,
-                  path: request.url,
-                  queryStringParameters: request.query,
-                };
-                const result = await handle(event, {});
-                reply.status(result.statusCode ?? 200);
-                for (const [key, value] of Object.entries(result.headers ?? {})) {
-                  reply.header(key, value);
-                }
-                return result.body;
-              } catch (error) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                reply.status(500).send({ error: (error as any).message });
-              }
-            },
-          });
-
-          fastify.listen({ port: 8082, host: "0.0.0.0" }, (err: unknown, address: string) => {
-            if (err) {
-              // Local dev only — never deployed. Same phrase the other packages' local server
-              // bootstraps use; see EXEMPT in test/alert_coverage.test.ts.
-              logger.error({ err }, "Error starting local server");
-              process.exit(1);
-            }
-            logger.info({ address }, "Local server listening");
-          });
-        });
-      });
-    });
-  });
 }

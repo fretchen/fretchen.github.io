@@ -1,4 +1,5 @@
 ---
+name: "blog-planner"
 description: "Use when: planning a new blog post, outlining blog content, drafting MDX blog posts, creating blog structure, writing blog articles, analyzing existing posts for style consistency. Handles blog post planning and implementation for the website/blog/ directory."
 allowed-tools: [Read, Edit, Write, Bash, WebFetch, WebSearch, TodoWrite, Agent]
 ---

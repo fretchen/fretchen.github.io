@@ -36,11 +36,11 @@
   "license": "MIT",
   "dependencies": {
     "@fretchen/chain-utils": "file:../shared/chain-utils",
-    "@x402/core": "^2.26.0",
-    "@x402/evm": "^2.26.0",
+    "@x402/core": "^2.28.0",
+    "@x402/evm": "^2.28.0",
     "dotenv": "^16.0.0",
     "pino": "^9.0.0",
-    "viem": "^2.54.2",
+    "viem": "^2.57.4",
     "zod": "^4.5.4"
   },
   "devDependencies": {

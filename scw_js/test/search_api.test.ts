@@ -432,6 +432,25 @@ describe("discovery", () => {
     return { httpMethod: method, path: `/${path}`, queryStringParameters: {}, headers };
   }
 
+  test("serves the ERC-8004 registration file, unpaid, and an empty body on HEAD", async () => {
+    const res = await handle(discoveryEvent("GET", ".well-known/agent-registration.json"), {});
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["Content-Type"]).toBe("application/json");
+    expect(res.headers["Access-Control-Allow-Origin"]).toBe("*");
+    const file = JSON.parse(res.body) as { services: { name: string; endpoint: string }[] };
+    expect(file.services[0].endpoint).toBe("https://web-agent.fretchen.eu/openapi.json");
+    // The offchain agentWallet is the same payTo the 402 quotes.
+    expect(file.services).toContainEqual({
+      name: "agentWallet",
+      endpoint: `eip155:8453:${RECEIVER}`,
+    });
+    expect(mockCreateBatchSettlementPaymentRequirements).not.toHaveBeenCalled();
+
+    const head = await handle(discoveryEvent("HEAD", ".well-known/agent-registration.json"), {});
+    expect(head.statusCode).toBe(200);
+    expect(head.body).toBe("");
+  });
+
   test("serves the generated spec, unpaid and unauthenticated", async () => {
     const res = await handle(discoveryEvent("GET", "openapi.json"), {});
 
@@ -692,6 +711,32 @@ describe("the paid path", () => {
     expect(res.statusCode).toBe(400);
     expect(mockSettlePayment).not.toHaveBeenCalled();
     expect(mockReleaseLock).toHaveBeenCalledOnce();
+  });
+
+  /**
+   * A page that never answers is the caller's choice of url, not our failure: the caller gets a
+   * 400 that names the host, is not charged, and nothing pages us. On 2026-10-04 this was a 500
+   * "Internal server error" and a ServicesNeedAttention alert.
+   */
+  test("explains a page that timed out, charges nothing, and does not alert", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new DOMException("The operation timed out.", "TimeoutError")),
+    );
+    // The instance search_api.ts logs through: beforeEach reset the registry before importing it.
+    const { logger } = await import("../logger.js");
+    const errorLog = vi.spyOn(logger, "error");
+
+    const res = await handle(
+      makeEvent("GET", "fetch", { auth: null, query: { url: "https://slow.example/" } }),
+      {},
+    );
+
+    expect(res.statusCode).toBe(400);
+    expect(JSON.parse(res.body).error).toBe("Could not reach slow.example: no response within 8 s");
+    expect(mockSettlePayment).not.toHaveBeenCalled();
+    expect(mockReleaseLock).toHaveBeenCalledOnce();
+    expect(errorLog).not.toHaveBeenCalled();
   });
 
   test("does not release a lock on success", async () => {

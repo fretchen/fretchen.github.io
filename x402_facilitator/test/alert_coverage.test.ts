@@ -63,8 +63,11 @@ describe("facilitator alert coverage", () => {
     expect(messages.length).toBeGreaterThanOrEqual(8);
   });
 
+  // A sanity check that the parser found anything, not a rule count: the rules are deliberately
+  // few (each is billed — see observability/test/alerts_budget.test.ts), so a new phrase extends an
+  // existing rule's alternation rather than adding a rule.
   it("found the facilitator/walletreportcron alert rules", () => {
-    expect(facilitatorRules.length).toBeGreaterThanOrEqual(3);
+    expect(facilitatorRules.length).toBeGreaterThan(0);
   });
 
   it("every EXEMPT entry still names a real logger.error message", () => {

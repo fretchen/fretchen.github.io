@@ -16,8 +16,11 @@ import { token } from "../styled-system/tokens";
  *      through as a literal string, so the browser drops the whole declaration.
  *      Symptom: `.c_token\(colors\.primary\) { color: colors.primary }`.
  *
- *   2. A JS identifier used as a value inside `css({})`. Panda extracts `css()`
- *      arguments statically, so a variable produces NO CSS at all.
+ *   2. A JS identifier used as a value inside `css({})`. The v2 engine traces local
+ *      constants and named imports, but a traced raw value emits a literal with no
+ *      var(--colors-*) — off-token — and a value that only exists at runtime (a
+ *      prop, state, a default or namespace import) still produces NO CSS at all.
+ *      Token names are the convention either way; see AGENTS.md rule 1.
  *
  *   3. A multi-value spacing shorthand written with bare grid numbers. Panda
  *      resolves spacing tokens for single values only: `padding: "4"` is 16px,
@@ -116,7 +119,7 @@ describe("style conventions", () => {
     }
     expect(
       offenders,
-      "Panda extracts css() statically — a JS constant here produces no CSS. Use a token name.",
+      "A JS constant as a css() value goes off-token (v2 traces it to a raw literal) or produces no CSS at all (a runtime value). Use a token name.",
     ).toEqual([]);
   });
 

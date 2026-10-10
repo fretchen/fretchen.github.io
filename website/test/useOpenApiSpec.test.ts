@@ -18,7 +18,7 @@ describe("useOpenApiSpec", () => {
     const doc = { "x-service-type": "llm/v1", components: { schemas: { A: { type: "object" } } } };
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => ({ ok: true, status: 200, json: async () => doc })) as unknown as typeof fetch,
+      vi.fn(async () => ({ ok: true, status: 200, json: async () => doc })),
     );
 
     const { result } = renderHookWithQuery(() => useOpenApiSpec(SPEC_URL));
@@ -31,7 +31,7 @@ describe("useOpenApiSpec", () => {
   it("surfaces an error for a non-OK response", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => ({ ok: false, status: 503, json: async () => ({}) })) as unknown as typeof fetch,
+      vi.fn(async () => ({ ok: false, status: 503, json: async () => ({}) })),
     );
 
     const { result } = renderHookWithQuery(() => useOpenApiSpec(SPEC_URL));
@@ -46,7 +46,7 @@ describe("useOpenApiSpec", () => {
       "fetch",
       vi.fn(async () => {
         throw new TypeError("Failed to fetch");
-      }) as unknown as typeof fetch,
+      }),
     );
 
     const { result } = renderHookWithQuery(() => useOpenApiSpec(SPEC_URL));
@@ -65,7 +65,7 @@ describe("useOpenApiSpec", () => {
         json: async () => {
           throw new SyntaxError("Unexpected token < in JSON");
         },
-      })) as unknown as typeof fetch,
+      })),
     );
 
     const { result } = renderHookWithQuery(() => useOpenApiSpec(SPEC_URL));

@@ -27,7 +27,8 @@ describe("territory rule CSS", () => {
   beforeAll(() => {
     const outfile = join(mkdtempSync(join(tmpdir(), "panda-cssgen-")), "styles.css");
     // No `--minimal`: it skips static CSS generation, which is the thing under test.
-    execFileSync("npx", ["panda", "cssgen", "-o", outfile, "--silent"], {
+    // `--log-level silent` is the v2 spelling of v1's `--silent`.
+    execFileSync("npx", ["panda", "cssgen", "-o", outfile, "--log-level", "silent"], {
       cwd: join(__dirname, ".."),
       stdio: "pipe",
     });

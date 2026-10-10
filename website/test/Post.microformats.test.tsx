@@ -67,7 +67,7 @@ describe("Post microformats", () => {
     __resetPostModuleCacheForTests();
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       json: async () => ({ children: [] }),
-    } as Response);
+    });
   });
 
   const ssr = (props: React.ComponentProps<typeof Post>) =>

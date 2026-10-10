@@ -259,6 +259,30 @@ describe("sc_llm_x402", () => {
       expect(body.paths["/"].post.responses["402"]).toBeDefined();
     });
 
+    it("serves the ERC-8004 registration file on GET and HEAD /.well-known/agent-registration.json", async () => {
+      const res = await handle(
+        makeEvent({ httpMethod: "GET", path: "/.well-known/agent-registration.json" }) as never,
+        {},
+      );
+      expect(res.statusCode).toBe(200);
+      expect(res.headers["Content-Type"]).toBe("application/json");
+      expect(res.headers["Access-Control-Allow-Origin"]).toBe("*");
+      expect(JSON.parse(res.body).services[0].endpoint).toBe(
+        "https://llm-agent.fretchen.eu/openapi.json",
+      );
+      expect(JSON.parse(res.body).services).toContainEqual({
+        name: "agentWallet",
+        endpoint: `eip155:8453:${VALID_ADDRESS}`,
+      });
+
+      const head = await handle(
+        makeEvent({ httpMethod: "HEAD", path: "/.well-known/agent-registration.json" }) as never,
+        {},
+      );
+      expect(head.statusCode).toBe(200);
+      expect(head.body).toBe("");
+    });
+
     it("serves openapi.json without a leading slash in the path too", async () => {
       const res = await handle(makeEvent({ httpMethod: "GET", path: "openapi.json" }) as never, {});
       expect(res.statusCode).toBe(200);

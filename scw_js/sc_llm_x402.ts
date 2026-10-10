@@ -35,6 +35,7 @@ import type { ScwEvent } from "./types.js";
 import openapiSpec from "./openapi.llm.json" with { type: "json" };
 import { faviconBase64, faviconContentType } from "./favicon.js";
 import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
+import { AGENT_REGISTRATION_PATH, buildAgentRegistration } from "./agent_registration.js";
 
 export type { ScwEvent };
 
@@ -124,6 +125,22 @@ function isHexAddress(addr: unknown): addr is `0x${string}` {
 export async function handle(event: ScwEvent, _context: unknown): Promise<ScwResponse> {
   if (event.httpMethod === "OPTIONS") {
     return { statusCode: 200, headers: CORS_HEADERS, body: "" };
+  }
+
+  if (
+    (event.httpMethod === "GET" || event.httpMethod === "HEAD") &&
+    (event.path ?? "").replace(/^\/+/, "") === AGENT_REGISTRATION_PATH
+  ) {
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      body:
+        event.httpMethod === "HEAD"
+          ? ""
+          : JSON.stringify(
+              buildAgentRegistration(openapiSpec, "llm", process.env.NFT_WALLET_PUBLIC_KEY),
+            ),
+    };
   }
 
   if (event.httpMethod === "GET" && (event.path ?? "").replace(/^\/+/, "") === "openapi.json") {
@@ -381,8 +398,7 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
   // Price the stablecoin the buyer's channel is in, not a fixed one: the requirements below must
   // match the 402 entry the client signed its channelConfig against.
   const accepted = (paymentPayload as Record<string, unknown>)["accepted"] as
-    | Record<string, unknown>
-    | undefined;
+    Record<string, unknown> | undefined;
   const coin = resolvePaidStablecoin(clientNetwork, accepted?.["asset"]);
   if (!coin) {
     logger.warn({ clientNetwork, asset: accepted?.["asset"] }, "Payment asset not offered");
@@ -535,71 +551,4 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     logger.error({ err: error }, "Settlement error");
     return errorResponse(402, `Settlement failed: ${(error as Error).message}`);
   }
-}
-
-if (process.env.NODE_ENV === "test" && !process.env.CI) {
-  import("dotenv").then((dotenv) => {
-    dotenv.config();
-    import("fastify").then((fastifyModule) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const fastify = (fastifyModule.default as any)({ bodyLimit: 10 * 1024 * 1024 });
-
-      import("@fastify/cors").then((corsModule) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        fastify.register((corsModule as any).default, {
-          origin: true,
-          methods: ["GET", "POST", "OPTIONS"],
-          allowedHeaders: "*",
-          exposedHeaders: ["Payment-Required", "PAYMENT-REQUIRED", "X-Payment", "PAYMENT-RESPONSE"],
-        });
-
-        import("@fastify/url-data").then((urlDataModule) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          fastify.register((urlDataModule as any).default);
-
-          fastify.addContentTypeParser(
-            "application/json",
-            { parseAs: "string" },
-            fastify.defaultTextParser,
-          );
-
-          fastify.route({
-            method: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-            url: "/*",
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            handler: async (request: any, reply: any) => {
-              try {
-                const event: ScwEvent = {
-                  httpMethod: request.method,
-                  headers: request.headers,
-                  body: request.body,
-                  path: request.url,
-                  queryStringParameters: request.query,
-                };
-                const result = await handle(event, {});
-                reply.status(result.statusCode ?? 200);
-                for (const [key, value] of Object.entries(result.headers ?? {})) {
-                  reply.header(key, value);
-                }
-                return result.body;
-              } catch (error) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                reply.status(500).send({ error: (error as any).message });
-              }
-            },
-          });
-
-          fastify.listen({ port: 8085, host: "0.0.0.0" }, (err: unknown, address: string) => {
-            if (err) {
-              // Local dev only — never deployed. Same phrase the other packages' local server
-              // bootstraps use; see EXEMPT in test/alert_coverage.test.ts.
-              logger.error({ err }, "Error starting local server");
-              process.exit(1);
-            }
-            logger.info({ address }, "Local server listening");
-          });
-        });
-      });
-    });
-  });
 }

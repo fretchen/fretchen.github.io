@@ -111,7 +111,13 @@ describe("ImageGenerator Component", () => {
       );
 
       vi.mocked(useConnect).mockReturnValue(
-        buildConnectData({ connect: mockConnect, connectors: [{ id: "mockConnector", name: "Mock Wallet" }] }),
+        // A discovered browser wallet (type "injected"): quick-connect targets the
+        // installed wallet, which is available immediately — the WalletConnect
+        // fallback only applies once EIP-6963 discovery has settled.
+        buildConnectData({
+          connect: mockConnect,
+          connectors: [{ id: "mockConnector", name: "Mock Wallet", type: "injected" }],
+        }),
       );
 
       renderWithQuery(<ImageGenerator />);
@@ -134,7 +140,7 @@ describe("ImageGenerator Component", () => {
       // Mock connected wallet to ensure expanded state
       vi.mocked(useAccount).mockReturnValue(
         buildAccountData({
-          address: "0x1234567890123456789012345678901234567890" as `0x${string}`,
+          address: "0x1234567890123456789012345678901234567890",
           isConnected: true,
           status: "connected",
         }),

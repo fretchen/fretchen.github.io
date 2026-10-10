@@ -159,6 +159,9 @@ import claimsFixture from "./fixtures/bundestakt/claims.json";
 import { OWNER_SCOPES } from "../utils/getChain";
 import { PaymentError } from "../utils/x402PaidFetch";
 import { MAX_HOPS } from "../utils/toolLoop";
+import { toolContractPrompt, teenPrompt, researchPrompt } from "../utils/prompts";
+import { formatLanguageContext } from "../utils/languageContext";
+import { usePageContext } from "vike-react/usePageContext";
 
 /** The first wallet with analytics scope — the scope `get_analytics` is gated on. */
 const OWNER_ADDRESS = OWNER_SCOPES.analytics[0];
@@ -274,7 +277,9 @@ describe("AssistantChat", () => {
 
     const prompt = mockSendMessage.mock.calls[0][0] as { role: string; content: string }[];
     expect(prompt[0].role).toBe("system");
-    expect(prompt[0].content).toContain("assistent.systemPrompt");
+    // Byte-equality against the loaded prompt body: stronger than a marker string — the
+    // whole tool contract must ship, not a fragment of it.
+    expect(prompt[0].content).toContain(toolContractPrompt.body);
     expect(prompt[prompt.length - 1]).toEqual({ role: "user", content: "What is the capital of France?" });
   });
 
@@ -292,6 +297,39 @@ describe("AssistantChat", () => {
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     });
     expect(prompt[0].content).toContain(today);
+  });
+
+  // The German locale gets one injected sentence instead of translated prompts
+  // (utils/languageContext.ts) — the prompts themselves are English-only by design.
+  it("appends the German-answer instruction only for the German locale", async () => {
+    // mockReturnValue, not Once: AssistantChat re-renders before the send (agent-card probe,
+    // connector discovery), and the send closure captures the LAST render's locale — a
+    // once-only return would be consumed by the first render and lost by the click.
+    // mockReset (vitest.config.ts) restores the default page context before the next test.
+    // A partial like setup.ts's own factory — the mock never validates the full
+    // PageContext shape, so only the fields useCurrentLocale reads are needed here.
+    vi.mocked(usePageContext).mockReturnValue({
+      urlPathname: "/de/test",
+      routeParams: { id: "0" },
+      locale: "de",
+    } as unknown as ReturnType<typeof usePageContext>);
+    renderWithQuery(<AssistantChat />);
+    sendUserMessage("Hallo");
+
+    await waitFor(() => expect(mockSendMessage).toHaveBeenCalledOnce());
+    const prompt = mockSendMessage.mock.calls[0][0] as { role: string; content: string }[];
+    expect(prompt[0].content).toContain(formatLanguageContext("de")!);
+    // One canonical prompt for both locales — the tool contract is the English body.
+    expect(prompt[0].content).toContain(toolContractPrompt.body);
+  });
+
+  it("appends no language instruction for the default locale", async () => {
+    renderWithQuery(<AssistantChat />);
+    sendUserMessage("Hello");
+
+    await waitFor(() => expect(mockSendMessage).toHaveBeenCalledOnce());
+    const prompt = mockSendMessage.mock.calls[0][0] as { role: string; content: string }[];
+    expect(prompt[0].content).not.toContain("Answer in German by default");
   });
 
   it("renders the assistant's reply as a message bubble", async () => {
@@ -1044,7 +1082,7 @@ describe("AssistantChat", () => {
 
         await waitFor(() => expect(mockSendMessage).toHaveBeenCalledOnce());
         expect(offeredNames(0)).toContain("note_findings");
-        expect(systemPrompt(0)).toContain("assistent.systemPromptResearch");
+        expect(systemPrompt(0)).toContain(researchPrompt.body);
       });
 
       it("offers neither once both web tools are switched off", async () => {
@@ -1054,7 +1092,7 @@ describe("AssistantChat", () => {
 
         await waitFor(() => expect(mockSendMessage).toHaveBeenCalledOnce());
         expect(offeredNames(0)).not.toContain("note_findings");
-        expect(systemPrompt(0)).not.toContain("assistent.systemPromptResearch");
+        expect(systemPrompt(0)).not.toContain(researchPrompt.body);
       });
 
       it("puts what each answer charged under it, and a chat total in the sidebar", async () => {

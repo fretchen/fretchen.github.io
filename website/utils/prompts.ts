@@ -50,7 +50,10 @@ export function parsePromptFile(raw: string, source: string): PromptFile {
     if (!value.trim()) throw new Error(`Prompt file ${source}: empty ${key}`);
   }
 
-  const body = lines.slice(closing + 1).join("\n").trim();
+  const body = lines
+    .slice(closing + 1)
+    .join("\n")
+    .trim();
   if (!body) throw new Error(`Prompt file ${source}: empty body`);
 
   return { name: fields.get("name")!, description: fields.get("description")!, body };

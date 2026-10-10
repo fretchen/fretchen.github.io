@@ -39,17 +39,11 @@ describe("prompt files", () => {
   });
 
   it("throws on malformed frontmatter, naming the file", () => {
-    expect(() => parsePromptFile("no frontmatter at all", "prompts/broken.md")).toThrow(
-      /prompts\/broken\.md/,
-    );
+    expect(() => parsePromptFile("no frontmatter at all", "prompts/broken.md")).toThrow(/prompts\/broken\.md/);
     expect(() => parsePromptFile("---\nname: x\n---\n\nbody", "prompts/broken.md")).toThrow(
       /expected exactly name and description/,
     );
-    expect(() => parsePromptFile("---\nname: x\ndescription: y\n", "prompts/broken.md")).toThrow(
-      /missing closing ---/,
-    );
-    expect(() => parsePromptFile("---\nname: x\ndescription: y\n---\n\n", "prompts/broken.md")).toThrow(
-      /empty body/,
-    );
+    expect(() => parsePromptFile("---\nname: x\ndescription: y\n", "prompts/broken.md")).toThrow(/missing closing ---/);
+    expect(() => parsePromptFile("---\nname: x\ndescription: y\n---\n\n", "prompts/broken.md")).toThrow(/empty body/);
   });
 });

@@ -1,0 +1,5 @@
+# Unversioned build/test output — never format, and exclude from any in-package
+# Prettier invocation (the root .prettierignore covers repo-root runs only).
+build/
+coverage/
+dist/

@@ -21,5 +21,8 @@
       "@utils/*": ["./utils/*"]
     }
   },
-  "exclude": ["dist"]
+  // build/ and coverage/ are unversioned output of `npm run build` / `npm test`. With no
+  // "include", tsc would otherwise pull them into the program — a stale build/ then makes
+  // typed linting report phantom `error` types (e.g. on the PageContext augmentation).
+  "exclude": ["dist", "build", "coverage"]
 }

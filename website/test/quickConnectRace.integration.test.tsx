@@ -67,104 +67,96 @@ function installFakeBrowserWallet() {
 }
 
 describe("quick-connect discovery race (real wagmi)", () => {
-  it(
-    "ignores a race-window click and connects the discovered wallet afterwards",
-    async () => {
-      installFakeBrowserWallet();
-      const { config } = await import("../wagmi.config");
-      const { WagmiProvider, useAccount, useConnect } = await import("wagmi");
-      const { useWalletConnection } = await import("../hooks/useWalletConnection");
-      const { QueryClient, QueryClientProvider } = await import("@tanstack/react-query");
+  it("ignores a race-window click and connects the discovered wallet afterwards", async () => {
+    installFakeBrowserWallet();
+    const { config } = await import("../wagmi.config");
+    const { WagmiProvider, useAccount, useConnect } = await import("wagmi");
+    const { useWalletConnection } = await import("../hooks/useWalletConnection");
+    const { QueryClient, QueryClientProvider } = await import("@tanstack/react-query");
 
-      const log: string[] = [];
-      // Set by the harness below: a spy on the WalletConnect connector's own
-      // connect() method, hoisted out so the assertions can read it.
-      let wcConnectSpy: MockInstance | null = null;
+    const log: string[] = [];
+    // Set by the harness below: a spy on the WalletConnect connector's own
+    // connect() method, hoisted out so the assertions can read it.
+    let wcConnectSpy: MockInstance | null = null;
 
-      function Harness() {
-        const { connector, isConnected } = useAccount();
-        const { connectors } = useConnect();
-        const { connectWallet } = useWalletConnection();
-        const phase = useRef(0);
+    function Harness() {
+      const { connector, isConnected } = useAccount();
+      const { connectors } = useConnect();
+      const { connectWallet } = useWalletConnection();
+      const phase = useRef(0);
 
-        // Spy on the WalletConnect connector's own connect() method BEFORE any
-        // quick-connect attempt. This is the one fully deterministic observable for
-        // the regression: a wrong pick calls connector.connect() synchronously, while
-        // React-level pending state is swallowed by act batching and store status
-        // transitions also fire for the on-mount reconnect.
-        useEffect(() => {
-          const wc = connectors.find((c) => c.type === "walletConnect");
-          if (wc) wcConnectSpy = vi.spyOn(wc, "connect");
-          // eslint-disable-next-line react-hooks/exhaustive-deps
-        }, []);
+      // Spy on the WalletConnect connector's own connect() method BEFORE any
+      // quick-connect attempt. This is the one fully deterministic observable for
+      // the regression: a wrong pick calls connector.connect() synchronously, while
+      // React-level pending state is swallowed by act batching and store status
+      // transitions also fire for the on-mount reconnect.
+      useEffect(() => {
+        const wc = connectors.find((c) => c.type === "walletConnect");
+        if (wc) wcConnectSpy = vi.spyOn(wc, "connect");
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, []);
 
-        // Phase A: runs BEFORE WagmiProvider's Hydrate onMount (child effects fire
-        // before parent effects), i.e. inside the race window.
-        useEffect(() => {
-          if (phase.current !== 0) return;
-          phase.current = 1;
-          log.push(
-            `race-window attempt: connectors=[${connectors.map((c) => `${c.name}[${c.type}]`).join(", ")}]`,
-          );
-          connectWallet("integration-test");
-          // eslint-disable-next-line react-hooks/exhaustive-deps
-        }, []);
+      // Phase A: runs BEFORE WagmiProvider's Hydrate onMount (child effects fire
+      // before parent effects), i.e. inside the race window.
+      useEffect(() => {
+        if (phase.current !== 0) return;
+        phase.current = 1;
+        log.push(`race-window attempt: connectors=[${connectors.map((c) => `${c.name}[${c.type}]`).join(", ")}]`);
+        connectWallet("integration-test");
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, []);
 
-        // Phase B: once the browser wallet has been discovered, connect again.
-        useEffect(() => {
-          if (phase.current !== 1) return;
-          if (!connectors.some((c) => c.type === "injected")) return;
-          phase.current = 2;
-          log.push("post-discovery attempt");
-          connectWallet("integration-test");
-          // eslint-disable-next-line react-hooks/exhaustive-deps
-        }, [connectors]);
+      // Phase B: once the browser wallet has been discovered, connect again.
+      useEffect(() => {
+        if (phase.current !== 1) return;
+        if (!connectors.some((c) => c.type === "injected")) return;
+        phase.current = 2;
+        log.push("post-discovery attempt");
+        connectWallet("integration-test");
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [connectors]);
 
-        useEffect(() => {
-          if (isConnected && connector) {
-            log.push(`connected via ${connector.name}`);
-          }
-        }, [isConnected, connector]);
+      useEffect(() => {
+        if (isConnected && connector) {
+          log.push(`connected via ${connector.name}`);
+        }
+      }, [isConnected, connector]);
 
-        return <div data-testid="log">{JSON.stringify(log)}</div>;
-      }
+      return <div data-testid="log">{JSON.stringify(log)}</div>;
+    }
 
-      render(
-        <QueryClientProvider client={new QueryClient()}>
-          <WagmiProvider config={config}>
-            <Harness />
-          </WagmiProvider>
-        </QueryClientProvider>,
-      );
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <WagmiProvider config={config}>
+          <Harness />
+        </WagmiProvider>
+      </QueryClientProvider>,
+    );
 
-      await waitFor(
-        () => {
-          const lines: string[] = JSON.parse(screen.getByTestId("log").textContent ?? "[]");
-          expect(lines).toContain("connected via Brave Wallet");
-        },
-        { timeout: 15000, interval: 100 },
-      );
+    await waitFor(
+      () => {
+        const lines: string[] = JSON.parse(screen.getByTestId("log").textContent ?? "[]");
+        expect(lines).toContain("connected via Brave Wallet");
+      },
+      { timeout: 15000, interval: 100 },
+    );
 
-      const lines: string[] = JSON.parse(screen.getByTestId("log").textContent ?? "[]");
-      // The race-window attempt saw only WalletConnect in the list…
-      expect(lines[0]).toContain("WalletConnect[walletConnect]");
-      expect(lines[0]).not.toContain("injected");
-      // …and must not have engaged it.
-      expect(lines).not.toContain("connected via WalletConnect");
+    const lines: string[] = JSON.parse(screen.getByTestId("log").textContent ?? "[]");
+    // The race-window attempt saw only WalletConnect in the list…
+    expect(lines[0]).toContain("WalletConnect[walletConnect]");
+    expect(lines[0]).not.toContain("injected");
+    // …and must not have engaged it.
+    expect(lines).not.toContain("connected via WalletConnect");
 
-      // The WalletConnect connector itself was never asked to connect — the spy sits
-      // below wagmi's React layer, so this holds regardless of render timing.
-      expect(wcConnectSpy).not.toBeNull();
-      expect(wcConnectSpy).not.toHaveBeenCalled();
+    // The WalletConnect connector itself was never asked to connect — the spy sits
+    // below wagmi's React layer, so this holds regardless of render timing.
+    expect(wcConnectSpy).not.toBeNull();
+    expect(wcConnectSpy).not.toHaveBeenCalled();
 
-      // The real connect went through the discovered EIP-6963 provider (wagmi asks
-      // for accounts via wallet_requestPermissions when the wallet supports it, and
-      // falls back to eth_requestAccounts otherwise).
-      const grantedAccounts = requests.some(
-        (m) => m === "wallet_requestPermissions" || m === "eth_requestAccounts",
-      );
-      expect(grantedAccounts).toBe(true);
-    },
-    30000,
-  );
+    // The real connect went through the discovered EIP-6963 provider (wagmi asks
+    // for accounts via wallet_requestPermissions when the wallet supports it, and
+    // falls back to eth_requestAccounts otherwise).
+    const grantedAccounts = requests.some((m) => m === "wallet_requestPermissions" || m === "eth_requestAccounts");
+    expect(grantedAccounts).toBe(true);
+  }, 30000);
 });

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { getGenAiNFTAddress, GenImNFTv4ABI, getViemChain } from "@fretchen/chain-utils";
 import { getPublicClient } from "wagmi/actions";
+import type { Chain } from "viem";
 import { config } from "../wagmi.config";
 
 vi.mock("../wagmi.config", () => ({
@@ -29,7 +30,9 @@ describe("Contract Chain Selection", () => {
   it("should use configured chain even when wallet is on different chain", async () => {
     // Use chain-utils pattern
     const network = "eip155:10"; // Optimism mainnet
-    const chain = getViemChain(network);
+    // getViemChain is typed with chain-utils' own viem copy (file: dep dev tree);
+    // wagmi expects this repo's copy — cast across the two identical viem versions.
+    const chain = getViemChain(network) as unknown as Chain;
     const client = getPublicClient({ ...config, chains: [chain] });
     expect(client).toBeDefined();
     if (!client) throw new Error("client should be defined");

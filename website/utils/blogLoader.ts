@@ -3,7 +3,6 @@
  * This replaces the static JSON generation with dynamic loading
  */
 
-import type { ComponentType } from "react";
 import { BlogPost, NFTMetadata } from "../types/BlogPost";
 import { GLOB_REGISTRY, type SupportedDirectory } from "./globRegistry";
 
@@ -173,9 +172,7 @@ export async function loadBlogs(
     try {
       const cleanPath = path.replace(/\?.*$/, "");
 
-      type EagerModule = { default: ComponentType };
-
-      const metadata = extractMetadataFromModule(module as EagerModule, path);
+      const metadata = extractMetadataFromModule(module, path);
       if (!metadata) {
         console.warn(`[BlogLoader] No valid metadata found in ${cleanPath}, skipping`);
         continue;

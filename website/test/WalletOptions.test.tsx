@@ -125,9 +125,9 @@ describe("WalletOptions Component", () => {
   it("prevents hydration mismatch when wallet is connected", async () => {
     vi.mocked(wagmi.useAccount).mockReturnValue(
       buildAccountData({
-        address: "0x1234567890abcdef1234567890abcdef12345678" as `0x${string}`,
+        address: "0x1234567890abcdef1234567890abcdef12345678",
         isConnected: true,
-        addresses: ["0x1234567890abcdef1234567890abcdef12345678" as `0x${string}`],
+        addresses: ["0x1234567890abcdef1234567890abcdef12345678"],
         chain: undefined,
         chainId: undefined,
         connector: undefined,
@@ -150,9 +150,9 @@ describe("WalletOptions Component", () => {
   it("shows ENS name when available after mount", async () => {
     vi.mocked(wagmi.useAccount).mockReturnValue(
       buildAccountData({
-        address: "0x1234567890abcdef1234567890abcdef12345678" as `0x${string}`,
+        address: "0x1234567890abcdef1234567890abcdef12345678",
         isConnected: true,
-        addresses: ["0x1234567890abcdef1234567890abcdef12345678" as `0x${string}`],
+        addresses: ["0x1234567890abcdef1234567890abcdef12345678"],
         chain: undefined,
         chainId: undefined,
         connector: undefined,
@@ -307,9 +307,9 @@ describe("WalletOptions Component", () => {
   it("clicking disconnect calls disconnect", async () => {
     vi.mocked(wagmi.useAccount).mockReturnValue(
       buildAccountData({
-        address: "0x1234567890abcdef1234567890abcdef12345678" as `0x${string}`,
+        address: "0x1234567890abcdef1234567890abcdef12345678",
         isConnected: true,
-        addresses: ["0x1234567890abcdef1234567890abcdef12345678" as `0x${string}`],
+        addresses: ["0x1234567890abcdef1234567890abcdef12345678"],
         chain: undefined,
         chainId: undefined,
         connector: undefined,

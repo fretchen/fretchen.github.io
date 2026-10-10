@@ -1,7 +1,7 @@
 // @ts-nocheck
 
 import eslint from "@eslint/js";
-import prettier from "eslint-plugin-prettier/recommended";
+import prettier from "eslint-config-prettier";
 import react from "eslint-plugin-react/configs/recommended.js";
 import reactPlugin from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";

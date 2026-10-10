@@ -535,8 +535,7 @@ async function handle(
   // Price the stablecoin the buyer chose from the 402, not a fixed one: the requirements below
   // must match its `accepted` entry, or verify rejects the payment.
   const accepted = (paymentPayload as Record<string, unknown>)?.["accepted"] as
-    | Record<string, unknown>
-    | undefined;
+    Record<string, unknown> | undefined;
   const coin = resolvePaidStablecoin(clientNetwork!, accepted?.["asset"]);
   if (!coin) {
     logger.warn({ clientNetwork, asset: accepted?.["asset"] }, "Payment asset not offered");
@@ -751,81 +750,4 @@ async function handle(
     logger.error({ err: error }, "Error during operation");
     return errorResponse(500, `Operation failed: ${(error as Error).message}`);
   }
-}
-
-if (process.env.NODE_ENV === "test" && !process.env.CI) {
-  import("dotenv").then((dotenv) => {
-    dotenv.config();
-    import("fastify").then((fastifyModule) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const fastify = (fastifyModule.default as any)({ bodyLimit: 10 * 1024 * 1024 });
-
-      import("@fastify/cors").then((corsModule) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        fastify.register((corsModule as any).default, {
-          origin: true,
-          methods: ["GET", "POST", "OPTIONS"],
-          allowedHeaders: "*",
-          exposedHeaders: ["Payment-Required", "PAYMENT-REQUIRED", "X-Payment", "PAYMENT-RESPONSE"],
-        });
-
-        import("@fastify/url-data").then((urlDataModule) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          fastify.register((urlDataModule as any).default);
-
-          fastify.addContentTypeParser(
-            "text/json",
-            { parseAs: "string" },
-            fastify.defaultTextParser,
-          );
-          fastify.addContentTypeParser(
-            "application/x-www-form-urlencoded",
-            { parseAs: "string" },
-            fastify.defaultTextParser,
-          );
-          fastify.addContentTypeParser(
-            "application/json",
-            { parseAs: "string" },
-            fastify.defaultTextParser,
-          );
-
-          fastify.route({
-            method: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-            url: "/*",
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            handler: async (request: any, reply: any) => {
-              try {
-                const event: ScwEvent = {
-                  httpMethod: request.method,
-                  headers: request.headers,
-                  body: request.body,
-                  path: request.url,
-                  queryStringParameters: request.query,
-                };
-                const result = await handle(event, {});
-                reply.status(result.statusCode ?? 200);
-                for (const [key, value] of Object.entries(result.headers ?? {})) {
-                  reply.header(key, value);
-                }
-                return result.body;
-              } catch (error) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                reply.status(500).send({ error: (error as any).message });
-              }
-            },
-          });
-
-          fastify.listen({ port: 8082, host: "0.0.0.0" }, (err: unknown, address: string) => {
-            if (err) {
-              // Local dev only — never deployed. Same phrase the other packages' local server
-              // bootstraps use; see EXEMPT in test/alert_coverage.test.ts.
-              logger.error({ err }, "Error starting local server");
-              process.exit(1);
-            }
-            logger.info({ address }, "Local server listening");
-          });
-        });
-      });
-    });
-  });
 }

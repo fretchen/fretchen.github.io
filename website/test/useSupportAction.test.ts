@@ -114,7 +114,7 @@ describe("useSupportAction", () => {
 
     vi.mocked(getWalletClient).mockResolvedValue({
       signTypedData: mockSignTypedData,
-    } as unknown as Awaited<ReturnType<typeof getWalletClient>>);
+    });
 
     // Mock useReadContracts - returns array of results for all chains
     // useReadContracts aggregates reads from multiple chains in one hook
@@ -382,7 +382,7 @@ describe("useSupportAction", () => {
       vi.mocked(useAccount).mockReturnValue(
         buildAccountData({ isConnected: true, chainId: 10, address: "0x1234", connector: { name: "MetaMask" } }),
       );
-      vi.mocked(getWalletClient).mockResolvedValue(null as unknown as Awaited<ReturnType<typeof getWalletClient>>);
+      vi.mocked(getWalletClient).mockResolvedValue(null);
 
       const { result } = renderHook(() => useSupportAction("/blog/test"));
 

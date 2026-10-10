@@ -140,7 +140,7 @@ describe("ImageGenerator Component", () => {
       // Mock connected wallet to ensure expanded state
       vi.mocked(useAccount).mockReturnValue(
         buildAccountData({
-          address: "0x1234567890123456789012345678901234567890" as `0x${string}`,
+          address: "0x1234567890123456789012345678901234567890",
           isConnected: true,
           status: "connected",
         }),

@@ -91,6 +91,7 @@ See [`.github/THREAT_MODEL.md`](.github/THREAT_MODEL.md) for the full asset inve
 - `SEPOLIA_PRIVATE_KEY` (Hardhat keystore) — deployment/script signing key `0x073f26…`. Does NOT own contracts.
 - Agent wallet `0xAAEBC1…` — backend-only, whitelisted on GenImNFTv4 via `authorizeAgentWallet()`.
 - Facilitator wallet — stored as a Scaleway secret, receives USDC fees only.
+- Receiver-authorizer key (`RECEIVER_AUTHORIZER_PRIVATE_KEY`, scw_js Scaleway secret) — signs batch-settlement channel-config and refund authorizations for the `/assistent` sellers; never sends transactions. Compromise means revenue denial (early refunds, stalled claims), not fund redirection.
 
 Rules that apply everywhere:
 

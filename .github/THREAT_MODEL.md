@@ -1,6 +1,6 @@
 # Threat Model
 
-Last updated: 2026-08-09
+Last updated: 2026-10-10
 
 This is a lightweight, living threat model. It follows the OWASP four-question framework and the values of the Threat Modeling Manifesto — a maintained document over a one-time audit, design issues over checkbox compliance, action over ceremony.
 
@@ -27,6 +27,7 @@ What has monetary value, irreversibility, or trust significance in this system:
 | Owner EOA private key | Dedicated keystore account (`0x1af51D…fBB20`), separated from daily wallet since 2026-06 | Controls every upgradeable contract and owns the three ERC-8004 agent identities — the highest-value key in the system |
 | ERC-8004 agent identities (3) | On-chain, Base Identity Registry `0x8004A169…a432` (agentIds 97598, 97599, 97600) | Owned by the owner EOA. Owner can repoint `agentURI`, transfer, or change the bound `agentWallet`; holds no funds, but the identity is what discovery and reputation attach to |
 | Agent wallet private key | scw_js secrets | Can trigger `requestImageUpdate()` and receive mintPrice per call. Same address as the x402 `payTo` (`NFT_WALLET`), bound as the `agentWallet` of the three ERC-8004 agents |
+| Receiver-authorizer private key | scw_js secrets | Signs batch-settlement channel-config and refund authorizations (EIP-712) for the `/assistent` sellers (LLM, search, fetch) via `receiverAuthorizerSigner`. Never sends transactions, never needs funding |
 | Facilitator wallet private key | x402_facilitator secrets | Receives USDC fees from settlements |
 | Scaleway secrets (SCW_SECRET_KEY) | Serverless secrets | Access to S3 image bucket, transactional email, and analytics counters |
 | BFL / IONOS API keys | Serverless secrets | Image generation quota; no on-chain access |
@@ -44,6 +45,7 @@ If a component is fully compromised, what else falls with it:
 | **Owner EOA** | Malicious upgrade to every upgradeable contract | Complete ETH drain from GenImNFTv4 + LLMv1; all NFT URIs replaceable; USDC fee wallet redirectable — total system compromise. The EIP3009 Splitter joins this blast radius once deployed to mainnet. Key is now a dedicated EOA (not daily wallet); full mitigation requires Gnosis Safe. The same key owns the three ERC-8004 agent identities (Base), so a compromise also lets an attacker repoint their `agentURI` to impersonate the services; a Safe migration must transfer them too, which clears each `agentWallet` and needs re-binding. |
 | **Agent wallet** (scw_js) | `requestImageUpdate()` callable arbitrarily; drains GenImNFTv4 at `mintPrice` per call | NFT metadata corruption for all tokens; contract ETH drained |
 | **Facilitator wallet** | USDC fees redirected | Financial only; no access to user funds or upgrade paths |
+| **Receiver-authorizer key** (scw_js) | Refund authorizations signable: buyer escrow returned early, claims stalled or unwound — revenue denial and channel DoS | No fund redirection (claims pay the channel's fixed receiver); no access to other contracts or upgrade paths |
 | **SCW_SECRET_KEY** | S3 bucket writable; email notifications spoofable | Generated images replaceable; no on-chain impact |
 | **BFL / IONOS key** | Image generation quota consumed | No on-chain or financial impact to users |
 | **x402_facilitator service** | Payment settlements halt | Image generation feature unavailable; already-signed USDC authorizations expire unused |

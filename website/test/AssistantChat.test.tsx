@@ -159,7 +159,7 @@ import claimsFixture from "./fixtures/bundestakt/claims.json";
 import { OWNER_SCOPES } from "../utils/getChain";
 import { PaymentError } from "../utils/x402PaidFetch";
 import { MAX_HOPS } from "../utils/toolLoop";
-import { toolContractPrompt, teenPrompt, researchPrompt } from "../utils/prompts";
+import { toolContractPrompt, researchPrompt } from "../utils/prompts";
 import { formatLanguageContext } from "../utils/languageContext";
 import { usePageContext } from "vike-react/usePageContext";
 
@@ -1296,13 +1296,13 @@ describe("AssistantChat", () => {
   describe("network and currency", () => {
     beforeEach(() => window.localStorage.clear());
 
-    it("defaults to EURC on Base — the only network EURC exists on — and pays on it", () => {
+    it("defaults to EURe on Base — the euro tokens exist only there — and pays on it", () => {
       renderWithQuery(<AssistantChat />);
 
-      expect(useX402Chat).toHaveBeenCalledWith("eip155:8453", "https://llm-agent.fretchen.eu", "EURC");
+      expect(useX402Chat).toHaveBeenCalledWith("eip155:8453", "https://llm-agent.fretchen.eu", "EURe");
     });
 
-    it("offers only Base while paying with EURC, with a note explaining why", () => {
+    it("offers only Base while paying a euro token, with a note explaining why", () => {
       renderWithQuery(<AssistantChat />);
 
       expect(screen.getByRole("button", { name: "Base" })).toBeInTheDocument();
@@ -1348,13 +1348,13 @@ describe("AssistantChat", () => {
     });
 
     it("ignores a stored network the current currency does not offer", async () => {
-      // Chosen under USDC, but EURC (the default here) exists only on Base.
+      // Chosen under USDC, but EURe (the default here) exists only on Base.
       window.localStorage.setItem("x402-chat-network", "eip155:10");
 
       renderWithQuery(<AssistantChat />);
 
       await waitFor(() =>
-        expect(useX402Chat).toHaveBeenLastCalledWith("eip155:8453", "https://llm-agent.fretchen.eu", "EURC"),
+        expect(useX402Chat).toHaveBeenLastCalledWith("eip155:8453", "https://llm-agent.fretchen.eu", "EURe"),
       );
     });
 
@@ -1439,7 +1439,7 @@ describe("AssistantChat", () => {
       renderWithQuery(<AssistantChat />);
 
       expect(screen.getByPlaceholderText("https://another-agent.example")).toBeInTheDocument();
-      expect(useX402Chat).toHaveBeenCalledWith("eip155:8453", "https://llm-agent.fretchen.eu", "EURC");
+      expect(useX402Chat).toHaveBeenCalledWith("eip155:8453", "https://llm-agent.fretchen.eu", "EURe");
     });
 
     it("pre-checks a pasted URL and then pays that agent instead", async () => {
@@ -1449,7 +1449,7 @@ describe("AssistantChat", () => {
       pasteAndTry(CUSTOM_URL);
 
       await waitFor(() => expect(precheckLlmV1Agent).toHaveBeenCalledWith(CUSTOM_URL));
-      await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:8453", CUSTOM_URL, "EURC"));
+      await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:8453", CUSTOM_URL, "EURe"));
       // Provenance of who is about to be paid.
       expect(screen.getByText("Someone Else")).toBeInTheDocument();
     });
@@ -1477,7 +1477,7 @@ describe("AssistantChat", () => {
       fireEvent.click(back);
 
       await waitFor(() =>
-        expect(useX402Chat).toHaveBeenLastCalledWith("eip155:8453", "https://llm-agent.fretchen.eu", "EURC"),
+        expect(useX402Chat).toHaveBeenLastCalledWith("eip155:8453", "https://llm-agent.fretchen.eu", "EURe"),
       );
     });
 
@@ -1498,7 +1498,7 @@ describe("AssistantChat", () => {
         expect(screen.getAllByLabelText("Site analytics").length).toBeGreaterThan(0);
 
         pasteAndTry(CUSTOM_URL);
-        await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:8453", CUSTOM_URL, "EURC"));
+        await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:8453", CUSTOM_URL, "EURe"));
 
         // ...and no longer once a stranger is being paid.
         expect(screen.queryByLabelText("Site analytics")).not.toBeInTheDocument();
@@ -1513,7 +1513,7 @@ describe("AssistantChat", () => {
 
         renderWithQuery(<AssistantChat />);
         pasteAndTry(CUSTOM_URL);
-        await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:8453", CUSTOM_URL, "EURC"));
+        await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:8453", CUSTOM_URL, "EURe"));
 
         sendUserMessage("How is the site doing?");
 
@@ -1537,7 +1537,7 @@ describe("AssistantChat", () => {
 
         renderWithQuery(<AssistantChat />);
         pasteAndTry(CUSTOM_URL);
-        await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:8453", CUSTOM_URL, "EURC"));
+        await waitFor(() => expect(useX402Chat).toHaveBeenLastCalledWith("eip155:8453", CUSTOM_URL, "EURe"));
 
         sendUserMessage("What is x402?");
 

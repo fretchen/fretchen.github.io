@@ -43,8 +43,10 @@ export default function Page() {
               works — or just a private key, for a script.
             </li>
             <li>
-              <strong>A small amount of USDC</strong> (a dollar stablecoin) on Optimism or Base — a few cents covers
-              many requests. No ETH needed: you pay no gas, the facilitator submits every transaction.
+              <strong>A small amount of a settlement token</strong> — USDC (a dollar stablecoin) on Optimism or Base, or
+              the euro tokens EURe and EURC on Base. This site defaults to EURe; the toggle keeps EURC and USDC one
+              click away. A few cents cover many requests. No ETH needed: you pay no gas — the facilitator submits every
+              transaction, and an EURe buyer&apos;s Permit2 approval rides an EIP-2612 permit inside the payment itself.
             </li>
             <li>
               <code>npm install @x402/evm @x402/fetch viem</code>
@@ -118,10 +120,10 @@ export default function Page() {
           <h2>Which scheme, when</h2>
           <p>
             <strong>exact</strong> is one signature, one on-chain settlement, one result — the right shape for a single
-            paid call. <strong>batch-settlement</strong> opens a USDC payment channel with one on-chain deposit, then
-            every further message is an off-chain signed voucher against that channel — no transaction, no wallet
-            prompt, until the channel is claimed later. Use it for many small calls to the same service, like a chat
-            session.
+            paid call. <strong>batch-settlement</strong> opens a payment channel in your chosen token with one on-chain
+            deposit, then every further message is an off-chain signed voucher against that channel — no transaction, no
+            wallet prompt, until the channel is claimed later. Use it for many small calls to the same service, like a
+            chat session.
           </p>
 
           <h2>TypeScript — exact scheme (image generation)</h2>

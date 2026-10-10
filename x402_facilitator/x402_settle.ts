@@ -634,8 +634,7 @@ export async function settlePayment(
     // the same way, so a crafted payload settling as Permit2 must be attributed to its payer,
     // not to the EIP-3009 field paired with it.
     const authorization = (payload?.permit2Authorization ?? payload?.authorization) as
-      | Record<string, unknown>
-      | undefined;
+      Record<string, unknown> | undefined;
     const accepted = paymentPayload.accepted as Record<string, unknown> | undefined;
 
     return {

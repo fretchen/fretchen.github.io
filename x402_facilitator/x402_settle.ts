@@ -114,8 +114,7 @@ function getBatchSettlementTarget(
   }
 
   const claims = payload?.claims as
-    | Array<{ voucher?: { channel?: { receiver?: string; token?: string } } }>
-    | undefined;
+    Array<{ voucher?: { channel?: { receiver?: string; token?: string } } }> | undefined;
   if (!Array.isArray(claims)) {
     return null;
   }
@@ -187,8 +186,7 @@ export function classifyBatchSettlement(payload: Record<string, unknown> | undef
     // claims that pay out to arbitrary unrelated receivers, relayed by the facilitator's
     // hot wallet. Anchoring every claim to the one channel verify vouches for closes that.
     const channelConfig = (payload as Record<string, unknown>).channelConfig as
-      | { receiver?: string; token?: string }
-      | undefined;
+      { receiver?: string; token?: string } | undefined;
     const channelReceiver = channelConfig?.receiver;
     if (!channelReceiver || channelReceiver.toLowerCase() !== claimsTarget.receiver.toLowerCase()) {
       return { kind: "reject", errorReason: "invalid_batch_settlement_evm_receiver_mismatch" };
@@ -401,8 +399,7 @@ export async function settlePayment(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
       const result = await facilitator.settle(paymentPayload as any, paymentRequirements as any);
       const claims = payload?.claims as
-        | Array<{ voucher?: { channel?: { payer?: string } } }>
-        | undefined;
+        Array<{ voucher?: { channel?: { payer?: string } } }> | undefined;
       const payer = claims?.[0]?.voucher?.channel?.payer;
 
       if (!result.success) {

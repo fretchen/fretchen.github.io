@@ -85,8 +85,7 @@ describe("agent registration file (EIP-8004)", () => {
    */
   describe.each(SERVICES)("$service OASF", ({ service, spec }) => {
     const oasf = buildAgentRegistration(spec, service).services.find((s) => s.name === "OASF") as
-      | { endpoint: string; version: string; skills: string[]; domains?: string[] }
-      | undefined;
+      { endpoint: string; version: string; skills: string[]; domains?: string[] } | undefined;
 
     it("declares an OASF v0.8.0 service with skills from the pinned map", () => {
       expect(oasf?.endpoint).toBe("https://github.com/agntcy/oasf/");

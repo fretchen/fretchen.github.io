@@ -442,7 +442,9 @@ describe("@fretchen/chain-utils", () => {
 
       test("returns null for EURe on Optimism and for unknown tokens or networks", () => {
         expect(findSettlementToken("eip155:10", BASE_EURE)).toBeNull();
-        expect(findSettlementToken("eip155:8453", "0x0000000000000000000000000000000000000001")).toBeNull();
+        expect(
+          findSettlementToken("eip155:8453", "0x0000000000000000000000000000000000000001")
+        ).toBeNull();
         expect(findSettlementToken("eip155:1", BASE_EURE)).toBeNull();
       });
     });

@@ -246,7 +246,9 @@ export function getSettlementTokens(network: string): SettlementTokenInfo[] {
  */
 export function findSettlementToken(network: string, address: string): SettlementTokenInfo | null {
   const wanted = address.toLowerCase();
-  return getSettlementTokens(network).find((token) => token.address.toLowerCase() === wanted) ?? null;
+  return (
+    getSettlementTokens(network).find((token) => token.address.toLowerCase() === wanted) ?? null
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════

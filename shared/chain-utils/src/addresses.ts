@@ -238,17 +238,6 @@ export function getSettlementTokens(network: string): SettlementTokenInfo[] {
   return coins;
 }
 
-/**
- * Identify a token address as one of the settlement tokens on `network`, case-insensitively.
- * The settlement-token counterpart of `findStablecoin` — the website's buyer side resolves a
- * 402's asset address to a payable currency through this, so it must know EURe.
- * @returns null for any other token, or for a token not deployed on this network.
- */
-export function findSettlementToken(network: string, address: string): SettlementTokenInfo | null {
-  const wanted = address.toLowerCase();
-  return getSettlementTokens(network).find((token) => token.address.toLowerCase() === wanted) ?? null;
-}
-
 // ═══════════════════════════════════════════════════════════════
 // EIP3009 Splitter
 // ═══════════════════════════════════════════════════════════════

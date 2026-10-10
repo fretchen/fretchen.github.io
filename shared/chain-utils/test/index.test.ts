@@ -35,7 +35,6 @@ import {
   EURC_ADDRESSES,
   EURE_ADDRESSES,
   findStablecoin,
-  findSettlementToken,
   getStablecoins,
   getSettlementTokens,
 } from "../src/addresses";
@@ -416,34 +415,6 @@ describe("@fretchen/chain-utils", () => {
           expect(getStablecoins("eip155:8453").map((c) => c.symbol)).toEqual(["USDC", "EURC"]);
           expect(getStablecoins(network).every((c) => c.symbol !== "EURe")).toBe(true);
         }
-      });
-    });
-
-    describe("findSettlementToken()", () => {
-      const BASE_EURE = EURE_ADDRESSES["eip155:8453"];
-
-      test("identifies each token on Base with its metadata, case-insensitively", () => {
-        expect(findSettlementToken("eip155:8453", BASE_EURE)).toMatchObject({
-          symbol: "EURe",
-          decimals: 18,
-          transferMethod: "permit2",
-        });
-        expect(findSettlementToken("eip155:8453", BASE_EURE.toLowerCase())?.symbol).toBe("EURe");
-        expect(findSettlementToken("eip155:84532", EURE_ADDRESSES["eip155:84532"])?.symbol).toBe(
-          "EURe"
-        );
-        expect(findSettlementToken("eip155:8453", USDC_ADDRESSES["eip155:8453"])?.symbol).toBe(
-          "USDC"
-        );
-        expect(findSettlementToken("eip155:8453", EURC_ADDRESSES["eip155:8453"])?.symbol).toBe(
-          "EURC"
-        );
-      });
-
-      test("returns null for EURe on Optimism and for unknown tokens or networks", () => {
-        expect(findSettlementToken("eip155:10", BASE_EURE)).toBeNull();
-        expect(findSettlementToken("eip155:8453", "0x0000000000000000000000000000000000000001")).toBeNull();
-        expect(findSettlementToken("eip155:1", BASE_EURE)).toBeNull();
       });
     });
 

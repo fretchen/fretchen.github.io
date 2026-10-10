@@ -104,7 +104,8 @@ function operationFor(route: Route) {
     operationId: route === "search" ? "searchWeb" : "fetchUrl",
     summary:
       `${DESCRIPTION[route]} (x402: ${formatUsdcAtomicAsDecimalUsd(PRICE_ATOMIC[route].USDC)} USDC, ` +
-      `or ${formatUsdcAtomicAsDecimalUsd(PRICE_ATOMIC[route].EURC)} EURC on Base)`,
+      `or ${formatUsdcAtomicAsDecimalUsd(PRICE_ATOMIC[route].EURC)} EURC, ` +
+      `or ${formatUsdcAtomicAsDecimalUsd(PRICE_ATOMIC[route].EURe, 18n)} EURe on Base)`,
     description: ROUTE_NOTES[route],
     tags: ["Web", "x402"],
     security: [] as const,
@@ -113,7 +114,7 @@ function operationFor(route: Route) {
       price: {
         mode: "fixed" as const,
         currency: "USD" as const,
-        // The discovery spec prices in USD, so this is the USDC list; EURC is in the summary.
+        // The discovery spec prices in USD, so this is the USDC list; EURC and EURe are in the summary.
         amount: formatUsdcAtomicAsDecimalUsd(PRICE_ATOMIC[route].USDC),
       },
     },
@@ -174,7 +175,8 @@ export function generateOpenApiSpec() {
       { name: "Web", description: "Search and single-page retrieval for agents" },
       {
         name: "x402",
-        description: "Paid via x402 batch-settlement payment channels in USDC, or EURC on Base",
+        description:
+          "Paid via x402 batch-settlement payment channels in USDC, EURC or EURe on Base",
       },
     ],
     paths: {

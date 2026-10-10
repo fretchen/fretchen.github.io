@@ -385,37 +385,41 @@ export async function createBatchSettlementPaymentRequirements({
   x402Version: number;
   resource: { url: string; description: string; mimeType: string };
   accepts: unknown[];
+  /** Present when a Permit2 token is offered (see `permit2Extensions`). */
+  extensions?: Record<string, unknown>;
 }> {
+  const offered = networks.flatMap((network) =>
+    offeredStablecoins(network).map((coin) => ({ network, coin })),
+  );
   const accepts = await Promise.all(
-    networks.flatMap((network) =>
-      offeredStablecoins(network).map((coin) => {
-        const base: SdkPaymentRequirements = {
+    offered.map(({ network, coin }) => {
+      const base: SdkPaymentRequirements = {
+        scheme: "batch-settlement",
+        network: network as `${string}:${string}`,
+        amount: price[coin.symbol],
+        asset: coin.address,
+        payTo,
+        maxTimeoutSeconds,
+        extra: tokenExtra(coin),
+      };
+      return scheme.enhancePaymentRequirements(
+        base,
+        {
+          x402Version: 2,
           scheme: "batch-settlement",
           network: network as `${string}:${string}`,
-          amount: price[coin.symbol],
-          asset: coin.address,
-          payTo,
-          maxTimeoutSeconds,
-          extra: { name: coin.name, version: coin.version },
-        };
-        return scheme.enhancePaymentRequirements(
-          base,
-          {
-            x402Version: 2,
-            scheme: "batch-settlement",
-            network: network as `${string}:${string}`,
-            extra: base.extra,
-          },
-          [],
-        );
-      }),
-    ),
+          extra: base.extra,
+        },
+        [],
+      );
+    }),
   );
 
   return {
     x402Version: 2,
     resource: { url: resourceUrl, description, mimeType },
     accepts,
+    extensions: permit2Extensions(offered.map(({ coin }) => coin)),
   };
 }
 
@@ -439,8 +443,42 @@ export interface PaymentRequirements {
     asset: string;
     payTo: string;
     maxTimeoutSeconds: number;
-    extra: { name: string; version: string };
+    /** EURe (Permit2) entries also carry `assetTransferMethod: "permit2"`; EIP-3009 ones omit it. */
+    extra: { name: string; version: string; assetTransferMethod?: "permit2" };
   }>;
+  /** Present when a Permit2 token is offered: lets buyers sign an EIP-2612 permit for Permit2
+   *  inside the payment (gas sponsoring), so a fresh wallet needs no approve() transaction. */
+  extensions?: Record<string, unknown>;
+}
+
+/**
+ * The 402 `extensions` entry that makes an EURe buyer's payment permit-carrying. The client only
+ * signs an EIP-2612 permit when the challenge advertises the extension; without it, a wallet
+ * without a standing Permit2 approval cannot pay EURe at all.
+ */
+function permit2Extensions(
+  coins: readonly { transferMethod: string }[],
+): Record<string, unknown> | undefined {
+  return coins.some((coin) => coin.transferMethod === "permit2")
+    ? { eip2612GasSponsoring: {} }
+    : undefined;
+}
+
+/**
+ * The per-token `extra` every client needs to build its payment: the token's EIP-712 domain, plus
+ * the transfer method when it is not the EIP-3009 default — EURe has no EIP-3009, and a client
+ * that tries it (the SDK's `extra?.assetTransferMethod ?? "eip3009"` default) fails at signing.
+ */
+function tokenExtra(coin: { name: string; version: string; transferMethod: string }): {
+  name: string;
+  version: string;
+  assetTransferMethod?: "permit2";
+} {
+  return {
+    name: coin.name,
+    version: coin.version,
+    ...(coin.transferMethod === "permit2" && { assetTransferMethod: "permit2" as const }),
+  };
 }
 
 /** The exact-scheme 402: one entry per (network, offered stablecoin), most preferred first. */
@@ -452,22 +490,24 @@ export function createPaymentRequirements({
   payTo,
   networks = getSupportedNetworks(),
 }: PaymentRequirementsOptions): PaymentRequirements {
-  const accepts = networks.flatMap((network) =>
-    offeredStablecoins(network).map((coin) => ({
-      scheme: "exact",
-      network,
-      amount: price[coin.symbol],
-      asset: coin.address,
-      payTo,
-      maxTimeoutSeconds: 60,
-      extra: { name: coin.name, version: coin.version },
-    })),
+  const offered = networks.flatMap((network) =>
+    offeredStablecoins(network).map((coin) => ({ network, coin })),
   );
+  const accepts = offered.map(({ network, coin }) => ({
+    scheme: "exact",
+    network,
+    amount: price[coin.symbol],
+    asset: coin.address,
+    payTo,
+    maxTimeoutSeconds: 60,
+    extra: tokenExtra(coin),
+  }));
 
   return {
     x402Version: 2,
     resource: { url: resourceUrl, description, mimeType },
     accepts,
+    extensions: permit2Extensions(offered.map(({ coin }) => coin)),
   };
 }
 
@@ -537,12 +577,11 @@ export function extractPaymentPayload(
  * discovery spec requires in decimal USD, not atomic units). Bigint-based to avoid float
  * precision loss; trims trailing zeros so "3000" -> "0.003", not "0.003000".
  */
-export function formatUsdcAtomicAsDecimalUsd(atomicAmount: string): string {
+export function formatUsdcAtomicAsDecimalUsd(atomicAmount: string, decimals: bigint = 6n): string {
   const atomic = BigInt(atomicAmount);
-  const DECIMALS = 6n;
-  const divisor = 10n ** DECIMALS;
+  const divisor = 10n ** decimals;
   const whole = atomic / divisor;
-  const fraction = (atomic % divisor).toString().padStart(Number(DECIMALS), "0");
+  const fraction = (atomic % divisor).toString().padStart(Number(decimals), "0");
   const trimmedFraction = fraction.replace(/0+$/, "");
   return trimmedFraction ? `${whole}.${trimmedFraction}` : whole.toString();
 }

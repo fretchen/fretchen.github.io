@@ -56,7 +56,7 @@ vi.mock("viem", async () => {
 // ===== Import after mocks =====
 
 import { handle } from "../llm_x402_cron.js";
-import { USDC_ADDRESSES, EURC_ADDRESSES } from "@fretchen/chain-utils";
+import { USDC_ADDRESSES, EURC_ADDRESSES, EURE_ADDRESSES } from "@fretchen/chain-utils";
 
 // ===== Helpers =====
 
@@ -66,13 +66,15 @@ function makeEvent() {
   return { httpMethod: "GET", headers: {}, body: null };
 }
 
-/** One claim run per (network, token): Optimism has USDC only, Base and Base Sepolia both. */
+/** One claim run per (network, token): Optimism has USDC only, Base and Base Sepolia all three. */
 const RUNS: Array<[string, string]> = [
   ["eip155:10", USDC_ADDRESSES["eip155:10"]],
   ["eip155:8453", USDC_ADDRESSES["eip155:8453"]],
   ["eip155:8453", EURC_ADDRESSES["eip155:8453"]],
+  ["eip155:8453", EURE_ADDRESSES["eip155:8453"]],
   ["eip155:84532", USDC_ADDRESSES["eip155:84532"]],
   ["eip155:84532", EURC_ADDRESSES["eip155:84532"]],
+  ["eip155:84532", EURE_ADDRESSES["eip155:84532"]],
 ];
 
 // ===== Tests =====
@@ -158,8 +160,10 @@ describe("llm_x402_cron", () => {
       ["eip155:10", "USDC"],
       ["eip155:8453", "USDC"],
       ["eip155:8453", "EURC"],
+      ["eip155:8453", "EURe"],
       ["eip155:84532", "USDC"],
       ["eip155:84532", "EURC"],
+      ["eip155:84532", "EURe"],
     ]);
     expect(body.results[0]).toEqual({
       network: "eip155:10",

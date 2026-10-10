@@ -1,6 +1,6 @@
 import { logger } from "./logger.js";
 import { createPublicClient, http } from "viem";
-import { getStablecoins, getViemChain, getRpcUrl } from "@fretchen/chain-utils";
+import { getSettlementTokens, getViemChain, getRpcUrl } from "@fretchen/chain-utils";
 import {
   createLLMResourceServer,
   createFacilitatorClient,
@@ -173,9 +173,11 @@ export async function handle(
   // allowance to run out and the check below is skipped entirely.
   const feeConfig = await getFacilitatorFeeConfig();
 
-  // Every stablecoin deployed on the network — each token's channels are claimed separately.
+  // Every token the sellers offer on the network (`getSettlementTokens`: USDC, EURC and EURe
+  // on Base) — each token's channels are claimed separately. A token missing here would leave
+  // its channels' escrow unclaimed forever, so this must read the same list the 402s offer.
   for (const network of getBatchSettlementNetworks()) {
-    for (const coin of getStablecoins(network)) {
+    for (const coin of getSettlementTokens(network)) {
       // Pass the token explicitly on EVERY network, not just Optimism. Omitting it makes
       // the SDK fall back to its `DEFAULT_STABLECOINS` registry, which still has no
       // "eip155:10" entry (see BATCH_SETTLEMENT_NETWORKS in x402_server.ts) and throws

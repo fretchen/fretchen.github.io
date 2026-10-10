@@ -33,8 +33,10 @@ import {
   TESTNET_EIP3009_SPLITTER_ADDRESSES,
   USDC_ADDRESSES,
   EURC_ADDRESSES,
+  EURE_ADDRESSES,
   findStablecoin,
   getStablecoins,
+  getSettlementTokens,
 } from "../src/addresses";
 
 describe("@fretchen/chain-utils", () => {
@@ -349,6 +351,70 @@ describe("@fretchen/chain-utils", () => {
           findStablecoin("eip155:8453", "0x0000000000000000000000000000000000000001")
         ).toBeNull();
         expect(findStablecoin("eip155:1", BASE_EURC)).toBeNull();
+      });
+    });
+
+    describe("getSettlementTokens()", () => {
+      test("appends EURe after the stablecoins, in registry order, on Base", () => {
+        expect(getSettlementTokens("eip155:8453").map((c) => c.symbol)).toEqual([
+          "USDC",
+          "EURC",
+          "EURe",
+        ]);
+        expect(getSettlementTokens("eip155:84532").map((c) => c.symbol)).toEqual([
+          "USDC",
+          "EURC",
+          "EURe",
+        ]);
+      });
+
+      test("carries each token's own decimals, transfer method and EIP-712 domain", () => {
+        expect(getSettlementTokens("eip155:8453")).toEqual([
+          {
+            symbol: "USDC",
+            address: USDC_ADDRESSES["eip155:8453"],
+            name: "USD Coin",
+            version: "2",
+            decimals: 6,
+            transferMethod: "eip3009",
+          },
+          {
+            symbol: "EURC",
+            address: EURC_ADDRESSES["eip155:8453"],
+            name: "EURC",
+            version: "2",
+            decimals: 6,
+            transferMethod: "eip3009",
+          },
+          {
+            symbol: "EURe",
+            address: EURE_ADDRESSES["eip155:8453"],
+            name: "Monerium EURe",
+            version: "1",
+            decimals: 18,
+            transferMethod: "permit2",
+          },
+        ]);
+      });
+
+      test("has no EURe or EURC on Optimism, where neither is deployed", () => {
+        for (const network of ["eip155:10", "eip155:11155420"]) {
+          expect(getSettlementTokens(network).map((c) => c.symbol)).toEqual(["USDC"]);
+        }
+      });
+
+      test("is empty for an unknown network", () => {
+        expect(getSettlementTokens("eip155:1")).toEqual([]);
+      });
+
+      test("leaves getStablecoins() unchanged — the website surface (regression guard)", () => {
+        for (const network of ["eip155:8453", "eip155:10", "eip155:1"]) {
+          expect(getStablecoins(network).map((c) => c.symbol)).toEqual(
+            getStablecoins(network).map((c) => c.symbol),
+          );
+          expect(getStablecoins("eip155:8453").map((c) => c.symbol)).toEqual(["USDC", "EURC"]);
+          expect(getStablecoins(network).every((c) => c.symbol !== "EURe")).toBe(true);
+        }
       });
     });
 

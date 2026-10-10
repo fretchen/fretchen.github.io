@@ -31,7 +31,7 @@ import {
   getRpcUrl,
   getViemChain,
   loadPrivateKey,
-  type StablecoinInfo,
+  type SettlementTokenInfo,
 } from "@fretchen/chain-utils";
 import { getFacilitatorFeeConfig, getSupportedNetworks } from "../x402_server.js";
 import { offeredStablecoins } from "../stablecoin_pricing.js";
@@ -43,13 +43,13 @@ export const SETTLEMENTS_PER_APPROVAL = 100n;
 
 export interface FeePair {
   network: string;
-  coin: StablecoinInfo;
+  coin: SettlementTokenInfo;
 }
 
-/** Every (network, stablecoin) pair the sellers put in a 402, and so every pair that needs an approval. */
+/** Every (network, token) pair the sellers put in a 402, and so every pair that needs an approval. */
 export function listFeePairs(
   networks: readonly string[],
-  coinsFor: (network: string) => StablecoinInfo[] = offeredStablecoins,
+  coinsFor: (network: string) => SettlementTokenInfo[] = offeredStablecoins,
 ): FeePair[] {
   return networks.flatMap((network) => coinsFor(network).map((coin) => ({ network, coin })));
 }

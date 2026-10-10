@@ -129,6 +129,10 @@ export default {
     fundsBody:
       "Zum Chatten brauchst du {currency} in deiner Wallet: Deine erste Nachricht legt 0,50 {currency} zurück.",
     fundsButton: "{currency} besorgen",
+    // EURe's two acquisition routes: the bank-native primary and the KYC-free secondary.
+    fundsRouteBank: "EURe per Banküberweisung holen (Monerium)",
+    fundsRouteSwap: "EURe auf Uniswap tauschen",
+    fundsSwapNote: "Für den Tausch brauchst du etwas ETH in deiner Wallet als Gas.",
     fundsNote: "Danach schick deine Nachricht noch einmal.",
     you: "Du",
     assistant: "Assistent",
@@ -214,7 +218,7 @@ export default {
   // Mit welchem Stablecoin die Seite bezahlt, gemeinsam für /imagegen und /assistent.
   payment: {
     payWith: "Bezahlen mit",
-    eurcBaseOnly: "EURC gibt es nur auf Base.",
+    eurcBaseOnly: "EURe und EURC gibt es nur auf Base.",
     currencyFallback: "Dieser Agent nimmt diese Währung hier nicht an, die Zahlung läuft daher über",
   },
 };

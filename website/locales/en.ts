@@ -124,6 +124,10 @@ export default {
     fundsTitle: "Top up your wallet",
     fundsBody: "To chat you need {currency} in your wallet: your first message sets aside 0.50 {currency}.",
     fundsButton: "Get {currency}",
+    // EURe's two acquisition routes: the bank-native primary and the KYC-free secondary.
+    fundsRouteBank: "Get EURe via bank transfer (Monerium)",
+    fundsRouteSwap: "Swap for EURe on Uniswap",
+    fundsSwapNote: "The swap route needs a little ETH in your wallet for gas.",
     fundsNote: "Then send your message again.",
     you: "You",
     assistant: "Assistant",
@@ -204,7 +208,7 @@ export default {
   // Which stablecoin the site pays with, shared by /imagegen and /assistent.
   payment: {
     payWith: "Pay with",
-    eurcBaseOnly: "EURC is on Base only.",
+    eurcBaseOnly: "EURe and EURC are on Base only.",
     // Followed by the currency actually used, e.g. "… so payment will use USDC."
     currencyFallback: "This agent doesn't take that currency here, so payment will use",
   },

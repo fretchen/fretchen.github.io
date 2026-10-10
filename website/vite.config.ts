@@ -18,6 +18,9 @@ export default defineConfig({
     // build time, in the file. (Options mirror what the old client-side renderer used,
     // see git history of hooks/useKaTeXRenderer.ts — now removed.)
     mdx({
+      // website/prompts/ holds the assistant's system prompts, imported as plain text via
+      // `?raw` (utils/prompts.ts) — MDX must not compile them into React components.
+      exclude: ["**/prompts/**"],
       remarkPlugins: [
         remarkFrontmatter,
         [remarkMdxFrontmatter, { name: "frontmatter" }],

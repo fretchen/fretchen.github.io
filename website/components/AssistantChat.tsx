@@ -76,6 +76,9 @@ import { isOwnerAddress, type OwnerScope } from "../utils/getChain";
 import type { X402ChatMessage, X402Tool, X402ToolCall } from "../types/x402";
 import { runToolLoop, type ToolRunResult, type LoopPhase, type OfferedTool } from "../utils/toolLoop";
 import { formatDateContext } from "../utils/dateContext";
+import { formatLanguageContext } from "../utils/languageContext";
+import { toolContractPrompt, teenPrompt, researchPrompt } from "../utils/prompts";
+import { useCurrentLocale } from "../hooks/useCurrentLocale";
 import { createLocalStorageStore } from "../utils/localStorageStore";
 import { useQueryClient } from "@tanstack/react-query";
 import { getViemChain, toCAIP2, fromCAIP2, getGenAiNFTMainnetNetworks } from "@fretchen/chain-utils";
@@ -384,7 +387,7 @@ const storeDisabledTools = (names: ReadonlySet<string>): void => disabledToolsSt
  *
  * A feature, not a parental control — nothing enforces it, and it is deliberately not tied to the
  * wallet, the payment or any notion of identity. It therefore needs nothing more than a stored
- * boolean: everything it changes lives in the appended system prompt (`assistent.systemPromptTeen`),
+ * boolean: everything it changes lives in the appended system prompt (`prompts/teen.md`),
  * so there is no server-side profile to keep honest and no request parameter a browser could lie
  * about anyway.
  *
@@ -447,11 +450,12 @@ export function AssistantChat() {
   const stopRequestedRef = useRef(false);
   const [stopPressed, setStopPressed] = useState(false);
 
-  // Localized messages (reuse the existing assistent.* namespace)
-  const systemPromptMessage = useLocale({ label: "assistent.systemPrompt" });
-  const teenPromptMessage = useLocale({ label: "assistent.systemPromptTeen" });
-  const researchPromptMessage = useLocale({ label: "assistent.systemPromptResearch" });
+  // Localized messages (reuse the existing assistent.* namespace). The three system prompts
+  // are NOT here: they live in website/prompts/ as agent-skill-shaped markdown, loaded via
+  // utils/prompts.ts — instructions to the model, English-only by design, so they never had
+  // a reason to be locale keys (see that module's doc comment).
   const researchProgressLabel = useLocale({ label: "assistent.researchProgress" });
+  const currentLocale = useCurrentLocale();
   const stopAndAnswerLabel = useLocale({ label: "assistent.stopAndAnswer" });
   const researchNotesLabel = useLocale({ label: "assistent.researchNotes" });
   const chatTotalLabel = useLocale({ label: "assistent.chatTotal" });
@@ -1055,19 +1059,24 @@ export function AssistantChat() {
           role: "system",
           // Read at send time, not at render time: `sendMessage` is an event handler, so there is
           // no server/client clock mismatch to hydrate, and a session left open over midnight
-          // picks up the new date by itself on the next message. Teen mode is read here for the
-          // same reason, so toggling it mid-conversation takes effect on the very next message.
+          // picks up the new date by itself on the next message. Teen mode and the locale are
+          // read here for the same reason, so toggling either mid-conversation takes effect on
+          // the very next message.
           //
           // Appended, never substituted: the base prompt is this chat's tool contract — the
           // get_sitzungen slug flow, get_page truncation, the fetch_url injection defence — and a
-          // parallel teen copy of all that would drift the first time a tool is added.
+          // parallel teen copy of all that would drift the first time a tool is added. The prompt
+          // bodies come from website/prompts/ (frontmatter stripped by the loader, so only prose
+          // is billed as input tokens on every hop); German gets one injected sentence instead
+          // of translated prompts.
           content: [
-            systemPromptMessage,
-            teenMode ? teenPromptMessage : null,
+            toolContractPrompt.body,
+            teenMode ? teenPrompt.body : null,
             // How to research, only when there is something to research with — it is input
             // tokens on every hop, and without web tools it would describe tools that are absent.
-            canResearch ? researchPromptMessage : null,
+            canResearch ? researchPrompt.body : null,
             formatDateContext(new Date(), Intl.DateTimeFormat().resolvedOptions().timeZone),
+            formatLanguageContext(currentLocale),
           ]
             .filter(Boolean)
             .join("\n\n"),

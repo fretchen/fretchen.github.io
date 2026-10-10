@@ -39,6 +39,14 @@ different `push.default`, could push straight onto `main`. Use
 `git branch --unset-upstream`. Set the correct tracking on first push with
 `git push -u origin <branch>`.
 
+## Code Review
+
+Use the **`code-review`** skill to review a change before pushing or merging — it layers
+universal checks over this repo's own conventions (the nested `AGENTS.md` files and the
+skills) and emits a graded inline report with a machine-readable gate verdict. The skill is
+vendored in `.agents/skills/code-review/` (MIT; upstream origin and pin are in its SKILL.md) —
+keep it out of `skills-lock.json`, which is only for CLI-managed skills.
+
 ## Architecture Patterns
 
 ### Smart Contracts (`eth/`)
@@ -75,7 +83,7 @@ Two things that silently break payments if you get them wrong, both documented i
 
 ## Security
 
-See [`.github/THREAT_MODEL.md`](.github/THREAT_MODEL.md) for the full asset inventory, blast radius, and trust boundaries, and [`eth/SECURITY.md`](eth/SECURITY.md) for contract-level findings. Use the **`cve-triage`** skill to evaluate open Dependabot alerts against the threat model; the criteria are in [`.github/CVE_TRIAGE.md`](.github/CVE_TRIAGE.md).
+See [`.github/THREAT_MODEL.md`](.github/THREAT_MODEL.md) for the full asset inventory, blast radius, and trust boundaries, and [`eth/SECURITY.md`](eth/SECURITY.md) for contract-level findings. Use the **`cve-triage`** skill to evaluate open Dependabot alerts against the threat model; the criteria are in [`.github/CVE_TRIAGE.md`](.github/CVE_TRIAGE.md). Use the **`security-review`** skill for periodic deep audits of the agent and API layers — it operationalizes the threat model's review cadence with OWASP secure-agent-playbook procedures, vendored under `.agents/skills/security-review/` (CC-BY-4.0; keep it out of `skills-lock.json`).
 
 **Key hierarchy** (highest-value first):
 
@@ -83,6 +91,7 @@ See [`.github/THREAT_MODEL.md`](.github/THREAT_MODEL.md) for the full asset inve
 - `SEPOLIA_PRIVATE_KEY` (Hardhat keystore) — deployment/script signing key `0x073f26…`. Does NOT own contracts.
 - Agent wallet `0xAAEBC1…` — backend-only, whitelisted on GenImNFTv4 via `authorizeAgentWallet()`.
 - Facilitator wallet — stored as a Scaleway secret, receives USDC fees only.
+- Receiver-authorizer key (`RECEIVER_AUTHORIZER_PRIVATE_KEY`, scw_js Scaleway secret) — signs batch-settlement channel-config and refund authorizations for the `/assistent` sellers; never sends transactions. Compromise means revenue denial (early refunds, stalled claims), not fund redirection.
 
 Rules that apply everywhere:
 

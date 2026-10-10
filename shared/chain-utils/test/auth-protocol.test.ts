@@ -234,6 +234,30 @@ describe("verifySignedMessage", () => {
     expect(result).toBe("Unauthorized");
   });
 
+  // The prefix is compared literally, never compiled into a RegExp: "growth+d" as a pattern
+  // would also match "growthd:…" (the + as a quantifier) — a message the literal prefix never
+  // minted, and one a bearer gate must not accept.
+  test("matches regex metacharacters in the prefix literally, not as a pattern", async () => {
+    mockVerifyMessage.mockResolvedValue(true);
+    const literal = await verifySignedMessage(
+      VALID_ADDRESS,
+      VALID_SIGNATURE,
+      `growth+d:${freshTs()}`,
+      "growth+d",
+      VALID_ADDRESS
+    );
+    expect(literal).toBeNull();
+
+    const patternShaped = await verifySignedMessage(
+      VALID_ADDRESS,
+      VALID_SIGNATURE,
+      `growthd:${freshTs()}`,
+      "growth+d",
+      VALID_ADDRESS
+    );
+    expect(patternShaped).toBe("Unauthorized");
+  });
+
   test("returns 'Token expired' for timestamp 6 minutes in the past", async () => {
     const result = await verifySignedMessage(
       VALID_ADDRESS,

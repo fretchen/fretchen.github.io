@@ -1,6 +1,6 @@
 # Threat Model
 
-Last updated: 2026-08-09
+Last updated: 2026-10-10
 
 This is a lightweight, living threat model. It follows the OWASP four-question framework and the values of the Threat Modeling Manifesto — a maintained document over a one-time audit, design issues over checkbox compliance, action over ceremony.
 
@@ -27,6 +27,7 @@ What has monetary value, irreversibility, or trust significance in this system:
 | Owner EOA private key | Dedicated keystore account (`0x1af51D…fBB20`), separated from daily wallet since 2026-06 | Controls every upgradeable contract and owns the three ERC-8004 agent identities — the highest-value key in the system |
 | ERC-8004 agent identities (3) | On-chain, Base Identity Registry `0x8004A169…a432` (agentIds 97598, 97599, 97600) | Owned by the owner EOA. Owner can repoint `agentURI`, transfer, or change the bound `agentWallet`; holds no funds, but the identity is what discovery and reputation attach to |
 | Agent wallet private key | scw_js secrets | Can trigger `requestImageUpdate()` and receive mintPrice per call. Same address as the x402 `payTo` (`NFT_WALLET`), bound as the `agentWallet` of the three ERC-8004 agents |
+| Receiver-authorizer private key | scw_js secrets | Signs batch-settlement channel-config and refund authorizations (EIP-712) for the `/assistent` sellers (LLM, search, fetch) via `receiverAuthorizerSigner`. Never sends transactions, never needs funding |
 | Facilitator wallet private key | x402_facilitator secrets | Receives USDC fees from settlements |
 | Scaleway secrets (SCW_SECRET_KEY) | Serverless secrets | Access to S3 image bucket, transactional email, and analytics counters |
 | BFL / IONOS API keys | Serverless secrets | Image generation quota; no on-chain access |
@@ -44,6 +45,7 @@ If a component is fully compromised, what else falls with it:
 | **Owner EOA** | Malicious upgrade to every upgradeable contract | Complete ETH drain from GenImNFTv4 + LLMv1; all NFT URIs replaceable; USDC fee wallet redirectable — total system compromise. The EIP3009 Splitter joins this blast radius once deployed to mainnet. Key is now a dedicated EOA (not daily wallet); full mitigation requires Gnosis Safe. The same key owns the three ERC-8004 agent identities (Base), so a compromise also lets an attacker repoint their `agentURI` to impersonate the services; a Safe migration must transfer them too, which clears each `agentWallet` and needs re-binding. |
 | **Agent wallet** (scw_js) | `requestImageUpdate()` callable arbitrarily; drains GenImNFTv4 at `mintPrice` per call | NFT metadata corruption for all tokens; contract ETH drained |
 | **Facilitator wallet** | USDC fees redirected | Financial only; no access to user funds or upgrade paths |
+| **Receiver-authorizer key** (scw_js) | Refund authorizations signable: buyer escrow returned early, claims stalled or unwound — revenue denial and channel DoS | No fund redirection (claims pay the channel's fixed receiver); no access to other contracts or upgrade paths |
 | **SCW_SECRET_KEY** | S3 bucket writable; email notifications spoofable | Generated images replaceable; no on-chain impact |
 | **BFL / IONOS key** | Image generation quota consumed | No on-chain or financial impact to users |
 | **x402_facilitator service** | Payment settlements halt | Image generation feature unavailable; already-signed USDC authorizations expire unused |
@@ -113,10 +115,11 @@ The analytics service accepts anonymous, unauthenticated `POST /hit` writes behi
 
 ## 5. Attack Techniques by Surface
 
-This is the **HOW** that complements §3 (WHO) and §4 (WHERE): the concrete classes of weakness in scope when reviewing or scanning this system. Only *live* categories are listed — a category's absence means it was considered and judged not applicable, not overlooked. Detailed, per-instance findings live in the documents named in the **Tracked in** column. The two halves of the system map to two standard catalogs:
+This is the **HOW** that complements §3 (WHO) and §4 (WHERE): the concrete classes of weakness in scope when reviewing or scanning this system. Only *live* categories are listed — a category's absence means it was considered and judged not applicable, not overlooked. Detailed, per-instance findings live in the documents named in the **Tracked in** column. The three layers of the system map to three standard catalogs:
 
 - [OWASP Smart Contract Top 10 (2025)](https://owasp.org/www-project-smart-contract-top-10/) — for `eth/` contracts.
 - [OWASP API Security Top 10 (2023)](https://owasp.org/API-Security/editions/2023/en/0x11-t10/) — for the serverless functions and website.
+- [OWASP Top 10 for LLM Applications 2025](https://genai.owasp.org/llm-top-10/) — for the assistant's agent layer (the `/assistent` tool loop).
 
 ### Contract layer — OWASP Smart Contract Top 10
 
@@ -140,6 +143,18 @@ This is the **HOW** that complements §3 (WHO) and §4 (WHERE): the concrete cla
 | Unrestricted access to sensitive business flows (API6) | Deliver-before-payment in the LLM and genimg flows | Open (medium) | scw_js/SECURITY.md |
 | Security misconfiguration / secret exposure (API8) | comment_service sends `SCW_SECRET_KEY` as the `X-Auth-Token` header to the Scaleway transactional-email API | Open (medium) | §7 |
 | Unsafe client trust (API10) | Client-side-only image validation | Open (low) | §7 |
+
+### Agent layer — OWASP Top 10 for LLM Applications
+
+The assistant is itself an LLM agent with a paid tool loop, so its review surface is mapped like the other layers. Per the section's own convention, unlisted categories were considered and judged not applicable: LLM02 (no PII is collected, §1; the conversation is browser-local state), LLM03 (supply chain is the cve-triage skill's mandate), LLM04/LLM08 (no RAG, training, or embedding store), LLM09 (no integrity claim is made about LLM output).
+
+| Technique (OWASP) | Where it applies | Status | Tracked in |
+|---|---|---|---|
+| Prompt injection (LLM01) | Indirect injection via tool outputs: `search_web` results and `fetch_url` page contents enter the conversation as untrusted text (direct injection via user messages is inherent to any chat) | Mitigated by bounding, not sanitization: tool results are projected hard before reaching the model, a failing tool is withdrawn for the rest of the turn, and the loop is capped (MAX_HOPS 10, MAX_PAID_CALLS 15). Residual risk: a malicious page steering the model's next tool call within those caps | website/utils/toolLoop.ts; website/tools/; this table (audit procedure: `.agents/skills/security-review/plays/agent-security-audit.md`) |
+| Improper output handling (LLM05) | Rendering of model output: ReactMarkdown without rehype-raw does not render raw HTML in model output; CodeBlock injects highlight.js output via `dangerouslySetInnerHTML`, but highlight.js escapes while highlighting | Mitigated | website/components/AssistantChat.tsx; website/components/CodeBlock.tsx |
+| Excessive agency (LLM06) | Spend-capable tools are confirm-gated in the browser (the generate_image confirm card); the paid LLM endpoint never executes tools on the caller's behalf (a published contract in `scw_js/openapi.llm.json`); the paid web tools spend only from the escrowed batch-settlement channel | Mitigated by design | .agents/skills/chat-tools/SKILL.md; scw_js/openapi.llm.json |
+| System prompt leakage (LLM07) | The system prompt (including the research variant) is sent to the model every turn; owner-scope tool descriptions are withheld from visitors entirely | Accepted (the prompt is not secret material; owner tools are never offered to visitors) | .agents/skills/chat-tools/SKILL.md |
+| Unbounded consumption (LLM10) | Per-message price ceiling (operator absorbs overage), MAX_MESSAGES_BYTES 192 KB, MAX_TOOLS_BYTES 8192, MAX_HOPS/MAX_PAID_CALLS loop caps | Mitigated | scw_js/llm_schemas.ts; website/utils/toolLoop.ts |
 
 ---
 
@@ -184,4 +199,5 @@ Active mitigations and where they live:
 - The EIP3009 Splitter (or any testnet-stage contract) is deployed to mainnet — promote it to a full asset/blast-radius entry and re-scope the owner blast radius
 - A key is rotated or a new privileged account is added
 - A new serverless function or trust boundary is introduced
+- A new tool is added to the assistant's registry, or the tool loop's caps (hops, paid calls, message bytes) change — audit with the `security-review` skill (agent layer)
 - A CVE is triaged as T1 or T2 (patch required)

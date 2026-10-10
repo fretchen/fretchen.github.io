@@ -4,26 +4,27 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const {
   mockGetFacilitatorAddress,
-  mockGetFeeAmount,
   mockGetChainConfig,
   mockGetRpcUrl,
   mockCreatePublicClient,
   mockGetContract,
 } = vi.hoisted(() => ({
   mockGetFacilitatorAddress: vi.fn(),
-  mockGetFeeAmount: vi.fn(),
   mockGetChainConfig: vi.fn(),
   mockGetRpcUrl: vi.fn(),
   mockCreatePublicClient: vi.fn(),
   mockGetContract: vi.fn(),
 }));
 
-vi.mock("../x402_fee", () => ({
+// The real fee arithmetic (feeAmountFor) and token registry (getFeeTokens): the per-token
+// decimals they carry are what these tests are about.
+vi.mock("../x402_fee", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../x402_fee")>()),
   getFacilitatorAddress: mockGetFacilitatorAddress,
-  getFeeAmount: mockGetFeeAmount,
 }));
 
-vi.mock("../chain_utils", () => ({
+vi.mock("../chain_utils", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../chain_utils")>()),
   getChainConfig: mockGetChainConfig,
   getRpcUrl: mockGetRpcUrl,
 }));
@@ -40,7 +41,7 @@ vi.mock("viem", async (importOriginal) => {
 // ===== Import after mocks =====
 
 import { handle } from "../wallet_report_cron";
-import { EURC_ADDRESSES } from "@fretchen/chain-utils";
+import { getFeeTokens } from "../chain_utils";
 
 // ===== Helpers =====
 
@@ -56,8 +57,7 @@ function makeEvent() {
 
 interface ActivityRow {
   txCount: number;
-  usdcDelta: string;
-  eurcDelta?: string;
+  tokenDeltas: Record<string, string>;
   ethDelta: string;
   estimatedSettlements?: number;
 }
@@ -65,8 +65,7 @@ interface ActivityRow {
 interface ReportRow {
   network: string;
   eth?: string;
-  usdc?: string;
-  eurc?: string;
+  balances?: Record<string, string>;
   lowGas?: boolean;
   error?: string;
   activity?: ActivityRow;
@@ -125,19 +124,29 @@ function balanceOf(current: bigint, past: bigint = current) {
   );
 }
 
-const BASE_EURC = EURC_ADDRESSES["eip155:8453"];
+// Token address -> symbol across both report networks, from the real registry.
+const SYMBOL_BY_ADDRESS = new Map<string, string>(
+  ["eip155:10", "eip155:8453"].flatMap((n) => getFeeTokens(n).map((t) => [t.address, t.symbol])),
+);
 
 /**
- * Route getContract by token address: USDC is the mocked config's "0xUSDC", EURC is the real
- * registry address (Base only). Defaults: 1.5 USDC and 0.25 EURC, no change over the window.
+ * Route getContract by token address to a per-symbol balanceOf. Defaults: 1.5 USDC,
+ * 0.25 EURC and 2 EURe (18 decimals), no change over the window.
  */
 function setupTokens(
-  opts: { usdc?: ReturnType<typeof balanceOf>; eurc?: ReturnType<typeof balanceOf> } = {},
+  opts: {
+    usdc?: ReturnType<typeof balanceOf>;
+    eurc?: ReturnType<typeof balanceOf>;
+    eure?: ReturnType<typeof balanceOf>;
+  } = {},
 ) {
-  const usdc = opts.usdc ?? balanceOf(1_500_000n);
-  const eurc = opts.eurc ?? balanceOf(250_000n);
+  const bySymbol: Record<string, ReturnType<typeof balanceOf>> = {
+    USDC: opts.usdc ?? balanceOf(1_500_000n),
+    EURC: opts.eurc ?? balanceOf(250_000n),
+    EURe: opts.eure ?? balanceOf(2n * 10n ** 18n),
+  };
   mockGetContract.mockImplementation(({ address }: { address: string }) => ({
-    read: { balanceOf: address === BASE_EURC ? eurc : usdc },
+    read: { balanceOf: bySymbol[SYMBOL_BY_ADDRESS.get(address)!] },
   }));
 }
 
@@ -153,7 +162,7 @@ describe("wallet_report_cron", () => {
     process.env.LOW_GAS_THRESHOLD_ETH = "0.005";
 
     mockGetFacilitatorAddress.mockReturnValue(FACILITATOR);
-    mockGetFeeAmount.mockReturnValue(10000n); // 0.01 USDC
+    delete process.env.FACILITATOR_FEE_AMOUNT; // the default 0.01 fee
     mockGetChainConfig.mockImplementation((network: string) => ({
       chain: { name: network === "eip155:10" ? "OP Mainnet" : "Base" },
       USDC_ADDRESS: "0xUSDC",
@@ -200,11 +209,10 @@ describe("wallet_report_cron", () => {
     const op = body.reports[0];
     expect(op.network).toBe("eip155:10");
     expect(op.eth).toBe("1");
-    expect(op.usdc).toBe("1.5");
     expect(op.lowGas).toBe(false);
-    // EURC exists on Base only.
-    expect(op.eurc).toBeUndefined();
-    expect(body.reports[1].eurc).toBe("0.25");
+    // EURC and EURe exist on Base only.
+    expect(op.balances).toEqual({ USDC: "1.5" });
+    expect(body.reports[1].balances).toEqual({ USDC: "1.5", EURC: "0.25", EURe: "2" });
 
     // Email sent once via Scaleway TEM
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -214,6 +222,7 @@ describe("wallet_report_cron", () => {
     expect(payload.to[0].email).toBe("me@example.com");
     expect(payload.subject).toContain("Facilitator weekly report");
     expect(payload.text).toContain("EURC balance: 0.25");
+    expect(payload.text).toContain("EURe balance: 2");
   });
 
   it("fails Base's row when its EURC read fails, like any other balance read", async () => {
@@ -301,7 +310,7 @@ describe("wallet_report_cron", () => {
 
       expect(op.activity).toEqual({
         txCount: 12,
-        usdcDelta: "0.12",
+        tokenDeltas: { USDC: "0.12" },
         ethDelta: "-0.0005",
         estimatedSettlements: 12,
       });
@@ -323,7 +332,7 @@ describe("wallet_report_cron", () => {
 
       expect(body.reports[0].activity).toEqual({
         txCount: 0,
-        usdcDelta: "0",
+        tokenDeltas: { USDC: "0" },
         ethDelta: "0",
       });
       // No fee delta => no settlement estimate, even though a fee is configured.
@@ -340,7 +349,7 @@ describe("wallet_report_cron", () => {
       const res = await handle(makeEvent(), {});
       const body = JSON.parse(res.body) as { reports: ReportRow[] };
 
-      expect(body.reports[0].activity?.usdcDelta).toBe("-0.5");
+      expect(body.reports[0].activity?.tokenDeltas.USDC).toBe("-0.5");
       expect(body.reports[0].activity?.estimatedSettlements).toBeUndefined();
 
       const emailText = JSON.parse(fetchMock.mock.calls[0][1].body).text as string;
@@ -348,14 +357,16 @@ describe("wallet_report_cron", () => {
       expect(emailText).not.toContain("Settlements:");
     });
 
-    it("counts fees earned in both USDC and EURC on Base", async () => {
+    it("counts fees earned in USDC, EURC and EURe on Base, each in its own decimals", async () => {
       mockCreatePublicClient.mockReturnValue(
-        setupClient({ ethBalance: 1_000_000_000_000_000_000n, currentNonce: 5 }),
+        setupClient({ ethBalance: 1_000_000_000_000_000_000n, currentNonce: 9 }),
       );
-      // +0.02 USDC and +0.03 EURC == 5 settlements at the 0.01 flat fee.
+      // +0.02 USDC, +0.03 EURC and +0.04 EURe == 9 settlements at the 0.01 flat fee. The EURe
+      // delta is 4·10¹⁶; divided by the 6-decimal 10000 it would count 4·10¹² settlements.
       setupTokens({
         usdc: balanceOf(1_520_000n, 1_500_000n),
         eurc: balanceOf(280_000n, 250_000n),
+        eure: balanceOf(2_040_000_000_000_000_000n, 2n * 10n ** 18n),
       });
 
       const res = await handle(makeEvent(), {});
@@ -363,16 +374,16 @@ describe("wallet_report_cron", () => {
       const [op, base] = body.reports;
 
       expect(base.activity).toMatchObject({
-        usdcDelta: "0.02",
-        eurcDelta: "0.03",
-        estimatedSettlements: 5,
+        tokenDeltas: { USDC: "0.02", EURC: "0.03", EURe: "0.04" },
+        estimatedSettlements: 9,
       });
-      // Optimism has no EURC, so its estimate comes from USDC alone.
-      expect(op.activity?.eurcDelta).toBeUndefined();
+      // Optimism has neither EURC nor EURe, so its estimate comes from USDC alone.
+      expect(op.activity?.tokenDeltas).toEqual({ USDC: "0.02" });
       expect(op.activity?.estimatedSettlements).toBe(2);
 
       const emailText = JSON.parse(fetchMock.mock.calls[0][1].body).text as string;
       expect(emailText).toContain("+0.03 EURC");
+      expect(emailText).toContain("+0.04 EURe");
     });
 
     it("omits activity (but still reports balances) when historical reads fail", async () => {
@@ -392,7 +403,7 @@ describe("wallet_report_cron", () => {
       // Balances are completely unaffected by the historical-read failure.
       expect(op.error).toBeUndefined();
       expect(op.eth).toBe("1");
-      expect(op.usdc).toBe("1.5");
+      expect(op.balances).toEqual({ USDC: "1.5" });
       expect(op.activity).toBeUndefined();
 
       const emailText = JSON.parse(fetchMock.mock.calls[0][1].body).text as string;

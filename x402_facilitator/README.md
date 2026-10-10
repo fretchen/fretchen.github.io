@@ -24,7 +24,7 @@ A production-ready x402 v2 Facilitator for Optimism, enabling EIP-3009 USDC paym
 
 The x402 Facilitator bridges the gap between Resource Servers and blockchain payments. It provides three core functions:
 
-1. **Verify** - Validates EIP-3009 payment authorizations off-chain
+1. **Verify** - Validates EIP-3009 and Permit2 payment authorizations off-chain
 2. **Settle** - Executes verified payments on-chain (Optimism / Base L2)
 3. **Supported** - Advertises accepted networks, assets, and payment schemes
 
@@ -32,12 +32,13 @@ The x402 Facilitator bridges the gap between Resource Servers and blockchain pay
 
 The facilitator supports two x402 schemes on the same `/verify` and `/settle` endpoints (it routes by the payload's `scheme` field):
 
-- **`exact`** — one EIP-3009 `transferWithAuthorization` per request, USDC moved wallet-to-wallet. Supported on all networks. A flat facilitator fee may be collected post-settlement.
+- **`exact`** — one transfer per request, moved wallet-to-wallet. USDC (any network) and EURC (Base) settle by EIP-3009 `transferWithAuthorization`; EURe (Base), which has no EIP-3009, settles through the x402 Permit2 proxy (see _EURe via Permit2_ below). Supported on all networks. A flat facilitator fee may be collected post-settlement.
 - **`batch-settlement`** — payment channels: the payer escrows USDC once, signs an off-chain cumulative voucher per request, and the receiver claims many requests in one on-chain transaction. Only advertised on networks where the canonical batch-settlement contract is deployed (see `getBatchSettlementNetworks()` — Optimism/Base mainnet + Base Sepolia). Optimism Sepolia is **not** on that list because the contract isn't deployed there — but `exact` still works on it; the restriction is specific to `batch-settlement`. See [`notebooks/x402_batch_settlement.ipynb`](./notebooks/x402_batch_settlement.ipynb) for an end-to-end walkthrough. `deposit`/`voucher` payloads and claim-less `refund`s are open and fee-free — they fund, sign, or unwind a channel rather than realize a payment. Whatever pays out charges the same flat fee `exact` does, gated by the same USDC allowance check (see `x402_fee.ts`); an under-approved recipient gets `insufficient_fee_allowance` on `/settle`. That means `claim`, `settle`, **and** a `refund` carrying a non-empty `claims[]` — the SDK settles the latter as `multicall([claimWithSignature, refundWithSignature])`, so it performs the identical payout a `claim` does. The fee follows the claim, not the payload type: gating on `payload.type` alone let a relabelled claim skip the gate entirely.
 
 ### Key Features
 
-- ✅ EIP-3009 `transferWithAuthorization` for USDC payments (`exact` scheme)
+- ✅ EIP-3009 `transferWithAuthorization` for USDC and EURC payments (`exact` scheme)
+- ✅ Permit2 for EURe payments on Base (`exact` scheme), with or without an EIP-2612 permit (`eip2612GasSponsoring`)
 - ✅ `batch-settlement` payment channels (`claim`/`settle` fee-gated like `exact`; `deposit`/`voucher`/`refund` free; deploy-gated per network)
 - ✅ Optimism + Base, Mainnet and testnet support
 - ✅ Flat facilitator fee, gated by a USDC allowance check on the recipient (`exact`, and `batch-settlement` `claim`/`settle`)
@@ -64,8 +65,10 @@ The facilitator supports two x402 schemes on the same `/verify` and `/settle` en
 
 There is no whitelist. Both schemes gate recipients the same way: an allowance the
 recipient has `approve()`d for the facilitator's wallet, **in the token the payment settles
-in** — USDC on any network, EURC on Base. The fee is charged in that same token (0.01 USDC or
-0.01 EURC), so a seller paid in both approves both. Any other token is refused with
+in** — USDC on any network, EURC and EURe on Base. The fee is charged in that same token (0.01
+USDC, 0.01 EURC or 0.01 EURe), so a seller paid in several approves each. EURe has 18 decimals,
+so its 0.01 is `10000000000000000` atomic units, not the `10000` of USDC/EURC — and an EURe
+approval of `1000000` covers no fee at all. Any other token is refused with
 `unsupported_fee_asset`. For `exact` the token is `requirements.asset`; for batch-settlement
 it is the channel's token (`payload.token` for `settle`, the claims' channel token for
 `claim`, `channelConfig.token` for a claim-carrying refund), and a batch mixing tokens is
@@ -165,7 +168,7 @@ facilitator runs without a fee (no `FACILITATOR_WALLET_PRIVATE_KEY`, or fee amou
     { "x402Version": 2, "scheme": "exact", "network": "eip155:10" },
     { "x402Version": 2, "scheme": "batch-settlement", "network": "eip155:10" }
   ],
-  "extensions": ["facilitator_fee", "facilitatorFees"],
+  "extensions": ["eip2612GasSponsoring", "facilitator_fee", "facilitatorFees"],
   "signers": {
     "eip155:*": ["0xFacilitatorAddress..."]
   },
@@ -179,7 +182,7 @@ facilitator runs without a fee (no `FACILITATOR_WALLET_PRIVATE_KEY`, or fee amou
     "networks": ["eip155:10", "eip155:8453", "eip155:11155420", "eip155:84532"],
     "fee": {
       "amount": "10000",
-      "description": "0.01 of the settled token (USDC, or EURC on Base) per settlement",
+      "description": "0.01 of the settled token (USDC; EURC and EURe on Base) per settlement",
       "collection": "post_settlement_transferFrom"
     },
     "setup": {
@@ -187,22 +190,52 @@ facilitator runs without a fee (no `FACILITATOR_WALLET_PRIVATE_KEY`, or fee amou
       "function": "approve(address spender, uint256 amount)",
       "spender": "0xFacilitatorAddress...",
       "recommended_amount": "1000000"
-    }
+    },
+    "assets": [
+      {
+        "network": "eip155:8453",
+        "asset": "0x8335…2913",
+        "symbol": "USDC",
+        "decimals": 6,
+        "flatFee": "10000",
+        "recommended_amount": "1000000"
+      },
+      {
+        "network": "eip155:8453",
+        "asset": "0x60a3…db42",
+        "symbol": "EURC",
+        "decimals": 6,
+        "flatFee": "10000",
+        "recommended_amount": "1000000"
+      },
+      {
+        "network": "eip155:8453",
+        "asset": "0xbf6e…762C",
+        "symbol": "EURe",
+        "decimals": 18,
+        "flatFee": "10000000000000000",
+        "recommended_amount": "1000000000000000000"
+      }
+    ]
   }
 }
 ```
+
+`flatFee`/`decimals`/`recommended_amount` at the top level state the nominal 0.01 in 6-decimal
+units. `assets` lists every fee token per network (abridged above) with its exact atomic fee and
+recommended approval — read it, not the top level, to approve EURe. `eip2612GasSponsoring` is
+always advertised: it tells a resource server that this facilitator settles an EIP-2612 permit
+carried in the payment, so it can offer the extension in its 402 and EURe buyers need no
+separate `approve()`.
 
 ### POST /verify
 
 Validates payment authorization off-chain.
 
-> **Scheme support:** the `exact` scheme is supported only via its **EIP-3009**
-> payload variant (an `authorization` object, as shown below). **Permit2** payloads
-> (a `permit2Authorization` object) are rejected with `invalidReason:
-"permit2_not_supported"` — the fee model (post-settlement USDC `transferFrom`) is
-> EIP-3009-specific, and the x402 Permit2 proxy has no per-network deployment registry
-> here. The `batch-settlement` scheme is supported on the networks listed by
-> `getBatchSettlementNetworks()`.
+> **Scheme support:** the `exact` scheme accepts both payload variants: **EIP-3009** (an
+> `authorization` object, as shown below — USDC, EURC) and **Permit2** (a
+> `permit2Authorization` object — EURe; see _EURe via Permit2_). The `batch-settlement` scheme
+> is supported on the networks listed by `getBatchSettlementNetworks()`.
 
 **Request:**
 
@@ -316,7 +349,10 @@ Error-reason strings come from the `@x402/evm` SDK and are prefixed by scheme (`
 | `invalid_batch_settlement_evm_receiver_mismatch`    | A `refund`'s `claims[]` pay out to a receiver other than its own verified channel                                                                               |
 | `invalid_batch_settlement_evm_token_mismatch`       | A `refund`'s `claims[]` are in a token other than its own verified channel's                                                                                    |
 | `insufficient_fee_allowance`                        | Recipient's allowance (in the settled token) for the facilitator is too low — `exact`, or any `batch-settlement` payload that executes a claim                  |
-| `unsupported_fee_asset`                             | The settled token is neither USDC nor (on Base) EURC, so no fee can be charged in it                                                                            |
+| `unsupported_fee_asset`                             | The settled token is neither USDC nor (on Base) EURC or EURe, so no fee can be charged in it                                                                    |
+| `invalid_permit2_recipient_mismatch`                | A Permit2 payment's `witness.to` is not `payTo` (`exact`, EURe)                                                                                                 |
+| `permit2_allowance_required`                        | Permit2 may not spend the payer's EURe: no prior `approve()` and no valid EIP-2612 permit in the payment                                                        |
+| `permit2_insufficient_balance`                      | Payer doesn't have enough of the token (`exact`, Permit2)                                                                                                       |
 | `invalid_network`                                   | Network not supported                                                                                                                                           |
 | `invalid_payload`                                   | Malformed payload                                                                                                                                               |
 | `unexpected_verify_error`                           | Unexpected error                                                                                                                                                |
@@ -454,6 +490,7 @@ TLS termination is handled automatically by Scaleway.
 
 - [ ] Set `FACILITATOR_WALLET_PRIVATE_KEY` in Scaleway Secrets
 - [ ] Fund facilitator wallet with ETH for gas (~0.01 ETH minimum)
+- [ ] Each seller paid in EURe approves EURe for the facilitator on Base — `1000000000000000000` (1 EURe = 100 fees), not the `1000000` used for USDC/EURC
 - [ ] Configure `BATCH_SETTLEMENT_TEST_WALLETS` if testnet dev convenience is needed
 - [ ] Test all endpoints after deployment
 - [ ] Set up monitoring and alerts in Scaleway Console
@@ -496,7 +533,42 @@ EURC (Circle) is deployed on Base only; the facilitator accepts it there alongsi
 | Base Mainnet | `eip155:8453`  | `0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42` | `EURC`           |
 | Base Sepolia | `eip155:84532` | `0x808456652fdb597867f38412077A9182bf77359F` | `EURC`           |
 
+EURe (Monerium) is deployed on Base, not on Optimism; the facilitator accepts it on Base only. It
+has **18 decimals** and no EIP-3009, so it is paid via Permit2 (below). Its EIP-712 domain is
+needed for the EIP-2612 permit; verified on-chain on both networks (2026-10-04), by recomputing
+`DOMAIN_SEPARATOR` from these values:
+
+| Network      | CAIP-2         | EURe                                         | EURe domain name | version | decimals |
+| ------------ | -------------- | -------------------------------------------- | ---------------- | ------- | -------- |
+| Base Mainnet | `eip155:8453`  | `0xbf6e2966A9C3D99C9E4D069E04f7Bdb9C8aa762C` | `Monerium EURe`  | `1`     | 18       |
+| Base Sepolia | `eip155:84532` | `0x29F37F6adCa168B79B8d9567eab9BE3fBF21db85` | `Monerium EURe`  | `1`     | 18       |
+
+EURe is registered in this package only (`getFeeTokens()` in `chain_utils.ts`), not yet in
+`@fretchen/chain-utils`: the sellers in `scw_js` do not offer it yet, and it moves to the shared
+registry when they do.
+
 The canonical `batch-settlement` contract is deployed at the same address on every supported chain: `0x4020074e9dF2ce1deE5A9C1b5c3f541D02a10003`.
+
+### EURe via Permit2
+
+The buyer signs a Permit2 `PermitWitnessTransferFrom` naming the x402 exact Permit2 proxy
+(`0x402085c248EeA27D92E8b30b2C58ed07f9E20001`, deployed on Base, Base Sepolia and Optimism) as
+spender and `payTo` as the witness recipient. Permit2 can only pull EURe the payer has approved
+it for, which happens one of two ways:
+
+- **`eip2612GasSponsoring`** (the usual case): the payment also carries an EIP-2612 permit to
+  Permit2, signed against the EURe domain above. The facilitator settles with the proxy's
+  `settleWithPermit`, which applies the permit and the transfer in one transaction. The proxy
+  ignores a permit that fails, so a wrong domain shows up as `permit2_allowance_required`.
+- **A prior `approve(Permit2, …)`** by the payer: the facilitator settles with `settle`.
+
+`@x402/evm` pins the payment to the requirements before our fee gate runs — `witness.to` must be
+`payTo`, and token and amount must match — and the fee gate then reads `requirements` exactly
+as for EIP-3009. The seller pays the fee by the same post-settlement `transferFrom`, in EURe.
+
+`batch-settlement` routes on `requirements.extra.assetTransferMethod` and is not blocked for
+`"permit2"` here, but EURe channels have not been run end to end; treat them as untested until
+the sellers offer EURe.
 
 ## EIP-712 Signature Verification
 

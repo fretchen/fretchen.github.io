@@ -155,10 +155,9 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
   /**
    * Helper: create mock hook arguments simulating a Permit2 exact payment. Same
    * scheme ("exact") as EIP-3009, but the payload carries `permit2Authorization`
-   * (recipient at witness.to) instead of `authorization`. This facilitator does not
-   * support Permit2 — the hook must reject it with `permit2_not_supported`.
+   * (recipient at witness.to) instead of `authorization` — the shape EURe pays with.
    */
-  function permit2HookArgs(recipient: string, network: string): HookArgs {
+  function permit2HookArgs(recipient: string, network: string, asset: string): HookArgs {
     return {
       paymentPayload: {
         accepted: { network, scheme: "exact" },
@@ -169,7 +168,7 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
           },
         },
       },
-      requirements: { network, scheme: "exact", payTo: recipient },
+      requirements: { network, scheme: "exact", payTo: recipient, asset },
       result: {
         isValid: true,
         payer: "0xSomePayer000000000000000000000000000000",
@@ -482,24 +481,24 @@ describe("facilitator_instance onAfterVerify hook (fee model)", () => {
   });
 
   // ───────────────────────────────────────────────────────────
-  // Permit2 rejection — only the EIP-3009 exact variant is supported
+  // Permit2 (EURe) — same fee gate as EIP-3009
   // ───────────────────────────────────────────────────────────
 
-  it("rejects Permit2 exact payloads with permit2_not_supported", async () => {
-    // Even a valid, well-formed Permit2 payment must be rejected: the fee model, the
-    // proxy deployment registry, and end-to-end coverage all assume EIP-3009.
+  it("gates a Permit2 exact payload on requirements, like an EIP-3009 one", async () => {
     vi.mocked(evaluateFeeGate).mockResolvedValue({
       kind: "charge" as const,
-      remainingSettlements: 10,
+      remainingSettlements: 100,
     });
+    const recipient = "0x1111111111111111111111111111111111111111";
+    const baseEure = "0xbf6e2966A9C3D99C9E4D069E04f7Bdb9C8aa762C";
 
-    const args = permit2HookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
+    const args = permit2HookArgs(recipient, "eip155:8453", baseEure);
     await hookHolder.current!(args);
 
-    expect(args.result.isValid).toBe(false);
-    expect(args.result.invalidReason).toBe("permit2_not_supported");
-    // Must reject before touching the fee-allowance path.
-    expect(evaluateFeeGate).not.toHaveBeenCalled();
+    expect(args.result.isValid).toBe(true);
+    expect(evaluateFeeGate).toHaveBeenCalledWith(recipient, "eip155:8453", baseEure);
+    expect(args.result.feeRequired).toBe(true);
+    expect(args.result.remainingSettlements).toBe(100);
   });
 });
 

@@ -3,9 +3,10 @@
  * Creates fresh read-only facilitator instance (no singleton caching)
  */
 
-import { formatUnits } from "viem";
 import { createReadOnlyFacilitator } from "./facilitator_instance";
-import { getFeeAmount, getFacilitatorAddress } from "./x402_fee";
+import { formatUnits, parseUnits } from "viem";
+import { getFeeTokens } from "./chain_utils";
+import { feeAmountFor, getFeeAmount, getFacilitatorAddress } from "./x402_fee";
 import type { SupportedResponseBody } from "./x402_schemas";
 
 /**
@@ -18,6 +19,13 @@ type SupportedCapabilities = SupportedResponseBody;
 /** Extension key advertised in `extensions` when a fee is configured. */
 const FACILITATOR_FEE_EXTENSION_KEY = "facilitator_fee";
 const FACILITATOR_FEES_EXTENSION_KEY = "facilitatorFees";
+/**
+ * The @x402/evm extension carrying an EIP-2612 permit to Permit2 inside the payment, so an EURe
+ * buyer needs no separate approve() transaction. The exact scheme verifies and settles it from the
+ * payload alone (settleWithPermit); a resource server reads this key from `/supported` to decide
+ * whether to offer it in its 402.
+ */
+const EIP2612_GAS_SPONSORING_EXTENSION_KEY = "eip2612GasSponsoring";
 
 const DOCUMENTATION_URL = "https://www.fretchen.eu/x402/";
 const SOURCE_URL = "https://github.com/fretchen/fretchen.github.io/tree/main/x402_facilitator";
@@ -34,7 +42,7 @@ export function getSupportedCapabilities(): SupportedCapabilities {
   const base = facilitator.getSupported();
   const supported: SupportedCapabilities = {
     ...base,
-    extensions: [...(base.extensions ?? [])],
+    extensions: [...(base.extensions ?? []), EIP2612_GAS_SPONSORING_EXTENSION_KEY],
     links: { documentation: DOCUMENTATION_URL, source: SOURCE_URL, openapi: OPENAPI_URL },
   };
 
@@ -48,6 +56,7 @@ export function getSupportedCapabilities(): SupportedCapabilities {
     supported.extensions.push(FACILITATOR_FEE_EXTENSION_KEY, FACILITATOR_FEES_EXTENSION_KEY);
 
     // Derive networks from `kinds` to stay consistent with the advertised response.
+    const networks = [...new Set(supported.kinds.map((k) => k.network))];
     supported.facilitatorFees = {
       version: "1",
       model: "flat",
@@ -56,11 +65,11 @@ export function getSupportedCapabilities(): SupportedCapabilities {
       flatFee: feeAmount.toString(),
       decimals: 6,
       recipient: facilitatorAddress,
-      networks: [...new Set(supported.kinds.map((k) => k.network))],
+      networks,
       fee: {
         amount: feeAmount.toString(),
         description:
-          `${formatUnits(feeAmount, 6)} of the settled token (USDC, or EURC on Base) per ` +
+          `${formatUnits(feeAmount, 6)} of the settled token (USDC; EURC and EURe on Base) per ` +
           "settlement (exact), or per on-chain claim " +
           "or settle transaction (batch-settlement) — same flat amount either way. " +
           "batch-settlement charges whatever realizes a payment: claim, settle, and a refund " +
@@ -71,7 +80,8 @@ export function getSupportedCapabilities(): SupportedCapabilities {
       setup: {
         description:
           "Recurring approval, one per token you are paid in: call approve() on the USDC contract " +
-          "(any network) and/or the EURC contract (Base) for the facilitator's address. A settlement " +
+          "(any network) and/or the EURC and EURe contracts (Base) for the facilitator's address. " +
+          "EURe has 18 decimals: approve the per-token amount listed in `assets`. A settlement " +
           "in a token you have not approved is refused. Applies to both schemes: exact recipients and " +
           "batch-settlement claim/settle recipients draw from the same per-token allowance. The recommended amount is deliberately small: the spender is a hot " +
           "wallet, so a large standing allowance is a standing risk. Re-approve when remainingSettlements " +
@@ -84,6 +94,17 @@ export function getSupportedCapabilities(): SupportedCapabilities {
         // that tradeoff in mind; the test in x402_supported.test.js bounds it.
         recommended_amount: "1000000", // 1 token (6 decimals) = 100 settlements
       },
+      // The same 0.01 fee and 1-token approval, in each token's own units.
+      assets: networks.flatMap((network) =>
+        getFeeTokens(network).map((token) => ({
+          network,
+          asset: token.address,
+          symbol: token.symbol,
+          decimals: token.decimals,
+          flatFee: feeAmountFor(token.decimals).toString(),
+          recommended_amount: parseUnits("1", token.decimals).toString(),
+        })),
+      ),
     };
   }
 

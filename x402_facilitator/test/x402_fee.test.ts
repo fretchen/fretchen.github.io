@@ -5,6 +5,7 @@ import {
   checkMerchantAllowance,
   collectFee,
   evaluateFeeGate,
+  feeAmountFor,
   wasRejectedBeforeBroadcast,
 } from "../x402_fee.js";
 import type { createPublicClient, getContract } from "viem";
@@ -48,6 +49,9 @@ vi.mock("viem/accounts", () => ({
 // The fee is charged in the settled token, so every fee call names one.
 const OP_SEPOLIA_USDC = "0x5fd84259d66Cd46123540766Be93DFE6D43130D7";
 const BASE_EURC = "0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42";
+// Monerium EURe has 18 decimals, so the same nominal fee is 10¹⁶ atomic units, not 10000.
+const BASE_EURE = "0xbf6e2966A9C3D99C9E4D069E04f7Bdb9C8aa762C";
+const EURE_FEE = 10_000_000_000_000_000n; // 0.01 EURe
 
 describe("x402_fee", () => {
   const originalEnv = { ...process.env };
@@ -147,8 +151,40 @@ describe("x402_fee", () => {
   // checkMerchantAllowance
   // ═══════════════════════════════════════════════════════════
 
+  describe("feeAmountFor — the nominal fee in each token's own units", () => {
+    it("is 10000 for a 6-decimal token and 10¹⁶ for an 18-decimal one", () => {
+      expect(feeAmountFor(6)).toBe(10000n);
+      expect(feeAmountFor(18)).toBe(EURE_FEE);
+    });
+
+    it("scales a configured fee the same way", () => {
+      process.env.FACILITATOR_FEE_AMOUNT = "50000"; // 0.05
+      expect(feeAmountFor(18)).toBe(50_000_000_000_000_000n);
+    });
+
+    it("stays zero when fees are disabled", () => {
+      process.env.FACILITATOR_FEE_AMOUNT = "0";
+      expect(feeAmountFor(18)).toBe(0n);
+    });
+  });
+
   describe("checkMerchantAllowance", () => {
     const merchant = "0x209693Bc6afc0C5328bA36FaF03C514EF312287C";
+
+    it("counts EURe settlements against the 18-decimal fee", async () => {
+      const { getContract } = await import("viem");
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          read: { allowance: vi.fn().mockResolvedValue(10n ** 18n) }, // 1 EURe
+        }),
+      );
+
+      const result = await checkMerchantAllowance(merchant, "eip155:8453", BASE_EURE);
+
+      // 1 EURe / 0.01 EURe — with an unscaled 10000 fee this would read as 10¹⁴ settlements.
+      expect(result.remainingSettlements).toBe(100);
+      expect(result.status).toBe("ok");
+    });
 
     it("returns status=ok when allowance exceeds fee", async () => {
       const { getContract } = await import("viem");
@@ -261,6 +297,40 @@ describe("x402_fee", () => {
 
   describe("collectFee", () => {
     const merchant = "0x209693Bc6afc0C5328bA36FaF03C514EF312287C";
+
+    it("pulls 0.01 EURe as 10¹⁶ atomic units", async () => {
+      const txHash = "0xfee1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab";
+      const { getContract, createPublicClient } = await import("viem");
+      vi.mocked(createPublicClient).mockReturnValue(
+        mockPublicClient({
+          waitForTransactionReceipt: vi.fn(async () => ({
+            status: "success",
+            transactionHash: txHash,
+          })),
+        }),
+      );
+      const transferFrom = vi.fn().mockResolvedValue(txHash);
+      vi.mocked(getContract).mockReturnValue(mockContract({ write: { transferFrom } }));
+
+      const result = await collectFee(merchant, "eip155:8453", BASE_EURE);
+
+      expect(result.success).toBe(true);
+      expect(transferFrom).toHaveBeenCalledWith([
+        merchant,
+        "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        EURE_FEE,
+      ]);
+    });
+
+    it("refuses a token that is not a fee token", async () => {
+      const result = await collectFee(
+        merchant,
+        "eip155:8453",
+        "0x0000000000000000000000000000000000000001",
+      );
+
+      expect(result).toEqual({ success: false, error: "unsupported_fee_asset" });
+    });
 
     it("skips fee collection when fee is 0", async () => {
       process.env.FACILITATOR_FEE_AMOUNT = "0";

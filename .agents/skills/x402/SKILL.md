@@ -94,10 +94,13 @@ fallback (see `genimg_x402_token.ts`).
   so it is paid via **Permit2** (`exact`'s and batch-settlement's `permit2Authorization`, with
   the 402 advertising `eip2612GasSponsoring`), and the 0.01 facilitator fee is `10¹⁶` atomic
   units, a seller's fee approval `10¹⁸` (1 EURe). Domain `"Monerium EURe"`, version `"1"`.
-  Registered in `@fretchen/chain-utils` → `getSettlementTokens()` (the facilitator's fee tokens
-  and the sellers' offers both read it); the website still pays only USDC/EURC via
-  `getStablecoins()` until its buyer-side PR. See `scw_js/README.md` → _Stablecoins and pricing_
-  and _Known EURe Domain Names_, and `x402_facilitator/README.md` → _EURe via Permit2_.
+  Registered in `@fretchen/chain-utils` → `getSettlementTokens()` — the facilitator's fee
+  tokens, the sellers' offers, and the website's buyer side (`getSettlementTokens`/
+  `findSettlementToken`, default currency EURe with EURC and USDC one toggle away; its
+  spend-control cap is per-token, `10^decimals`) all read it. `getStablecoins()` remains
+  USDC+EURC only — nothing should read it for EURe. See `scw_js/README.md` → _Stablecoins
+  and pricing_ and _Known EURe Domain Names_, and `x402_facilitator/README.md` → _EURe via
+  Permit2_.
 
 ## Writing about x402 on the site
 

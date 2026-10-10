@@ -1,0 +1,65 @@
+name: Viem Version Alignment
+
+permissions:
+    contents: read
+
+on:
+    pull_request:
+        paths:
+            - "shared/chain-utils/package-lock.json"
+            - "scw_js/package-lock.json"
+            - "x402_facilitator/package-lock.json"
+            - "analytics/package-lock.json"
+            - "website/package-lock.json"
+            - ".github/workflows/test-viem-alignment.yml"
+    push:
+        branches:
+            - main
+        paths:
+            - "shared/chain-utils/package-lock.json"
+            - "scw_js/package-lock.json"
+            - "x402_facilitator/package-lock.json"
+            - "analytics/package-lock.json"
+            - "website/package-lock.json"
+
+jobs:
+    check-viem-alignment:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v6
+
+            - name: Assert one viem version across all lockfiles
+              run: |
+                  node <<'EOF'
+                  const fs = require("fs");
+                  const locks = [
+                    "shared/chain-utils/package-lock.json",
+                    "scw_js/package-lock.json",
+                    "x402_facilitator/package-lock.json",
+                    "analytics/package-lock.json",
+                    "website/package-lock.json",
+                  ];
+                  const versions = locks.map((path) => {
+                    const lock = JSON.parse(fs.readFileSync(path, "utf8"));
+                    return [path, lock.packages?.["node_modules/viem"]?.version];
+                  });
+                  const missing = versions.filter(([, version]) => !version);
+                  if (missing.length > 0) {
+                    console.error(`No viem entry found in: ${missing.map(([path]) => path).join(", ")}`);
+                    process.exit(1);
+                  }
+                  const unique = new Set(versions.map(([, version]) => version));
+                  if (unique.size !== 1) {
+                    console.error("viem versions have drifted across lockfiles:");
+                    for (const [path, version] of versions) {
+                      console.error(`  ${path}: ${version}`);
+                    }
+                    console.error(
+                      "All five packages must resolve the same viem version: @fretchen/chain-utils is symlinked into its consumers and its dist/.d.ts types resolve against chain-utils' own node_modules/viem, so a version split makes its Chain type structurally incompatible with the consumers' viem. Align the lockfiles, then rebuild shared/chain-utils (npm run build).",
+                    );
+                    process.exit(1);
+                  }
+                  console.log(`All lockfiles agree on viem ${versions[0][1]}`);
+                  EOF

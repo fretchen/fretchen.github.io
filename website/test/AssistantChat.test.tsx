@@ -159,7 +159,7 @@ import claimsFixture from "./fixtures/bundestakt/claims.json";
 import { OWNER_SCOPES } from "../utils/getChain";
 import { PaymentError } from "../utils/x402PaidFetch";
 import { MAX_HOPS } from "../utils/toolLoop";
-import { toolContractPrompt, teenPrompt, researchPrompt } from "../utils/prompts";
+import { toolContractPrompt, researchPrompt } from "../utils/prompts";
 import { formatLanguageContext } from "../utils/languageContext";
 import { usePageContext } from "vike-react/usePageContext";
 

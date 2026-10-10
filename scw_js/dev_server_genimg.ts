@@ -64,7 +64,7 @@ import("dotenv").then((dotenv) => {
           },
         });
 
-        fastify.listen({ port: 8082, host: "0.0.0.0" }, (err: unknown, address: string) => {
+        fastify.listen({ port: 8082, host: "127.0.0.1" }, (err: unknown, address: string) => {
           if (err) {
             // Local dev only — never deployed. Same phrase the other packages' local server
             // bootstraps use; see EXEMPT in test/alert_coverage.test.ts.

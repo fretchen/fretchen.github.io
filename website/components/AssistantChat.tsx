@@ -53,7 +53,6 @@ import {
   pagePath,
   indexUnavailable,
   fetchFailed as pageFetchFailed,
-  type PageResult,
 } from "../tools/page";
 import {
   searchWebTool,
@@ -61,7 +60,6 @@ import {
   selectSearch,
   normalizeQuery,
   fetchFailed as searchFetchFailed,
-  type SearchToolResult,
 } from "../tools/search";
 import {
   fetchUrlTool,
@@ -862,7 +860,7 @@ export function AssistantChat() {
   async function loadSearch(args: Record<string, unknown>): Promise<ToolRunResult> {
     const query = normalizeQuery(args.query);
     if (!query) {
-      return { result: { status: "no_query" } as SearchToolResult, recoverable: true };
+      return { result: { status: "no_query" }, recoverable: true };
     }
 
     try {
@@ -952,7 +950,7 @@ export function AssistantChat() {
 
       const path = pagePath(args.url);
       if (!path) {
-        return { result: { status: "invalid_url", url: String(args.url) } as PageResult, recoverable: true };
+        return { result: { status: "invalid_url", url: String(args.url) }, recoverable: true };
       }
 
       const html = await queryClient.fetchQuery({

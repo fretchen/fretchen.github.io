@@ -17,7 +17,7 @@ before. The test file catches them; these are the rules it enforces.
 
 1. **Never pass a JS variable as a `css({})` value.** Panda resolves values statically at
    build time; what it cannot trace without running the code emits no CSS at all. Since the
-   v2 engine, Panda *does* trace a local constant and a named import
+   v2 engine, Panda _does_ trace a local constant and a named import
    (`import { accent } from "./palette"`) — but the convention is still the token _name_,
    spelled out at the call site: a traced raw value (`"#654321"`) silently goes off-token,
    and a value that only exists at runtime (a prop, state, a default or namespace import)

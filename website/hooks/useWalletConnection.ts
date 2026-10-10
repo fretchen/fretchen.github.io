@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAccount, useConnect } from "wagmi";
 import { useIsMounted } from "./useIsMounted";
 import { useIsWalletConnected } from "./useIsWalletConnected";
@@ -27,15 +27,27 @@ export function useWalletConnection() {
   // way whether or not a wallet ends up connected).
   const isConnected = useIsWalletConnected();
 
+  // wagmi appends the EIP-6963-discovered browser wallets inside WagmiProvider's Hydrate
+  // mount effect — one commit after the first render, because `ssr: true` defers discovery
+  // out of the initial connector computation (see wagmi.config.ts). Until that append
+  // lands, a connector list with no injected entry means "not discovered yet", not "not
+  // installed", so the WalletConnect fallback must not fire (see pickWalletConnector). A
+  // macrotask is late enough: the append is driven by already-settled promises inside
+  // onMount, so it always completes before any timer fires.
+  const [discoverySettled, setDiscoverySettled] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setDiscoverySettled(true), 0);
+    return () => clearTimeout(timer);
+  }, []);
+
   const connectWallet = useCallback(
     (source: string, metadata?: Record<string, string | number | boolean>) => {
-      const target = pickWalletConnector(connectors);
-      if (target) {
-        trackEvent(WalletEvents.CONNECT_ATTEMPT, { source, ...metadata });
-        connect({ connector: target });
-      }
+      const target = pickWalletConnector(connectors, { discoverySettled });
+      if (!target) return;
+      trackEvent(WalletEvents.CONNECT_ATTEMPT, { source, ...metadata });
+      connect({ connector: target });
     },
-    [connectors, connect, trackEvent],
+    [connectors, connect, trackEvent, discoverySettled],
   );
 
   return {

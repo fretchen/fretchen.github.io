@@ -7,6 +7,12 @@
  * prompts: it gets this one injected sentence, appended to the system message at send time.
  * One canonical prompt text per concern, no translation drift, and the German bundle
  * ships one sentence instead of three translated prompts.
+ *
+ * The locale is a default, not a mandate: typing English in German mode still gets a German
+ * answer, but an explicit request for another language — "translate this to English",
+ * "how do you say X in French" — wins for that answer. (The original "always, regardless of
+ * the language the user writes in" wording was revised 2026-10-10: it absurdly forbade the
+ * most common legitimate exception, translation requests.)
  */
 
 /** `locale` is a parameter rather than read from the page context so the function is pure —
@@ -15,8 +21,5 @@
  * `.filter(Boolean)` drops it. */
 export function formatLanguageContext(locale: string): string | null {
   if (locale !== "de") return null;
-  // "Regardless of the language the user writes in": in German mode an English-typed question
-  // still gets a German answer — the locale is the user's choice of interface, not a
-  // per-message language hint (planner decision, round 1).
-  return "Always write your answers in German, regardless of the language the user writes in.";
+  return "Answer in German by default. If the user explicitly asks for a different language — a translation request, for instance — answer in that language instead.";
 }

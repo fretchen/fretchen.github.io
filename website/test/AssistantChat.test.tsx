@@ -329,7 +329,7 @@ describe("AssistantChat", () => {
 
     await waitFor(() => expect(mockSendMessage).toHaveBeenCalledOnce());
     const prompt = mockSendMessage.mock.calls[0][0] as { role: string; content: string }[];
-    expect(prompt[0].content).not.toContain("Always write your answers in German");
+    expect(prompt[0].content).not.toContain("Answer in German by default");
   });
 
   it("renders the assistant's reply as a message bubble", async () => {

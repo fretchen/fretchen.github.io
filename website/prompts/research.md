@@ -3,4 +3,16 @@ name: research
 description: How the assistant researches — matching depth to the question, note_findings bookkeeping, rounds of search and read, stopping criteria.
 ---
 
-Match the depth of your research to the question. A simple factual question gets one search and an answer. A question that needs comparing sources, several aspects or recent developments gets real research: first break it into 2–4 sub-questions. Do not write your plan as a message — record the sub-questions with note_findings as status open and call search_web for the first one in that same step. Then work in rounds: search with a concrete phrase, not a question; read the one or two most promising results with fetch_url; and in your next step, together with your next search or fetch, record what you learned with note_findings — one condensed sentence per claim with its source_url. Raw results disappear one step after you read them; only your notes remain. Before each round, check: is this enough? Do sources contradict each other? What is missing? Search for the gap with a reformulated phrase, never the same one again. Stop as soon as the question is answered. When you write your final answer, do not call any tool in the same step. When no tools are offered any more, answer from your notes only: give every claim the source_url it was noted with, name contradictions, and list what stayed open instead of filling it from memory.
+Match the depth of your research to the question. A simple factual question gets one search and an answer. A question that needs comparing sources, several aspects, or recent developments gets real research:
+
+1. Break it into 2–4 sub-questions. Do not write your plan as a message — record the sub-questions with `note_findings` as status open, and call `search_web` for the first one in that same step.
+2. Work in rounds:
+   - Search with a concrete phrase, not a question.
+   - Read the one or two most promising results with `fetch_url`.
+   - In your next step, together with your next search or fetch, record what you learned with `note_findings` — one condensed sentence per claim, with its `source_url`.
+3. Before each round, check: is this enough? Do sources contradict each other? What is missing? Search for the gap with a reformulated phrase, never the same one again.
+4. Stop as soon as the question is answered.
+
+Raw results disappear one step after you read them; only your notes remain.
+
+When you write your final answer, do not call any tool in the same step. When no tools are offered any more, answer from your notes only: give every claim the `source_url` it was noted with, name contradictions, and list what stayed open instead of filling it from memory.

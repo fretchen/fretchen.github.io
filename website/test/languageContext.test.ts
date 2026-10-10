@@ -1,11 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { formatLanguageContext } from "../utils/languageContext";
 
+const GERMAN_DEFAULT_INSTRUCTION =
+  "Answer in German by default. If the user explicitly asks for a different language — a translation request, for instance — answer in that language instead.";
+
 describe("formatLanguageContext", () => {
-  it("instructs German answers for the German locale", () => {
-    expect(formatLanguageContext("de")).toBe(
-      "Always write your answers in German, regardless of the language the user writes in.",
-    );
+  it("sets German as the default answer language, with an explicit-request override", () => {
+    expect(formatLanguageContext("de")).toBe(GERMAN_DEFAULT_INSTRUCTION);
   });
 
   it("returns null for the English locale", () => {

@@ -40,20 +40,24 @@ const {
           completion_tokens: bigint | number | string;
         },
         provider: string,
-        symbol: "USDC" | "EURC",
+        symbol: "USDC" | "EURC" | "EURe",
+        decimals: number,
       ) => {
-        // One rate card per currency, as in llm_service.ts: $0.50/$1.50 and €0.44/€1.50.
+        // One rate card per currency, as in llm_service.ts: $0.50/$1.50 and €0.44/€1.50 —
+        // EURe shares the EUR card, rescaled to its 18 decimals like the real tokensToCost.
         const RATES: Record<string, Record<string, { in: bigint; out: bigint; den: bigint }>> = {
           mistral: {
             USDC: { in: 50n, out: 150n, den: 100n },
             EURC: { in: 44n, out: 150n, den: 100n },
+            EURe: { in: 44n, out: 150n, den: 100n },
           },
         };
         const rate = RATES[provider]?.[symbol];
         if (!rate) throw new Error(`Unknown LLM provider: ${provider}`);
         const p = BigInt(usage.prompt_tokens);
         const c = BigInt(usage.completion_tokens);
-        return (p * rate.in + c * rate.out) / rate.den;
+        const base = (p * rate.in + c * rate.out) / rate.den;
+        return decimals === 6 ? base : base * 10n ** BigInt(decimals - 6);
       },
     ),
     mockCreateLLMResourceServer: vi.fn(),
@@ -489,8 +493,9 @@ describe("sc_llm_x402", () => {
         expect.objectContaining({
           payTo: VALID_ADDRESS,
           scheme: mockScheme,
-          // 20000 tokens at the output rate: $1.50/M and €1.50/M both give 30000.
-          price: { USDC: "30000", EURC: "30000" },
+          // 20000 tokens at the output rate: $1.50/M and €1.50/M give 30000 in 6 decimals,
+          // and 30000 ×10¹² for EURe's 18 — the same ceiling in each token's own units.
+          price: { USDC: "30000", EURC: "30000", EURe: "30000000000000000" },
         }),
       );
       expect(mockCreate402Response).toHaveBeenCalled();

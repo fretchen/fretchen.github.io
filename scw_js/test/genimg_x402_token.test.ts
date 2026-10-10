@@ -145,7 +145,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "https://api.example.com/genimg",
         description: "AI Image Generation",
         mimeType: "application/json",
-        price: { USDC: "1000", EURC: "900" },
+        price: { USDC: "1000", EURC: "900", EURe: "900000000000000" },
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
       });
       const response = create402Response(paymentRequirements);
@@ -177,7 +177,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/genimg",
         description: "AI Image Generation",
         mimeType: "application/json",
-        price: { USDC: "1000", EURC: "900" },
+        price: { USDC: "1000", EURC: "900", EURe: "900000000000000" },
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
       });
       const response = create402Response(paymentRequirements);
@@ -207,7 +207,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/genimg",
         description: "AI Image Generation",
         mimeType: "application/json",
-        price: { USDC: "1000", EURC: "900" },
+        price: { USDC: "1000", EURC: "900", EURe: "900000000000000" },
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
       });
       const response = create402Response(paymentRequirements);
@@ -223,7 +223,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/genimg",
         description: "AI Image Generation",
         mimeType: "application/json",
-        price: { USDC: "1000", EURC: "900" },
+        price: { USDC: "1000", EURC: "900", EURe: "900000000000000" },
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
       });
       const response = create402Response(paymentRequirements);
@@ -241,7 +241,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/genimg",
         description: "AI Image Generation",
         mimeType: "application/json",
-        price: { USDC: "1000", EURC: "900" },
+        price: { USDC: "1000", EURC: "900", EURe: "900000000000000" },
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
         networks: ["eip155:11155420"], // Only Sepolia
       });
@@ -261,7 +261,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/genimg",
         description: "AI Image Generation",
         mimeType: "application/json",
-        price: { USDC: "1000", EURC: "900" },
+        price: { USDC: "1000", EURC: "900", EURe: "900000000000000" },
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
         networks: undefined, // Default: all networks
       });
@@ -358,7 +358,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
       // Default is production mode: Optimism + Base
       expect(body.accepts).toBeInstanceOf(Array);
-      // Optimism: USDC. Base: EURC first (the preference), then USDC.
+      // Optimism: USDC. Base: EURe first (the preference), then EURC, then USDC.
       expect(
         body.accepts.map((a: { network: string; extra: { name: string } }) => [
           a.network,
@@ -366,6 +366,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         ]),
       ).toEqual([
         ["eip155:10", "USD Coin"],
+        ["eip155:8453", "Monerium EURe"],
         ["eip155:8453", "EURC"],
         ["eip155:8453", "USD Coin"],
       ]);
@@ -1776,13 +1777,13 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/test",
         description: "Test Resource",
         mimeType: "application/json",
-        price: { USDC: "1000", EURC: "900" },
+        price: { USDC: "1000", EURC: "900", EURe: "900000000000000" },
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
       });
 
       expect(requirements.x402Version).toBe(2);
-      // USDC on all four networks, plus EURC on Base and Base Sepolia.
-      expect(requirements.accepts).toHaveLength(6);
+      // USDC on all four networks, plus EURC and EURe on Base and Base Sepolia.
+      expect(requirements.accepts).toHaveLength(8);
 
       const networks = requirements.accepts.map((a) => a.network);
       expect(networks).toContain("eip155:10");
@@ -1851,7 +1852,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         resourceUrl: "/test",
         description: "Test",
         mimeType: "application/json",
-        price: { USDC: "1000", EURC: "900" },
+        price: { USDC: "1000", EURC: "900", EURe: "900000000000000" },
         payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
       });
 
@@ -1874,36 +1875,88 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       });
     });
 
-    describe("USDC and EURC as two parallel price lists", () => {
-      test("lists EURC before USDC on Base, and only USDC on Optimism", async () => {
+    describe("USDC, EURC and EURe as three parallel price lists", () => {
+      test("lists EURe, then EURC, then USDC on Base, and only USDC on Optimism", async () => {
         const { createPaymentRequirements } = await import("../x402_server.js");
 
         const { accepts } = createPaymentRequirements({
           resourceUrl: "/test",
           description: "Test",
           mimeType: "application/json",
-          price: { USDC: "1001", EURC: "850" },
+          price: { USDC: "1001", EURC: "850", EURe: "850000000000000" },
           payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
         });
 
         const byNetwork = (network: string) =>
           accepts.filter((a) => a.network === network).map((a) => a.extra.name);
         // The order is the preference: a stock client pays with the first entry it allows.
-        expect(byNetwork("eip155:8453")).toEqual(["EURC", "USD Coin"]);
-        expect(byNetwork("eip155:84532")).toEqual(["EURC", "USDC"]);
+        expect(byNetwork("eip155:8453")).toEqual(["Monerium EURe", "EURC", "USD Coin"]);
+        expect(byNetwork("eip155:84532")).toEqual(["Monerium EURe", "EURC", "USDC"]);
         expect(byNetwork("eip155:10")).toEqual(["USD Coin"]);
         expect(byNetwork("eip155:11155420")).toEqual(["USDC"]);
 
+        const baseEure = accepts.find(
+          (a) => a.network === "eip155:8453" && a.extra.name === "Monerium EURe",
+        );
         const baseEurc = accepts.find(
           (a) => a.network === "eip155:8453" && a.extra.name === "EURC",
         );
         const baseUsdc = accepts.find(
           (a) => a.network === "eip155:8453" && a.extra.name === "USD Coin",
         );
-        // Each entry carries its own token's price — no conversion between the two.
+        // Each entry carries its own token's price — no conversion between the three.
         expect(baseEurc?.amount).toBe("850");
         expect(baseEurc?.asset).toBe("0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42");
         expect(baseUsdc?.amount).toBe("1001");
+        // EURe: the same euro price in its own 18 decimals, on its own address.
+        expect(baseEure?.amount).toBe("850000000000000");
+        expect(baseEure?.asset).toBe("0xbf6e2966A9C3D99C9E4D069E04f7Bdb9C8aa762C");
+      });
+
+      test("marks the EURe entry as Permit2 — and only that entry", async () => {
+        const { createPaymentRequirements } = await import("../x402_server.js");
+
+        const { accepts, extensions } = createPaymentRequirements({
+          resourceUrl: "/test",
+          description: "Test",
+          mimeType: "application/json",
+          price: { USDC: "1001", EURC: "850", EURe: "850000000000000" },
+          payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+        });
+
+        const baseEure = accepts.find(
+          (a) => a.network === "eip155:8453" && a.extra.name === "Monerium EURe",
+        );
+        // EURe has no EIP-3009; without this field the SDK client defaults to it and fails.
+        expect(baseEure?.extra).toEqual({
+          name: "Monerium EURe",
+          version: "1",
+          assetTransferMethod: "permit2",
+        });
+        // The EIP-3009 entries carry the field never — its absence IS the "eip3009" signal.
+        for (const accept of accepts.filter((a) => a.extra.name !== "Monerium EURe")) {
+          expect(accept.extra).not.toHaveProperty("assetTransferMethod");
+        }
+        // The challenge advertises gas sponsoring so a fresh wallet can pay EURe with no
+        // approve() to Permit2: the client only signs the EIP-2612 permit when this is present.
+        expect(extensions).toEqual({ eip2612GasSponsoring: {} });
+      });
+
+      test("advertises no gas-sponsoring extension when only EIP-3009 tokens are offered", async () => {
+        const { createPaymentRequirements } = await import("../x402_server.js");
+
+        // Optimism only: USDC — no EURe, so no extension.
+        const { accepts, extensions } = createPaymentRequirements({
+          resourceUrl: "/test",
+          description: "Test",
+          mimeType: "application/json",
+          price: { USDC: "1001", EURC: "850", EURe: "850000000000000" },
+          payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+          networks: ["eip155:10"],
+        });
+
+        expect(accepts.every((a) => a.extra.name === "USD Coin")).toBe(true);
+        expect(extensions).toBeUndefined();
       });
     });
   });

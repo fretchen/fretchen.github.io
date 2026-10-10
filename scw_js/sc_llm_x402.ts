@@ -15,9 +15,14 @@ import {
   FORWARDED_OWN_KEYS,
   MAX_MESSAGES_BYTES,
 } from "./llm_schemas.js";
-import { isTestnet, type StablecoinSymbol } from "@fretchen/chain-utils";
+import { isTestnet, type SettlementTokenSymbol } from "@fretchen/chain-utils";
 import { logger } from "./logger.js";
-import { offeredStablecoins, resolvePaidStablecoin, type PriceList } from "./stablecoin_pricing.js";
+import {
+  offeredStablecoins,
+  resolvePaidStablecoin,
+  TOKEN_DECIMALS,
+  type PriceList,
+} from "./stablecoin_pricing.js";
 import {
   createLLMResourceServer,
   createBatchSettlementPaymentRequirements,
@@ -92,15 +97,21 @@ const MAX_TOKENS_PER_MESSAGE = process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE ?? "
 // never an underestimate relative to whatever the real split turns out to be;
 // getSettleAmount's cap below still protects the ceiling from ever being exceeded.
 //
-// One ceiling per token, each priced on the provider's own rate card in that currency — two
-// parallel price systems, no conversion (see llm_service.ts).
-const maxPriceFor = (symbol: StablecoinSymbol): string =>
+// One ceiling per token, each priced on the provider's own rate card in that currency — three
+// parallel price systems, no conversion (see llm_service.ts). EURe's ceiling is the same EUR
+// arithmetic rescaled to 18 decimals (tokensToCost's `decimals`).
+const maxPriceFor = (symbol: SettlementTokenSymbol): string =>
   tokensToCost(
     { prompt_tokens: 0, completion_tokens: MAX_TOKENS_PER_MESSAGE },
     LLM_PROVIDER,
     symbol,
+    TOKEN_DECIMALS[symbol],
   ).toString();
-const MAX_PRICE_ATOMIC: PriceList = { USDC: maxPriceFor("USDC"), EURC: maxPriceFor("EURC") };
+const MAX_PRICE_ATOMIC: PriceList = {
+  USDC: maxPriceFor("USDC"),
+  EURC: maxPriceFor("EURC"),
+  EURe: maxPriceFor("EURe"),
+};
 
 /**
  * Real, usage-derived charge for this message in `symbol`'s atomic units, from that currency's
@@ -111,9 +122,9 @@ const MAX_PRICE_ATOMIC: PriceList = { USDC: maxPriceFor("USDC"), EURC: maxPriceF
  */
 function getSettleAmount(
   usage: { prompt_tokens: number; completion_tokens: number },
-  symbol: StablecoinSymbol,
+  symbol: SettlementTokenSymbol,
 ): string {
-  const actualCost = tokensToCost(usage, LLM_PROVIDER, symbol);
+  const actualCost = tokensToCost(usage, LLM_PROVIDER, symbol, TOKEN_DECIMALS[symbol]);
   const maxCost = BigInt(MAX_PRICE_ATOMIC[symbol]);
   return (actualCost > maxCost ? maxCost : actualCost).toString();
 }

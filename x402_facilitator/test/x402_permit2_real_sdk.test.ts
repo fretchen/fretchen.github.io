@@ -23,7 +23,7 @@ import { verifyPayment } from "../x402_verify.js";
 import { resetFacilitator } from "../facilitator_instance.js";
 import { getFacilitatorAddress } from "../x402_fee.js";
 import { SettleResponseSchema } from "../x402_schemas.js";
-import { EURE_ADDRESSES } from "../chain_utils.js";
+import { EURE_ADDRESSES } from "@fretchen/chain-utils";
 import { chain } from "./helpers/fakeChain";
 import { signPermit2Payment, EURE_DOMAIN, SELLER } from "./helpers/signPayment";
 

@@ -231,26 +231,34 @@ done
 
 Later, if wanted: tell paying clients they can leave feedback for the `agentId` (Reputation Registry); reference the ids from `x-discovery` in the OpenAPI specs; move the `agentURI` to IPFS or a `data:` URI if the domain dependency becomes a concern. The Validation Registry waits on its spec section.
 
-### Stablecoins and pricing (USDC, EURC)
+### Stablecoins and pricing (USDC, EURC, EURe)
 
-All three sellers (image, chat, search) take **USDC on every network and EURC on Base / Base
-Sepolia**. Circle has no EURC on Optimism. USDC and EURC are **two parallel price lists**: every
-price is set explicitly in each token, and nothing is converted between them.
+All three sellers (image, chat, search) take **USDC on every network and EURC and EURe on
+Base / Base Sepolia**. Circle has no EURC and Monerium no EURe on Optimism. USDC, EURC and EURe
+are **three parallel price lists**: every price is set explicitly in each token, and nothing is
+converted between them. EURe has **18 decimals** (USDC and EURC have 6), so its atomic prices
+are twelve orders of magnitude larger than the same nominal price in EURC — `tokensToCost`
+rescales by the token's decimals, and a price literal that assumes 6 decimals is wrong by 10¹².
+EURe has no EIP-3009: its 402 entries carry `assetTransferMethod: "permit2"` and its challenges
+advertise `eip2612GasSponsoring`, so a buyer needs no `approve()` — not to Permit2, not to the
+token contract.
 
-| What           | USDC               | EURC               | Where it is set                                                |
-| -------------- | ------------------ | ------------------ | -------------------------------------------------------------- |
-| Image          | 0.07               | 0.06               | `USDC_PAYMENT_AMOUNT` / `EURC_PAYMENT_AMOUNT` (serverless.yml) |
-| Search / fetch | 0.01 / 0.001       | 0.01 / 0.001       | `PRICE_ATOMIC` in `search_schemas.ts`                          |
-| Chat           | Mistral's USD card | Mistral's EUR card | `pricePerMillion` in `llm_service.ts`                          |
+| What           | USDC               | EURC               | EURe               | Where it is set                                                                        |
+| -------------- | ------------------ | ------------------ | ------------------ | -------------------------------------------------------------------------------------- |
+| Image          | 0.07               | 0.06               | 0.06               | `USDC_PAYMENT_AMOUNT` / `EURC_PAYMENT_AMOUNT` / `EURE_PAYMENT_AMOUNT` (serverless.yml) |
+| Search / fetch | 0.01 / 0.001       | 0.01 / 0.001       | 0.01 / 0.001       | `PRICE_ATOMIC` in `search_schemas.ts`                                                  |
+| Chat           | Mistral's USD card | Mistral's EUR card | Mistral's EUR card | `pricePerMillion` in `llm_service.ts`                                                  |
 
 The chat price is computed per message from token usage, on the rate card of the currency the
-channel is in: $0.50 / $1.50 per million input/output tokens, or €0.44 / €1.50. Each card is the
-provider's own published price in that currency. OpenAPI `x-payment-info.price` must be quoted in
-USD, so it carries the USDC price; the EURC price is stated in the description.
+channel is in: $0.50 / $1.50 per million input/output tokens, or €0.44 / €1.50 (EURC and EURe
+share the EUR card — a euro is a euro). Each card is the provider's own published price in that
+currency. OpenAPI `x-payment-info.price` must be quoted in USD, so it carries the USDC price;
+the EURC and EURe prices are stated in the description.
 
-- **Preference:** on Base the 402 lists EURC first (`STABLECOIN_PREFERENCE`). A stock x402 client
-  pays with the first entry its spend controls allow, and the SDK's built-in asset registry only
-  knows USDC, so a default client keeps paying USDC until it allowlists EURC.
+- **Preference:** on Base the 402 lists EURe, then EURC, then USDC (`STABLECOIN_PREFERENCE`). A
+  stock x402 client pays with the first entry its spend controls allow, and the SDK's built-in
+  asset registry only knows USDC, so a default client keeps paying USDC until it allowlists
+  EURe or EURC.
 - **Facilitator fee:** charged in the token the payment settled in, so the seller wallet
   (`NFT_WALLET_PUBLIC_KEY`) needs an `approve()` for the facilitator for **every (network, token)
   pair the sellers offer**. Without it every payment or claim in that pair fails with
@@ -258,11 +266,12 @@ USD, so it carries the USDC price; the EURC price is stated in the description.
   any is below one fee; `npm run fee-allowances -- --approve` fixes the short ones (needs
   `NFT_WALLET_PRIVATE_KEY` and a little gas). It runs as `predeploy`, so `npm run deploy` refuses to
   ship an offer that cannot be paid. The claim cron still warns per token when an approval runs
-  low between deploys.
-- **Channels:** USDC and EURC channels share each network's `channels/<network>/` prefix (the
-  token is part of the channel id). The cron claims one token at a time, because a claim batch
-  must not mix tokens. `scripts/recover_channels.ts` takes the token as an argument for the same
-  reason.
+  low between deploys. EURe's fee approval is **1 EURe (10¹⁸)** — a `1000000` allowance, right
+  for the 6-decimal tokens, covers no EURe fee at all.
+- **Channels:** USDC, EURC and EURe channels share each network's `channels/<network>/` prefix
+  (the token is part of the channel id). The cron claims one token at a time, because a claim
+  batch must not mix tokens. `scripts/recover_channels.ts` takes the token as an argument for
+  the same reason.
 
 ## 🗄️ S3 Storage Layout & Data Classification
 
@@ -393,6 +402,18 @@ EURC exists on Base only (Circle has no Optimism deployment). Unlike USDC, mainn
 | ------------ | -------------- | -------------------------------------------- | ----------- | ------- | ------------- |
 | Base Mainnet | `eip155:8453`  | `0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42` | `EURC`      | `2`     | ✅ 2026-09-25 |
 | Base Sepolia | `eip155:84532` | `0x808456652fdb597867f38412077A9182bf77359F` | `EURC`      | `2`     | ✅ 2026-09-25 |
+
+### Known EURe Domain Names
+
+EURe (Monerium) exists on Base only. It has **no EIP-3009** — it settles via Permit2 with an
+EIP-2612 permit (`assetTransferMethod: "permit2"`), so the domain below signs the permit, not a
+`transferWithAuthorization`. Mainnet and sandbox share one name and version; the sandbox address
+is the testnet token. Domain values recomputed from `DOMAIN_SEPARATOR()` on-chain, 2026-10-04.
+
+| Network      | CAIP-2 ID      | Address                                      | Domain Name     | Version | Verified      |
+| ------------ | -------------- | -------------------------------------------- | --------------- | ------- | ------------- |
+| Base Mainnet | `eip155:8453`  | `0xbf6e2966A9C3D99C9E4D069E04f7Bdb9C8aa762C` | `Monerium EURe` | `1`     | ✅ 2026-10-04 |
+| Base Sepolia | `eip155:84532` | `0x29F37F6adCa168B79B8d9567eab9BE3fBF21db85` | `Monerium EURe` | `1`     | ✅ 2026-10-04 |
 
 > ⚠️ **Warning:** Mainnet and Testnet often have DIFFERENT domain names! Always verify.
 

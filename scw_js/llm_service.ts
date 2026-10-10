@@ -1,4 +1,4 @@
-import type { StablecoinSymbol } from "@fretchen/chain-utils";
+import type { SettlementTokenSymbol } from "@fretchen/chain-utils";
 import { logger } from "./logger.js";
 import { UpstreamChatCompletionSchema, flattenUpstreamContent } from "./upstream_schemas.js";
 
@@ -8,9 +8,9 @@ interface LLMProviderConfig {
   defaultModel: string;
   apiKeyEnvVar: string;
   // Price per 1,000,000 tokens, num/den to stay exact bigint math — one rate card per
-  // settlement token, each as the provider publishes it in that currency. Two parallel price
-  // systems: a EURC cost is computed from the EUR card, never converted from the USD one.
-  pricePerMillion: Record<StablecoinSymbol, { input: RatePerMillion; output: RatePerMillion }>;
+  // settlement token, each as the provider publishes it in that currency. Parallel price
+  // systems: a EURC or EURe cost is computed from the EUR card, never converted from the USD one.
+  pricePerMillion: Record<SettlementTokenSymbol, { input: RatePerMillion; output: RatePerMillion }>;
 }
 
 interface RatePerMillion {
@@ -30,6 +30,9 @@ const LLM_PROVIDERS: Record<string, LLMProviderConfig> = {
     pricePerMillion: {
       USDC: { input: { num: 50n, den: 100n }, output: { num: 150n, den: 100n } }, // $0.50 / $1.50 (2026-07-21)
       EURC: { input: { num: 44n, den: 100n }, output: { num: 150n, den: 100n } }, // €0.44 / €1.50 (2026-09-26)
+      // Same euro card as EURC: EURe is a euro like EURC, so the provider's EUR prices apply
+      // unchanged — only the atomic scale differs (18 decimals, passed by the caller).
+      EURe: { input: { num: 44n, den: 100n }, output: { num: 150n, den: 100n } }, // €0.44 / €1.50
     },
   },
 };
@@ -305,15 +308,17 @@ function parseTokenCount(tokenCount: bigint | number | string): bigint {
 }
 
 /**
- * Cost of `usage` in `symbol`'s atomic units (6 decimals), from the provider's rate card in that
- * currency, pricing prompt and completion tokens separately — providers typically charge more
+ * Cost of `usage` in `symbol`'s atomic units, from the provider's rate card in that currency,
+ * pricing prompt and completion tokens separately — providers typically charge more
  * for completion (output) tokens than prompt (input) tokens, so a single blended rate would
  * systematically mis-price a provider with an asymmetric split (e.g. Mistral: $0.50/M input vs
  * $1.50/M output — a 3x gap. See LLM_PROVIDERS above).
  *
- * Both tokens have 6 decimals and prices are quoted per 1,000,000 tokens, so the 1e6 factors
- * cancel exactly — no separate decimals conversion needed. A card is read as 1 USD = 1 USDC and
- * 1 EUR = 1 EURC.
+ * Prices are quoted per 1,000,000 tokens and USDC/EURC have 6 decimals, so for those two the
+ * 1e6 factors cancel exactly and the raw cross-product is already atomic. `decimals` rescales
+ * that for anything else: EURe's 18 decimals multiply the result by 10¹² — forgetting this
+ * would undercharge EURe messages by twelve orders of magnitude, silently. A card is read as
+ * 1 USD = 1 USDC and 1 EUR = 1 EURC = 1 EURe.
  */
 export function tokensToCost(
   usage: {
@@ -321,7 +326,8 @@ export function tokensToCost(
     completion_tokens: bigint | number | string;
   },
   provider: string,
-  symbol: StablecoinSymbol,
+  symbol: SettlementTokenSymbol,
+  decimals: number,
 ): bigint {
   const config = getLLMProviderConfig(provider);
   const p = parseTokenCount(usage.prompt_tokens);
@@ -331,6 +337,7 @@ export function tokensToCost(
   const { num: outNum, den: outDen } = output;
   // Cross-multiply to keep one shared denominator instead of assuming inDen === outDen.
   // No explicit 1e6 factor here — the "per 1,000,000 tokens" divisor and the tokens' 6
-  // decimals cancel exactly.
-  return (p * inNum * outDen + c * outNum * inDen) / (inDen * outDen);
+  // decimals cancel exactly; `decimals` then rescales from that 6-decimal base.
+  const base = (p * inNum * outDen + c * outNum * inDen) / (inDen * outDen);
+  return decimals === 6 ? base : base * 10n ** BigInt(decimals - 6);
 }

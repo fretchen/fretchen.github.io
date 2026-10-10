@@ -55,8 +55,9 @@ export type Route = (typeof ROUTES)[number];
  * effect of generating a document. This module has no side effects.
  */
 export const PRICE_ATOMIC: Record<Route, PriceList> = {
-  search: { USDC: "10000", EURC: "10000" },
-  fetch: { USDC: "1000", EURC: "1000" },
+  // USDC/EURC in 6 decimals, EURe in 18 — same nominal prices, each in its own atomic units.
+  search: { USDC: "10000", EURC: "10000", EURe: "10000000000000000" },
+  fetch: { USDC: "1000", EURC: "1000", EURe: "1000000000000000" },
 };
 
 /** What each route sells, used both in the 402 challenge and in the published spec. */

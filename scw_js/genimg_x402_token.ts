@@ -50,11 +50,12 @@ import { offeredStablecoins, resolvePaidStablecoin, type PriceList } from "./sta
 // Re-export for backward compatibility with tests
 export { handle, create402Response };
 
-// The image price, quoted separately in each token's atomic units (6 decimals): 0.07 USDC or
-// 0.06 EURC. Two parallel prices, not one converted into the other.
+// The image price, quoted separately in each token's atomic units: 0.07 USDC, 0.06 EURC or
+// 0.06 EURe (18 decimals). Parallel prices, not one converted into the other.
 const PRICE_ATOMIC: PriceList = {
   USDC: process.env.USDC_PAYMENT_AMOUNT ?? "70000",
   EURC: process.env.EURC_PAYMENT_AMOUNT ?? "60000",
+  EURe: process.env.EURE_PAYMENT_AMOUNT ?? "60000000000000000",
 };
 const GAS_BUFFER = parseEther("0.00001");
 

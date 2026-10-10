@@ -21,6 +21,9 @@ provider:
     USDC_PAYMENT_AMOUNT: ${env:USDC_PAYMENT_AMOUNT, "70000"}
     # The image's EURC price — its own euro price, not a conversion of USDC_PAYMENT_AMOUNT.
     EURC_PAYMENT_AMOUNT: ${env:EURC_PAYMENT_AMOUNT, "60000"}
+    # The image's EURe price — the same euro price in EURe's 18 decimals (0.06 EURe), not a
+    # conversion. EURe is paid via Permit2, so an EURe buyer needs no ETH for an approval.
+    EURE_PAYMENT_AMOUNT: ${env:EURE_PAYMENT_AMOUNT, "60000000000000000"}
     # One address, or several comma-separated — see parseOwnerAddresses in chain-utils.
     OWNER_ETH_ADDRESS: ${env:OWNER_ETH_ADDRESS}
     LLM_ESTIMATED_TOKENS_PER_MESSAGE: ${env:LLM_ESTIMATED_TOKENS_PER_MESSAGE, "20000"}

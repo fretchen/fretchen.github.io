@@ -124,6 +124,20 @@ export const EURC_NAMES: Record<string, string> = {
 };
 
 // ═══════════════════════════════════════════════════════════════
+// EURe (Monerium — Base only, like EURC; no Optimism deployment)
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Addresses from Monerium's token API (api.monerium.app; api.monerium.dev for the sandbox),
+ * confirmed on-chain 2026-10-04: name() "Monerium EURe", decimals() 18, EIP-712 version "1",
+ * EIP-2612 permit present, EIP-3009 absent.
+ */
+export const EURE_ADDRESSES: Record<string, `0x${string}`> = {
+  "eip155:8453": "0xbf6e2966A9C3D99C9E4D069E04f7Bdb9C8aa762C", // Base
+  "eip155:84532": "0x29F37F6adCa168B79B8d9567eab9BE3fBF21db85", // Base Sepolia (Monerium sandbox)
+};
+
+// ═══════════════════════════════════════════════════════════════
 // Stablecoin lookup (USDC + EURC)
 // ═══════════════════════════════════════════════════════════════
 
@@ -165,6 +179,63 @@ export function getStablecoins(network: string): StablecoinInfo[] {
 export function findStablecoin(network: string, address: string): StablecoinInfo | null {
   const wanted = address.toLowerCase();
   return getStablecoins(network).find((coin) => coin.address.toLowerCase() === wanted) ?? null;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Settlement tokens — the stablecoins plus how each one moves
+// ═══════════════════════════════════════════════════════════════
+
+/** The stablecoins plus EURe — everything this project settles or charges fees in. */
+export type SettlementTokenSymbol = StablecoinSymbol | "EURe";
+
+/** How a buyer authorizes moving a token: USDC and EURC implement EIP-3009
+ * (`transferWithAuthorization`); EURe does not, so it is paid through Permit2 — with an EIP-2612
+ * permit to Permit2 bundled in, so the buyer needs no separate approval transaction.
+ */
+export type AssetTransferMethod = "eip3009" | "permit2";
+
+export interface SettlementTokenInfo {
+  symbol: SettlementTokenSymbol;
+  address: `0x${string}`;
+  /** EIP-712 domain name */
+  name: string;
+  /** EIP-712 domain version */
+  version: string;
+  /** ERC-20 decimals: 6 for USDC/EURC, 18 for EURe. Never assume 6. */
+  decimals: number;
+  transferMethod: AssetTransferMethod;
+}
+
+/**
+ * Every token this project settles on `network`: the stablecoins (USDC, EURC) plus EURe, where
+ * deployed. Sellers and the facilitator read this — the website does not: it keeps reading
+ * `getStablecoins()`, which stays USDC+EURC only, so the buyer side stays EURe-blind until it
+ * is deliberately switched (its spend-control cap is a 6-decimal figure that EURe's 18
+ * decimals would silently veto). Like `getStablecoins`, this list carries no preference order —
+ * EURe is appended after the stablecoins, and a seller's own preference
+ * (`STABLECOIN_PREFERENCE` in scw_js) sorts it for the wire.
+ */
+export function getSettlementTokens(network: string): SettlementTokenInfo[] {
+  const coins: SettlementTokenInfo[] = getStablecoins(network).map((coin) => ({
+    symbol: coin.symbol,
+    address: coin.address,
+    name: coin.name,
+    version: coin.version,
+    decimals: 6,
+    transferMethod: "eip3009",
+  }));
+  const eure = EURE_ADDRESSES[network];
+  if (eure) {
+    coins.push({
+      symbol: "EURe",
+      address: eure,
+      name: "Monerium EURe",
+      version: "1",
+      decimals: 18,
+      transferMethod: "permit2",
+    });
+  }
+  return coins;
 }
 
 // ═══════════════════════════════════════════════════════════════

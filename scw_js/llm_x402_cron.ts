@@ -1,14 +1,21 @@
 import { logger } from "./logger.js";
 import { createPublicClient, http } from "viem";
-import { getSettlementTokens, getViemChain, getRpcUrl } from "@fretchen/chain-utils";
+import {
+  getSettlementTokens,
+  getViemChain,
+  getRpcUrl,
+  type SettlementTokenInfo,
+} from "@fretchen/chain-utils";
 import {
   createLLMResourceServer,
   createFacilitatorClient,
   getBatchSettlementNetworks,
   getFacilitatorFeeConfig,
   useEnhancedRefundRequirements,
-  type FacilitatorFeeConfig,
 } from "./x402_server.js";
+// From fee_config, not x402_server: the cron's test mocks x402_server wholesale, and this
+// function is the very logic under test — it must stay the real one.
+import { facilitatorFeeFor, type FacilitatorFeeConfig } from "./fee_config.js";
 import { resyncChannelState } from "./x402_channel_sync.js";
 import type { Channel } from "@x402/evm/batch-settlement/server";
 import type { ScwEvent } from "./types.js";
@@ -108,21 +115,27 @@ function findStuckChannels(channels: Channel[]): string[] {
 async function readFeeAllowanceClaimsLeft(
   receiver: `0x${string}`,
   network: string,
-  token: `0x${string}`,
+  coin: SettlementTokenInfo,
   fee: FacilitatorFeeConfig,
 ): Promise<number | null> {
+  const feePerClaim = facilitatorFeeFor(fee, network, coin.address, coin.decimals);
+  if (feePerClaim === null) {
+    // The facilitator publishes no per-token fee for this token (an old build, pre-`assets`):
+    // the nominal 6-decimal figure would be 10¹² off for EURe, so no number beats a wrong one.
+    return null;
+  }
   try {
     const publicClient = createPublicClient({
       chain: getViemChain(network),
       transport: http(getRpcUrl(network)),
     });
     const allowance = await publicClient.readContract({
-      address: token,
+      address: coin.address,
       abi: ERC20_ALLOWANCE_ABI,
       functionName: "allowance",
       args: [receiver, fee.recipient],
     });
-    return Number(allowance / fee.flatFee);
+    return Number(allowance / feePerClaim);
   } catch (err) {
     logger.debug({ err, network }, "Could not read fee allowance — skipping the low-balance check");
     return null;
@@ -190,7 +203,7 @@ export async function handle(
       // allowance, this is the run where the warning is most needed.
       let claimsLeft: number | null = null;
       if (feeConfig) {
-        claimsLeft = await readFeeAllowanceClaimsLeft(receiverAddress, network, token, feeConfig);
+        claimsLeft = await readFeeAllowanceClaimsLeft(receiverAddress, network, coin, feeConfig);
         if (claimsLeft !== null && BigInt(claimsLeft) < LOW_ALLOWANCE_CLAIMS) {
           logger.warn(
             {

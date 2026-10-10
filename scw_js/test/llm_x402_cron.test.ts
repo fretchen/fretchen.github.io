@@ -118,12 +118,30 @@ describe("llm_x402_cron", () => {
     });
     mockCreateFacilitatorClient.mockReturnValue({});
     mockGetBatchSettlementNetworks.mockReturnValue(["eip155:10", "eip155:8453", "eip155:84532"]);
-    // Default: the facilitator charges 0.01 USDC and the approval is healthy (100 claims).
+    // Default: the facilitator charges 0.01 per settlement, published per token — the nominal
+    // 10000 for the 6-decimal tokens, 10¹⁶ for EURe, exactly as the deployed /supported's
+    // facilitatorFees.assets does. Keyed per RUNS: every (network, token) the cron claims.
+    const isEure = (token: string) =>
+      Object.values(EURE_ADDRESSES).some((a) => a.toLowerCase() === token.toLowerCase());
     mockGetFacilitatorFeeConfig.mockResolvedValue({
       recipient: "0x3F8d2Fb6fEA24E70155bC61471936F3c9C30c206",
       flatFee: 10000n,
+      feeByAsset: new Map(
+        RUNS.map(
+          ([network, token]) =>
+            [
+              `${network}:${token.toLowerCase()}`,
+              isEure(token) ? 10_000_000_000_000_000n : 10000n,
+            ] as const,
+        ),
+      ),
     });
-    mockReadContract.mockResolvedValue(1_000_000n);
+    // Healthy by default on every token: 1 USDC/EURC-worth (100 claims at 0.01) and 1 EURe
+    // (100 claims at the per-token fee). Per-token because the fee's atomic size differs.
+    mockReadContract.mockImplementation(
+      ({ address }: { address: `0x${string}` }) =>
+        isEure(address) ? 1_000_000_000_000_000_000n : 1_000_000n, // 1 EURe : 1 USDC/EURC
+    );
   });
 
   it("returns 500 when NFT_WALLET_PUBLIC_KEY is missing", async () => {
@@ -496,6 +514,52 @@ describe("llm_x402_cron", () => {
     await handle(makeEvent() as never, {});
 
     expect(mockLoggerWarn).not.toHaveBeenCalled();
+  });
+
+  it("computes EURe claims left with the per-token fee — 0.98 EURe is 98 claims, not 9.8×10¹⁴", async () => {
+    // The regression: dividing an 18-decimal allowance by the nominal 6-decimal 10000 once
+    // reported a real 0.98-EURe approval as 98000000000000 claims. The fee must come from
+    // /supported's per-token assets (10¹⁶ for EURe), so the same wallet reads as 98.
+    mockReadContract.mockImplementation(({ address }: { address: `0x${string}` }) =>
+      Object.values(EURE_ADDRESSES).some((a) => a.toLowerCase() === address.toLowerCase())
+        ? 980_000_000_000_000_000n // 0.98 EURe — the wallet state that printed the wrong figure
+        : 1_000_000n,
+    );
+
+    const res = await handle(makeEvent() as never, {});
+    const body = JSON.parse(res.body) as {
+      results: Array<{ network: string; asset: string; feeAllowanceClaimsLeft?: number }>;
+    };
+
+    for (const network of ["eip155:8453", "eip155:84532"]) {
+      const eure = body.results.find((r) => r.network === network && r.asset === "EURe");
+      expect(eure?.feeAllowanceClaimsLeft).toBe(98);
+    }
+    // The 6-decimal tokens keep their own fee: 1 USDC-worth is still 100 claims.
+    expect(body.results.find((r) => r.network === "eip155:10")?.feeAllowanceClaimsLeft).toBe(100);
+  });
+
+  it("reports no runway for EURe against a facilitator that publishes no per-token fees", async () => {
+    // An old facilitator build has no facilitatorFees.assets. The nominal 10000 would be 10¹²
+    // off for EURe, so the honest answer is "unknown" — no number, and no warning.
+    mockGetFacilitatorFeeConfig.mockResolvedValue({
+      recipient: "0x3F8d2Fb6fEA24E70155bC61471936F3c9C30c206",
+      flatFee: 10000n,
+      feeByAsset: new Map(),
+    });
+
+    const res = await handle(makeEvent() as never, {});
+    const body = JSON.parse(res.body) as {
+      results: Array<{ network: string; asset: string; feeAllowanceClaimsLeft?: number }>;
+    };
+
+    const eure = body.results.find((r) => r.asset === "EURe");
+    expect(eure?.feeAllowanceClaimsLeft).toBeUndefined();
+    expect(
+      mockLoggerWarn.mock.calls.some((call) => String(call[0]?.asset ?? "").includes("EURe")),
+    ).toBe(false);
+    // The 6-decimal tokens fall back to the nominal fee and still report a runway.
+    expect(body.results.find((r) => r.network === "eip155:10")?.feeAllowanceClaimsLeft).toBe(100);
   });
 
   it("still claims when the allowance read fails — the check must never cost a claim", async () => {

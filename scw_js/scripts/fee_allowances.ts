@@ -25,7 +25,14 @@
  *   npm run fee-allowances -- --approve     # approve 100 fees' worth where short
  */
 import dotenv from "dotenv";
-import { createPublicClient, createWalletClient, erc20Abi, http, type Address } from "viem";
+import {
+  createPublicClient,
+  createWalletClient,
+  erc20Abi,
+  formatUnits,
+  http,
+  type Address,
+} from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import {
   getRpcUrl,
@@ -33,6 +40,7 @@ import {
   loadPrivateKey,
   type SettlementTokenInfo,
 } from "@fretchen/chain-utils";
+import { facilitatorFeeFor } from "../fee_config.js";
 import { getFacilitatorFeeConfig, getSupportedNetworks } from "../x402_server.js";
 import { offeredStablecoins } from "../stablecoin_pricing.js";
 
@@ -71,9 +79,9 @@ export function assessAllowance(allowance: bigint | null, flatFee: bigint): Allo
     : { kind: "short", settlementsLeft };
 }
 
-/** Both stablecoins have 6 decimals. */
-function units(atomic: bigint): string {
-  return (Number(atomic) / 1e6).toFixed(2);
+/** A token amount in whole units — USDC/EURC have 6 decimals, EURe 18. */
+function units(atomic: bigint, decimals: number): string {
+  return formatUnits(atomic, decimals);
 }
 
 function publicClientFor(network: string) {
@@ -111,7 +119,9 @@ async function approve(pair: FeePair, spender: Address, amount: bigint): Promise
   if (receipt.status !== "success") {
     throw new Error(`approve reverted (${hash})`);
   }
-  console.log(`   ✅ ${pair.network} ${pair.coin.symbol}: approved ${units(amount)} (${hash})`);
+  console.log(
+    `   ✅ ${pair.network} ${pair.coin.symbol}: approved ${units(amount, pair.coin.decimals)} (${hash})`,
+  );
 }
 
 async function main(): Promise<void> {
@@ -145,21 +155,35 @@ async function main(): Promise<void> {
   }
 
   console.log(
-    `Seller ${seller} → facilitator ${fee.recipient}, fee ${units(fee.flatFee)} per settlement\n`,
+    `Seller ${seller} → facilitator ${fee.recipient}, nominal fee ${units(fee.flatFee, 6)} per settlement\n` +
+      "   (per-token figures below come from /supported's facilitatorFees.assets — EURe's 0.01 is 10¹² its nominal figure)\n",
   );
 
-  const short: FeePair[] = [];
+  // (network, token) → the fee in THAT token's atomic units. Computed once: both the check
+  // and --approve must use it, never the nominal 6-decimal flatFee — for EURe that would
+  // divide an 18-decimal allowance by a 6-decimal fee (a 1-EURe approval reported as a
+  // trillion settlements) and approve 10⁻¹² EURe over a healthy allowance.
+  const short: Array<{ pair: FeePair; fee: bigint }> = [];
   for (const pair of listFeePairs(getSupportedNetworks())) {
-    const status = assessAllowance(await readAllowance(pair, seller, fee.recipient), fee.flatFee);
     const label = `${pair.network.padEnd(16)} ${pair.coin.symbol.padEnd(5)}`;
+    const pairFee = facilitatorFeeFor(fee, pair.network, pair.coin.address, pair.coin.decimals);
+    if (pairFee === null) {
+      // facilitatorFeeFor returns null only for a non-6-decimal token with no per-token entry —
+      // an old facilitator build. No number beats a wrong one; refuse to guess.
+      console.warn(
+        `⚠️  ${label} the facilitator publishes no per-token fee — old build? Run the latest x402_facilitator. Skipped.`,
+      );
+      continue;
+    }
+    const status = assessAllowance(await readAllowance(pair, seller, fee.recipient), pairFee);
     if (status.kind === "unknown") {
       console.warn(`⚠️  ${label} allowance unreadable — skipped`);
     } else {
       const mark = status.kind === "ok" ? "✅" : "❌";
       console.log(
-        `${mark} ${label} ${String(status.settlementsLeft).padStart(4)} settlements left`,
+        `${mark} ${label} ${String(status.settlementsLeft).padStart(4)} settlements left (${units(pairFee, pair.coin.decimals)} per settlement)`,
       );
-      if (status.kind === "short") short.push(pair);
+      if (status.kind === "short") short.push({ pair, fee: pairFee });
     }
   }
 
@@ -176,9 +200,9 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const amount = fee.flatFee * SETTLEMENTS_PER_APPROVAL;
   let failed = 0;
-  for (const pair of short) {
+  for (const { pair, fee: pairFee } of short) {
+    const amount = pairFee * SETTLEMENTS_PER_APPROVAL;
     try {
       await approve(pair, fee.recipient, amount);
     } catch (err) {

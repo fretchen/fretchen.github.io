@@ -77,14 +77,13 @@ export function createFacilitatorClient(): HTTPFacilitatorClient {
   return new HTTPFacilitatorClient({ url: FACILITATOR_URL });
 }
 
-/** What the facilitator charges, and the address that collects it. */
-export interface FacilitatorFeeConfig {
-  /** Spender to approve — the facilitator wallet that runs `transferFrom`. */
-  recipient: `0x${string}`;
-  /** Flat fee per settlement, in the settled token's atomic units (the same nominal amount in
-   *  USDC and EURC — the facilitator charges the fee in whichever token the payment settles in). */
-  flatFee: bigint;
-}
+/**
+ * The facilitator's fee model lives in `fee_config.ts` (pure, import-light, unmocked by tests
+ * that mock this module wholesale) — re-exported here so existing consumers keep their imports.
+ */
+export type { FacilitatorFeeConfig } from "./fee_config.js";
+export { facilitatorFeeFor } from "./fee_config.js";
+import type { FacilitatorFeeConfig } from "./fee_config.js";
 
 /**
  * Read the fee model the facilitator currently advertises, or null when it charges none.
@@ -115,8 +114,15 @@ export async function getFacilitatorFeeConfig(): Promise<FacilitatorFeeConfig | 
       return null;
     }
     const body: unknown = await res.json();
-    const fees = (body as { facilitatorFees?: { recipient?: unknown; flatFee?: unknown } })
-      ?.facilitatorFees;
+    const fees = (
+      body as {
+        facilitatorFees?: {
+          recipient?: unknown;
+          flatFee?: unknown;
+          assets?: Array<{ network?: unknown; asset?: unknown; flatFee?: unknown }>;
+        };
+      }
+    )?.facilitatorFees;
     if (typeof fees?.recipient !== "string" || typeof fees?.flatFee !== "string") {
       // No fee configured on this facilitator — nothing to check an allowance against.
       return null;
@@ -125,7 +131,28 @@ export async function getFacilitatorFeeConfig(): Promise<FacilitatorFeeConfig | 
     if (flatFee <= 0n) {
       return null;
     }
-    return { recipient: fees.recipient as `0x${string}`, flatFee };
+    // Per-token fees, each in that token's own atomic units (EURe's 0.01 is 10¹⁶, not 10000).
+    // Per-entry parse: one malformed entry must not nuke the whole map — a null config reads
+    // as "no fee configured" downstream and silently disables the allowance checks. Skipped
+    // rather than guessed for a token with no entry — see facilitatorFeeFor.
+    const feeByAsset = new Map<string, bigint>();
+    for (const asset of fees.assets ?? []) {
+      if (
+        typeof asset?.network === "string" &&
+        typeof asset.asset === "string" &&
+        typeof asset.flatFee === "string"
+      ) {
+        try {
+          const perToken = BigInt(asset.flatFee);
+          if (perToken > 0n) {
+            feeByAsset.set(`${asset.network}:${asset.asset.toLowerCase()}`, perToken);
+          }
+        } catch {
+          // Unparseable figure — leave the token unknown rather than poison the config.
+        }
+      }
+    }
+    return { recipient: fees.recipient as `0x${string}`, flatFee, feeByAsset };
   } catch (err) {
     logger.warn({ err }, "Could not read facilitator fee config");
     return null;

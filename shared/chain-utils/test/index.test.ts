@@ -410,7 +410,7 @@ describe("@fretchen/chain-utils", () => {
       test("leaves getStablecoins() unchanged — the website surface (regression guard)", () => {
         for (const network of ["eip155:8453", "eip155:10", "eip155:1"]) {
           expect(getStablecoins(network).map((c) => c.symbol)).toEqual(
-            getStablecoins(network).map((c) => c.symbol),
+            getStablecoins(network).map((c) => c.symbol)
           );
           expect(getStablecoins("eip155:8453").map((c) => c.symbol)).toEqual(["USDC", "EURC"]);
           expect(getStablecoins(network).every((c) => c.symbol !== "EURe")).toBe(true);

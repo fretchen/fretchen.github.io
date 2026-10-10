@@ -44,7 +44,7 @@ async function fetchUserTokensOnNetwork(network: string, address: `0x${string}`)
       args: [address, BigInt(i)],
       chainId,
     })
-      .then((tokenId) => ({ tokenId, network }) as MultiChainNFTToken)
+      .then((tokenId) => ({ tokenId, network }))
       .catch(() => null),
   );
 

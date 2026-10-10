@@ -82,7 +82,7 @@ describe("Post chunk-load failure", () => {
     __resetPostModuleCacheForTests();
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       json: async () => ({ children: [] }),
-    } as Response);
+    });
   });
 
   const postProps = {

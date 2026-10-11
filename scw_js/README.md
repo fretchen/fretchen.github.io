@@ -219,6 +219,34 @@ done
 
 Each file must list its `agentId` and `eip155:8453:0x8004A169…` as `agentRegistry`. On the registry, `tokenURI(agentId)` must return the same URL and `getAgentWallet(agentId)` the 402 `payTo`.
 
+### Bazaar discovery metadata
+
+Every paid route's 402 challenge carries an `extensions.bazaar` block — the [x402 Bazaar discovery extension](https://docs.x402.org/extensions/bazaar): the route's method, an example request, and the request's JSON Schema, so a discovery layer can list and pre-validate the route without a paid probe. The `resource` object additionally carries the optional service metadata (`serviceName`, `tags`, `iconUrl`) facilitators use to enrich search results.
+
+- **Built by** [`bazaar_discovery.ts`](./bazaar_discovery.ts): a thin wrapper over `declareDiscoveryExtension` from `@x402/extensions` (same org as `@x402/core`), with the input schemas derived via `z.toJSONSchema` from the same Zod request schemas the OpenAPI specs are generated from — one source of truth, including the strictness distinction (`z.object` vs `z.looseObject`). `test/bazaar_discovery.test.ts` pins the wire shape and runs each block through the package's own `validateDiscoveryExtension`.
+- **Wired in** `x402_server.ts`: both `createPaymentRequirements` and `createBatchSettlementPaymentRequirements` accept `extensions`, `serviceName`, `tags`, `iconUrl`; the caller-supplied extensions merge with (never clobber) the existing `eip2612GasSponsoring` entry, and the metadata is sanitized onto `resource` by the package's soft-drop rules.
+- **This deployment is metadata-only.** Settlement runs through `facilitator.fretchen.eu`, so the Coinbase Bazaar does not index these routes. Full CDP Bazaar indexing would additionally require: (1) a settled payment through the **CDP Facilitator** with `paymentPayload.extensions.bazaar` and `paymentPayload.resource` set, (2) a CDP-supported `accepts` list — Base/USDC-shaped; the validator rejects `eip155:10` and non-USDC entries, and (3) a re-settlement at least every **30 days**, or the listing is dropped. The llm/search blocks could only ever lead to a listing via an exact-scheme alias route — the CDP Facilitator does not verify the batch-settlement scheme.
+- **Check a deployment** (free, no key; the same preflight the CDP Facilitator applies):
+
+```bash
+curl -X POST https://api.cdp.coinbase.com/platform/v2/x402/validate \
+  -H "Content-Type: application/json" \
+  -d '{"resource": "https://imagegen-agent.fretchen.eu/imagegen", "method": "POST"}' | jq '.valid, .simulation'
+```
+
+Note: with the default mainnet offer (Optimism + Base), the validator still fails the `eip155:10` accepts entry — passing it fully would mean narrowing the default offer, a payment-flow decision this metadata-only deployment deliberately does not make.
+
+### MCP endpoint
+
+`mcp_server.ts` (deployed as the `mcp` function, `mcp-agent.fretchen.eu/mcp`) is a **stateless paid MCP endpoint**: JSON-RPC 2.0 over a single POST route, no sessions, no SSE — GET and DELETE answer `405`, which the Streamable HTTP spec allows a session-less server. No MCP SDK server runs inside it: a Scaleway function receives a parsed event, never Node's `req`/`res`, so the SDK's transports cannot attach — and the four messages a stateless server must answer (`initialize`, notifications → 202, `tools/list`, `tools/call`) are dispatched by hand.
+
+- **Tools** (`mcp_tools.ts`): `llm_complete` and `web_search`, each wrapped with `@x402/mcp`'s `createPaymentWrapper` over the **same** payment stack as the REST handlers — `createLLMResourceServer` (batch-settlement channels in S3, shared with the chat and search: a customer's existing channel works here unchanged), `createBatchSettlementPaymentRequirements`, same per-currency prices (`MAX_PRICE_ATOMIC`, `PRICE_ATOMIC.search`), same EURe permit2 extension. Input schemas come from the same Zod modules as the OpenAPI specs.
+- **Payment** follows the official x402-over-MCP convention: an unpaid `tools/call` returns a tool result with `isError: true` and the payment demands in `structuredContent` (JSON-RPC error `-32042` on the client side); payment travels in `params._meta["x402/payment"]`; the settlement receipt comes back in `_meta["x402/payment-response"]`. Clients pay with `@x402/mcp`'s `createx402MCPClient` (register `BatchSettlementEvmScheme` client-side, as the x402 MCP guide shows).
+- **One semantic difference from the REST chat**: the wrapper settles the signed voucher amount — the advertised ceiling — while `sc_llm_x402.ts` settles a usage-derived amount below it. An MCP call always costs the price it was quoted.
+- **No free path**: the service modules (`callLLMAPI`, `searchWeb`) sit inside the wrapper, reachable only after `verifyPayment` succeeds — pinned by `test/mcp_server.test.ts` the same way the REST handlers' suites pin theirs.
+- **Registry**: each agent's registration file declares the shared MCP service with its own `mcpTools` (`agent_registration.ts` → `MCP_SERVICE`); genimg has no MCP tool yet (its mint/no-mint decision is still open).
+- **Local check**: `npm run dev:mcp` serves `handle()` on `127.0.0.1:8086`; point `npx @modelcontextprotocol/inspector` at `http://127.0.0.1:8086/mcp` to exercise the handshake, the tool list, and the unpaid payment demand before any deploy.
+
 8004scan is the external validator. Its API shows how it parsed each agent; `errors` and `warnings` should be empty:
 
 ```bash

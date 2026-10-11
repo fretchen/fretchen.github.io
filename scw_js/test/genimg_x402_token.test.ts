@@ -296,6 +296,33 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(body.accepts).toBeDefined();
     });
 
+    test("should carry the bazaar discovery block and service metadata in the 402", async () => {
+      const event = {
+        httpMethod: "POST",
+        headers: {},
+        body: JSON.stringify({
+          prompt: "A beautiful sunset",
+        }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
+      const body = JSON.parse(response.body);
+
+      // Bazaar discovery metadata (docs.x402.org/extensions/bazaar), metadata-only: the
+      // block is advertised for cataloging, the payment terms themselves are unchanged.
+      expect(body.extensions.bazaar.info.input.method).toBe("POST");
+      // The example body pins Base, so a probe replaying it is offered Base only.
+      expect(body.extensions.bazaar.info.input.body.network).toBe("eip155:8453");
+      expect(body.resource.serviceName).toBe("Fretchen Image Generation");
+      expect(body.resource.tags).toEqual(["image-generation", "x402", "nft"]);
+      expect(body.resource.iconUrl).toBe("https://imagegen-agent.fretchen.eu/favicon.png");
+      // Buyer-flow guard: the challenge's terms are what they were before the block —
+      // all four mainnet entries, all exact-scheme.
+      expect(body.accepts).toHaveLength(4);
+      expect(body.accepts.every((a: { scheme: string }) => a.scheme === "exact")).toBe(true);
+    });
+
     test("should restrict to Sepolia when network is testnet", async () => {
       const event = {
         httpMethod: "POST",
@@ -1957,6 +1984,23 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
 
         expect(accepts.every((a) => a.extra.name === "USD Coin")).toBe(true);
         expect(extensions).toBeUndefined();
+      });
+
+      test("merges caller-supplied extensions with the permit2 one without clobbering", async () => {
+        const { createPaymentRequirements } = await import("../x402_server.js");
+
+        const { extensions } = createPaymentRequirements({
+          resourceUrl: "/test",
+          description: "Test",
+          mimeType: "application/json",
+          price: { USDC: "1001", EURC: "850", EURe: "850000000000000" },
+          payTo: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+          extensions: { bazaar: { info: {} } },
+        });
+
+        // Both keys survive the merge — the bazaar block must not clobber the gas-sponsoring
+        // entry, and vice versa.
+        expect(extensions).toEqual({ eip2612GasSponsoring: {}, bazaar: { info: {} } });
       });
     });
   });

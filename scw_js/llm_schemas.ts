@@ -21,7 +21,9 @@
  */
 
 import { z } from "zod";
-import { advertisedModelIds } from "./llm_service.js";
+import { advertisedModelIds, tokensToCost } from "./llm_service.js";
+import { TOKEN_DECIMALS, type PriceList } from "./stablecoin_pricing.js";
+import type { SettlementTokenSymbol } from "@fretchen/chain-utils";
 
 /**
  * The model ids this endpoint advertises. Derived from `advertisedModelIds()` in `llm_service.ts`
@@ -30,6 +32,45 @@ import { advertisedModelIds } from "./llm_service.js";
  * `llm_service.ts` does not import this file, so the dependency direction is safe.
  */
 export const ADVERTISED_LLM_MODELS = advertisedModelIds() as [string, ...string[]];
+
+// ── Pricing ──
+// Lives here, beside the schemas, for the same reason `PRICE_ATOMIC` lives in
+// `search_schemas.ts`: consumers that must not import a handler (the OpenAPI generator,
+// the MCP tool table) still need the exact advertised ceiling.
+
+/**
+ * The token estimate a per-message price ceiling is derived from. Env-overridable for test
+ * environments; see `sc_llm_x402.ts` for the full rationale of the value.
+ */
+const MAX_TOKENS_PER_MESSAGE = process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE ?? "20000";
+
+/** The provider the ceiling is priced on — see `llm_service.ts`'s LLM_PROVIDERS. */
+const LLM_PROVIDER = "mistral";
+
+// No real prompt/completion split exists yet for the ceiling, so price the entire
+// estimate as completion (output) tokens — the pricier of the two rates for a
+// provider with an asymmetric split like Mistral's. This guarantees the ceiling is
+// never an underestimate relative to whatever the real split turns out to be;
+// `getSettleAmount`'s cap in `sc_llm_x402.ts` still protects the ceiling from ever
+// being exceeded.
+//
+// One ceiling per token, each priced on the provider's own rate card in that currency — three
+// parallel price systems, no conversion (see llm_service.ts). EURe's ceiling is the same EUR
+// arithmetic rescaled to 18 decimals (tokensToCost's `decimals`).
+const maxPriceFor = (symbol: SettlementTokenSymbol): string =>
+  tokensToCost(
+    { prompt_tokens: 0, completion_tokens: MAX_TOKENS_PER_MESSAGE },
+    LLM_PROVIDER,
+    symbol,
+    TOKEN_DECIMALS[symbol],
+  ).toString();
+
+/** The per-message price ceiling in each stablecoin's own atomic units — the 402's price. */
+export const MAX_PRICE_ATOMIC: PriceList = {
+  USDC: maxPriceFor("USDC"),
+  EURC: maxPriceFor("EURC"),
+  EURe: maxPriceFor("EURe"),
+};
 
 // ── Tools ──
 

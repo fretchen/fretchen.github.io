@@ -24,7 +24,8 @@
     "dev:llmx402": "NODE_ENV=test npx tsx dev_server_llm.ts",
     "dev:llmx402cron": "NODE_ENV=test npx tsx llm_x402_cron.ts",
     "dev:growth": "NODE_ENV=test npx tsx growth_api.ts",
-    "dev:search": "NODE_ENV=test npx tsx search_api.ts"
+    "dev:search": "NODE_ENV=test npx tsx search_api.ts",
+    "dev:mcp": "NODE_ENV=test npx tsx dev_server_mcp.ts"
   },
   "keywords": [],
   "author": "",
@@ -53,6 +54,8 @@
     "@fretchen/s3-utils": "file:../shared/s3-utils",
     "@x402/core": "^2.23.0",
     "@x402/evm": "^2.23.0",
+    "@x402/extensions": "~2.28.0",
+    "@x402/mcp": "~2.28.0",
     "dotenv": "^18.0.1",
     "pino": "^10.3.1",
     "tsx": "^4.23.12",

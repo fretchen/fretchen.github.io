@@ -5,6 +5,10 @@ import {
   type AuthorizerSigner,
   type BatchSettlementChannelManager,
 } from "@x402/evm/batch-settlement/server";
+import {
+  sanitizeResourceServiceMetadata,
+  type SanitizedResourceServiceMetadata,
+} from "@x402/extensions/bazaar";
 import { loadPrivateKey } from "@fretchen/chain-utils";
 import { privateKeyToAccount } from "viem/accounts";
 import { S3ChannelStorage } from "./x402_channel_storage.js";
@@ -390,6 +394,22 @@ export interface BatchSettlementPaymentRequirementsOptions {
    * here. Whatever a route advertises it must also pass at verify time.
    */
   maxTimeoutSeconds?: number;
+  /**
+   * Extra 402 `extensions` entries beyond the permit2 one, keyed by extension name — today the
+   * Bazaar discovery block from `bazaar_discovery.ts`. Merged after `eip2612GasSponsoring`,
+   * which must survive; an unknown key in a challenge is inert for clients that do not
+   * recognize it (both extensions are optional by spec).
+   */
+  extensions?: Record<string, unknown>;
+  /**
+   * Bazaar service metadata (docs.x402.org/extensions/bazaar → "Service Metadata"), sanitized
+   * by the package's soft-drop rules and stamped onto the `resource` object: `serviceName`
+   * (ASCII ≤ 32), up to 5 `tags`, and an absolute `iconUrl`. Facilitators enrich discovery
+   * search results with them; all three are optional.
+   */
+  serviceName?: string;
+  tags?: string[];
+  iconUrl?: string;
 }
 
 /**
@@ -408,11 +428,19 @@ export async function createBatchSettlementPaymentRequirements({
   scheme,
   networks = BATCH_SETTLEMENT_NETWORKS,
   maxTimeoutSeconds = LLM_MAX_TIMEOUT_SECONDS,
+  extensions,
+  serviceName,
+  tags,
+  iconUrl,
 }: BatchSettlementPaymentRequirementsOptions): Promise<{
   x402Version: number;
-  resource: { url: string; description: string; mimeType: string };
+  resource: {
+    url: string;
+    description: string;
+    mimeType: string;
+  } & SanitizedResourceServiceMetadata;
   accepts: unknown[];
-  /** Present when a Permit2 token is offered (see `permit2Extensions`). */
+  /** Present when a Permit2 token is offered or extra extensions were passed (see `permit2Extensions`). */
   extensions?: Record<string, unknown>;
 }> {
   const offered = networks.flatMap((network) =>
@@ -444,9 +472,14 @@ export async function createBatchSettlementPaymentRequirements({
 
   return {
     x402Version: 2,
-    resource: { url: resourceUrl, description, mimeType },
+    resource: {
+      url: resourceUrl,
+      description,
+      mimeType,
+      ...sanitizeResourceServiceMetadata({ url: resourceUrl, serviceName, tags, iconUrl }),
+    },
     accepts,
-    extensions: permit2Extensions(offered.map(({ coin }) => coin)),
+    extensions: mergeExtensions(permit2Extensions(offered.map(({ coin }) => coin)), extensions),
   };
 }
 
@@ -458,11 +491,21 @@ export interface PaymentRequirementsOptions {
   price: PriceList;
   payTo: string;
   networks?: readonly string[];
+  /** Extra 402 `extensions` entries beyond the permit2 one — see the batch-settlement twin above. */
+  extensions?: Record<string, unknown>;
+  /** Bazaar service metadata, sanitized onto the `resource` object — see the batch-settlement twin above. */
+  serviceName?: string;
+  tags?: string[];
+  iconUrl?: string;
 }
 
 export interface PaymentRequirements {
   x402Version: number;
-  resource: { url: string; description: string; mimeType: string };
+  resource: {
+    url: string;
+    description: string;
+    mimeType: string;
+  } & SanitizedResourceServiceMetadata;
   accepts: Array<{
     scheme: string;
     network: string;
@@ -473,9 +516,23 @@ export interface PaymentRequirements {
     /** EURe (Permit2) entries also carry `assetTransferMethod: "permit2"`; EIP-3009 ones omit it. */
     extra: { name: string; version: string; assetTransferMethod?: "permit2" };
   }>;
-  /** Present when a Permit2 token is offered: lets buyers sign an EIP-2612 permit for Permit2
-   *  inside the payment (gas sponsoring), so a fresh wallet needs no approve() transaction. */
+  /** Present when a Permit2 token is offered or extra extensions were passed: the permit2 entry
+   *  lets buyers sign an EIP-2612 permit for Permit2 inside the payment (gas sponsoring), so a
+   *  fresh wallet needs no approve() transaction; the rest are caller-supplied (see options). */
   extensions?: Record<string, unknown>;
+}
+
+/**
+ * Merges the route's own extensions with caller-supplied ones. `undefined` when both sides are
+ * empty, preserving the pre-bazaar challenge shape for callers that pass nothing — an
+ * `extensions: {}` would be harmless but noisy.
+ */
+function mergeExtensions(
+  permit2: Record<string, unknown> | undefined,
+  extra: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined {
+  const merged = { ...permit2, ...extra };
+  return Object.keys(merged).length > 0 ? merged : undefined;
 }
 
 /**
@@ -516,6 +573,10 @@ export function createPaymentRequirements({
   price,
   payTo,
   networks = getSupportedNetworks(),
+  extensions,
+  serviceName,
+  tags,
+  iconUrl,
 }: PaymentRequirementsOptions): PaymentRequirements {
   const offered = networks.flatMap((network) =>
     offeredStablecoins(network).map((coin) => ({ network, coin })),
@@ -532,9 +593,14 @@ export function createPaymentRequirements({
 
   return {
     x402Version: 2,
-    resource: { url: resourceUrl, description, mimeType },
+    resource: {
+      url: resourceUrl,
+      description,
+      mimeType,
+      ...sanitizeResourceServiceMetadata({ url: resourceUrl, serviceName, tags, iconUrl }),
+    },
     accepts,
-    extensions: permit2Extensions(offered.map(({ coin }) => coin)),
+    extensions: mergeExtensions(permit2Extensions(offered.map(({ coin }) => coin)), extensions),
   };
 }
 

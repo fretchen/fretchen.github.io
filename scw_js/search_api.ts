@@ -15,6 +15,7 @@ import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
 import { AGENT_REGISTRATION_PATH, buildAgentRegistration } from "./agent_registration.js";
 import { faviconBase64, faviconContentType } from "./favicon.js";
 import openapiSpec from "./openapi.search.json" with { type: "json" };
+import { buildSearchBazaarExtension } from "./bazaar_discovery.js";
 import {
   create402Response,
   createBatchSettlementPaymentRequirements,
@@ -333,6 +334,12 @@ async function challenge(route: Route, receiverAddress: `0x${string}`) {
     scheme,
     networks: MAINNET_NETWORKS,
     maxTimeoutSeconds: MAX_TIMEOUT_SECONDS,
+    // One bazaar block per route: the block names the method and the query parameters, and the
+    // two routes sell different things at different prices.
+    extensions: buildSearchBazaarExtension(route),
+    serviceName: "Fretchen Web Access",
+    tags: ["search", "web", "x402"],
+    iconUrl: `${openapiSpec.servers[0].url}/favicon.png`,
   });
   return create402Response(paymentRequirements);
 }

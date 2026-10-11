@@ -25,6 +25,7 @@ import type { Address } from "viem";
 import type { z } from "zod";
 import type { FeeStatusSchema, FacilitatorFeePaidSchema, SettleResponseBody } from "./x402_schemas";
 import { isTestWalletBypassed } from "./x402_whitelist";
+import { annotateDecodedRevert } from "./revert_selectors";
 import pino from "pino";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
@@ -401,6 +402,9 @@ export async function settlePayment(
       const facilitator = getFacilitator();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
       const result = await facilitator.settle(paymentPayload as any, paymentRequirements as any);
+      // Decoded once here, at the boundary where the SDK's raw text enters this package —
+      // every log and the returned SettleResult below carry the annotated message.
+      const errorMessage = annotateDecodedRevert(result.errorMessage);
       const claims = payload?.claims as
         Array<{ voucher?: { channel?: { payer?: string } } }> | undefined;
       const payer = claims?.[0]?.voucher?.channel?.payer;
@@ -410,7 +414,7 @@ export async function settlePayment(
         logger.warn(
           {
             errorReason: result.errorReason,
-            errorMessage: result.errorMessage,
+            errorMessage,
             // Only meaningful when pending — a terminal failure never broadcast anything.
             ...(pending && { transaction: result.transaction, network }),
           },
@@ -421,7 +425,7 @@ export async function settlePayment(
         return {
           success: false,
           errorReason: result.errorReason,
-          errorMessage: result.errorMessage,
+          errorMessage,
           payer,
           // Pass the broadcast hash through. Hard-coding "" here would throw away the one thing
           // that makes settlement_pending recoverable, leaving the caller unable to tell a
@@ -527,13 +531,16 @@ export async function settlePayment(
     const facilitator = getFacilitator();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
     const result = await facilitator.settle(paymentPayload as any, paymentRequirements as any);
+    // Decoded once here, at the boundary where the SDK's raw text enters this package —
+    // every log and the returned SettleResult below carry the annotated message.
+    const errorMessage = annotateDecodedRevert(result.errorMessage);
 
     if (!result.success) {
       const pending = result.errorReason === SETTLEMENT_PENDING;
       logger.warn(
         {
           errorReason: result.errorReason,
-          errorMessage: result.errorMessage,
+          errorMessage,
           ...(pending && { transaction: result.transaction, network: accepted?.network }),
         },
         pending ? "Settlement broadcast but unconfirmed — reconcile on chain" : "Settlement failed",
@@ -541,7 +548,7 @@ export async function settlePayment(
       return {
         success: false,
         errorReason: result.errorReason,
-        errorMessage: result.errorMessage,
+        errorMessage,
         payer: verifyResult.payer,
         // See SETTLEMENT_PENDING: the hash is what the caller reconciles against.
         transaction: pending ? (result.transaction ?? "") : "",

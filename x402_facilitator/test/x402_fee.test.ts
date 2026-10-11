@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
+  ERC20_FEE_ABI,
   getFeeAmount,
   getFacilitatorAddress,
   checkMerchantAllowance,
@@ -521,6 +522,54 @@ describe("x402_fee", () => {
       expect(result.error).toBe("insufficient_merchant_balance");
     });
 
+    it("does not retry a decoded insufficient-balance revert — the merchant cannot fund it in 2s", async () => {
+      // The 2026-10-11 EURe incident: a deterministic ERC20InsufficientBalance revert was
+      // re-sent twice before giving up. A retry cannot change the merchant's balance, so the
+      // transfer must be attempted exactly once.
+      process.env.FEE_RETRY_DELAY_MS = "0";
+      const { getContract } = await import("viem");
+      const transferFrom = vi.fn().mockRejectedValue(
+        // The shape viem produces once the fee ABI decodes the OZ v5 error (Task 1).
+        new Error(
+          'The contract function "transferFrom" reverted with reason: ERC20InsufficientBalance(0x209…287C, 5000000000000000, 10000000000000000)',
+        ),
+      );
+      vi.mocked(getContract).mockReturnValue(mockContract({ write: { transferFrom } }));
+
+      const result = await collectFee(merchant, "eip155:8453", BASE_EURE);
+
+      expect(result).toMatchObject({ success: false, error: "insufficient_merchant_balance" });
+      expect(transferFrom).toHaveBeenCalledTimes(1);
+    });
+
+    it("still retries a nonce race the full attempt budget", async () => {
+      // The retry exists for exactly this class (the 2025-09-28 nonce reuse): a node refused
+      // the send before broadcast, the next attempt can succeed. Must not be broken by the
+      // deterministic-revert classification.
+      process.env.FEE_RETRY_DELAY_MS = "0";
+      const mockTxHash = "0xfee1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab";
+      const { getContract, createPublicClient } = await import("viem");
+      vi.mocked(createPublicClient).mockReturnValue(
+        mockPublicClient({
+          waitForTransactionReceipt: vi.fn(async () => ({
+            status: "success",
+            transactionHash: mockTxHash,
+          })),
+        }),
+      );
+      const transferFrom = vi
+        .fn()
+        .mockRejectedValueOnce(new Error("nonce too low"))
+        .mockRejectedValueOnce(new Error("replacement transaction underpriced"))
+        .mockResolvedValue(mockTxHash);
+      vi.mocked(getContract).mockReturnValue(mockContract({ write: { transferFrom } }));
+
+      const result = await collectFee(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
+
+      expect(result.success).toBe(true);
+      expect(transferFrom).toHaveBeenCalledTimes(3);
+    });
+
     it("returns generic error for unknown failures", async () => {
       const { getContract } = await import("viem");
       vi.mocked(getContract).mockReturnValue(
@@ -688,5 +737,52 @@ describe("wasRejectedBeforeBroadcast", () => {
     ["Timed out while waiting for transaction", "receipt timeout — broadcast, outcome unknown"],
   ])("never retries %s (%s)", (message) => {
     expect(wasRejectedBeforeBroadcast(new Error(message))).toBe(false);
+  });
+});
+
+describe("ERC20_FEE_ABI — the OZ v5 errors decode the incident's fee revert", () => {
+  // The 2026-10-11 incident: the EURe fee pull reverted with selector 0xe450d38c, and viem
+  // logged "Unable to decode signature" because the fee ABI carried no error definitions —
+  // so the insufficient_merchant_balance mapping in collectFee's catch never fired and the
+  // alert carried a bare selector. These tests pin the fix at both ends: the selector belongs
+  // to OZ v5's ERC20InsufficientBalance (self-verified against the production selector, not
+  // assumed), and the ABI now decodes it into a named, argued error.
+  const MERCHANT = "0x209693Bc6afc0C5328bA36FaF03C514EF312287C";
+  const word = (value: bigint | string) =>
+    (typeof value === "bigint" ? value.toString(16) : value.replace(/^0x/, "")).padStart(64, "0");
+
+  it("self-verifies the OZ v5 signature against the production selector", async () => {
+    const { toFunctionSelector } = await import("viem");
+    expect(toFunctionSelector("ERC20InsufficientBalance(address,uint256,uint256)")).toBe(
+      "0xe450d38c",
+    );
+  });
+
+  it("decodes the incident's revert data to a named, argued error", async () => {
+    const { decodeErrorResult } = await import("viem");
+    // The incident's shape: sender = the seller, balance below one fee, needed = one 0.01 EURe
+    // fee in 18-decimal units.
+    const data =
+      "0xe450d38c" + word(MERCHANT) + word(5_000_000_000_000_000n) + word(10_000_000_000_000_000n);
+
+    const decoded = decodeErrorResult({ abi: ERC20_FEE_ABI, data: data as `0x${string}` });
+
+    expect(decoded.errorName).toBe("ERC20InsufficientBalance");
+    // viem returns error args positionally.
+    expect(decoded.args).toEqual([MERCHANT, 5_000_000_000_000_000n, 10_000_000_000_000_000n]);
+  });
+
+  it("decodes the allowance twin the same way", async () => {
+    const { toFunctionSelector, decodeErrorResult } = await import("viem");
+    const data =
+      toFunctionSelector("ERC20InsufficientAllowance(address,uint256,uint256)") +
+      word(MERCHANT) +
+      word(0n) +
+      word(10n ** 18n);
+
+    const decoded = decodeErrorResult({ abi: ERC20_FEE_ABI, data: data as `0x${string}` });
+
+    expect(decoded.errorName).toBe("ERC20InsufficientAllowance");
+    expect(decoded.args).toEqual([MERCHANT, 0n, 10n ** 18n]);
   });
 });

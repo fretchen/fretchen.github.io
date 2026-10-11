@@ -10,21 +10,29 @@
  * back as a result with `isError` and the payment demands in `structuredContent`, per the
  * official x402-over-MCP convention (JSON-RPC error code -32042 on the client side).
  *
- * One deliberate semantic difference from the REST chat: the wrapper settles the signed
- * voucher amount — the advertised ceiling — while `sc_llm_x402.ts` settles a usage-derived
- * amount below it. An MCP call therefore always costs the price it was quoted.
+ * Settlement is the REST chat's "authorize an upper bound, claim the real amount" split, kept
+ * in parity by `withUsageDerivedSettlement`: verify against the advertised ceiling, settle the
+ * usage-derived amount (capped at the ceiling, zero when usage is absent).
  */
 import { z } from "zod";
 import { createPaymentWrapper, type PaymentRequirements } from "@x402/mcp";
+import type { PaymentRequirements as SdkPaymentRequirements } from "@x402/core/types";
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
+import type { x402ResourceServer } from "@x402/core/server";
 import {
   createBatchSettlementPaymentRequirements,
   createLLMResourceServer,
 } from "./x402_server.js";
-import { LLMChatRequestSchema, LLMChatMessageSchema, MAX_PRICE_ATOMIC } from "./llm_schemas.js";
+import {
+  LLMChatRequestSchema,
+  LLMChatMessageSchema,
+  MAX_PRICE_ATOMIC,
+  getSettleAmount,
+} from "./llm_schemas.js";
 import { SearchQuerySchema, PRICE_ATOMIC } from "./search_schemas.js";
 import { callLLMAPI, resolveModel, type LLMMessage } from "./llm_service.js";
 import { searchWeb } from "./search_service.js";
+import { resolvePaidStablecoin } from "./stablecoin_pricing.js";
 import llmSpec from "./openapi.llm.json" with { type: "json" };
 import searchSpec from "./openapi.search.json" with { type: "json" };
 
@@ -42,6 +50,55 @@ export interface McpTool {
 
 function isHexAddress(addr: unknown): addr is `0x${string}` {
   return typeof addr === "string" && /^0x[a-fA-F0-9]{40}$/.test(addr);
+}
+
+/**
+ * Settlement parity for `llm_complete`: the payment wrapper settles with the requirements it
+ * matched (the advertised ceiling), while the REST chat claims the real, usage-derived amount
+ * (sc_llm_x402.ts — "authorize an upper bound, claim the real amount"). Nothing in the x402
+ * MCP convention fixes the claim amount; the wrapper simply calls whatever resource server it
+ * was handed, so this proxy shadows ONE method: `settlePayment` re-prices the claim from the
+ * tool result's `usage` (the wrapper sets `transportContext.result` before settling) with the
+ * shared `getSettleAmount` — capped at the advertised ceiling, zero when usage is absent.
+ *
+ * `Object.create` keeps every other method on the prototype chain, so the wrapper sees the real
+ * server for verify/match/cancel — and any method a future @x402/mcp version adds still
+ * resolves instead of crashing on a hand-rolled delegating object.
+ *
+ * Falls back to the wrapper's own behavior (unchanged requirements) only when the payload's
+ * asset does not resolve to an offered coin — a state the wrapper's own
+ * `findMatchingRequirements` step makes unreachable for a verified payment.
+ */
+function withUsageDerivedSettlement(server: x402ResourceServer): x402ResourceServer {
+  const proxy = Object.create(server) as x402ResourceServer;
+  proxy.settlePayment = ((
+    payload: { accepted?: { network?: string; asset?: string } } & Record<string, unknown>,
+    requirements: SdkPaymentRequirements,
+    extMap: Record<string, unknown> | undefined,
+    transportContext: { result?: { structuredContent?: Record<string, unknown> } } & Record<
+      string,
+      unknown
+    >,
+    ...rest: unknown[]
+  ) => {
+    const usage = transportContext?.result?.structuredContent?.usage as
+      { prompt_tokens: number; completion_tokens: number } | undefined;
+    // The wrapper hands settlePayment the full PaymentPayload envelope — the accepted entry
+    // lives on its inner `payload` (the REST handlers see the unwrapped object, which is why
+    // the shape differs from sc_llm_x402.ts's).
+    const accepted =
+      (payload as { payload?: { accepted?: { network?: string; asset?: string } } }).payload
+        ?.accepted ?? payload.accepted;
+    const coin = resolvePaidStablecoin(accepted?.network ?? "", accepted?.asset);
+    // No usage → zero charge, exactly like the REST chat's dummy path. No coin → unreachable
+    // for a verified payment (see the doc comment); settle as the wrapper would have.
+    const amount = !usage ? "0" : coin ? getSettleAmount(usage, coin.symbol) : requirements.amount;
+    // Pass-through delegation for the wrapper's trailing args (settlement overrides, phase):
+    // the SDK's own settlePayment types them; modeling them here would just drift.
+    const settle = server.settlePayment as (...args: unknown[]) => Promise<unknown>;
+    return settle(payload, { ...requirements, amount }, extMap, transportContext, ...rest);
+  }) as x402ResourceServer["settlePayment"];
+  return proxy;
 }
 
 /** The handler shape `createPaymentWrapper` expects (ToolResult in @x402/mcp's terms). */
@@ -89,7 +146,7 @@ async function buildMcpTools(): Promise<McpTool[]> {
     scheme,
     extensions: llmExtensions,
   });
-  const paidLlm = createPaymentWrapper(resourceServer, {
+  const paidLlm = createPaymentWrapper(withUsageDerivedSettlement(resourceServer), {
     accepts: llmReqs.accepts as PaymentRequirements[],
     resource: {
       url: "mcp://tool/llm_complete",

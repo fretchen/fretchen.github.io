@@ -72,6 +72,25 @@ export const MAX_PRICE_ATOMIC: PriceList = {
   EURe: maxPriceFor("EURe"),
 };
 
+/**
+ * Real, usage-derived charge for this message in `symbol`'s atomic units, from that currency's
+ * rate card, capped at the same currency's pre-authorized ceiling (`MAX_PRICE_ATOMIC`) — a
+ * response that somehow runs over the estimate still settles for the max rather than aborting
+ * with cap_exceeded; the difference is absorbed as under-billing, not a fund-safety issue (the
+ * client is always protected by the voucher's signed ceiling).
+ *
+ * Shared by the REST chat (`sc_llm_x402.ts`) and the MCP `llm_complete` tool — both settle the
+ * real usage, never the flat ceiling they advertise.
+ */
+export function getSettleAmount(
+  usage: { prompt_tokens: number; completion_tokens: number },
+  symbol: SettlementTokenSymbol,
+): string {
+  const actualCost = tokensToCost(usage, LLM_PROVIDER, symbol, TOKEN_DECIMALS[symbol]);
+  const maxCost = BigInt(MAX_PRICE_ATOMIC[symbol]);
+  return (actualCost > maxCost ? maxCost : actualCost).toString();
+}
+
 // ── Tools ──
 
 /** Bytes, not a tool count: what is billed is the serialized definitions, on every hop. A count

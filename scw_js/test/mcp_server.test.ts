@@ -10,6 +10,7 @@
  * assertions rely on its gating, not on a mock of it.
  */
 import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
+import { MAX_PRICE_ATOMIC, getSettleAmount } from "../llm_schemas.js";
 
 /** The seller's own address (`NFT_WALLET_PUBLIC_KEY`) — Anvil account #2, as elsewhere. */
 const RECEIVER = "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC";
@@ -18,7 +19,9 @@ const FAKE_ACCEPTS = [
   {
     scheme: "batch-settlement",
     network: "eip155:8453",
-    amount: "10000",
+    // The real llm ceiling, so verify-side, cap-side and fixture agree (mcp_tools advertises
+    // MAX_PRICE_ATOMIC through the mocked requirements builder).
+    amount: MAX_PRICE_ATOMIC.USDC,
     asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
     payTo: RECEIVER,
     maxTimeoutSeconds: 120,
@@ -26,15 +29,20 @@ const FAKE_ACCEPTS = [
   },
 ];
 
-/** A payment payload the wrapper accepts as present: {x402Version, payload} in _meta. */
+/** A payment payload the wrapper accepts as present: {x402Version, payload} in _meta. The
+ * accepted entry mirrors the fake accept so the settlement proxy's coin resolution works —
+ * in production the wrapper's own matching step guarantees this alignment. */
 const PAID_META = {
   "x402/payment": {
     x402Version: 2,
     payload: {
-      type: "voucher",
       x402Version: 2,
+      type: "voucher",
       scheme: "batch-settlement",
-      network: "eip155:8453",
+      accepted: {
+        network: "eip155:8453",
+        asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      },
     },
   },
 } as Record<string, unknown>;
@@ -361,5 +369,76 @@ describe("tools/call — the payment gate (no free path)", () => {
     });
     if (!("error" in res)) throw new Error("expected error");
     expect(res.error.code).toBe(-32602);
+  });
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // Settlement parity: llm_complete claims the real, usage-derived amount, exactly like
+  // the REST chat (sc_llm_x402.test.ts's twins of these pins). web_search stays flat.
+  // ════════════════════════════════════════════════════════════════════════════
+
+  /** One paid llm_complete call; returns the (payload, requirements) the settle mock saw. */
+  async function paidLlmCall(): Promise<{ payload: unknown; requirements: { amount: string } }> {
+    const res = await rpc(
+      {
+        jsonrpc: "2.0",
+        id: 10,
+        method: "tools/call",
+        params: {
+          name: "llm_complete",
+          arguments: { model: "mistral-large-latest", messages: [{ role: "user", content: "hi" }] },
+        },
+      },
+      PAID_META,
+    );
+    if ("error" in res)
+      throw new Error(`expected result, got: ${JSON.stringify(res).slice(0, 300)}`);
+    expect(mockVerifyPayment).toHaveBeenCalledTimes(1);
+    expect(mockSettlePayment).toHaveBeenCalledTimes(1);
+    return {
+      payload: mockSettlePayment.mock.calls[0][0],
+      requirements: mockSettlePayment.mock.calls[0][1] as { amount: string },
+    };
+  }
+
+  it("verifies against the ceiling but settles llm_complete for the real token usage", async () => {
+    // Default mockCallLLMAPI: 10 prompt + 5 completion tokens.
+    const { requirements } = await paidLlmCall();
+    // The voucher/verify side saw the advertised ceiling…
+    expect(mockVerifyPayment).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ amount: MAX_PRICE_ATOMIC.USDC }),
+      expect.anything(),
+      expect.anything(),
+    );
+    // …the claim is the usage-derived amount, computed with the same shared function.
+    const expected = getSettleAmount({ prompt_tokens: 10, completion_tokens: 5 }, "USDC");
+    expect(requirements.amount).toBe(expected);
+    expect(expected).not.toBe(MAX_PRICE_ATOMIC.USDC);
+  });
+
+  it("caps the llm_complete settlement at the advertised ceiling when usage runs over it", async () => {
+    mockCallLLMAPI.mockImplementation(async () => ({
+      id: "chatcmpl-test",
+      object: "chat.completion",
+      created: 1_760_000_000,
+      model: "mistral-large-latest",
+      choices: [{ index: 0, message: { role: "assistant", content: "ok" }, finish_reason: "stop" }],
+      usage: { prompt_tokens: 0, completion_tokens: 99_999_999, total_tokens: 99_999_999 },
+    }));
+    const { requirements } = await paidLlmCall();
+    expect(requirements.amount).toBe(MAX_PRICE_ATOMIC.USDC);
+  });
+
+  it("settles zero when the llm_complete result carries no usage — same as the REST dummy path", async () => {
+    mockCallLLMAPI.mockImplementation(async () => ({
+      id: "chatcmpl-test",
+      object: "chat.completion",
+      created: 1_760_000_000,
+      model: "mistral-large-latest",
+      choices: [{ index: 0, message: { role: "assistant", content: "ok" }, finish_reason: "stop" }],
+      // no usage field
+    }));
+    const { requirements } = await paidLlmCall();
+    expect(requirements.amount).toBe("0");
   });
 });

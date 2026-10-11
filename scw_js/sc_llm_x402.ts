@@ -1,10 +1,4 @@
-import {
-  callLLMAPI,
-  tokensToCost,
-  resolveModel,
-  advertisedModelIds,
-  type LLMMessage,
-} from "./llm_service.js";
+import { callLLMAPI, resolveModel, advertisedModelIds, type LLMMessage } from "./llm_service.js";
 import { parseJsonBody, CORS_HEADERS, errorResponse, openAiError } from "./utils.js";
 import { z } from "zod";
 import {
@@ -15,10 +9,11 @@ import {
   FORWARDED_OWN_KEYS,
   MAX_MESSAGES_BYTES,
   MAX_PRICE_ATOMIC,
+  getSettleAmount,
 } from "./llm_schemas.js";
-import { isTestnet, type SettlementTokenSymbol } from "@fretchen/chain-utils";
+import { isTestnet } from "@fretchen/chain-utils";
 import { logger } from "./logger.js";
-import { offeredStablecoins, resolvePaidStablecoin, TOKEN_DECIMALS } from "./stablecoin_pricing.js";
+import { offeredStablecoins, resolvePaidStablecoin } from "./stablecoin_pricing.js";
 import {
   createLLMResourceServer,
   createBatchSettlementPaymentRequirements,
@@ -61,8 +56,6 @@ interface ScwResponse {
 // with the ceiling amount, then pass a smaller usage-derived amount to settlePayment().
 // (The installed @x402/evm — 2.18.0 — exposes no higher-level helper for this; we call the
 // resourceServer verify/settle primitives directly.) See getSettleAmount() below.
-// See llm_service.ts's LLM_PROVIDERS for the provider registry.
-const LLM_PROVIDER = "mistral";
 
 // The request fields this endpoint consumes rather than passes on: model/messages it resolves and
 // validates itself, useDummyData/payment are vendor extensions, and stream/n/max_tokens are the
@@ -79,20 +72,10 @@ const STRIPPED_REQUEST_KEYS = new Set(
 // a handler still get the exact advertised price. The full derivation rationale lives there.
 
 /**
- * Real, usage-derived charge for this message in `symbol`'s atomic units, from that currency's
- * rate card, capped at the same currency's pre-authorized ceiling (`MAX_PRICE_ATOMIC`) — a
- * response that somehow runs over the estimate still settles for the max rather than aborting
- * with cap_exceeded; the difference is absorbed as under-billing, not a fund-safety issue (the
- * client is always protected by the voucher's signed ceiling).
+ * Real, usage-derived charge for this message in `symbol`'s atomic units — moved to
+ * `llm_schemas.ts` (beside MAX_PRICE_ATOMIC) so the MCP `llm_complete` tool settles with
+ * the identical formula. The full rationale lives there.
  */
-function getSettleAmount(
-  usage: { prompt_tokens: number; completion_tokens: number },
-  symbol: SettlementTokenSymbol,
-): string {
-  const actualCost = tokensToCost(usage, LLM_PROVIDER, symbol, TOKEN_DECIMALS[symbol]);
-  const maxCost = BigInt(MAX_PRICE_ATOMIC[symbol]);
-  return (actualCost > maxCost ? maxCost : actualCost).toString();
-}
 
 function isHexAddress(addr: unknown): addr is `0x${string}` {
   return typeof addr === "string" && /^0x[a-fA-F0-9]{40}$/.test(addr);

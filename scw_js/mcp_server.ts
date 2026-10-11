@@ -19,7 +19,7 @@
  */
 import { CORS_HEADERS } from "./utils.js";
 import type { HttpResponse } from "./x402_server.js";
-import { getMcpTools } from "./mcp_tools.js";
+import { MCP_TOOLS } from "./mcp_tools.js";
 import type { ScwEvent } from "./types.js";
 
 /** The latest protocol revision this server implements. */
@@ -102,9 +102,8 @@ async function dispatch(
       });
     }
     case "tools/list": {
-      const tools = await getMcpTools();
       return jsonRpcResult(id, {
-        tools: tools.map(({ name, description, inputSchema }) => ({
+        tools: MCP_TOOLS.map(({ name, description, inputSchema }) => ({
           name,
           description,
           inputSchema,
@@ -112,18 +111,18 @@ async function dispatch(
       });
     }
     case "tools/call": {
-      const tools = await getMcpTools();
       const name = typeof params?.name === "string" ? params.name : "";
-      const tool = tools.find((t) => t.name === name);
+      const tool = MCP_TOOLS.find((t) => t.name === name);
       if (!tool) {
         return jsonRpcError(id, -32602, `Unknown tool '${name}'`, {
-          available: tools.map((t) => t.name),
+          available: MCP_TOOLS.map((t) => t.name),
         });
       }
       const args = (params?.arguments ?? {}) as Record<string, unknown>;
       const meta = (params?._meta ?? undefined) as Record<string, unknown> | undefined;
-      // The payment wrapper owns the unpaid path: its result (isError + demands in
-      // structuredContent) is a valid tool result, not a JSON-RPC error, and passes through.
+      // The tool relays to the real handler, which owns the unpaid path: its 402 comes
+      // back as a tool result with isError + the payment demands in structuredContent —
+      // a valid tool result, not a JSON-RPC error, and passes through.
       const result = await tool.call(args, meta);
       return jsonRpcResult(id, result);
     }

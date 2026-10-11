@@ -9,8 +9,11 @@ const {
   mockGetFacilitatorFeeConfig,
   mockReadContract,
   mockLoggerWarn,
+  mockLoggerError,
   mockResyncChannelState,
   mockUseEnhancedRefundRequirements,
+  mockRefund,
+  mockUpdateChannel,
 } = vi.hoisted(() => ({
   mockCreateLLMResourceServer: vi.fn(),
   mockCreateFacilitatorClient: vi.fn(),
@@ -18,8 +21,11 @@ const {
   mockGetFacilitatorFeeConfig: vi.fn(),
   mockReadContract: vi.fn(),
   mockLoggerWarn: vi.fn(),
+  mockLoggerError: vi.fn(),
   mockResyncChannelState: vi.fn(),
   mockUseEnhancedRefundRequirements: vi.fn(),
+  mockRefund: vi.fn(),
+  mockUpdateChannel: vi.fn(),
 }));
 
 // Hits a real RPC otherwise. Its own behaviour is covered in x402_channel_sync.test.ts.
@@ -35,12 +41,12 @@ vi.mock("../x402_server.js", () => ({
   useEnhancedRefundRequirements: mockUseEnhancedRefundRequirements,
 }));
 
-// The cron's logger is module-private; mock pino so its warnings are observable.
+// The cron's logger is module-private; mock pino so its warnings and errors are observable.
 vi.mock("pino", () => ({
   default: vi.fn(() => ({
     info: vi.fn(),
     warn: mockLoggerWarn,
-    error: vi.fn(),
+    error: mockLoggerError,
     debug: vi.fn(),
   })),
 }));
@@ -66,6 +72,18 @@ function makeEvent() {
   return { httpMethod: "GET", headers: {}, body: null };
 }
 
+/** A quiet, funded, partially-charged channel: refundable by the sweep. */
+function idleRefundableChannel(overrides: Record<string, unknown> = {}) {
+  return {
+    channelId: "0xrefundme",
+    balance: "600000",
+    totalClaimed: "100000",
+    chargedCumulativeAmount: "100000",
+    lastRequestTimestamp: Date.now() - 48 * 3600 * 1000,
+    ...overrides,
+  };
+}
+
 /** One claim run per (network, token): Optimism has USDC only, Base and Base Sepolia all three. */
 const RUNS: Array<[string, string]> = [
   ["eip155:10", USDC_ADDRESSES["eip155:10"]],
@@ -82,9 +100,20 @@ const RUNS: Array<[string, string]> = [
 describe("llm_x402_cron", () => {
   let mockCreateChannelManager: ReturnType<typeof vi.fn>;
   let mockClaimAndSettle: ReturnType<typeof vi.fn>;
-  let mockRefundIdleChannels: ReturnType<typeof vi.fn>;
   let mockClaimSchemeFor: ReturnType<typeof vi.fn>;
   let mockStorageList: ReturnType<typeof vi.fn>;
+
+  /** Storage whose deletions stick. A real SDK refund and the sweep's garbage collection both
+   *  remove the record, so the post-condition sees what a real run would see — a static
+   *  mockResolvedValue would resurrect every refunded channel as stuck escrow. */
+  function statefulStorage(channels: Array<Record<string, unknown>>) {
+    let current = channels;
+    mockStorageList.mockImplementation(async () => current);
+    mockUpdateChannel.mockImplementation(async (channelId: string) => {
+      current = current.filter((c) => c.channelId !== channelId);
+      return { channel: undefined, status: "deleted" };
+    });
+  }
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -94,20 +123,26 @@ describe("llm_x402_cron", () => {
       claims: [{ vouchers: 2, transaction: "0xclaimtx" }],
       settle: { transaction: "0xsettletx" },
     });
-    mockRefundIdleChannels = vi.fn().mockResolvedValue([]);
+    // The sweep refunds one channel per call, each in its own try/catch — see the SDK notes
+    // in llm_x402_cron.ts. Default: every attempt succeeds and refunds nothing (no channels).
+    mockRefund.mockResolvedValue([]);
+    mockUpdateChannel.mockResolvedValue({ channel: undefined, status: "deleted" });
     mockCreateChannelManager = vi.fn().mockReturnValue({
       claimAndSettle: mockClaimAndSettle,
-      refundIdleChannels: mockRefundIdleChannels,
+      refund: mockRefund,
     });
 
     // One scheme per (network, token), each owning storage that lists only that network's
     // prefix and that token's channels.
-    // list() is read by the post-condition check after every sweep. Default: nothing left
-    // behind, which is what a healthy run looks like.
+    // list() is read by the sweep's partition and again by the post-condition check after
+    // every run. Default: nothing stored, which is what a healthy run looks like.
     mockStorageList = vi.fn().mockResolvedValue([]);
     mockClaimSchemeFor = vi.fn().mockReturnValue({
       createChannelManager: mockCreateChannelManager,
-      getStorage: vi.fn().mockReturnValue({ list: mockStorageList }),
+      getStorage: vi.fn().mockReturnValue({
+        list: mockStorageList,
+        updateChannel: mockUpdateChannel,
+      }),
     });
     mockResyncChannelState.mockResolvedValue([]);
     mockUseEnhancedRefundRequirements.mockResolvedValue(undefined);
@@ -193,6 +228,7 @@ describe("llm_x402_cron", () => {
       // Reported on every run, including the healthy one: "we checked and found nothing" is the
       // signal that distinguishes a working sweep from one that never looked.
       driftCorrected: 0,
+      garbageCollected: 0,
       escrowHeld: "0",
     });
   });
@@ -244,6 +280,7 @@ describe("llm_x402_cron", () => {
       refunds: 0,
       feeAllowanceClaimsLeft: 100,
       driftCorrected: 0,
+      garbageCollected: 0,
       escrowHeld: "0",
     });
   });
@@ -287,12 +324,21 @@ describe("llm_x402_cron", () => {
   // ═══════════════════════════════════════════════════════════
 
   it("sweeps idle channels for refunds on each network, after the claim", async () => {
-    mockRefundIdleChannels.mockResolvedValue([{ transaction: "0xrefund1" }]);
+    statefulStorage([idleRefundableChannel()]);
+    mockRefund.mockImplementation(async ([channelId]: string[]) => {
+      // The SDK deletes the record on a successful refund — mirrored by statefulStorage, so
+      // only the first (network, token) run sees the channel, exactly like production.
+      await mockUpdateChannel(channelId, () => undefined);
+      return [{ transaction: "0xrefund1" }];
+    });
 
     const res = await handle(makeEvent() as never, {});
 
-    expect(mockRefundIdleChannels).toHaveBeenCalledTimes(RUNS.length);
-    expect(mockRefundIdleChannels).toHaveBeenCalledWith({ idleSecs: 21600 });
+    expect(mockRefund).toHaveBeenCalledTimes(1);
+    expect(mockRefund).toHaveBeenCalledWith(["0xrefundme"]);
+    expect(mockClaimAndSettle.mock.invocationCallOrder[0]).toBeLessThan(
+      mockRefund.mock.invocationCallOrder[0],
+    );
 
     const body = JSON.parse(res.body) as { results: Array<{ refunds?: number }> };
     expect(body.results[0].refunds).toBe(1);
@@ -304,7 +350,8 @@ describe("llm_x402_cron", () => {
       order.push("claim");
       return { claims: [], settle: undefined };
     });
-    mockRefundIdleChannels.mockImplementation(async () => {
+    statefulStorage([idleRefundableChannel()]);
+    mockRefund.mockImplementation(async () => {
       order.push("refund");
       return [];
     });
@@ -317,11 +364,12 @@ describe("llm_x402_cron", () => {
   it("enhances the refund requirements before sweeping, or every refund is rejected", async () => {
     // The SDK's manager builds `extra: {}` and the facilitator fails closed on a missing
     // receiverAuthorizer, so ordering here is load-bearing, not cosmetic.
+    statefulStorage([idleRefundableChannel()]);
     await handle(makeEvent() as never, {});
 
     expect(mockUseEnhancedRefundRequirements).toHaveBeenCalledTimes(RUNS.length);
     expect(mockUseEnhancedRefundRequirements.mock.invocationCallOrder[0]).toBeLessThan(
-      mockRefundIdleChannels.mock.invocationCallOrder[0],
+      mockRefund.mock.invocationCallOrder[0],
     );
     expect(mockUseEnhancedRefundRequirements).toHaveBeenCalledWith(
       expect.anything(),
@@ -345,11 +393,13 @@ describe("llm_x402_cron", () => {
    * the same as being guaranteed.
    */
   it("resyncs cached channel state before sweeping, not after", async () => {
+    statefulStorage([idleRefundableChannel()]);
+
     await handle(makeEvent() as never, {});
 
     expect(mockResyncChannelState).toHaveBeenCalled();
     expect(mockResyncChannelState.mock.invocationCallOrder[0]).toBeLessThan(
-      mockRefundIdleChannels.mock.invocationCallOrder[0],
+      mockRefund.mock.invocationCallOrder[0],
     );
   });
 
@@ -366,19 +416,22 @@ describe("llm_x402_cron", () => {
     expect(result.statusCode).toBe(500);
     const body = JSON.parse(result.body);
     expect(body.results[0].refundError).toBe("S3 unavailable");
-    expect(mockRefundIdleChannels).not.toHaveBeenCalled();
+    expect(mockRefund).not.toHaveBeenCalled();
   });
 
   /**
-   * A failed refund sweep still reports its successful claim — but the RUN fails.
+   * A failed refund still reports its successful claim — but the RUN fails.
    *
    * It used to return 200: `refundError` is a different key from `error`, and only `error` was
    * counted, so Scaleway recorded a successful invocation. That is how a refund sweep that failed
    * twice a day went unnoticed for weeks. The claim detail below is what must not be masked; the
-   * status code is what must not lie.
+   * status code is what must not lie. Since the sweep went per-channel, a failing channel no
+   * longer aborts the loop — `refunds` is reported (as 0) rather than dropped, and `refundError`
+   * carries the count summary instead of the raw message.
    */
   it("a failing refund sweep fails the run without masking a successful claim", async () => {
-    mockRefundIdleChannels.mockRejectedValue(new Error("facilitator rejected refund"));
+    statefulStorage([idleRefundableChannel()]);
+    mockRefund.mockRejectedValue(new Error("facilitator rejected refund"));
 
     const res = await handle(makeEvent() as never, {});
 
@@ -387,8 +440,8 @@ describe("llm_x402_cron", () => {
       results: Array<{ claims?: number; refunds?: number; refundError?: string }>;
     };
     expect(body.results[0].claims).toBe(1);
-    expect(body.results[0].refundError).toBe("facilitator rejected refund");
-    expect(body.results[0].refunds).toBeUndefined();
+    expect(body.results[0].refundError).toBe("1 of 1 refund(s) failed");
+    expect(body.results[0].refunds).toBe(0);
   });
 
   // ═══════════════════════════════════════════════════════════
@@ -426,25 +479,138 @@ describe("llm_x402_cron", () => {
   /** Nothing thrown, refunds reported as done — and escrow still sitting there. This is the case
    *  no error-based check can see, and the reason the post-condition is written at all. */
   it("catches stuck escrow even when the sweep reported success", async () => {
-    mockRefundIdleChannels.mockResolvedValue([{ transaction: "0xabc" }]);
+    // Static list on purpose: the refund "succeeds" but the record survives, which is the lie
+    // the post-condition exists to catch.
     mockStorageList.mockResolvedValue([stuckChannel()]);
+    mockRefund.mockResolvedValue([{ transaction: "0xabc" }]);
 
     const res = await handle(makeEvent() as never, {});
 
     expect(res.statusCode).toBe(500);
   });
 
-  it("passes a channel that is idle but has nothing left to refund", async () => {
-    mockStorageList.mockResolvedValue([stuckChannel({ balance: "52897" })]);
+  // ═══════════════════════════════════════════════════════════
+  // The sweep's partition: refundable / fully-claimed (garbage-collected) / anomalous
+  //
+  // The 2026-10-11 incident: a fully-claimed record lingered with balance != 0, so the SDK's
+  // batch sweep built a 0-amount refund for it, the contract rejected that with ZeroRefund,
+  // and the abort-on-first-failure batch stranded two funded channels' escrow behind it.
+  // The sweep now partitions and drives each channel separately.
+  // ═══════════════════════════════════════════════════════════
+
+  it("garbage-collects a fully-claimed idle channel and never refunds it", async () => {
+    // Every atom deposited was also claimed, so the chain holds nothing for this channel —
+    // the record is the only thing keeping the ZeroRefund loop alive.
+    const fullyClaimed = idleRefundableChannel({
+      channelId: "0xdead",
+      balance: "52897",
+      totalClaimed: "52897",
+      chargedCumulativeAmount: "52897",
+    });
+    statefulStorage([fullyClaimed]);
+    mockResyncChannelState.mockResolvedValue([
+      { channelId: "0xdead", chainBalance: "52897", chainTotalClaimed: "52897", corrected: false },
+    ]);
 
     const res = await handle(makeEvent() as never, {});
 
-    expect(res.statusCode).toBe(200);
+    expect(mockRefund).not.toHaveBeenCalled();
+    expect(mockUpdateChannel).toHaveBeenCalledWith("0xdead", expect.any(Function));
+    // The deletion contract the SDK itself uses: an updater returning undefined deletes.
+    const updater = mockUpdateChannel.mock.calls[0][1] as (c: unknown) => unknown;
+    expect(updater(fullyClaimed)).toBeUndefined();
+
     const body = JSON.parse(res.body) as {
-      results: Array<{ stuckChannels?: string[]; escrowHeld?: string }>;
+      results: Array<{
+        garbageCollected?: number;
+        escrowHeld?: string;
+        stuckChannels?: string[];
+        anomalousChannels?: string[];
+      }>;
     };
+    expect(body.results[0].garbageCollected).toBe(1);
+    expect(body.results[0].escrowHeld).toBe("0");
     expect(body.results[0].stuckChannels).toBeUndefined();
-    expect(body.results[0].escrowHeld).toBe("52897");
+    expect(body.results[0].anomalousChannels).toBeUndefined();
+    expect(res.statusCode).toBe(200);
+  });
+
+  it("one channel's refund failure no longer blocks the rest of the sweep", async () => {
+    // The incident regression: the SDK's batch sweep aborted on the first failure, so one
+    // bad channel stranded every refund behind it. The per-channel loop must attempt all.
+    statefulStorage([
+      idleRefundableChannel({ channelId: "0xgood1" }),
+      idleRefundableChannel({ channelId: "0xbad" }),
+      idleRefundableChannel({ channelId: "0xgood2" }),
+    ]);
+    mockRefund.mockImplementation(async ([channelId]: string[]) => {
+      if (channelId === "0xbad") {
+        throw new Error("invalid_batch_settlement_evm_refund_simulation_failed");
+      }
+      await mockUpdateChannel(channelId, () => undefined);
+      return [{ transaction: "0xrefund" }];
+    });
+
+    const res = await handle(makeEvent() as never, {});
+
+    // All three channels attempted on the first run. The failed one is not deleted (only a
+    // successful refund removes a record), so each of the remaining six (network, token) runs
+    // retries it alone: 3 + 6 = 9 attempts in total, with the two good refunds safe on run one.
+    expect(mockRefund).toHaveBeenCalledTimes(9);
+    expect(mockRefund).toHaveBeenCalledWith(["0xbad"]);
+    const body = JSON.parse(res.body) as {
+      results: Array<{ refunds?: number; refundError?: string }>;
+    };
+    expect(body.results[0].refunds).toBe(2);
+    expect(body.results[0].refundError).toBe("1 of 3 refund(s) failed");
+    expect(res.statusCode).toBe(500);
+  });
+
+  it("reports a fully charged channel that still holds chain escrow, refunding and deleting nothing", async () => {
+    // The payer signed the whole balance away in vouchers and the claim did not move it out:
+    // nothing is refundable, yet the chain holds money. Keep the record (a later claim needs
+    // its voucher), page via the stuck-escrow alert phrase, fail the run.
+    statefulStorage([
+      idleRefundableChannel({
+        channelId: "0xanomaly",
+        balance: "52897",
+        totalClaimed: "0",
+        chargedCumulativeAmount: "52897",
+      }),
+    ]);
+    mockResyncChannelState.mockResolvedValue([
+      { channelId: "0xanomaly", chainBalance: "52897", chainTotalClaimed: "0", corrected: false },
+    ]);
+
+    const res = await handle(makeEvent() as never, {});
+
+    expect(mockRefund).not.toHaveBeenCalled();
+    expect(mockUpdateChannel).not.toHaveBeenCalled();
+    const body = JSON.parse(res.body) as {
+      results: Array<{ anomalousChannels?: string[]; garbageCollected?: number }>;
+    };
+    expect(body.results[0].anomalousChannels).toEqual(["0xanomaly"]);
+    expect(body.results[0].garbageCollected).toBe(0);
+    expect(res.statusCode).toBe(500);
+    expect(mockLoggerError).toHaveBeenCalledWith(
+      expect.objectContaining({ channelId: "0xanomaly" }),
+      expect.stringContaining("still hold escrow"),
+    );
+  });
+
+  it("skips channels that are not idle or have no balance", async () => {
+    statefulStorage([
+      idleRefundableChannel({ channelId: "0xactive", lastRequestTimestamp: Date.now() }),
+      idleRefundableChannel({ channelId: "0xempty", balance: "0" }),
+    ]);
+
+    const res = await handle(makeEvent() as never, {});
+
+    expect(mockRefund).not.toHaveBeenCalled();
+    expect(mockUpdateChannel).not.toHaveBeenCalled();
+    const body = JSON.parse(res.body) as { results: Array<{ garbageCollected?: number }> };
+    expect(body.results[0].garbageCollected).toBe(0);
+    expect(res.statusCode).toBe(200);
   });
 
   /** `balance` is cumulative deposits, so a channel with claim history holds less than it has

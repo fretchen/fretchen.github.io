@@ -71,6 +71,13 @@ interface NetworkResult {
   /** Cached channel records that disagreed with the chain and were corrected. Reported, not
    *  escalated: the repair is the design, but drift means something upstream is wrong. */
   driftCorrected?: number;
+  /** Fully-claimed idle channel records deleted this run — the sweep's garbage collection.
+   *  A repair working, not a fault: the payer has no escrow left on those channels. */
+  garbageCollected?: number;
+  /** Channels whose balance the payer has fully signed away in vouchers while the chain still
+   *  holds money the claim did not move — neither refundable nor claimed. A fault: the run
+   *  reports 500 for it. */
+  anomalousChannels?: string[];
   /** Escrow this token's channels still hold (deposits minus what has been claimed out), in
    *  the token's atomic units. Context for the check below, not a condition of its own. */
   escrowHeld?: string;
@@ -237,13 +244,12 @@ export async function handle(
         // Cooperative refund of channels that have gone quiet, after the claim so the two
         // stay independent: refunding a channel with outstanding vouchers would otherwise be
         // submitted as an enriched refund (multicall([claim, refund])) and tangle the fee
-        // accounting. `refundIdleChannels` calls `storage.list()` itself, which is safe only
-        // because the storage is scoped to this network and token — on a shared store it would
-        // sweep every chain's channels into this chain's refunds. Its own try/catch, so a refund failure
-        // never hides a good claim.
+        // accounting. Own try/catch, so a refund failure never hides a good claim.
         let refunds: number | undefined;
         let refundError: string | undefined;
         let driftCorrected: number | undefined;
+        let garbageCollected: number | undefined;
+        let anomalousChannels: string[] | undefined;
         try {
           // The SDK builds a refund entirely from the stored record — amount, candidate filter and
           // signing nonce — and all three are caches that have gone stale in production. A stale
@@ -270,8 +276,103 @@ export async function handle(
             asset: token,
             payTo: receiverAddress,
           });
-          refunds = (await manager.refundIdleChannels({ idleSecs: REFUND_IDLE_SECS })).length;
-          logger.info({ network, asset, refunds }, "Refund sweep completed");
+
+          // Partition the idle channels and drive each one separately. `refundIdleChannels`
+          // (the SDK's batch entry point) selects every channel with balance != 0, builds
+          // `refundAmount = balance - chargedCumulativeAmount`, and aborts the whole batch on
+          // the first channel that fails. A fully-claimed record — the payer spent their whole
+          // deposit, the claim moved it out, but claims never delete records, only successful
+          // refunds do — therefore produces a 0-amount refund the contract always rejects with
+          // ZeroRefund, and that one rejection blocked every other refund behind it
+          // (2026-10-11, Base/EURe). Refunding each channel through the public `refund([id])`
+          // in its own try/catch, and deleting records the chain provably holds nothing for,
+          // is the whole fix. `refund([id])` applies the SDK's live-pending-request filter
+          // itself but NOT the idle threshold, so the idle predicate lives here now —
+          // `balance !== 0` and quiet past REFUND_IDLE_SECS, identical to the SDK's own
+          // getIdleChannelsForRefundFromChannels.
+          const storage = scheme.getStorage();
+          const channels = await storage.list();
+          const chainOf = new Map(synced.map((s) => [s.channelId, s]));
+          // The same idle threshold findStuckChannels applies below — deliberately one shape
+          // in two places rather than a shared helper the post-condition cannot be pointed at.
+          const idleBefore = Date.now() - REFUND_IDLE_SECS * 1000;
+          const idle = channels.filter(
+            (c) => BigInt(c.balance) !== 0n && c.lastRequestTimestamp < idleBefore,
+          );
+          refunds = 0;
+          garbageCollected = 0;
+          const failedChannels: Array<{ channelId: string; error: string }> = [];
+          for (const channel of idle) {
+            const balance = BigInt(channel.balance);
+            const charged = BigInt(channel.chargedCumulativeAmount);
+            // Chain figures come from the resync above. If the resync's read failed for this
+            // channel (it skips bad reads, leaving no entry), fall back to the stored record —
+            // the decision below then errs toward the stored state, which resync has usually
+            // just corrected toward the chain anyway.
+            const sync = chainOf.get(channel.channelId);
+            const chainBalance = BigInt(sync?.chainBalance ?? channel.balance);
+            const chainTotalClaimed = BigInt(sync?.chainTotalClaimed ?? channel.totalClaimed);
+
+            if (balance > charged) {
+              // Unspent escrow the payer can still be refunded. One channel per call, one
+              // try/catch each: a failure here is logged and the sweep moves on.
+              try {
+                refunds += (await manager.refund([channel.channelId])).length;
+              } catch (err) {
+                failedChannels.push({
+                  channelId: channel.channelId,
+                  error: (err as Error).message,
+                });
+              }
+              continue;
+            }
+
+            if (chainBalance <= chainTotalClaimed) {
+              // Fully claimed: the chain holds nothing for this channel, but the record
+              // lingers with balance != 0, so every sweep would re-select it and re-submit a
+              // 0-amount refund that reverts ZeroRefund forever. The record is the only thing
+              // keeping that loop alive — delete it (the SDK's own delete path, CAS-safe in
+              // S3ChannelStorage). Warn, not error: the repair working is the design, the
+              // record's existence was the bug.
+              await storage.updateChannel(channel.channelId, () => undefined);
+              garbageCollected++;
+              logger.warn(
+                { network, asset, channelId: channel.channelId },
+                "Garbage-collected a fully-claimed idle channel record",
+              );
+              continue;
+            }
+
+            // Nothing refundable — the payer signed the whole balance to us in vouchers —
+            // yet the chain still holds money the claim did not move. The claim step above
+            // should have drained exactly this state, so reaching here means bookkeeping and
+            // chain disagree in a way no sweep step repairs. Keep the record (a later claim
+            // still needs its voucher) and page: the message reuses the stuck-escrow alert
+            // phrase on purpose, so the existing rule fires without a yaml change.
+            (anomalousChannels ??= []).push(channel.channelId);
+            logger.error(
+              {
+                network,
+                asset,
+                channelId: channel.channelId,
+                chainBalance: chainBalance.toString(),
+                chainTotalClaimed: chainTotalClaimed.toString(),
+              },
+              "Fully charged idle channels still hold escrow that no claim drained — the refund sweep cannot return what the payer has signed to us",
+            );
+          }
+          if (failedChannels.length > 0) {
+            refundError = `${failedChannels.length} of ${idle.length} refund(s) failed`;
+            logger.error(
+              { network, asset, failedChannels, refunded: refunds, garbageCollected },
+              "Refund sweep failed",
+            );
+          } else {
+            logger.info(
+              { network, asset, refunds, garbageCollected },
+              "Refund sweep completed",
+            );
+          }
         } catch (err) {
           refundError = (err as Error).message;
           logger.error({ err, network, asset }, "Refund sweep failed");
@@ -306,6 +407,8 @@ export async function handle(
           ...(refunds !== undefined && { refunds }),
           ...(refundError !== undefined && { refundError }),
           ...(driftCorrected !== undefined && { driftCorrected }),
+          ...(garbageCollected !== undefined && { garbageCollected }),
+          ...(anomalousChannels !== undefined && { anomalousChannels }),
           ...(claimsLeft !== null && { feeAllowanceClaimsLeft: claimsLeft }),
           escrowHeld: escrowHeld.toString(),
           ...(stuckChannels.length > 0 && { stuckChannels }),
@@ -331,7 +434,10 @@ export async function handle(
   // cases where nothing threw at all.
   const hasErrors = results.some(
     (r) =>
-      r.error !== undefined || r.refundError !== undefined || (r.stuckChannels?.length ?? 0) > 0,
+      r.error !== undefined ||
+      r.refundError !== undefined ||
+      (r.stuckChannels?.length ?? 0) > 0 ||
+      (r.anomalousChannels?.length ?? 0) > 0,
   );
   return {
     statusCode: hasErrors ? 500 : 200,

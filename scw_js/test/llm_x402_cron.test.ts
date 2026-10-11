@@ -112,10 +112,7 @@ describe("llm_x402_cron", () => {
     let current = channels;
     mockStorageList.mockImplementation(async () => current);
     mockUpdateChannel.mockImplementation(
-      async (
-        channelId: string,
-        update: (c: Record<string, unknown> | undefined) => unknown,
-      ) => {
+      async (channelId: string, update: (c: Record<string, unknown> | undefined) => unknown) => {
         const existing = current.find((c) => c.channelId === channelId);
         const next = update(existing);
         if (next === existing) {

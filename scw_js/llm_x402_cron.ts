@@ -387,7 +387,14 @@ export async function handle(
           if (failedChannels.length > 0) {
             refundError = `${failedChannels.length} of ${idle.length} refund(s) failed`;
             logger.error(
-              { network, asset, failedChannels, refunded: refunds, garbageCollected, idle: idle.length },
+              {
+                network,
+                asset,
+                failedChannels,
+                refunded: refunds,
+                garbageCollected,
+                idle: idle.length,
+              },
               "Refund sweep failed",
             );
           } else {

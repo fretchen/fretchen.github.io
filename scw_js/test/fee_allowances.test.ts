@@ -15,7 +15,7 @@ vi.mock("@fretchen/s3-utils", () => ({
   listObjects: vi.fn(),
 }));
 
-import { assessAllowance, listFeePairs } from "../scripts/fee_allowances.js";
+import { assessAllowance, assessBalance, listFeePairs } from "../scripts/fee_allowances.js";
 import { facilitatorFeeFor } from "../fee_config.js";
 import { getFacilitatorFeeConfig } from "../x402_server.js";
 
@@ -72,6 +72,36 @@ describe("assessAllowance", () => {
       kind: "ok",
       settlementsLeft: 98n,
     });
+  });
+});
+
+describe("assessBalance — the predeploy guard the 2026-10-11 incident asked for", () => {
+  // The incident: the seller's EURe allowance was fine (0.98 EURe), but its BALANCE was below
+  // one fee, so every EURe fee pull reverted after settlement. The allowance check alone could
+  // never catch it — the balance check is what would have blocked that deploy.
+  const EURE_FEE = 10_000_000_000_000_000n; // 0.01 EURe, 18 decimals
+
+  it("is short below one fee — the state that reverted the incident's fee pull", () => {
+    // 0.005 EURe in the wallet, one fee is 0.01: zero fundable settlements.
+    expect(assessBalance(5_000_000_000_000_000n, EURE_FEE)).toEqual({
+      kind: "short",
+      settlementsFunded: 0n,
+    });
+    expect(assessBalance(0n, EURE_FEE)).toEqual({ kind: "short", settlementsFunded: 0n });
+  });
+
+  it("is ok from exactly one fee, and counts the settlements it funds", () => {
+    expect(assessBalance(EURE_FEE, EURE_FEE)).toEqual({ kind: "ok", settlementsFunded: 1n });
+    // 1.38 EURe — the wallet state after the operator topped it up.
+    expect(assessBalance(1_380_000_000_000_000_000n, EURE_FEE)).toEqual({
+      kind: "ok",
+      settlementsFunded: 138n,
+    });
+  });
+
+  it("treats an unreadable balance as unknown, never as short — the fail-open rule", () => {
+    // Short would fail the predeploy on a flaky RPC; unknown only warns, same as allowances.
+    expect(assessBalance(null, EURE_FEE)).toEqual({ kind: "unknown" });
   });
 });
 

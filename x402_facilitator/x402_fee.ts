@@ -87,7 +87,14 @@ export type FeeGateDecision =
 // ERC-20 ABI (minimal subset for fee operations)
 // ═══════════════════════════════════════════════════════════════
 
-const ERC20_FEE_ABI = [
+/**
+ * The fee pull's ERC-20 surface. The two OZ v5 `error` entries are load-bearing for
+ * diagnostics: without them viem cannot decode a reverting `transferFrom` (the 2026-10-11
+ * EURe incident logged a bare `0xe450d38c` and "Unable to decode signature"), and the
+ * insufficient_merchant_balance / insufficient_fee_allowance mapping in collectFee's catch —
+ * which reads the decoded name out of the error message — never fires.
+ */
+export const ERC20_FEE_ABI = [
   {
     name: "allowance",
     type: "function",
@@ -108,6 +115,26 @@ const ERC20_FEE_ABI = [
       { name: "value", type: "uint256" },
     ],
     outputs: [{ name: "", type: "bool" }],
+  },
+  // OpenZeppelin v5's transferFrom errors (EURe, and every OZ v5 token, reverts with these
+  // rather than the old require strings). Decode-only entries: viem matches them by selector.
+  {
+    name: "ERC20InsufficientBalance",
+    type: "error",
+    inputs: [
+      { name: "sender", type: "address" },
+      { name: "balance", type: "uint256" },
+      { name: "needed", type: "uint256" },
+    ],
+  },
+  {
+    name: "ERC20InsufficientAllowance",
+    type: "error",
+    inputs: [
+      { name: "spender", type: "address" },
+      { name: "allowance", type: "uint256" },
+      { name: "needed", type: "uint256" },
+    ],
   },
 ] as const satisfies Abi;
 
@@ -406,8 +433,21 @@ export function wasRejectedBeforeBroadcast(error: unknown): boolean {
 }
 
 /**
+ * A fee-pull revert no retry can fix: the merchant's token balance or the facilitator's
+ * allowance will not change between attempts — the 2026-10-11 EURe incident burned two retry
+ * cycles on a deterministic ERC20InsufficientBalance before failing. Detected by the decoded
+ * OZ v5 error name, which the fee ABI carries (see ERC20_FEE_ABI): before those entries
+ * existed, viem logged a bare selector and this could never match.
+ */
+export function isDeterministicFeeRevert(error: unknown): boolean {
+  const text = String((error as { message?: unknown })?.message ?? error).toLowerCase();
+  return text.includes("erc20insufficientbalance") || text.includes("erc20insufficientallowance");
+}
+
+/**
  * Send the fee transfer, again after a short pause if a node refused it before broadcast. Returns
- * the hash of the one send the node accepted; rethrows the last error otherwise.
+ * the hash of the one send the node accepted; rethrows the last error otherwise. A deterministic
+ * balance/allowance revert is rethrown immediately — see isDeterministicFeeRevert.
  */
 async function sendFeeTransfer(
   send: () => Promise<Hex>,
@@ -417,7 +457,11 @@ async function sendFeeTransfer(
     try {
       return await send();
     } catch (error) {
-      if (attempt >= FEE_SEND_ATTEMPTS || !wasRejectedBeforeBroadcast(error)) {
+      if (
+        isDeterministicFeeRevert(error) ||
+        attempt >= FEE_SEND_ATTEMPTS ||
+        !wasRejectedBeforeBroadcast(error)
+      ) {
         throw error;
       }
       // warn, not error: a refused send that is about to be retried is not yet a failure, and

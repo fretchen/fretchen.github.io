@@ -42,8 +42,10 @@ export const BATCH_SETTLEMENT_REVERT_SELECTORS: Record<`0x${string}`, string> = 
   "0xd758525c": "ZeroRefund()",
 };
 
-/** All 8-hex-digit selectors appearing in a message, `0x`-prefixed and lowercased. */
-const SELECTOR_RE = /0x[0-9a-fA-F]{8}/g;
+/** Standalone revert selectors: `0x` + 8 hex NOT followed by more hex. The lookahead keeps
+ *  the first 8 hex of a longer value — a tx hash, an address, calldata — from ever being
+ *  read as a selector; a real selector in a viem message stands alone. */
+const SELECTOR_RE = /0x[0-9a-fA-F]{8}(?![0-9a-fA-F])/g;
 
 /**
  * Append the names of every known BatchSettlement revert selector a message mentions.

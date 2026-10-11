@@ -103,16 +103,31 @@ describe("llm_x402_cron", () => {
   let mockClaimSchemeFor: ReturnType<typeof vi.fn>;
   let mockStorageList: ReturnType<typeof vi.fn>;
 
-  /** Storage whose deletions stick. A real SDK refund and the sweep's garbage collection both
-   *  remove the record, so the post-condition sees what a real run would see — a static
-   *  mockResolvedValue would resurrect every refunded channel as stuck escrow. */
+  /** Storage whose deletions stick, honoring the updater's decision. A real SDK refund and
+   *  the sweep's garbage collection both delete through updateChannel's updater contract —
+   *  return undefined to delete, return the record to keep it — so the mock applies exactly
+   *  that instead of deleting unconditionally. A static mockResolvedValue would resurrect
+   *  every refunded channel as stuck escrow. */
   function statefulStorage(channels: Array<Record<string, unknown>>) {
     let current = channels;
     mockStorageList.mockImplementation(async () => current);
-    mockUpdateChannel.mockImplementation(async (channelId: string) => {
-      current = current.filter((c) => c.channelId !== channelId);
-      return { channel: undefined, status: "deleted" };
-    });
+    mockUpdateChannel.mockImplementation(
+      async (
+        channelId: string,
+        update: (c: Record<string, unknown> | undefined) => unknown,
+      ) => {
+        const existing = current.find((c) => c.channelId === channelId);
+        const next = update(existing);
+        if (next === existing) {
+          return { channel: existing, status: "unchanged" };
+        }
+        if (next) {
+          return { channel: next, status: "updated" };
+        }
+        current = current.filter((c) => c.channelId !== channelId);
+        return { channel: undefined, status: existing ? "deleted" : "unchanged" };
+      },
+    );
   }
 
   beforeEach(() => {
@@ -516,9 +531,16 @@ describe("llm_x402_cron", () => {
 
     expect(mockRefund).not.toHaveBeenCalled();
     expect(mockUpdateChannel).toHaveBeenCalledWith("0xdead", expect.any(Function));
-    // The deletion contract the SDK itself uses: an updater returning undefined deletes.
+    // The guarded-delete contract, exercised three ways. A still-dead record deletes (the
+    // SDK's own updater shape: undefined deletes); a record that changed since the sweep's
+    // snapshot — a payment landed and bumped lastRequestTimestamp, or a deposit grew the
+    // balance — must come back unchanged, because its voucher is claimable revenue.
     const updater = mockUpdateChannel.mock.calls[0][1] as (c: unknown) => unknown;
     expect(updater(fullyClaimed)).toBeUndefined();
+    const raced = { ...fullyClaimed, lastRequestTimestamp: Date.now() };
+    expect(updater(raced)).toBe(raced);
+    const toppedUp = { ...fullyClaimed, balance: "60000" };
+    expect(updater(toppedUp)).toBe(toppedUp);
 
     const body = JSON.parse(res.body) as {
       results: Array<{

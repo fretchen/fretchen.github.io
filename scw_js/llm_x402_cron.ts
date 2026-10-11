@@ -288,8 +288,10 @@ export async function handle(
           // in its own try/catch, and deleting records the chain provably holds nothing for,
           // is the whole fix. `refund([id])` applies the SDK's live-pending-request filter
           // itself but NOT the idle threshold, so the idle predicate lives here now —
-          // `balance !== 0` and quiet past REFUND_IDLE_SECS, identical to the SDK's own
-          // getIdleChannelsForRefundFromChannels.
+          // `balance !== 0` and quiet past REFUND_IDLE_SECS, the same shape as the SDK's own
+          // getIdleChannelsForRefundFromChannels (its >= boundary differs by one millisecond;
+          // ours aligns with findStuckChannels below so the sweep and its post-condition can
+          // never disagree about which channels were due).
           const storage = scheme.getStorage();
           const channels = await storage.list();
           const chainOf = new Map(synced.map((s) => [s.channelId, s]));
@@ -334,12 +336,33 @@ export async function handle(
               // keeping that loop alive — delete it (the SDK's own delete path, CAS-safe in
               // S3ChannelStorage). Warn, not error: the repair working is the design, the
               // record's existence was the bug.
-              await storage.updateChannel(channel.channelId, () => undefined);
-              garbageCollected++;
-              logger.warn(
-                { network, asset, channelId: channel.channelId },
-                "Garbage-collected a fully-claimed idle channel record",
+              //
+              // The delete re-reads the record under CAS and only commits when it STILL says
+              // fully claimed and still idle. A payment that landed since this sweep's
+              // snapshot grew the balance and bumped lastRequestTimestamp, and its voucher
+              // must survive for the claim that needs it — the same guarded-delete shape the
+              // SDK's refundChannel uses (it refuses to delete records with live pending
+              // requests). A blocked delete self-heals: the next run re-evaluates with fresh
+              // chain and stored state.
+              const updateResult = await storage.updateChannel(channel.channelId, (current) =>
+                current &&
+                BigInt(current.balance) <= BigInt(current.totalClaimed) &&
+                current.lastRequestTimestamp < idleBefore
+                  ? undefined
+                  : current,
               );
+              if (updateResult.status === "deleted") {
+                garbageCollected++;
+                logger.warn(
+                  { network, asset, channelId: channel.channelId },
+                  "Garbage-collected a fully-claimed idle channel record",
+                );
+              } else {
+                logger.info(
+                  { network, asset, channelId: channel.channelId },
+                  "Skipped garbage collection — the record changed during the sweep",
+                );
+              }
               continue;
             }
 
@@ -364,12 +387,16 @@ export async function handle(
           if (failedChannels.length > 0) {
             refundError = `${failedChannels.length} of ${idle.length} refund(s) failed`;
             logger.error(
-              { network, asset, failedChannels, refunded: refunds, garbageCollected },
+              { network, asset, failedChannels, refunded: refunds, garbageCollected, idle: idle.length },
               "Refund sweep failed",
             );
           } else {
+            // `idle` is the observability hook for the sweep's cost model: refund([id])
+            // re-lists storage per channel (the SDK's public API), so large idle counts mean
+            // quadratic S3 reads — see the review notes. Watch this number before ever
+            // chunking the refund loop.
             logger.info(
-              { network, asset, refunds, garbageCollected },
+              { network, asset, refunds, garbageCollected, idle: idle.length },
               "Refund sweep completed",
             );
           }

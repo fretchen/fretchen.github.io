@@ -86,6 +86,15 @@ describe("annotateDecodedRevert", () => {
     );
   });
 
+  it("does not read the 8-hex prefix of a longer value as a selector", () => {
+    // A tx hash or calldata blob starts 0x + many hex chars; even when its first 8 hex
+    // collide with a known selector, it is not one. The lookahead requires the selector to
+    // stand alone, the way viem presents it in "reverted with the following signature".
+    expect(annotateDecodedRevert("hash 0xd758525c00000000deadbeef confirmed")).toBe(
+      "hash 0xd758525c00000000deadbeef confirmed",
+    );
+  });
+
   it("passes undefined through", () => {
     expect(annotateDecodedRevert(undefined)).toBeUndefined();
   });

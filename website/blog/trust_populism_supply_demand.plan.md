@@ -153,6 +153,20 @@ Already gathered this session, to be cited properly (not re-derived):
   lineage.
 - 2022 Frontiers in Sociology paper on supply/demand measurement-tool inconsistency (CSES vs.
   POPPA disagreement).
+- Neuner & Wratil (2022), *The Populist Marketplace*, Political Behavior — German conjoint
+  experiments causally separating thin/thick populist appeal components; hypothetical candidates
+  because real parties bundle traits (no observational counterfactual); anti-elite rhetoric
+  repels even populist-attitude holders; supply-demand "market clearance" does not behave as
+  assumed. Considered and cut from the post — noise for the argument.
+- Existing quantified supply parameters (national level only, cited in section 6): CHES trend
+  file 1999–2019 (anti-elite salience per party/election, chesdata.eu), V-Party (V-Dem) graded
+  party populism index, PopBERT (Erhard et al. 2024, Political Analysis — per-party populism
+  intensity from Bundestag speeches 2013–2021), Niedermayer's „Parteimitglieder in Deutschland"
+  working-paper series (membership by party and Bundesland over time — the regional anchor for
+  the membership bullet).
+- Storz & Bernauer (2018), Swiss Political Science Review — subnational precedent: text-analysis
+  populism scores for 24 cantonal SVP manifestos linked to individual populist attitudes; the
+  template for a regional German supply measure that has never been built.
 - The PopuList 4.0 — `literature/The PopuList 4.0.csv`.
 - This project's own notebooks as the data/figures source: `political_trust_de_fr.ipynb`,
   `political_trust_de_east_west.ipynb`, `populist_vote_de_nuts1.ipynb`,

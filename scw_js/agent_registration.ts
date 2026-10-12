@@ -75,7 +75,7 @@ export const MCP_SERVICE = {
   version: "2025-06-18",
 } as const;
 const MCP_TOOLS: Partial<Record<AgentService, string[]>> = {
-  llm: ["llm_complete"],
+  llm: ["chat_completion"],
   search: ["web_search"],
 };
 

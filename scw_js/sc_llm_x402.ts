@@ -73,7 +73,7 @@ const STRIPPED_REQUEST_KEYS = new Set(
 
 /**
  * Real, usage-derived charge for this message in `symbol`'s atomic units — moved to
- * `llm_schemas.ts` (beside MAX_PRICE_ATOMIC) so the MCP `llm_complete` tool settles with
+ * `llm_schemas.ts` (beside MAX_PRICE_ATOMIC) so the MCP `chat_completion` tool settles with
  * the identical formula. The full rationale lives there.
  */
 

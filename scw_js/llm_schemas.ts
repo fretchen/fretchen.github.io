@@ -79,7 +79,7 @@ export const MAX_PRICE_ATOMIC: PriceList = {
  * with cap_exceeded; the difference is absorbed as under-billing, not a fund-safety issue (the
  * client is always protected by the voucher's signed ceiling).
  *
- * Shared by the REST chat (`sc_llm_x402.ts`) and the MCP `llm_complete` tool — both settle the
+ * Shared by the REST chat (`sc_llm_x402.ts`) and the MCP `chat_completion` tool — both settle the
  * real usage, never the flat ceiling they advertise.
  */
 export function getSettleAmount(

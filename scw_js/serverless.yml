@@ -98,5 +98,11 @@ functions:
     httpOption: redirected
     custom_domains:
       - web-agent.fretchen.eu
+  mcp:
+    handler: dist/mcp_server.handle
+    description: "Stateless MCP endpoint - paid tools (llm_complete, web_search) via x402 batch-settlement"
+    httpOption: redirected
+    custom_domains:
+      - mcp-agent.fretchen.eu
     minScale: 0
     maxScale: 1

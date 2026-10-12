@@ -80,6 +80,37 @@ describe("agent registration file (EIP-8004)", () => {
   });
 
   /**
+   * 8004scan Agent Metadata Standard → Service Types → MCP: an MCP service carries a
+   * date-formatted protocol version and the tool names. Only the llm and search agents
+   * declare it — the MCP endpoint serves their tools, and genimg has none there (yet).
+   */
+  describe.each(SERVICES)("$service MCP service", ({ service }) => {
+    const mcp = buildAgentRegistration(
+      {
+        info: { title: "t", description: "d" },
+        servers: [{ url: "https://example.com" }],
+        openapi: "3.1.0",
+      } as any,
+      service,
+    ).services.find((s) => s.name === "MCP");
+
+    if (service === "llm" || service === "search") {
+      it("declares the shared MCP endpoint with this agent's tools", () => {
+        expect(mcp).toMatchObject({
+          name: "MCP",
+          endpoint: "https://mcp-agent.fretchen.eu/mcp",
+          version: "2025-06-18",
+          mcpTools: [service === "llm" ? "llm_complete" : "web_search"],
+        });
+      });
+    } else {
+      it("stays absent for a service with no MCP tool", () => {
+        expect(mcp).toBeUndefined();
+      });
+    }
+  });
+
+  /**
    * 8004scan Agent Metadata Standard: an OASF service names the taxonomy repo and a semver
    * version, and carries at least one of skills/domains as `category/.../leaf` slugs.
    */

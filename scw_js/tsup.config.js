@@ -8,6 +8,7 @@ export default defineConfig({
     "llm_x402_cron.ts",
     "growth_api.ts",
     "search_api.ts",
+    "mcp_server.ts",
   ],
   format: ["esm"],
   platform: "node",

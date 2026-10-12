@@ -496,6 +496,18 @@ describe("sc_llm_x402", () => {
           // 20000 tokens at the output rate: $1.50/M and €1.50/M give 30000 in 6 decimals,
           // and 30000 ×10¹² for EURe's 18 — the same ceiling in each token's own units.
           price: { USDC: "30000", EURC: "30000", EURe: "30000000000000000" },
+          // Bazaar discovery metadata (docs.x402.org/extensions/bazaar) rides along on the
+          // challenge; metadata-only, the payment terms are untouched.
+          extensions: expect.objectContaining({
+            bazaar: expect.objectContaining({
+              info: expect.objectContaining({
+                input: expect.objectContaining({ method: "POST" }),
+              }),
+            }),
+          }),
+          serviceName: "Fretchen AI Assistant",
+          tags: ["llm", "chat", "x402"],
+          iconUrl: "https://llm-agent.fretchen.eu/favicon.png",
         }),
       );
       expect(mockCreate402Response).toHaveBeenCalled();

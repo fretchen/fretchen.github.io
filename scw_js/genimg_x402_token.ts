@@ -43,6 +43,7 @@ import type { ScwEvent } from "./types.js";
 import openapiSpec from "./openapi.genimg.json" with { type: "json" };
 import { faviconBase64, faviconContentType } from "./favicon.js";
 import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
+import { buildGenimgBazaarExtension } from "./bazaar_discovery.js";
 import { AGENT_REGISTRATION_PATH, buildAgentRegistration } from "./agent_registration.js";
 import { logger } from "./logger.js";
 import { offeredStablecoins, resolvePaidStablecoin, type PriceList } from "./stablecoin_pricing.js";
@@ -480,6 +481,10 @@ async function handle(
       price: PRICE_ATOMIC,
       payTo: serverWallet,
       networks,
+      extensions: buildGenimgBazaarExtension(),
+      serviceName: "Fretchen Image Generation",
+      tags: ["image-generation", "x402", "nft"],
+      iconUrl: `${openapiSpec.servers[0].url}/favicon.png`,
     });
 
     return create402Response(paymentRequirements);

@@ -58,4 +58,5 @@ Nothing in the repo relies on anonymous listing (the website fetches direct obje
 - Wallet authentication via signed-message bearer tokens with a bounded freshness window (`auth_utils.ts` — timestamped message, address match, signature verification)
 - EIP-3009 nonce binding enforces recipient/amount on settlement (facilitator + Splitter), so a relayer cannot redirect funds
 - Image metadata URLs validated against an allowlisted host before fetch (`genimg_x402_token.ts`)
+- The MCP endpoint (`mcp_server.ts`, deployed as the `mcp` function at `mcp-agent.fretchen.eu/mcp`) holds no payment, pricing, or cost logic: each `tools/call` relays in-process to the real handlers (`search_api.handle` / `sc_llm_x402.handle`), inheriting their controls by construction — no free path, mainnet-only search, testnet-mocked completions, usage-derived settlement — pinned by `test/mcp_server.test.ts`
 - Secrets supplied via Scaleway secret env vars, never committed; CORS handled per-function

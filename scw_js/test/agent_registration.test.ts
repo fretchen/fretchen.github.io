@@ -100,7 +100,7 @@ describe("agent registration file (EIP-8004)", () => {
           name: "MCP",
           endpoint: "https://mcp-agent.fretchen.eu/mcp",
           version: "2025-06-18",
-          mcpTools: [service === "llm" ? "llm_complete" : "web_search"],
+          mcpTools: [service === "llm" ? "chat_completion" : "web_search"],
         });
       });
     } else {

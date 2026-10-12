@@ -108,7 +108,7 @@ export const MCP_TOOLS: McpTool[] = [
       ),
   },
   {
-    name: "llm_complete",
+    name: "chat_completion",
     description:
       "AI Assistant chat completion — the same llm/v1 API as the chat endpoint. Paid per call via x402; testnet calls return a mock completion.",
     inputSchema: z.toJSONSchema(LLMChatRequestSchema) as Record<string, unknown>,

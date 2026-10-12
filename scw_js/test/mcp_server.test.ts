@@ -191,15 +191,15 @@ describe("mcp_server (stateless paid MCP endpoint)", () => {
   });
 
   describe("tools/list", () => {
-    it("lists llm_complete and web_search with the real API's input schemas", async () => {
+    it("lists chat_completion and web_search with the real API's input schemas", async () => {
       const res = await rpc({ jsonrpc: "2.0", id: 2, method: "tools/list" });
       if ("error" in res) throw new Error("expected result");
       const tools = res.result.tools as Array<{
         name: string;
         inputSchema: Record<string, unknown>;
       }>;
-      expect(tools.map((t) => t.name).sort()).toEqual(["llm_complete", "web_search"]);
-      const llm = tools.find((t) => t.name === "llm_complete");
+      expect(tools.map((t) => t.name).sort()).toEqual(["chat_completion", "web_search"]);
+      const llm = tools.find((t) => t.name === "chat_completion");
       const search = tools.find((t) => t.name === "web_search");
       expect(Object.keys((llm?.inputSchema.properties ?? {}) as object)).toContain("messages");
       expect(Object.keys((search?.inputSchema.properties ?? {}) as object)).toEqual(["q"]);
@@ -237,13 +237,13 @@ describe("mcp_server (stateless paid MCP endpoint)", () => {
       expect(mockSearchWeb).not.toHaveBeenCalled();
     });
 
-    it("answers an unpaid llm_complete with demands that DO include testnet", async () => {
+    it("answers an unpaid chat_completion with demands that DO include testnet", async () => {
       const res = await rpc({
         jsonrpc: "2.0",
         id: 4,
         method: "tools/call",
         params: {
-          name: "llm_complete",
+          name: "chat_completion",
           arguments: { model: "mistral-large-latest", messages: [{ role: "user", content: "hi" }] },
         },
       });
@@ -259,14 +259,14 @@ describe("mcp_server (stateless paid MCP endpoint)", () => {
       expect(mockCallLLMAPI).not.toHaveBeenCalled();
     });
 
-    it("runs and settles a paid llm_complete on testnet via the handler's own mock rule", async () => {
+    it("runs and settles a paid chat_completion on testnet via the handler's own mock rule", async () => {
       const res = await rpc(
         {
           jsonrpc: "2.0",
           id: 5,
           method: "tools/call",
           params: {
-            name: "llm_complete",
+            name: "chat_completion",
             arguments: {
               model: "mistral-large-latest",
               messages: [{ role: "user", content: "hi" }],

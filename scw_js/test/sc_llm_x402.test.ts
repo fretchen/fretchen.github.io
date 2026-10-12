@@ -493,6 +493,9 @@ describe("sc_llm_x402", () => {
         expect.objectContaining({
           payTo: VALID_ADDRESS,
           scheme: mockScheme,
+          // Absolute resource URL — the bazaar discovery validation rejects a relative one
+          // ("resource must start with 'https://'"), which would keep the route unindexable.
+          resourceUrl: "https://llm-agent.fretchen.eu/",
           // 20000 tokens at the output rate: $1.50/M and €1.50/M give 30000 in 6 decimals,
           // and 30000 ×10¹² for EURe's 18 — the same ceiling in each token's own units.
           price: { USDC: "30000", EURC: "30000", EURe: "30000000000000000" },

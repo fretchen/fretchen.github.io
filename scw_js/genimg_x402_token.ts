@@ -475,7 +475,10 @@ async function handle(
     logger.debug({ networks }, "402 offering networks");
 
     const paymentRequirements = createPaymentRequirements({
-      resourceUrl: event.path ?? process.env.GENIMG_SERVICE_URL ?? "https://api.example.com/genimg",
+      // Absolute, from the committed spec's server URL (the same origin as iconUrl): the bazaar
+      // discovery validation rejects a relative resource ("resource must start with 'https://'
+      // when protocol type is http"), so a relative event.path here kept the route unindexable.
+      resourceUrl: `${openapiSpec.servers[0].url}/imagegen`,
       description: "AI Image Generation with NFT Certificate",
       mimeType: "application/json",
       price: PRICE_ATOMIC,

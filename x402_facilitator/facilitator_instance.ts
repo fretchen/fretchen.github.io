@@ -191,31 +191,19 @@ export function createFacilitator(requirePrivateKey = true): InstanceType<typeof
     }
 
     // The `exact` scheme accepts two payload shapes (@x402/evm ExactEvmPayloadV2):
-    // EIP-3009 (`authorization`) and Permit2 (`permit2Authorization`). We only support
-    // the EIP-3009 variant. Permit2 is unsupported on three independent axes:
-    //   1. the fee model below (post-settlement token transferFrom) was never designed
-    //      or tested for it — the recipient lives at permit2Authorization.witness.to,
-    //      not authorization.to;
-    //   2. the x402 Permit2 proxy is a single hardcoded address with no per-network
-    //      deployment registry in the SDK (cf. getBatchSettlementNetworks(), where we
-    //      maintain our own list precisely because the SDK doesn't track deployment);
-    //   3. no end-to-end coverage exists for it here.
-    // Reject explicitly with a dedicated reason rather than a misleading generic
-    // `invalid_payload`. Discriminator matches the SDK's isPermit2Payload().
-    if ("permit2Authorization" in (paymentPayload.payload ?? {})) {
-      logger.warn("Permit2 payload rejected — only the EIP-3009 exact variant is supported");
-      result.isValid = false;
-      result.invalidReason = "permit2_not_supported";
-      return;
-    }
-
+    // EIP-3009 (`authorization`, USDC/EURC) and Permit2 (`permit2Authorization`, EURe —
+    // which has no EIP-3009). Both reach the gate below unchanged, because it reads only
+    // `requirements`.
+    //
     // Gate on `requirements`, NOT on the client's payload envelope — consistent with the
-    // batch-settlement branch above. verifyEIP3009 already enforced
-    // `authorization.to === requirements.payTo` (ErrRecipientMismatch) before this hook
-    // runs, so requirements.payTo is the same value, shape-independent, not client-set.
+    // batch-settlement branch above. The SDK pins the payload to the requirements before
+    // this hook runs: verifyEIP3009 enforces `authorization.to === payTo`
+    // (ErrRecipientMismatch), verifyPermit2 enforces `permit2Authorization.witness.to ===
+    // payTo` (ErrPermit2RecipientMismatch) plus the token and amount. So requirements.payTo
+    // is the recipient actually paid, shape-independent, not client-set.
     const network = requirements?.network;
     const recipient = requirements?.payTo as string | undefined;
-    // The token transferWithAuthorization runs on, and so the one the fee is charged in.
+    // The token the payment settles in, and so the one the fee is charged in.
     // Requirements again, not the payload envelope: verify signed against this asset.
     const asset = requirements?.asset as string | undefined;
 

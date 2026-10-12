@@ -1,25 +1,39 @@
 /**
- * Which stablecoin this site pays with, as a buyer.
+ * Which settlement token this site pays with, as a buyer.
  *
- * One site-wide preference, EURC by default. The sellers list what they accept — on Base EURC and
- * USDC, on Optimism USDC only (Circle has no EURC there) — and the client picks. This module is
- * that pick: `preferCurrency` is the selector every x402 client here is built with, and
- * `networksForCurrency` is why the network follows the currency (EURC means Base).
+ * The site-wide preference, EURe by default. EURe is the default because the sellers prefer it
+ * (the deployed `STABLECOIN_PREFERENCE` lists EURe first, so the 402 offers it first); the
+ * toggle keeps EURC and USDC one click away. A stored choice always wins over the default, so
+ * flipping the default only ever affects a visitor with no stored preference — existing users
+ * keep paying what they chose. The sellers list what they accept — on Base all three tokens, on
+ * Optimism USDC only — and the client picks. This module is that pick: `preferCurrency` is the
+ * selector every x402 client here is built with, and `networksForCurrency` is why the network
+ * follows the currency (a euro token means Base).
  *
- * Both tokens must also pass the spend controls first (`x402SpendControls.ts`); the selector only
- * chooses among what they let through.
+ * Both chosen and paid tokens must also pass the spend controls first (`x402SpendControls.ts`);
+ * the selector only chooses among what they let through. EURe is 18 decimals
+ * (`CURRENCY_DECIMALS`) — the display and spend-cap math must never assume 6.
  */
 
 import { useSyncExternalStore } from "react";
-import { findStablecoin, getStablecoins, type StablecoinSymbol } from "@fretchen/chain-utils";
+import { findSettlementToken, getSettlementTokens, type SettlementTokenSymbol } from "@fretchen/chain-utils";
 import { createLocalStorageStore } from "../utils/localStorageStore";
 import type { AcceptsEntry } from "./x402Discovery";
 
-export type PaymentCurrency = StablecoinSymbol;
+export type PaymentCurrency = SettlementTokenSymbol;
 
-export const PAYMENT_CURRENCIES: readonly PaymentCurrency[] = ["EURC", "USDC"];
+export const PAYMENT_CURRENCIES: readonly PaymentCurrency[] = ["EURe", "EURC", "USDC"];
 
-export const DEFAULT_CURRENCY: PaymentCurrency = "EURC";
+export const DEFAULT_CURRENCY: PaymentCurrency = "EURe";
+
+/**
+ * Decimals per currency, derived from the shared registry (a symbol's decimals never vary by
+ * network; Base is the one network carrying all three). EURe is 18 — the 6-decimal assumption
+ * that holds for USDC and EURC silently breaks EURe by 10¹².
+ */
+export const CURRENCY_DECIMALS: Record<PaymentCurrency, number> = Object.fromEntries(
+  getSettlementTokens("eip155:8453").map((token) => [token.symbol, token.decimals]),
+) as Record<PaymentCurrency, number>;
 
 const CURRENCY_KEY = "x402-currency";
 
@@ -47,21 +61,21 @@ export function usePaymentCurrency(): PaymentCurrency {
 
 /**
  * The networks, of those given, on which `currency` exists — order kept, so a caller's default
- * network stays first. EURC narrows the NFT networks to Base; USDC keeps them all.
+ * network stays first. A euro token narrows the NFT networks to Base; USDC keeps them all.
  */
 export function networksForCurrency(currency: PaymentCurrency, networks: readonly string[]): string[] {
-  return networks.filter((network) => getStablecoins(network).some((coin) => coin.symbol === currency));
+  return networks.filter((network) => getSettlementTokens(network).some((token) => token.symbol === currency));
 }
 
 /** The currency an `accepts` entry is priced in, or null for a token this site does not pay with. */
 function currencyOf(entry: { network?: string; asset?: string }): PaymentCurrency | null {
   if (!entry.network || !entry.asset) return null;
-  return findStablecoin(entry.network, entry.asset)?.symbol ?? null;
+  return findSettlementToken(entry.network, entry.asset)?.symbol ?? null;
 }
 
 /**
  * The `paymentRequirementsSelector` for an `x402Client`: the first entry in `currency`, otherwise
- * the seller's own first entry. The fallback is what lets a EURC preference still pay a seller
+ * the seller's own first entry. The fallback is what lets an EURe preference still pay a seller
  * that only takes USDC — an Optimism-only third-party agent, say.
  *
  * `onPick` reports what was actually chosen, so a label can name the currency that was paid rather

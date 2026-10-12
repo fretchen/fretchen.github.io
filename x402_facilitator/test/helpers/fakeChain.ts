@@ -11,7 +11,9 @@
  * The fake models exactly the calls the SDK and x402_fee make — mapped by reading
  * @x402/evm's exact/eip3009 facilitator (verifyEIP3009, simulateEip3009TransferResult,
  * diagnoseEip3009SimulationFailure, executeTransferWithAuthorization,
- * verifyEip3009TransferEvent) and x402_fee's getContract reads/writes. A call it does not
+ * verifyEip3009TransferEvent), its exact/permit2 facilitator (verifyPermit2,
+ * simulatePermit2Settle[WithPermit], diagnosePermit2SimulationFailure, settlePermit2Direct,
+ * settlePermit2WithEIP2612) and x402_fee's getContract reads/writes. A call it does not
  * model throws, so an SDK upgrade that starts asking the chain something new fails loudly
  * instead of being answered with a guess.
  *
@@ -28,12 +30,18 @@
  */
 
 import type * as Viem from "viem";
-import { resetAssetContractCache } from "@x402/evm";
+import {
+  PERMIT2_ADDRESS,
+  resetAssetContractCache,
+  x402ExactPermit2ProxyABI,
+  x402ExactPermit2ProxyAddress,
+} from "@x402/evm";
 
 type Address = `0x${string}`;
 type Hex = `0x${string}`;
 
 const MULTICALL3 = "0xca11bde05977b3631167028862be2a173976ca11";
+const PERMIT2_PROXY = x402ExactPermit2ProxyAddress.toLowerCase();
 // Any non-empty bytecode satisfies the SDK's asset-is-a-contract precheck.
 const TOKEN_BYTECODE = "0x60806040";
 
@@ -72,6 +80,13 @@ const TOKEN_ABI = [
   },
   {
     type: "function",
+    name: "nonces",
+    stateMutability: "view",
+    inputs: [{ name: "owner", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
     name: "authorizationState",
     stateMutability: "view",
     inputs: [
@@ -102,6 +117,16 @@ export interface WriteCall {
 interface TokenState {
   name: string;
   version: string;
+  /** Set only for EIP-2612 tokens: the chain id their permit() domain is bound to. */
+  permitChainId?: number;
+}
+
+/** The decoded arguments of the Permit2 proxy's settle / settleWithPermit. */
+interface ProxySettle {
+  permit: { permitted: { token: Address; amount: bigint }; nonce: bigint; deadline: bigint };
+  owner: Address;
+  witness: { to: Address; validAfter: bigint };
+  permit2612?: { value: bigint; deadline: bigint; r: Hex; s: Hex; v: number };
 }
 
 interface Log {
@@ -120,6 +145,10 @@ export const chain = {
   balances: new Map<string, bigint>(),
   allowances: new Map<string, bigint>(),
   usedNonces: new Set<string>(),
+  /** EIP-2612 nonces, per token and owner. */
+  permitNonces: new Map<string, bigint>(),
+  /** Permit2's signature-transfer nonces — per owner, across all tokens. */
+  usedPermit2Nonces: new Set<string>(),
   receipts: new Map<string, Log[]>(),
   writes: [] as WriteCall[],
   failures: new Map<string, { failure: Failure; remaining: number }>(),
@@ -133,6 +162,8 @@ export const chain = {
     this.balances.clear();
     this.allowances.clear();
     this.usedNonces.clear();
+    this.permitNonces.clear();
+    this.usedPermit2Nonces.clear();
     this.receipts.clear();
     this.writes = [];
     this.walletAccounts = [];
@@ -168,6 +199,13 @@ export const chain = {
   /** Deploy a token: after this, getCode reports bytecode and name()/version() answer. */
   addToken(address: string, name: string, version = "2") {
     this.tokens.set(lc(address), { name, version });
+  },
+  /** Deploy an EIP-2612 token (EURe): permit() works, bound to `chainId`'s domain. */
+  addPermitToken(address: string, name: string, version: string, chainId: number) {
+    this.tokens.set(lc(address), { name, version, permitChainId: chainId });
+  },
+  permitNonce(token: string, owner: string) {
+    return this.permitNonces.get(`${lc(token)}:${lc(owner)}`) ?? 0n;
   },
   setBalance(token: string, holder: string, amount: bigint) {
     this.balances.set(`${lc(token)}:${lc(holder)}`, amount);
@@ -215,6 +253,8 @@ function readToken(address: string, functionName: string, args: readonly unknown
       return token.name;
     case "version":
       return token.version;
+    case "nonces":
+      return chain.permitNonce(address, args[0] as string);
     case "authorizationState":
       return chain.isNonceUsed(address, args[0] as string, args[1] as string);
     case "transferWithAuthorization": {
@@ -240,6 +280,8 @@ export function fakeViem(actual: typeof Viem) {
     encodeFunctionResult,
     encodeEventTopics,
     encodeAbiParameters,
+    recoverTypedDataAddress,
+    serializeSignature,
     WaitForTransactionReceiptTimeoutError,
   } = actual;
 
@@ -262,6 +304,24 @@ export function fakeViem(actual: typeof Viem) {
   function tryAggregate(calls: readonly { target: Address; callData: Hex }[]) {
     return calls.map(({ target, callData }) => {
       try {
+        // The Permit2 diagnosis asks the proxy which Permit2 it uses — "is it deployed?".
+        if (lc(target) === PERMIT2_PROXY) {
+          const { functionName } = decodeFunctionData({
+            abi: x402ExactPermit2ProxyABI,
+            data: callData,
+          });
+          if (functionName !== "PERMIT2") {
+            throw new Error(`fakeChain: unmodelled multicall ${functionName} on the proxy`);
+          }
+          return {
+            success: true,
+            returnData: encodeFunctionResult({
+              abi: x402ExactPermit2ProxyABI,
+              functionName: "PERMIT2",
+              result: PERMIT2_ADDRESS,
+            }),
+          };
+        }
         const { functionName, args } = decodeFunctionData({ abi: TOKEN_ABI, data: callData });
         const result = readToken(target, functionName, args ?? []);
         return {
@@ -277,6 +337,135 @@ export function fakeViem(actual: typeof Viem) {
         return { success: false, returnData: "0x" };
       }
     });
+  }
+
+  function decodeProxySettle(functionName: string, args: readonly unknown[]): ProxySettle {
+    if (functionName === "settle") {
+      const [permit, owner, witness] = args as [
+        ProxySettle["permit"],
+        Address,
+        ProxySettle["witness"],
+      ];
+      return { permit, owner, witness };
+    }
+    if (functionName === "settleWithPermit") {
+      const [permit2612, permit, owner, witness] = args as [
+        ProxySettle["permit2612"],
+        ProxySettle["permit"],
+        Address,
+        ProxySettle["witness"],
+      ];
+      return { permit2612, permit, owner, witness };
+    }
+    throw new Error(`fakeChain: unmodelled proxy call ${functionName}`);
+  }
+
+  /**
+   * The token's EIP-2612 permit(owner, Permit2, value, deadline, v, r, s): true when it would
+   * succeed. The signature is recovered for real, against the token's own domain, so a permit
+   * signed for the wrong name, version, chain or nonce fails here as it would on-chain.
+   */
+  async function permitSucceeds(
+    token: Address,
+    owner: Address,
+    p: NonNullable<ProxySettle["permit2612"]>,
+  ) {
+    const state = chain.tokens.get(lc(token));
+    if (!state?.permitChainId || p.deadline < BigInt(Math.floor(Date.now() / 1000))) {
+      return false;
+    }
+    try {
+      const signer = await recoverTypedDataAddress({
+        domain: {
+          name: state.name,
+          version: state.version,
+          chainId: state.permitChainId,
+          verifyingContract: token,
+        },
+        types: {
+          Permit: [
+            { name: "owner", type: "address" },
+            { name: "spender", type: "address" },
+            { name: "value", type: "uint256" },
+            { name: "nonce", type: "uint256" },
+            { name: "deadline", type: "uint256" },
+          ],
+        },
+        primaryType: "Permit",
+        message: {
+          owner,
+          spender: PERMIT2_ADDRESS,
+          value: p.value,
+          nonce: chain.permitNonce(token, owner),
+          deadline: p.deadline,
+        },
+        signature: serializeSignature({ r: p.r, s: p.s, v: BigInt(p.v) }),
+      });
+      return lc(signer) === lc(owner);
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * x402ExactPermit2Proxy.settle / settleWithPermit, modelled on the contract source
+   * (coinbase/x402 contracts/evm/src/x402BasePermit2Proxy.sol): settleWithPermit first checks
+   * the permit's value against the permitted amount, then TRIES the token's permit() and
+   * carries on if it fails; _settle checks destination and validAfter, then Permit2's
+   * permitWitnessTransferFrom checks deadline and nonce and pulls the tokens with its ERC-20
+   * allowance. The Permit2 signature itself is not re-checked here: the SDK recovers it offline
+   * before every simulation and write, exactly as for EIP-3009.
+   *
+   * `apply` false is the eth_call simulation: same checks, no state change.
+   */
+  async function proxySettle(functionName: string, args: readonly unknown[], apply: boolean) {
+    const { permit, owner, witness, permit2612 } = decodeProxySettle(functionName, args);
+    const token = permit.permitted.token;
+    const amount = permit.permitted.amount;
+    requireToken(token);
+
+    let allowance = chain.allowance(token, owner, PERMIT2_ADDRESS);
+    if (permit2612) {
+      if (permit2612.value !== amount) {
+        throw new Revert("Permit2612AmountMismatch()");
+      }
+      if (await permitSucceeds(token, owner, permit2612)) {
+        allowance = permit2612.value;
+        if (apply) {
+          chain.permitNonces.set(`${lc(token)}:${lc(owner)}`, chain.permitNonce(token, owner) + 1n);
+        }
+      }
+    }
+
+    const now = BigInt(Math.floor(Date.now() / 1000));
+    const nonceKey = `${lc(owner)}:${permit.nonce}`;
+    if (witness.to === "0x0000000000000000000000000000000000000000") {
+      throw new Revert("InvalidDestination()");
+    }
+    if (now < witness.validAfter) {
+      throw new Revert("PaymentTooEarly()");
+    }
+    if (now > permit.deadline) {
+      throw new Revert("SignatureExpired()");
+    }
+    if (chain.usedPermit2Nonces.has(nonceKey)) {
+      throw new Revert("InvalidNonce()");
+    }
+    if (allowance < amount) {
+      throw new Revert("TRANSFER_FROM_FAILED"); // Permit2's SafeTransferLib on a short allowance
+    }
+    if (chain.balanceOf(token, owner) < amount) {
+      throw new Revert("TRANSFER_FROM_FAILED");
+    }
+
+    if (!apply) {
+      return [];
+    }
+    chain.usedPermit2Nonces.add(nonceKey);
+    chain.setAllowance(token, owner, PERMIT2_ADDRESS, allowance - amount);
+    chain.setBalance(token, owner, chain.balanceOf(token, owner) - amount);
+    chain.setBalance(token, witness.to, chain.balanceOf(token, witness.to) + amount);
+    return [transferLog(token, owner, witness.to, amount)];
   }
 
   function createPublicClient() {
@@ -295,6 +484,9 @@ export function fakeViem(actual: typeof Viem) {
       }) {
         if (lc(address) === MULTICALL3 && functionName === "tryAggregate") {
           return tryAggregate(args[1] as { target: Address; callData: Hex }[]);
+        }
+        if (lc(address) === PERMIT2_PROXY) {
+          return proxySettle(functionName, args, false);
         }
         return readToken(address, functionName, args);
       },
@@ -335,7 +527,9 @@ export function fakeViem(actual: typeof Viem) {
         functionName: string;
         args?: readonly unknown[];
       }) {
-        requireToken(address);
+        if (lc(address) !== PERMIT2_PROXY) {
+          requireToken(address);
+        }
         const sender = account.address;
         const pending = chain.failures.get(functionName);
         if (pending && --pending.remaining <= 0) {
@@ -360,7 +554,9 @@ export function fakeViem(actual: typeof Viem) {
         }
         let logs: Log[];
 
-        if (functionName === "transferWithAuthorization") {
+        if (lc(address) === PERMIT2_PROXY) {
+          logs = await proxySettle(functionName, args, true);
+        } else if (functionName === "transferWithAuthorization") {
           readToken(address, functionName, args); // same checks as the simulation
           const [from, to, value, , , nonce] = args as [
             string,

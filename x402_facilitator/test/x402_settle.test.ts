@@ -262,6 +262,29 @@ describe("settlePayment — batch-settlement wiring", () => {
     expect(result.extra).toEqual({ channelState: { id: "c" } });
   });
 
+  it("names the contract revert behind an undecodable selector in a failed settlement", async () => {
+    // The 2026-10-11 incident: the contract reverted ZeroRefund() (a 0-amount refund), but
+    // the SDK's ABI fragment declares no errors, so the log carried a raw selector and an
+    // "Unable to decode signature" paragraph. The annotation happens once at the settle
+    // boundary, so both the log line and the returned SettleResult carry the name.
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({ isValid: true, payer: PAYER });
+    stubSettle({
+      success: false,
+      errorReason: "invalid_batch_settlement_evm_refund_simulation_failed",
+      errorMessage:
+        'The contract function "refundWithSignature" reverted with the following signature:\n' +
+        "0xd758525c\n" +
+        'Unable to decode signature "0xd758525c" as it was not found on the provided ABI.\n',
+    });
+
+    const result = await settlePayment(refund([]), batchRequirements());
+
+    expect(result.success).toBe(false);
+    expect(result.errorMessage).toContain("decoded revert: ZeroRefund() (0xd758525c)");
+    // The raw SDK text stays intact — the name is appended, nothing is rewritten.
+    expect(result.errorMessage).toContain("Unable to decode signature");
+  });
+
   // ─── Unexpected throw ───────────────────────────────────
 
   it("maps anything thrown during settlement to settlement_failed, keeping the payer", async () => {
@@ -288,6 +311,36 @@ describe("settlePayment — batch-settlement wiring", () => {
       errorReason: "settlement_failed",
       payer: PAYER,
       network: "eip155:11155420",
+      transaction: "",
+    });
+  });
+
+  it("attributes a payload carrying both authorization shapes to the Permit2 payer", async () => {
+    // The SDK's isPermit2Payload() settles such a payload as Permit2, so the catch path must
+    // read the payer from permit2Authorization.from — not the EIP-3009 field a crafted
+    // payload pairs with it, which would attribute the failure to someone else.
+    vi.spyOn(verifyModule, "verifyPayment").mockResolvedValue({ isValid: true, payer: PAYER });
+    vi.spyOn(facilitatorInstance, "getFacilitator").mockImplementation(() => {
+      throw new Error("Transaction failed: insufficient funds for gas");
+    });
+    const exactPayload = {
+      x402Version: 2,
+      accepted: { scheme: "exact", network: "eip155:11155420" },
+      payload: {
+        authorization: { from: PAYER },
+        permit2Authorization: { from: OTHER_SELLER },
+      },
+    };
+
+    const result = await settlePayment(exactPayload, {
+      scheme: "exact",
+      network: "eip155:11155420",
+    });
+
+    expect(result).toMatchObject({
+      success: false,
+      errorReason: "settlement_failed",
+      payer: OTHER_SELLER,
       transaction: "",
     });
   });

@@ -206,6 +206,12 @@ const sectionRule = defineRecipe({
 });
 
 export default defineConfig({
+  // v2 no longer injects these implicitly. preset-base provides the conditions
+  // (_hover, _disabled, …) and patterns; preset-panda provides the shorthands
+  // (mt, mb, px, bg, …) and the default theme the config references (gray.*,
+  // red.*, purple.*, durations.normal, the fontSize scale, breakpoints).
+  presets: ["@pandacss/preset-base", "@pandacss/preset-panda"],
+
   // Whether to use css reset
   preflight: true,
 

@@ -43,6 +43,7 @@ import type { ScwEvent } from "./types.js";
 import openapiSpec from "./openapi.genimg.json" with { type: "json" };
 import { faviconBase64, faviconContentType } from "./favicon.js";
 import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
+import { buildGenimgBazaarExtension } from "./bazaar_discovery.js";
 import { AGENT_REGISTRATION_PATH, buildAgentRegistration } from "./agent_registration.js";
 import { logger } from "./logger.js";
 import { offeredStablecoins, resolvePaidStablecoin, type PriceList } from "./stablecoin_pricing.js";
@@ -50,11 +51,12 @@ import { offeredStablecoins, resolvePaidStablecoin, type PriceList } from "./sta
 // Re-export for backward compatibility with tests
 export { handle, create402Response };
 
-// The image price, quoted separately in each token's atomic units (6 decimals): 0.07 USDC or
-// 0.06 EURC. Two parallel prices, not one converted into the other.
+// The image price, quoted separately in each token's atomic units: 0.07 USDC, 0.06 EURC or
+// 0.06 EURe (18 decimals). Parallel prices, not one converted into the other.
 const PRICE_ATOMIC: PriceList = {
   USDC: process.env.USDC_PAYMENT_AMOUNT ?? "70000",
   EURC: process.env.EURC_PAYMENT_AMOUNT ?? "60000",
+  EURe: process.env.EURE_PAYMENT_AMOUNT ?? "60000000000000000",
 };
 const GAS_BUFFER = parseEther("0.00001");
 
@@ -473,12 +475,19 @@ async function handle(
     logger.debug({ networks }, "402 offering networks");
 
     const paymentRequirements = createPaymentRequirements({
-      resourceUrl: event.path ?? process.env.GENIMG_SERVICE_URL ?? "https://api.example.com/genimg",
+      // Absolute, from the committed spec's server URL (the same origin as iconUrl): the bazaar
+      // discovery validation rejects a relative resource ("resource must start with 'https://'
+      // when protocol type is http"), so a relative event.path here kept the route unindexable.
+      resourceUrl: `${openapiSpec.servers[0].url}/imagegen`,
       description: "AI Image Generation with NFT Certificate",
       mimeType: "application/json",
       price: PRICE_ATOMIC,
       payTo: serverWallet,
       networks,
+      extensions: buildGenimgBazaarExtension(),
+      serviceName: "Fretchen Image Generation",
+      tags: ["image-generation", "x402", "nft"],
+      iconUrl: `${openapiSpec.servers[0].url}/favicon.png`,
     });
 
     return create402Response(paymentRequirements);
@@ -535,8 +544,7 @@ async function handle(
   // Price the stablecoin the buyer chose from the 402, not a fixed one: the requirements below
   // must match its `accepted` entry, or verify rejects the payment.
   const accepted = (paymentPayload as Record<string, unknown>)?.["accepted"] as
-    | Record<string, unknown>
-    | undefined;
+    Record<string, unknown> | undefined;
   const coin = resolvePaidStablecoin(clientNetwork!, accepted?.["asset"]);
   if (!coin) {
     logger.warn({ clientNetwork, asset: accepted?.["asset"] }, "Payment asset not offered");
@@ -751,81 +759,4 @@ async function handle(
     logger.error({ err: error }, "Error during operation");
     return errorResponse(500, `Operation failed: ${(error as Error).message}`);
   }
-}
-
-if (process.env.NODE_ENV === "test" && !process.env.CI) {
-  import("dotenv").then((dotenv) => {
-    dotenv.config();
-    import("fastify").then((fastifyModule) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const fastify = (fastifyModule.default as any)({ bodyLimit: 10 * 1024 * 1024 });
-
-      import("@fastify/cors").then((corsModule) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        fastify.register((corsModule as any).default, {
-          origin: true,
-          methods: ["GET", "POST", "OPTIONS"],
-          allowedHeaders: "*",
-          exposedHeaders: ["Payment-Required", "PAYMENT-REQUIRED", "X-Payment", "PAYMENT-RESPONSE"],
-        });
-
-        import("@fastify/url-data").then((urlDataModule) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          fastify.register((urlDataModule as any).default);
-
-          fastify.addContentTypeParser(
-            "text/json",
-            { parseAs: "string" },
-            fastify.defaultTextParser,
-          );
-          fastify.addContentTypeParser(
-            "application/x-www-form-urlencoded",
-            { parseAs: "string" },
-            fastify.defaultTextParser,
-          );
-          fastify.addContentTypeParser(
-            "application/json",
-            { parseAs: "string" },
-            fastify.defaultTextParser,
-          );
-
-          fastify.route({
-            method: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-            url: "/*",
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            handler: async (request: any, reply: any) => {
-              try {
-                const event: ScwEvent = {
-                  httpMethod: request.method,
-                  headers: request.headers,
-                  body: request.body,
-                  path: request.url,
-                  queryStringParameters: request.query,
-                };
-                const result = await handle(event, {});
-                reply.status(result.statusCode ?? 200);
-                for (const [key, value] of Object.entries(result.headers ?? {})) {
-                  reply.header(key, value);
-                }
-                return result.body;
-              } catch (error) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                reply.status(500).send({ error: (error as any).message });
-              }
-            },
-          });
-
-          fastify.listen({ port: 8082, host: "0.0.0.0" }, (err: unknown, address: string) => {
-            if (err) {
-              // Local dev only — never deployed. Same phrase the other packages' local server
-              // bootstraps use; see EXEMPT in test/alert_coverage.test.ts.
-              logger.error({ err }, "Error starting local server");
-              process.exit(1);
-            }
-            logger.info({ address }, "Local server listening");
-          });
-        });
-      });
-    });
-  });
 }

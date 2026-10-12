@@ -355,7 +355,7 @@ describe("NFTCard Component", () => {
 describe("NFTCard — button disabled state with simulation", () => {
   const renderProps: NFTCardProps = {
     tokenId: BigInt(1),
-    network: "eip155:10" as `eip155:${number}`,
+    network: "eip155:10",
     onImageClick: vi.fn(),
     onNftBurned: vi.fn(),
     onListedStatusChanged: vi.fn(),

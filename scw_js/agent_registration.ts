@@ -4,10 +4,11 @@
  * Served at `/.well-known/agent-registration.json` on each origin. That path is also the
  * on-chain `agentURI`, so the file doubles as the EIP's optional endpoint-domain proof.
  *
- * Shape: EIP-8004, "Agent URI and Agent Registration File", plus two services from the 8004scan
+ * Shape: EIP-8004, "Agent URI and Agent Registration File", plus three services from the 8004scan
  * Agent Metadata Standard (best-practices.8004scan.io, 01-agent-metadata-standard): `OASF`
- * (capability taxonomy) and `agentWallet` (offchain copy of the payment wallet, which that
- * standard says an `x402Support: true` agent SHOULD declare). `services` replaced the draft-era
+ * (capability taxonomy), `agentWallet` (offchain copy of the payment wallet, which that
+ * standard says an `x402Support: true` agent SHOULD declare) and `MCP` (the stateless paid
+ * MCP endpoint, with the per-agent `mcpTools` list). `services` replaced the draft-era
  * `endpoints`; `registrations` is `[]` until the agent has an id.
  */
 
@@ -63,6 +64,21 @@ export const OASF: Record<AgentService, { skills: string[]; domains: string[] }>
 /** The mainnets every 402 here quotes; the payTo is the same address on both. */
 const PAYMENT_CHAINS = [8453, 10] as const;
 
+/**
+ * The stateless paid MCP endpoint (`mcp_server.ts`, served by the `mcp` function at
+ * mcp-agent.fretchen.eu). One endpoint for all tools; each agent lists only the tools that
+ * are its own service, so the registry entry stays honest about who serves what. Version is
+ * the MCP protocol revision the dispatcher speaks (see `mcp_server.ts`).
+ */
+export const MCP_SERVICE = {
+  endpoint: "https://mcp-agent.fretchen.eu/mcp",
+  version: "2025-06-18",
+} as const;
+const MCP_TOOLS: Partial<Record<AgentService, string[]>> = {
+  llm: ["chat_completion"],
+  search: ["web_search"],
+};
+
 export const AGENT_REGISTRATION_PATH = ".well-known/agent-registration.json";
 
 /** The parts of a committed `openapi.*.json` this file is derived from. */
@@ -104,6 +120,17 @@ export function buildAgentRegistration(spec: OpenApiSource, service: AgentServic
         skills: oasf.skills,
         ...(oasf.domains.length > 0 ? { domains: oasf.domains } : {}),
       },
+      ...(MCP_TOOLS[service]
+        ? [
+            {
+              name: "MCP",
+              endpoint: MCP_SERVICE.endpoint,
+              version: MCP_SERVICE.version,
+              capabilities: [] as unknown[],
+              mcpTools: MCP_TOOLS[service],
+            },
+          ]
+        : []),
       ...wallets,
     ],
     x402Support: true,

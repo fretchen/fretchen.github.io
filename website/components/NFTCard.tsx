@@ -94,7 +94,7 @@ export function NFTCard({
           functionName: "ownerOf",
           args: [tokenId],
         });
-        owner = ownerResult as string;
+        owner = ownerResult;
       }
 
       if (tokenURI && !tokenURI.startsWith("file://")) {

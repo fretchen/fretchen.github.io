@@ -382,10 +382,11 @@
               },
               "asset": {
                 "type": "string",
-                "description": "\"settled\": the fee is charged in the token the payment settles in (USDC, or EURC on Base)."
+                "description": "\"settled\": the fee is charged in the token the payment settles in (USDC; EURC and EURe on Base)."
               },
               "flatFee": {
-                "type": "string"
+                "type": "string",
+                "description": "The nominal fee in `decimals` units. Tokens with more decimals are charged the same nominal amount in their own units — see `assets` for each token's exact atomic figure."
               },
               "decimals": {
                 "type": "integer",
@@ -437,6 +438,48 @@
                 },
                 "required": ["description", "function", "spender", "recommended_amount"],
                 "additionalProperties": false
+              },
+              "assets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "network": {
+                      "type": "string",
+                      "description": "CAIP-2 network id."
+                    },
+                    "asset": {
+                      "type": "string",
+                      "description": "Token contract address."
+                    },
+                    "symbol": {
+                      "type": "string"
+                    },
+                    "decimals": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "flatFee": {
+                      "type": "string",
+                      "description": "The fee in this token's atomic units."
+                    },
+                    "recommended_amount": {
+                      "type": "string",
+                      "description": "Recommended approve() amount in this token's atomic units (1 token)."
+                    }
+                  },
+                  "required": [
+                    "network",
+                    "asset",
+                    "symbol",
+                    "decimals",
+                    "flatFee",
+                    "recommended_amount"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "Every token the fee is charged in, per network, with the exact atomic fee and approval. EURe has 18 decimals, so its 0.01 fee is 10000000000000000, not the 10000 of USDC/EURC."
               }
             },
             "required": [
@@ -448,7 +491,8 @@
               "recipient",
               "networks",
               "fee",
-              "setup"
+              "setup",
+              "assets"
             ],
             "additionalProperties": false
           },

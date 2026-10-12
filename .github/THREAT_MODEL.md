@@ -1,6 +1,6 @@
 # Threat Model
 
-Last updated: 2026-08-09
+Last updated: 2026-10-12
 
 This is a lightweight, living threat model. It follows the OWASP four-question framework and the values of the Threat Modeling Manifesto — a maintained document over a one-time audit, design issues over checkbox compliance, action over ceremony.
 
@@ -21,13 +21,16 @@ What has monetary value, irreversibility, or trust significance in this system:
 |---|---|---|
 | ETH in GenImNFTv4 | On-chain | Accumulates mint fees until `withdraw()` is called |
 | ETH in LLMv1 (deprecated) | On-chain | User prepaid balances; withdrawable by users or claimable by providers. **No serverless code path calls this contract anymore** — `sc_llm.ts`/`leaf_history.ts` were retired in favor of `/assistent`'s x402 batch-settlement USDC channels. Final decommission (contract-level retirement) is pending confirmation that all balances have been withdrawn. |
-| USDC settlements | x402_facilitator | Per-request payments routed through the facilitator |
+| Stablecoin settlements | x402_facilitator | Per-request payments routed through the facilitator: USDC (any supported network), EURC and EURe on Base. EURe (Monerium, no EIP-3009, 18 decimals) settles via Permit2 through the x402 exact Permit2 proxy |
+| x402 exact Permit2 proxy + Uniswap Permit2 (external) | On-chain, Base and Base Sepolia (SDK-pinned addresses, not upgradeable by this project) | Third-party contracts the facilitator settles EURe through. A defect affects EURe settlement availability, not fund safety: `/verify` simulates `settleWithPermit` against the live proxy before anything is broadcast, and Permit2 enforces the buyer's signature over the witness on-chain |
+| Batch-settlement channel escrow | On-chain, canonical x402 batch-settlement contract (Optimism + Base mainnet) | Buyer deposits held in the channel's own token — USDC, EURC or EURe on Base — until claimed against signed vouchers. Escrow is the buyer's: refundable via the buyer-owned `withdraw` path after the lock, and a stalled claim delays it rather than losing it. Every token's channels are separate (the token is part of `channelId`), so each needs its own claim sweep and its own fee allowance |
 | EIP3009 Splitter contract (testnet) | On-chain, Optimism Sepolia only (`eip155:11155420`) | Routes USDC settlements via EIP-3009; owner-upgradeable. Not yet on mainnet — promotes to a live asset on mainnet deployment |
 | NFT metadata integrity | On-chain (token URIs) | Authoritative record of what image each token represents |
 | Owner EOA private key | Dedicated keystore account (`0x1af51D…fBB20`), separated from daily wallet since 2026-06 | Controls every upgradeable contract and owns the three ERC-8004 agent identities — the highest-value key in the system |
 | ERC-8004 agent identities (3) | On-chain, Base Identity Registry `0x8004A169…a432` (agentIds 97598, 97599, 97600) | Owned by the owner EOA. Owner can repoint `agentURI`, transfer, or change the bound `agentWallet`; holds no funds, but the identity is what discovery and reputation attach to |
 | Agent wallet private key | scw_js secrets | Can trigger `requestImageUpdate()` and receive mintPrice per call. Same address as the x402 `payTo` (`NFT_WALLET`), bound as the `agentWallet` of the three ERC-8004 agents |
-| Facilitator wallet private key | x402_facilitator secrets | Receives USDC fees from settlements |
+| Receiver-authorizer private key | scw_js secrets | Signs batch-settlement channel-config and refund authorizations (EIP-712) for the `/assistent` sellers (LLM, search, fetch) via `receiverAuthorizerSigner`. Never sends transactions, never needs funding |
+| Facilitator wallet private key | x402_facilitator secrets | Receives settlement fees (USDC; EURC and EURe on Base) |
 | Scaleway secrets (SCW_SECRET_KEY) | Serverless secrets | Access to S3 image bucket, transactional email, and analytics counters |
 | BFL / IONOS API keys | Serverless secrets | Image generation quota; no on-chain access |
 
@@ -43,7 +46,9 @@ If a component is fully compromised, what else falls with it:
 |---|---|---|
 | **Owner EOA** | Malicious upgrade to every upgradeable contract | Complete ETH drain from GenImNFTv4 + LLMv1; all NFT URIs replaceable; USDC fee wallet redirectable — total system compromise. The EIP3009 Splitter joins this blast radius once deployed to mainnet. Key is now a dedicated EOA (not daily wallet); full mitigation requires Gnosis Safe. The same key owns the three ERC-8004 agent identities (Base), so a compromise also lets an attacker repoint their `agentURI` to impersonate the services; a Safe migration must transfer them too, which clears each `agentWallet` and needs re-binding. |
 | **Agent wallet** (scw_js) | `requestImageUpdate()` callable arbitrarily; drains GenImNFTv4 at `mintPrice` per call | NFT metadata corruption for all tokens; contract ETH drained |
-| **Facilitator wallet** | USDC fees redirected | Financial only; no access to user funds or upgrade paths |
+| **Facilitator wallet** | Settlement fees redirected (USDC, EURC, EURe) | Financial only; no access to user funds or upgrade paths |
+| **Claim path** (the cron's per-token sweep + the seller's per-token fee allowance) | Claims for one token stall — a token missing from the sweep's enumeration leaves that token's escrow unclaimed indefinitely, and an exhausted fee allowance stalls claims with `insufficient_fee_allowance`. The sweep's refund half also garbage-collects fully-claimed records: a wrongly-guarded delete would destroy the stored voucher of a payment that raced the sweep, making that charge permanently unclaimable | Buyer impact is delay, not loss — the `withdraw` path after the lock is the buyer's own. Revenue delayed; no fund redirection. The GC delete is CAS-guarded and only commits when the record still shows `balance <= totalClaimed` and still idle, so a raced payment's voucher survives; a blocked delete self-heals next run |
+| **Receiver-authorizer key** (scw_js) | Refund authorizations signable: buyer escrow returned early, claims stalled or unwound — revenue denial and channel DoS | No fund redirection (claims pay the channel's fixed receiver); no access to other contracts or upgrade paths |
 | **SCW_SECRET_KEY** | S3 bucket writable; email notifications spoofable | Generated images replaceable; no on-chain impact |
 | **BFL / IONOS key** | Image generation quota consumed | No on-chain or financial impact to users |
 | **x402_facilitator service** | Payment settlements halt | Image generation feature unavailable; already-signed USDC authorizations expire unused |
@@ -91,8 +96,10 @@ This is the attack-**surface** map: each arrow marks where data crosses from a l
 └─────────────────────────────────────────────────────────────┘
 
 x402_facilitator
-  │  EIP-712 sig verification ──────────► USDC contract
+  │  EIP-712 sig verification ──────────► USDC / EURC contract
   │                                        (nonce enforced on-chain)
+  │  Permit2 witness + EIP-2612 permit ─► x402 Permit2 proxy → EURe (Base)
+  │                                        (witness + nonce enforced on-chain)
   └─ fee collection ────────────────────► facilitator wallet
 
 scw_js
@@ -105,6 +112,8 @@ Owner EOA ───────────────────────�
   (single key controls all upgrade paths)
 ```
 
+The `mcp` function (`mcp_server.ts`, served at `mcp-agent.fretchen.eu/mcp`) is a fourth public inbound surface alongside the three REST sellers: stateless JSON-RPC 2.0 over a single POST route, open CORS, no sessions (GET and DELETE answer 405). It carries no payment, pricing, or cost logic — every `tools/call` relays in-process to the real handlers (`search_api.handle` / `sc_llm_x402.handle`), so the payment gate, the mainnet-only search rule, testnet-mocked completions, and usage-derived settlement are the handlers' own and cannot drift from them; `test/mcp_server.test.ts` pins all four through the real challenge configs. The relay needs exactly the secrets the relayed handlers need (Mistral and Brave API keys, the receiver-authorizer key, S3 credentials for channel storage); `serverless.yml` scopes secrets per service, not per function, so the `mcp` function also receives the genimg-only keys — the pre-existing granularity of this service, not an MCP-specific widening. An unpaid `tools/call` builds a 402 challenge and nothing else — no metered service runs, no S3 is touched, no signature is made — the same cheap path every unpaid request to the REST sellers takes (accepted, API4).
+
 ★ The x402 facilitator is an intentionally open public service (any merchant on Base or Optimism). `Access-Control-Allow-Origin: *` is required by the open-protocol design. The blast radius of a cross-origin attack is bounded by EIP-712/EIP-3009 cryptography: a malicious page can trigger settlement requests but cannot redirect funds (the signature binds recipient, amount, and nonce) or forge signatures. The residual risk (gas drain via `/settle` spam) is accepted: garbage requests fail before any on-chain transaction is attempted, L2 gas per settlement is negligible (~$0.001), and no realistic threat actor has financial incentive to drain a facilitator wallet whose ETH goes to miners, not the attacker.
 
 The analytics service accepts anonymous, unauthenticated `POST /hit` writes behind the same origin whitelist as `comment_service`. Note that the whitelist is defence-in-depth, **not** a write control here: CORS is browser-enforced only (any script or `curl` ignores it), and the pageview beacon is a `sendBeacon` simple request (`text/plain`), so no preflight occurs and a cross-origin write would land regardless of the header. Write abuse is bounded instead by path validation and the 200-entry `pages` cap (§5, API4). The counters themselves are written **private** (no public-read ACL) and the read path is authorized — see §6.
@@ -113,10 +122,11 @@ The analytics service accepts anonymous, unauthenticated `POST /hit` writes behi
 
 ## 5. Attack Techniques by Surface
 
-This is the **HOW** that complements §3 (WHO) and §4 (WHERE): the concrete classes of weakness in scope when reviewing or scanning this system. Only *live* categories are listed — a category's absence means it was considered and judged not applicable, not overlooked. Detailed, per-instance findings live in the documents named in the **Tracked in** column. The two halves of the system map to two standard catalogs:
+This is the **HOW** that complements §3 (WHO) and §4 (WHERE): the concrete classes of weakness in scope when reviewing or scanning this system. Only *live* categories are listed — a category's absence means it was considered and judged not applicable, not overlooked. Detailed, per-instance findings live in the documents named in the **Tracked in** column. The three layers of the system map to three standard catalogs:
 
 - [OWASP Smart Contract Top 10 (2025)](https://owasp.org/www-project-smart-contract-top-10/) — for `eth/` contracts.
 - [OWASP API Security Top 10 (2023)](https://owasp.org/API-Security/editions/2023/en/0x11-t10/) — for the serverless functions and website.
+- [OWASP Top 10 for LLM Applications 2025](https://genai.owasp.org/llm-top-10/) — for the assistant's agent layer (the `/assistent` tool loop).
 
 ### Contract layer — OWASP Smart Contract Top 10
 
@@ -134,12 +144,24 @@ This is the **HOW** that complements §3 (WHO) and §4 (WHERE): the concrete cla
 
 | Technique (OWASP) | Where it applies | Status | Tracked in |
 |---|---|---|---|
-| Broken authentication (API2) | EIP-712/EIP-3009 sig verify (facilitator); agent-wallet whitelist (scw_js); `useWalletAuth` owner-sig bearer (growth **and analytics**); origin whitelist (comment_service) | Mitigated | §4; §7 |
+| Broken authentication (API2) | EIP-712/EIP-3009 sig verify (facilitator), plus Permit2-witness and EIP-2612-permit verify for EURe (facilitator); agent-wallet whitelist (scw_js); `useWalletAuth` owner-sig bearer (growth **and analytics**); origin whitelist (comment_service) | Mitigated | §4; §7 |
 | Broken function-level authz (API5) | x402 `Access-Control-Allow-Origin: *`; bounded by EIP-3009 crypto | Accepted (intentional open protocol) | §4 ★; §7 |
-| Unrestricted resource consumption (API4) | `/settle` spam gas drain; serverless cold starts (accepted); LLM pre-charge balance gate (batch-settlement stall; Open, medium); analytics `/hit` request volume (not rate-limited, and **CORS is not the control** — browser-only, and `sendBeacon` sends a simple request with no preflight; accepted, since the consequence is a skewed counter, not cost or exposure); analytics `pages` map cardinality abuse (mitigated via path validation + a 200-entry cap) | Mixed — gas drain and `/hit` volume accepted; balance-gate open; `pages` cardinality mitigated | §4; scw_js/SECURITY.md |
+| Unrestricted resource consumption (API4) | `/settle` spam gas drain; unpaid MCP `tools/call` 402 generation (accepted — pure CPU: no metered service, no S3, no signing, same posture as the REST sellers' unpaid requests, see §4); serverless cold starts (accepted); LLM pre-charge balance gate (batch-settlement stall; Open, medium); analytics `/hit` request volume (not rate-limited, and **CORS is not the control** — browser-only, and `sendBeacon` sends a simple request with no preflight; accepted, since the consequence is a skewed counter, not cost or exposure); analytics `pages` map cardinality abuse (mitigated via path validation + a 200-entry cap) | Mixed — gas drain, MCP unpaid calls and `/hit` volume accepted; balance-gate open; `pages` cardinality mitigated | §4; scw_js/SECURITY.md |
 | Unrestricted access to sensitive business flows (API6) | Deliver-before-payment in the LLM and genimg flows | Open (medium) | scw_js/SECURITY.md |
 | Security misconfiguration / secret exposure (API8) | comment_service sends `SCW_SECRET_KEY` as the `X-Auth-Token` header to the Scaleway transactional-email API | Open (medium) | §7 |
 | Unsafe client trust (API10) | Client-side-only image validation | Open (low) | §7 |
+
+### Agent layer — OWASP Top 10 for LLM Applications
+
+The assistant is itself an LLM agent with a paid tool loop, so its review surface is mapped like the other layers. Per the section's own convention, unlisted categories were considered and judged not applicable: LLM02 (no PII is collected, §1; the conversation is browser-local state), LLM03 (supply chain is the cve-triage skill's mandate), LLM04/LLM08 (no RAG, training, or embedding store), LLM09 (no integrity claim is made about LLM output).
+
+| Technique (OWASP) | Where it applies | Status | Tracked in |
+|---|---|---|---|
+| Prompt injection (LLM01) | Indirect injection via tool outputs: `search_web` results and `fetch_url` page contents enter the conversation as untrusted text (direct injection via user messages is inherent to any chat) | Mitigated by bounding, not sanitization: tool results are projected hard before reaching the model, a failing tool is withdrawn for the rest of the turn, and the loop is capped (MAX_HOPS 10, MAX_PAID_CALLS 15). Residual risk: a malicious page steering the model's next tool call within those caps | website/utils/toolLoop.ts; website/tools/; this table (audit procedure: `.agents/skills/security-review/plays/agent-security-audit.md`) |
+| Improper output handling (LLM05) | Rendering of model output: ReactMarkdown without rehype-raw does not render raw HTML in model output; CodeBlock injects highlight.js output via `dangerouslySetInnerHTML`, but highlight.js escapes while highlighting | Mitigated | website/components/AssistantChat.tsx; website/components/CodeBlock.tsx |
+| Excessive agency (LLM06) | Spend-capable tools are confirm-gated in the browser (the generate_image confirm card); the paid LLM endpoint never executes tools on the caller's behalf (a published contract in `scw_js/openapi.llm.json`); the paid web tools spend only from the escrowed batch-settlement channel | Mitigated by design | .agents/skills/chat-tools/SKILL.md; scw_js/openapi.llm.json |
+| System prompt leakage (LLM07) | The system prompt (including the research variant) is sent to the model every turn; owner-scope tool descriptions are withheld from visitors entirely | Accepted (the prompt is not secret material; owner tools are never offered to visitors) | .agents/skills/chat-tools/SKILL.md |
+| Unbounded consumption (LLM10) | Per-message price ceiling (operator absorbs overage), MAX_MESSAGES_BYTES 192 KB, MAX_TOOLS_BYTES 8192, MAX_HOPS/MAX_PAID_CALLS loop caps | Mitigated | scw_js/llm_schemas.ts; website/utils/toolLoop.ts |
 
 ---
 
@@ -184,4 +206,5 @@ Active mitigations and where they live:
 - The EIP3009 Splitter (or any testnet-stage contract) is deployed to mainnet — promote it to a full asset/blast-radius entry and re-scope the owner blast radius
 - A key is rotated or a new privileged account is added
 - A new serverless function or trust boundary is introduced
+- A new tool is added to the assistant's registry, or the tool loop's caps (hops, paid calls, message bytes) change — audit with the `security-review` skill (agent layer)
 - A CVE is triaged as T1 or T2 (patch required)

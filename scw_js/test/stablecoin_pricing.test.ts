@@ -8,18 +8,30 @@ const OP = "eip155:10";
 
 describe("stablecoin_pricing", () => {
   describe("offeredStablecoins", () => {
-    it("offers EURC first on both Base networks — the order is the preference", () => {
-      expect(offeredStablecoins(BASE).map((c) => c.symbol)).toEqual(["EURC", "USDC"]);
-      expect(offeredStablecoins(BASE_SEPOLIA).map((c) => c.symbol)).toEqual(["EURC", "USDC"]);
+    it("offers EURe, then EURC, then USDC on both Base networks — the order is the preference", () => {
+      expect(offeredStablecoins(BASE).map((c) => c.symbol)).toEqual(["EURe", "EURC", "USDC"]);
+      expect(offeredStablecoins(BASE_SEPOLIA).map((c) => c.symbol)).toEqual([
+        "EURe",
+        "EURC",
+        "USDC",
+      ]);
     });
 
-    it("offers USDC only on Optimism, where EURC does not exist", () => {
+    it("offers USDC only on Optimism, where EURC and EURe do not exist", () => {
       expect(offeredStablecoins(OP).map((c) => c.symbol)).toEqual(["USDC"]);
     });
 
-    it("needs no configuration to offer EURC", () => {
-      // EURC is a first-class price list, not a conversion that depends on a rate being set.
+    it("needs no configuration to offer EURC or EURe", () => {
+      // EURC and EURe are first-class price lists, not conversions that depend on a rate being set.
       expect(offeredStablecoins(BASE).some((c) => c.symbol === "EURC")).toBe(true);
+      expect(offeredStablecoins(BASE).some((c) => c.symbol === "EURe")).toBe(true);
+    });
+
+    it("carries each token's decimals — EURe is 18, not 6", () => {
+      const bySymbol = Object.fromEntries(offeredStablecoins(BASE).map((c) => [c.symbol, c]));
+      expect(bySymbol.EURe.decimals).toBe(18);
+      expect(bySymbol.EURC.decimals).toBe(6);
+      expect(bySymbol.USDC.decimals).toBe(6);
     });
   });
 

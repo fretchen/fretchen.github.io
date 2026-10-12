@@ -111,12 +111,19 @@ export async function verifySignedMessage(
   expectedPrefix: string,
   expectedAddresses: string | readonly string[]
 ): Promise<string | null> {
-  const match = message.match(new RegExp(`^${expectedPrefix}:(\\d+)$`));
-  if (!match) {
+  // Literal comparison, not a RegExp built from the prefix: a metacharacter in a future
+  // prefix (d+, ., (…) would gain pattern meaning of its own and accept messages that
+  // prefix never minted.
+  if (!message.startsWith(`${expectedPrefix}:`)) {
     return "Unauthorized";
   }
 
-  const ts = parseInt(match[1], 10);
+  const timestamp = message.slice(expectedPrefix.length + 1);
+  if (!/^\d+$/.test(timestamp)) {
+    return "Unauthorized";
+  }
+
+  const ts = parseInt(timestamp, 10);
   if (ts > 9_999_999_999) {
     return "Unauthorized";
   } // guard against year >2286 / integer overflow

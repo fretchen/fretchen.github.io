@@ -36,7 +36,7 @@
     "@fretchen/chain-utils": "file:../shared/chain-utils",
     "@fretchen/s3-utils": "file:../shared/s3-utils",
     "isbot": "^5.2.2",
-    "viem": "^2.54.2"
+    "viem": "^2.57.4"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",

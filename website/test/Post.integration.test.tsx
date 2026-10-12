@@ -52,7 +52,7 @@ describe("Post Component Integration Tests", () => {
     vi.clearAllMocks();
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       json: async () => ({ children: [] }),
-    } as Response);
+    });
   });
 
   describe("Markdown Blog Rendering", () => {

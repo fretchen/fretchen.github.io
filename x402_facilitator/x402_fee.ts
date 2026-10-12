@@ -24,8 +24,8 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import pino from "pino";
-import { findStablecoin, loadPrivateKey } from "@fretchen/chain-utils";
-import { getChainConfig, getRpcUrl } from "./chain_utils";
+import { loadPrivateKey } from "@fretchen/chain-utils";
+import { findFeeToken, getChainConfig, getRpcUrl } from "./chain_utils";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
@@ -87,7 +87,14 @@ export type FeeGateDecision =
 // ERC-20 ABI (minimal subset for fee operations)
 // ═══════════════════════════════════════════════════════════════
 
-const ERC20_FEE_ABI = [
+/**
+ * The fee pull's ERC-20 surface. The two OZ v5 `error` entries are load-bearing for
+ * diagnostics: without them viem cannot decode a reverting `transferFrom` (the 2026-10-11
+ * EURe incident logged a bare `0xe450d38c` and "Unable to decode signature"), and the
+ * insufficient_merchant_balance / insufficient_fee_allowance mapping in collectFee's catch —
+ * which reads the decoded name out of the error message — never fires.
+ */
+export const ERC20_FEE_ABI = [
   {
     name: "allowance",
     type: "function",
@@ -109,14 +116,44 @@ const ERC20_FEE_ABI = [
     ],
     outputs: [{ name: "", type: "bool" }],
   },
+  // OpenZeppelin v5's transferFrom errors (EURe, and every OZ v5 token, reverts with these
+  // rather than the old require strings). Decode-only entries: viem matches them by selector.
+  {
+    name: "ERC20InsufficientBalance",
+    type: "error",
+    inputs: [
+      { name: "sender", type: "address" },
+      { name: "balance", type: "uint256" },
+      { name: "needed", type: "uint256" },
+    ],
+  },
+  {
+    name: "ERC20InsufficientAllowance",
+    type: "error",
+    inputs: [
+      { name: "spender", type: "address" },
+      { name: "allowance", type: "uint256" },
+      { name: "needed", type: "uint256" },
+    ],
+  },
 ] as const satisfies Abi;
 
 // ═══════════════════════════════════════════════════════════════
 // Fee Configuration
 // ═══════════════════════════════════════════════════════════════
 
-/** Default fee: 10000 = 0.01 of the settled token (USDC and EURC both have 6 decimals) */
+/**
+ * Default fee: 10000 = 0.01 of the settled token, written in 6-decimal units.
+ *
+ * The fee is NOMINAL: 0.01 of whichever token settles. USDC and EURC have 6 decimals, so this is
+ * also their atomic amount — but EURe has 18, where 10000 atomic units would be 10⁻¹⁴ EUR. Every
+ * place that charges, checks or reports the fee must therefore use `feeAmountFor(decimals)`,
+ * never this number directly.
+ */
 const DEFAULT_FEE_AMOUNT = 10000n;
+
+/** The decimals `FACILITATOR_FEE_AMOUNT` / `DEFAULT_FEE_AMOUNT` are written in. */
+const FEE_BASE_DECIMALS = 6;
 
 /**
  * Cap on how long fee collection may wait for its receipt.
@@ -148,8 +185,8 @@ function feeRetryDelayMs(): number {
 }
 
 /**
- * Get the fee amount from environment or default.
- * @returns Fee amount in the settled token's smallest unit (6 decimals)
+ * The nominal fee from environment or default, in 6-decimal units (10000 = 0.01).
+ * To charge it, scale it to the settled token with `feeAmountFor`.
  */
 export function getFeeAmount(): bigint {
   const envFee = process.env.FACILITATOR_FEE_AMOUNT;
@@ -170,6 +207,20 @@ export function getFeeAmount(): bigint {
     }
   }
   return DEFAULT_FEE_AMOUNT;
+}
+
+/** The nominal fee in atomic units of a token with `decimals` decimals (0.01 → 10¹⁶ for 18). */
+export function feeAmountFor(decimals: number): bigint {
+  const base = getFeeAmount();
+  return decimals >= FEE_BASE_DECIMALS
+    ? base * 10n ** BigInt(decimals - FEE_BASE_DECIMALS)
+    : base / 10n ** BigInt(FEE_BASE_DECIMALS - decimals);
+}
+
+/** The nominal fee in `token`'s atomic units on `network`, or null for a token we do not know. */
+export function feeAmountForToken(network: string, token: string): bigint | null {
+  const feeToken = findFeeToken(network, token);
+  return feeToken ? feeAmountFor(feeToken.decimals) : null;
 }
 
 /**
@@ -218,7 +269,13 @@ export async function checkMerchantAllowance(
     return { allowance: 0n, remainingSettlements: 0, status: "insufficient" };
   }
 
-  const feeAmount = getFeeAmount();
+  const feeAmount = feeAmountForToken(network, token);
+  if (feeAmount === null) {
+    // Not a token this facilitator charges in. evaluateFeeGate refuses these before asking;
+    // answer "insufficient" rather than guess at a fee in unknown units.
+    logger.warn({ network, token }, "Cannot check allowance: not a known stablecoin");
+    return { allowance: 0n, remainingSettlements: 0, status: "insufficient" };
+  }
   if (feeAmount === 0n) {
     // No fee configured — nothing to collect, nothing to approve
     return { remainingSettlements: Infinity, status: "ok" };
@@ -286,8 +343,8 @@ export async function checkMerchantAllowance(
  * allowance proceeds — the payment is worth more than the fee.
  *
  * `token` is the token the settlement moves, and so the one the fee is charged in. It must
- * be USDC or EURC on `network`: a flat fee in a token this facilitator does not know is
- * meaningless, so any other token is refused rather than relayed.
+ * be a stablecoin from the registry on `network` (USDC, EURC, EURe): a flat fee in a token this
+ * facilitator does not know is meaningless, so any other token is refused rather than relayed.
  */
 export async function evaluateFeeGate(
   recipient: Address,
@@ -299,9 +356,12 @@ export async function evaluateFeeGate(
     return { kind: "no_fee" };
   }
 
-  const stablecoin = findStablecoin(network, token);
+  const stablecoin = findFeeToken(network, token);
   if (!stablecoin) {
-    logger.warn({ recipient, network, token }, "Fee asset is not USDC or EURC on this network");
+    logger.warn(
+      { recipient, network, token },
+      "Fee asset is not a known stablecoin on this network",
+    );
     return { kind: "reject", reason: "unsupported_fee_asset" };
   }
 
@@ -322,7 +382,7 @@ export async function evaluateFeeGate(
         recipient,
         network,
         allowance: allowanceInfo.allowance?.toString(),
-        feeAmount: feeAmount.toString(),
+        feeAmount: feeAmountFor(stablecoin.decimals).toString(),
         facilitatorAddress,
         token,
       },
@@ -373,8 +433,21 @@ export function wasRejectedBeforeBroadcast(error: unknown): boolean {
 }
 
 /**
+ * A fee-pull revert no retry can fix: the merchant's token balance or the facilitator's
+ * allowance will not change between attempts — the 2026-10-11 EURe incident burned two retry
+ * cycles on a deterministic ERC20InsufficientBalance before failing. Detected by the decoded
+ * OZ v5 error name, which the fee ABI carries (see ERC20_FEE_ABI): before those entries
+ * existed, viem logged a bare selector and this could never match.
+ */
+export function isDeterministicFeeRevert(error: unknown): boolean {
+  const text = String((error as { message?: unknown })?.message ?? error).toLowerCase();
+  return text.includes("erc20insufficientbalance") || text.includes("erc20insufficientallowance");
+}
+
+/**
  * Send the fee transfer, again after a short pause if a node refused it before broadcast. Returns
- * the hash of the one send the node accepted; rethrows the last error otherwise.
+ * the hash of the one send the node accepted; rethrows the last error otherwise. A deterministic
+ * balance/allowance revert is rethrown immediately — see isDeterministicFeeRevert.
  */
 async function sendFeeTransfer(
   send: () => Promise<Hex>,
@@ -384,7 +457,11 @@ async function sendFeeTransfer(
     try {
       return await send();
     } catch (error) {
-      if (attempt >= FEE_SEND_ATTEMPTS || !wasRejectedBeforeBroadcast(error)) {
+      if (
+        isDeterministicFeeRevert(error) ||
+        attempt >= FEE_SEND_ATTEMPTS ||
+        !wasRejectedBeforeBroadcast(error)
+      ) {
         throw error;
       }
       // warn, not error: a refused send that is about to be retried is not yet a failure, and
@@ -419,7 +496,13 @@ export async function collectFee(
   network: string,
   token: Address,
 ): Promise<FeeResult> {
-  const feeAmount = getFeeAmount();
+  const feeAmount = feeAmountForToken(network, token);
+  if (feeAmount === null) {
+    // evaluateFeeGate vets the token before settlement, so this is unreachable in practice —
+    // `warn`, not `error`, so it does not need an alert rule for something that cannot happen.
+    logger.warn({ network, token }, "Cannot collect fee: not a known stablecoin");
+    return { success: false, error: "unsupported_fee_asset" };
+  }
 
   // No fee configured — skip silently
   if (feeAmount === 0n) {

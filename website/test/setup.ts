@@ -11,6 +11,7 @@ import type { useAccount, useConnect, useWalletClient } from "wagmi";
 class MockIntersectionObserver implements IntersectionObserver {
   readonly root: Element | Document | null = null;
   readonly rootMargin: string = "";
+  readonly scrollMargin: string = "";
   readonly thresholds: ReadonlyArray<number> = [];
 
   observe = vi.fn();
@@ -113,7 +114,7 @@ interface MockAccountData {
 
 export const mockAccountData = vi.fn(
   (): MockAccountData => ({
-    address: "0x123456789abcdef" as `0x${string}`,
+    address: "0x123456789abcdef",
     isConnected: false,
     status: "disconnected",
     isConnecting: false,
@@ -123,20 +124,34 @@ export const mockAccountData = vi.fn(
 );
 
 // Contract Mocks
-export const mockReadContractData = vi.fn(() => ({
-  data: undefined as unknown,
-  error: null,
-  isPending: false,
-  isLoading: false,
-  refetch: vi.fn(),
-}));
+// Same reasoning as `MockAccountData` above: `.mockReturnValue()` is called with
+// plain literals (decoded bigint results, etc.), so `data` must be `unknown` —
+// with the literal `data: undefined` it would be inferred as `undefined` only and
+// any test mocking a concrete contract result would not type-check.
+interface MockReadContractData {
+  data: unknown;
+  error: unknown;
+  isPending: boolean;
+  isLoading: boolean;
+  refetch: ReturnType<typeof vi.fn>;
+}
+
+export const mockReadContractData = vi.fn(
+  (): MockReadContractData => ({
+    data: undefined,
+    error: null,
+    isPending: false,
+    isLoading: false,
+    refetch: vi.fn(),
+  }),
+);
 
 export const mockWriteContractData = vi.fn(() => ({
   writeContract: vi.fn(),
   writeContractAsync: vi.fn(),
   isPending: false,
   error: null,
-  data: undefined as unknown,
+  data: undefined,
 }));
 
 // =============================================================================

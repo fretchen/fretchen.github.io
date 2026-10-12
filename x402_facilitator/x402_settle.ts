@@ -9,7 +9,7 @@ import { verifyPayment } from "./x402_verify";
 import {
   collectFee,
   evaluateFeeGate,
-  getFeeAmount,
+  feeAmountForToken,
   type FeeGateDecision,
   type FeeResult,
 } from "./x402_fee";
@@ -25,6 +25,7 @@ import type { Address } from "viem";
 import type { z } from "zod";
 import type { FeeStatusSchema, FacilitatorFeePaidSchema, SettleResponseBody } from "./x402_schemas";
 import { isTestWalletBypassed } from "./x402_whitelist";
+import { annotateDecodedRevert } from "./revert_selectors";
 import pino from "pino";
 
 const logger = pino({ level: process.env.LOG_LEVEL || "info" });
@@ -114,8 +115,7 @@ function getBatchSettlementTarget(
   }
 
   const claims = payload?.claims as
-    | Array<{ voucher?: { channel?: { receiver?: string; token?: string } } }>
-    | undefined;
+    Array<{ voucher?: { channel?: { receiver?: string; token?: string } } }> | undefined;
   if (!Array.isArray(claims)) {
     return null;
   }
@@ -187,8 +187,7 @@ export function classifyBatchSettlement(payload: Record<string, unknown> | undef
     // claims that pay out to arbitrary unrelated receivers, relayed by the facilitator's
     // hot wallet. Anchoring every claim to the one channel verify vouches for closes that.
     const channelConfig = (payload as Record<string, unknown>).channelConfig as
-      | { receiver?: string; token?: string }
-      | undefined;
+      { receiver?: string; token?: string } | undefined;
     const channelReceiver = channelConfig?.receiver;
     if (!channelReceiver || channelReceiver.toLowerCase() !== claimsTarget.receiver.toLowerCase()) {
       return { kind: "reject", errorReason: "invalid_batch_settlement_evm_receiver_mismatch" };
@@ -252,7 +251,10 @@ async function collectAndReportFee(
   fee: NonNullable<SettleResult["fee"]>;
   extensions: SettleResult["extensions"];
 }> {
-  const feeAmount = getFeeAmount();
+  // In the settled token's own units: 0.01 EURe is 10¹⁶, not the 10000 a 6-decimal token uses.
+  // Null only for a token that is not a fee token, which the verify gate already refuses; were
+  // one to get here, collectFee charges nothing, so nothing is assessed either.
+  const feeAmount = feeAmountForToken(network, token) ?? 0n;
   const feeResult = await collectFee(recipient, network, token);
   const feeStatus = feeStatusOf(feeResult);
 
@@ -400,9 +402,11 @@ export async function settlePayment(
       const facilitator = getFacilitator();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
       const result = await facilitator.settle(paymentPayload as any, paymentRequirements as any);
+      // Decoded once here, at the boundary where the SDK's raw text enters this package —
+      // every log and the returned SettleResult below carry the annotated message.
+      const errorMessage = annotateDecodedRevert(result.errorMessage);
       const claims = payload?.claims as
-        | Array<{ voucher?: { channel?: { payer?: string } } }>
-        | undefined;
+        Array<{ voucher?: { channel?: { payer?: string } } }> | undefined;
       const payer = claims?.[0]?.voucher?.channel?.payer;
 
       if (!result.success) {
@@ -410,7 +414,7 @@ export async function settlePayment(
         logger.warn(
           {
             errorReason: result.errorReason,
-            errorMessage: result.errorMessage,
+            errorMessage,
             // Only meaningful when pending — a terminal failure never broadcast anything.
             ...(pending && { transaction: result.transaction, network }),
           },
@@ -421,7 +425,7 @@ export async function settlePayment(
         return {
           success: false,
           errorReason: result.errorReason,
-          errorMessage: result.errorMessage,
+          errorMessage,
           payer,
           // Pass the broadcast hash through. Hard-coding "" here would throw away the one thing
           // that makes settlement_pending recoverable, leaving the caller unable to tell a
@@ -527,13 +531,16 @@ export async function settlePayment(
     const facilitator = getFacilitator();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
     const result = await facilitator.settle(paymentPayload as any, paymentRequirements as any);
+    // Decoded once here, at the boundary where the SDK's raw text enters this package —
+    // every log and the returned SettleResult below carry the annotated message.
+    const errorMessage = annotateDecodedRevert(result.errorMessage);
 
     if (!result.success) {
       const pending = result.errorReason === SETTLEMENT_PENDING;
       logger.warn(
         {
           errorReason: result.errorReason,
-          errorMessage: result.errorMessage,
+          errorMessage,
           ...(pending && { transaction: result.transaction, network: accepted?.network }),
         },
         pending ? "Settlement broadcast but unconfirmed — reconcile on chain" : "Settlement failed",
@@ -541,7 +548,7 @@ export async function settlePayment(
       return {
         success: false,
         errorReason: result.errorReason,
-        errorMessage: result.errorMessage,
+        errorMessage,
         payer: verifyResult.payer,
         // See SETTLEMENT_PENDING: the hash is what the caller reconciles against.
         transaction: pending ? (result.transaction ?? "") : "",
@@ -629,9 +636,12 @@ export async function settlePayment(
     // by sniffing the message — and sniffing once reported OUR wallet running out of gas
     // ("insufficient funds for gas") as the caller's fault.
     const payload = paymentPayload.payload as Record<string, unknown> | undefined;
-    // EIP-3009 shape only. Permit2 payloads (payer at permit2Authorization.from) are
-    // rejected at verify time (permit2_not_supported), so they never reach settle.
-    const authorization = payload?.authorization as Record<string, unknown> | undefined;
+    // The payer sits at authorization.from (EIP-3009) or permit2Authorization.from (Permit2).
+    // Permit2 wins when both shapes are present — the SDK's isPermit2Payload() discriminates
+    // the same way, so a crafted payload settling as Permit2 must be attributed to its payer,
+    // not to the EIP-3009 field paired with it.
+    const authorization = (payload?.permit2Authorization ?? payload?.authorization) as
+      Record<string, unknown> | undefined;
     const accepted = paymentPayload.accepted as Record<string, unknown> | undefined;
 
     return {

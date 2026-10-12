@@ -562,6 +562,37 @@ describe("the 402 challenge", () => {
     expect(resource.url).toMatch(/\/search$/);
   });
 
+  /** One bazaar block per route (docs.x402.org/extensions/bazaar): the block names the method
+   *  and the query parameters, and the two routes sell different things at different prices. */
+  test("declares a per-route bazaar block with the service metadata", async () => {
+    await handle(makeEvent("GET", "search", { auth: null, query: { q: "x402" } }), {});
+    await handle(
+      makeEvent("GET", "fetch", { auth: null, query: { url: "https://example.com/" } }),
+      {},
+    );
+
+    const searchOpts = mockCreateBatchSettlementPaymentRequirements.mock.calls[0][0] as {
+      extensions: {
+        bazaar: { info: { input: { method: string; queryParams: Record<string, unknown> } } };
+      };
+      serviceName: string;
+      tags: string[];
+      iconUrl: string;
+    };
+    const fetchOpts = mockCreateBatchSettlementPaymentRequirements.mock
+      .calls[1][0] as typeof searchOpts;
+
+    expect(searchOpts.extensions.bazaar.info.input.method).toBe("GET");
+    expect(Object.keys(searchOpts.extensions.bazaar.info.input.queryParams)).toEqual(["q"]);
+    expect(fetchOpts.extensions.bazaar.info.input.method).toBe("GET");
+    expect(Object.keys(fetchOpts.extensions.bazaar.info.input.queryParams)).toEqual(["url"]);
+    for (const opts of [searchOpts, fetchOpts]) {
+      expect(opts.serviceName).toBe("Fretchen Web Access");
+      expect(opts.tags).toEqual(["search", "web", "x402"]);
+      expect(opts.iconUrl).toBe("https://web-agent.fretchen.eu/favicon.png");
+    }
+  });
+
   /** An unpaid request is quoted whatever its query says: a client probing for terms must not be
    *  told its query is malformed instead of being told the price. */
   test("quotes a price even when the query is invalid", async () => {

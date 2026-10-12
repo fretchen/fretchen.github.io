@@ -86,10 +86,21 @@ fallback (see `genimg_x402_token.ts`).
 - **The facilitator collects a fee** via `transferFrom(merchant, facilitator, fee)`, in the token
   the payment settled in — so the merchant needs one `approve()` **per token** it takes (USDC, and
   EURC on Base). Amounts live only in `website/pages/x402/sellers/`.
-- **Two stablecoins: USDC everywhere, EURC on Base and Base Sepolia only.** They are two parallel
-  price lists — every price is set in each token, never converted (see `scw_js/README.md` →
-  _Stablecoins and pricing_). On Base the 402 lists EURC first. That order is the seller's
-  preference; the buyer's choice is made by its own selector and spend controls.
+- **Three settlement tokens: USDC everywhere, EURC and EURe on Base and Base Sepolia.** They are
+  three parallel price lists — every price is set in each token, never converted (see
+  `scw_js/README.md` → _Stablecoins and pricing_). On Base the 402 lists EURe first
+  (`STABLECOIN_PREFERENCE`); that order is the seller's preference, and the buyer's choice is
+  made by its own selector and spend controls. EURe (Monerium, 18 decimals) has no EIP-3009,
+  so it is paid via **Permit2** (`exact`'s and batch-settlement's `permit2Authorization`, with
+  the 402 advertising `eip2612GasSponsoring`), and the 0.01 facilitator fee is `10¹⁶` atomic
+  units, a seller's fee approval `10¹⁸` (1 EURe). Domain `"Monerium EURe"`, version `"1"`.
+  Registered in `@fretchen/chain-utils` → `getSettlementTokens()` — the facilitator's fee
+  tokens, the sellers' offers, and the website's buyer side (`getSettlementTokens`/
+  `findSettlementToken`, default currency EURe with EURC and USDC one toggle away; its
+  spend-control cap is per-token, `10^decimals`) all read it. `getStablecoins()` remains
+  USDC+EURC only — nothing should read it for EURe. See `scw_js/README.md` → _Stablecoins
+  and pricing_ and _Known EURe Domain Names_, and `x402_facilitator/README.md` → _EURe via
+  Permit2_.
 
 ## Writing about x402 on the site
 

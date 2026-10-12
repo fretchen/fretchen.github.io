@@ -18,6 +18,10 @@ import { resolve } from "path";
 export default defineConfig({
   plugins: [
     mdx({
+      // website/prompts/ holds the assistant's system prompts, imported as plain text via
+      // `?raw` (utils/prompts.ts) — MDX must not compile them into React components.
+      // Mirrors vite.config.ts.
+      exclude: ["**/prompts/**"],
       remarkPlugins: [remarkFrontmatter, [remarkMdxFrontmatter, { name: "frontmatter" }], remarkGfm, remarkMath],
       rehypePlugins: [[rehypeKatex, { trust: true, strict: false, throwOnError: false }], rehypeMdxImportMedia],
     }),

@@ -192,9 +192,14 @@ export const FacilitatorFeesDisclosureSchema = z.object({
   asset: z
     .string()
     .describe(
-      '"settled": the fee is charged in the token the payment settles in (USDC, or EURC on Base).',
+      '"settled": the fee is charged in the token the payment settles in (USDC; EURC and EURe on Base).',
     ),
-  flatFee: z.string(),
+  flatFee: z
+    .string()
+    .describe(
+      "The nominal fee in `decimals` units. Tokens with more decimals are charged the same " +
+        "nominal amount in their own units — see `assets` for each token's exact atomic figure.",
+    ),
   decimals: z.number().int(),
   recipient: z
     .string()
@@ -211,6 +216,23 @@ export const FacilitatorFeesDisclosureSchema = z.object({
     spender: z.string(),
     recommended_amount: z.string(),
   }),
+  assets: z
+    .array(
+      z.object({
+        network: z.string().describe("CAIP-2 network id."),
+        asset: z.string().describe("Token contract address."),
+        symbol: z.string(),
+        decimals: z.number().int(),
+        flatFee: z.string().describe("The fee in this token's atomic units."),
+        recommended_amount: z
+          .string()
+          .describe("Recommended approve() amount in this token's atomic units (1 token)."),
+      }),
+    )
+    .describe(
+      "Every token the fee is charged in, per network, with the exact atomic fee and approval. " +
+        "EURe has 18 decimals, so its 0.01 fee is 10000000000000000, not the 10000 of USDC/EURC.",
+    ),
 });
 
 export type FacilitatorFeesDisclosure = z.infer<typeof FacilitatorFeesDisclosureSchema>;

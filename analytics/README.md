@@ -121,7 +121,7 @@ for recent days that aren't rolled up yet (capped by `HOURLY_FALLBACK_DAYS`,
 late or missed run changes what a query costs, never what it returns.
 
 `source` is per day, not per month, because the changeover month holds both
-kinds. Further seams are *not* marked by `source`: the beacon counts engaged
+kinds. Further seams are _not_ marked by `source`: the beacon counts engaged
 views rather than raw pageviews, first via a 3s dwell gate and — after a crawler
 simply out-waited it — via an interaction gate instead (`git log
 website/utils/hitTracker.ts` for the dates; the definition has moved twice while

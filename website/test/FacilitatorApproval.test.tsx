@@ -380,7 +380,7 @@ describe("FacilitatorApproval", () => {
 
     it("uses provided facilitator address without fetching", async () => {
       const { FacilitatorApproval } = await importComponent();
-      render(<FacilitatorApproval facilitatorAddress={"0xProvided" as `0x${string}`} />);
+      render(<FacilitatorApproval facilitatorAddress={"0xProvided"} />);
 
       // fetch should not be called for /supported
       await waitFor(() => {

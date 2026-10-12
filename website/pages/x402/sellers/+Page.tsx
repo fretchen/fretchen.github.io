@@ -99,7 +99,13 @@ export default function Page() {
             </li>
             <li>
               <strong>About 1 USDC</strong> of allowance for fees — USDC is a dollar stablecoin, pegged 1:1 to the US
-              dollar. That covers roughly 100 settlements.
+              dollar. That covers roughly 100 settlements. The fee is charged in the token each payment settles in, so a
+              token you also take in euros needs its own approval: 1 EURC for EURC, and for EURe{" "}
+              <strong>
+                1 EURe (10<sup>18</sup> atomic — 18 decimals, not 6)
+              </strong>{" "}
+              — a USDC-sized <code>1000000</code> allowance covers no EURe fee at all. The facilitator&apos;s{" "}
+              <code>/supported</code> lists every token&apos;s exact atomic fee and recommended approval.
             </li>
             <li>To rehearse on testnet: testnet ETH and a buyer holding testnet USDC — see below.</li>
           </ul>

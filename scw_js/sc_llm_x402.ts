@@ -1,10 +1,4 @@
-import {
-  callLLMAPI,
-  tokensToCost,
-  resolveModel,
-  advertisedModelIds,
-  type LLMMessage,
-} from "./llm_service.js";
+import { callLLMAPI, resolveModel, advertisedModelIds, type LLMMessage } from "./llm_service.js";
 import { parseJsonBody, CORS_HEADERS, errorResponse, openAiError } from "./utils.js";
 import { z } from "zod";
 import {
@@ -14,10 +8,12 @@ import {
   REJECTED_PARAMS,
   FORWARDED_OWN_KEYS,
   MAX_MESSAGES_BYTES,
+  MAX_PRICE_ATOMIC,
+  getSettleAmount,
 } from "./llm_schemas.js";
-import { isTestnet, type StablecoinSymbol } from "@fretchen/chain-utils";
+import { isTestnet } from "@fretchen/chain-utils";
 import { logger } from "./logger.js";
-import { offeredStablecoins, resolvePaidStablecoin, type PriceList } from "./stablecoin_pricing.js";
+import { offeredStablecoins, resolvePaidStablecoin } from "./stablecoin_pricing.js";
 import {
   createLLMResourceServer,
   createBatchSettlementPaymentRequirements,
@@ -36,6 +32,7 @@ import openapiSpec from "./openapi.llm.json" with { type: "json" };
 import { faviconBase64, faviconContentType } from "./favicon.js";
 import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
 import { AGENT_REGISTRATION_PATH, buildAgentRegistration } from "./agent_registration.js";
+import { buildLlmBazaarExtension } from "./bazaar_discovery.js";
 
 export type { ScwEvent };
 
@@ -59,8 +56,6 @@ interface ScwResponse {
 // with the ceiling amount, then pass a smaller usage-derived amount to settlePayment().
 // (The installed @x402/evm — 2.18.0 — exposes no higher-level helper for this; we call the
 // resourceServer verify/settle primitives directly.) See getSettleAmount() below.
-// See llm_service.ts's LLM_PROVIDERS for the provider registry.
-const LLM_PROVIDER = "mistral";
 
 // The request fields this endpoint consumes rather than passes on: model/messages it resolves and
 // validates itself, useDummyData/payment are vendor extensions, and stream/n/max_tokens are the
@@ -72,51 +67,15 @@ const STRIPPED_REQUEST_KEYS = new Set(
   Object.keys(LLMChatRequestSchema.shape).filter((key) => !FORWARDED_OWN_KEYS.has(key)),
 );
 
-// Raised from 2000 when tool support landed. Tool definitions and tool results are *input*
-// tokens, charged on every hop, and the ceiling is exhausted at ceiling_atomic / input_rate —
-// at 2000 that was 6000 input tokens, which an ordinary tool-using conversation reaches. Past it
-// getSettleAmount caps, and the operator absorbs the difference.
-//
-// Raising it costs plain-chat callers nothing: this is the *authorization* bound the 402
-// advertises and verifyPayment checks, while settlement is still usage-derived. It only means a
-// larger per-message voucher.
-//
-// Raised again from 6000 for multi-hop web research: a research turn carries notes plus the
-// latest fetched pages, and at 6000 (~18,000 input tokens) MAX_MESSAGES_BYTES had to stay at
-// 64 KB — six page reads. At 20000: ceiling = 20000 × $1.50/M = $0.03, covering ~60,000 input
-// tokens or ~20,000 output tokens. Raise it together with MAX_MESSAGES_BYTES, never alone.
-const MAX_TOKENS_PER_MESSAGE = process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE ?? "20000";
-// No real prompt/completion split exists yet for the ceiling, so price the entire
-// estimate as completion (output) tokens — the pricier of the two rates for a
-// provider with an asymmetric split like Mistral's. This guarantees the ceiling is
-// never an underestimate relative to whatever the real split turns out to be;
-// getSettleAmount's cap below still protects the ceiling from ever being exceeded.
-//
-// One ceiling per token, each priced on the provider's own rate card in that currency — two
-// parallel price systems, no conversion (see llm_service.ts).
-const maxPriceFor = (symbol: StablecoinSymbol): string =>
-  tokensToCost(
-    { prompt_tokens: 0, completion_tokens: MAX_TOKENS_PER_MESSAGE },
-    LLM_PROVIDER,
-    symbol,
-  ).toString();
-const MAX_PRICE_ATOMIC: PriceList = { USDC: maxPriceFor("USDC"), EURC: maxPriceFor("EURC") };
+// The per-message price ceiling, now shared with the MCP tool table — moved to `llm_schemas.ts`
+// (beside the schemas, like PRICE_ATOMIC in search_schemas.ts) so consumers that must not import
+// a handler still get the exact advertised price. The full derivation rationale lives there.
 
 /**
- * Real, usage-derived charge for this message in `symbol`'s atomic units, from that currency's
- * rate card, capped at the same currency's pre-authorized ceiling (`MAX_PRICE_ATOMIC`) — a
- * response that somehow runs over the estimate still settles for the max rather than aborting
- * with cap_exceeded; the difference is absorbed as under-billing, not a fund-safety issue (the
- * client is always protected by the voucher's signed ceiling).
+ * Real, usage-derived charge for this message in `symbol`'s atomic units — moved to
+ * `llm_schemas.ts` (beside MAX_PRICE_ATOMIC) so the MCP `chat_completion` tool settles with
+ * the identical formula. The full rationale lives there.
  */
-function getSettleAmount(
-  usage: { prompt_tokens: number; completion_tokens: number },
-  symbol: StablecoinSymbol,
-): string {
-  const actualCost = tokensToCost(usage, LLM_PROVIDER, symbol);
-  const maxCost = BigInt(MAX_PRICE_ATOMIC[symbol]);
-  return (actualCost > maxCost ? maxCost : actualCost).toString();
-}
 
 function isHexAddress(addr: unknown): addr is `0x${string}` {
   return typeof addr === "string" && /^0x[a-fA-F0-9]{40}$/.test(addr);
@@ -230,12 +189,19 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
       return errorResponse(500, "Server configuration error");
     }
     const paymentRequirements = await createBatchSettlementPaymentRequirements({
-      resourceUrl: event.path ?? process.env.LLM_SERVICE_URL ?? "https://api.example.com/llm",
+      // Absolute, from the committed spec's server URL (the same origin as iconUrl): the bazaar
+      // discovery validation rejects a relative resource ("resource must start with 'https://'
+      // when protocol type is http"), so a relative event.path here kept the route unindexable.
+      resourceUrl: `${openapiSpec.servers[0].url}/`,
       description: "AI Assistant chat message",
       mimeType: "application/json",
       price: MAX_PRICE_ATOMIC,
       payTo: receiverAddressForChallenge,
       scheme: challengeScheme,
+      extensions: buildLlmBazaarExtension(),
+      serviceName: "Fretchen AI Assistant",
+      tags: ["llm", "chat", "x402"],
+      iconUrl: `${openapiSpec.servers[0].url}/favicon.png`,
     });
     return create402Response(paymentRequirements);
   }
@@ -398,8 +364,7 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
   // Price the stablecoin the buyer's channel is in, not a fixed one: the requirements below must
   // match the 402 entry the client signed its channelConfig against.
   const accepted = (paymentPayload as Record<string, unknown>)["accepted"] as
-    | Record<string, unknown>
-    | undefined;
+    Record<string, unknown> | undefined;
   const coin = resolvePaidStablecoin(clientNetwork, accepted?.["asset"]);
   if (!coin) {
     logger.warn({ clientNetwork, asset: accepted?.["asset"] }, "Payment asset not offered");
@@ -473,7 +438,9 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     const paymentRequired = await resourceServer.createPaymentRequiredResponse(
       [paymentRequirements],
       {
-        url: event.path ?? process.env.LLM_SERVICE_URL ?? "https://api.example.com/llm",
+        // Same absolute resource as the challenge — the corrective 402 replaces it wholesale,
+        // and the two advertising the same resource differently is a client-side cache split.
+        url: `${openapiSpec.servers[0].url}/`,
         description: "AI Assistant chat message",
         mimeType: "application/json",
       },
@@ -552,71 +519,4 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     logger.error({ err: error }, "Settlement error");
     return errorResponse(402, `Settlement failed: ${(error as Error).message}`);
   }
-}
-
-if (process.env.NODE_ENV === "test" && !process.env.CI) {
-  import("dotenv").then((dotenv) => {
-    dotenv.config();
-    import("fastify").then((fastifyModule) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const fastify = (fastifyModule.default as any)({ bodyLimit: 10 * 1024 * 1024 });
-
-      import("@fastify/cors").then((corsModule) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        fastify.register((corsModule as any).default, {
-          origin: true,
-          methods: ["GET", "POST", "OPTIONS"],
-          allowedHeaders: "*",
-          exposedHeaders: ["Payment-Required", "PAYMENT-REQUIRED", "X-Payment", "PAYMENT-RESPONSE"],
-        });
-
-        import("@fastify/url-data").then((urlDataModule) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          fastify.register((urlDataModule as any).default);
-
-          fastify.addContentTypeParser(
-            "application/json",
-            { parseAs: "string" },
-            fastify.defaultTextParser,
-          );
-
-          fastify.route({
-            method: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-            url: "/*",
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            handler: async (request: any, reply: any) => {
-              try {
-                const event: ScwEvent = {
-                  httpMethod: request.method,
-                  headers: request.headers,
-                  body: request.body,
-                  path: request.url,
-                  queryStringParameters: request.query,
-                };
-                const result = await handle(event, {});
-                reply.status(result.statusCode ?? 200);
-                for (const [key, value] of Object.entries(result.headers ?? {})) {
-                  reply.header(key, value);
-                }
-                return result.body;
-              } catch (error) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                reply.status(500).send({ error: (error as any).message });
-              }
-            },
-          });
-
-          fastify.listen({ port: 8085, host: "0.0.0.0" }, (err: unknown, address: string) => {
-            if (err) {
-              // Local dev only — never deployed. Same phrase the other packages' local server
-              // bootstraps use; see EXEMPT in test/alert_coverage.test.ts.
-              logger.error({ err }, "Error starting local server");
-              process.exit(1);
-            }
-            logger.info({ address }, "Local server listening");
-          });
-        });
-      });
-    });
-  });
 }

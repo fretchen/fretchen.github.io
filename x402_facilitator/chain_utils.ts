@@ -11,7 +11,9 @@ import {
   tryGetEIP3009SplitterAddress,
   getUSDCAddress,
   getUSDCName,
+  getSettlementTokens,
   type Network,
+  type SettlementTokenInfo,
 } from "@fretchen/chain-utils";
 
 export interface ChainConfig {
@@ -66,4 +68,35 @@ export function getSupportedNetworks(): Network[] {
  */
 export function getBatchSettlementNetworks(): Network[] {
   return ["eip155:10", "eip155:8453", "eip155:84532"];
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Fee tokens — the tokens this facilitator settles and charges its fee in
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * How a buyer authorizes moving a token. USDC and EURC implement EIP-3009
+ * (`transferWithAuthorization`); EURe does not, so it is paid through Permit2 — with an EIP-2612
+ * permit to Permit2 bundled in, so the buyer needs no separate approval transaction.
+ * (Mirrored from @fretchen/chain-utils, where the registry lives.)
+ */
+export type TransferMethod = "eip3009" | "permit2";
+
+/** A token this facilitator settles and may charge its fee in (same shape as the shared registry's). */
+export type FeeToken = SettlementTokenInfo;
+
+/**
+ * Every token this facilitator settles on `network`, from the shared registry: USDC everywhere,
+ * EURC and EURe (Monerium, 18 decimals, paid via Permit2) on Base. The sellers (`scw_js`) read
+ * the same list for what they offer, so the facilitator never charges a fee in a token the
+ * sellers cannot be paid in.
+ */
+export function getFeeTokens(network: string): FeeToken[] {
+  return getSettlementTokens(network);
+}
+
+/** The fee token at `address` on `network`, case-insensitively; null for any other token. */
+export function findFeeToken(network: string, address: string): FeeToken | null {
+  const wanted = address.toLowerCase();
+  return getFeeTokens(network).find((token) => token.address.toLowerCase() === wanted) ?? null;
 }

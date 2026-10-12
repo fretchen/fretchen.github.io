@@ -103,7 +103,7 @@ describe("probeAccepts caching", () => {
       status,
       headers: { get: () => (accepts ? paymentRequiredHeader(accepts) : null) },
     }));
-    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+    vi.stubGlobal("fetch", fetchMock);
     return fetchMock;
   }
 
@@ -166,7 +166,7 @@ describe("precheckLlmV1Agent", () => {
           status: p.status,
           headers: { get: () => (p.accepts ? paymentRequiredHeader(p.accepts) : null) },
         };
-      }) as unknown as typeof fetch,
+      }),
     );
   }
 
@@ -242,7 +242,7 @@ describe("checkLlmV1Agent (build-your-own-agent diagnostic)", () => {
         if (p.throws) throw new TypeError("Failed to fetch");
         const headerValue = p.header !== undefined ? p.header : p.accepts ? paymentRequiredHeader(p.accepts) : null;
         return { status: p.status, headers: { get: () => headerValue } };
-      }) as unknown as typeof fetch,
+      }),
     );
   }
 
@@ -345,7 +345,7 @@ describe("fetchAgentRegistration", () => {
       if (response === "throws") throw new TypeError("Failed to fetch");
       return { ok: response.status >= 200 && response.status < 300, json: async () => response.body };
     });
-    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+    vi.stubGlobal("fetch", fetchMock);
     return fetchMock;
   }
 

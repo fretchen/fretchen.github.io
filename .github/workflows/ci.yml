@@ -48,6 +48,11 @@ jobs:
           cd website
           npm run lint
 
+      - name: Format
+        run: |
+          cd website
+          npm run format
+
       - name: Typecheck
         run: |
           cd website

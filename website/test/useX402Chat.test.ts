@@ -617,8 +617,8 @@ describe("useX402Chat", () => {
         ),
       );
 
-      // Default currency (EURC) — no third argument.
-      const { result } = renderHook(() => useX402Chat(NETWORK));
+      // Explicit EURC — the default is EURe now; this test's subject is EURC's error wording.
+      const { result } = renderHook(() => useX402Chat(NETWORK, undefined, "EURC"));
       let thrown: Error | undefined;
       await act(async () => {
         try {

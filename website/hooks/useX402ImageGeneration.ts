@@ -92,8 +92,8 @@ export function useX402ImageGeneration(currency: PaymentCurrency = DEFAULT_CURRE
         // Explicitly allowlist every stablecoin this site pays with — the SDK's default spend
         // controls reject Optimism USDC and all EURC otherwise. See x402SpendControls.ts.
         client.setSpendControls({ allowedAssets: buildStablecoinAllowedAssets() });
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment -- x402 SDK expects specific signer interface
-        registerExactEvmScheme(client, { signer: signer as any });
+
+        registerExactEvmScheme(client, { signer: signer });
 
         // === Make the paid request ===
         // Remove expectedChainId from request body (it's only for client-side validation)

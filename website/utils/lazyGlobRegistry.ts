@@ -56,5 +56,5 @@ export const loadLazyModuleFromDirectory = async (
     throw new Error(`Module not found: ${modulePath}. Available modules: ${available}`);
   }
 
-  return (await moduleLoader()) as { default: React.ComponentType };
+  return await moduleLoader();
 };

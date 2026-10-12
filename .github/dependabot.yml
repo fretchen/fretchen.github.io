@@ -10,6 +10,10 @@ updates:
       - "website"
       - "eth"
       - "scw_js"
+      - "x402_facilitator"
+      - "comment_service"
+      - "analytics"
+      - "shared/chain-utils"
     schedule:
       interval: "weekly"
     groups:

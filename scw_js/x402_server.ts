@@ -103,8 +103,16 @@ import type { FacilitatorFeeConfig } from "./fee_config.js";
  * Bounded to FEE_CONFIG_FETCH_TIMEOUT_MS: this is awaited once, before the per-network
  * claim loop even starts, so an unbounded fetch would stall every network's claim behind
  * it — the opposite of "advisory only" if the facilitator is merely slow, not down.
+ *
+ * 30s, not 5s: the facilitator is a serverless function that is cold at every scheduled cron
+ * run, and its first response takes ~15s (measured 2026-10-12: 3/3 cold runs aborted at
+ * the old 5s bound, silently disabling the fee-allowance early warning — the one signal
+ * before claims fail with insufficient_fee_allowance). 30s is a 2x margin over the worst
+ * observed cold start; the cost is only paid when the facilitator is actually slow, and
+ * once per run. No retry yet — the escalation trigger for adding one is a >30s timeout
+ * appearing in these logs. The SDK's own facilitator client allows 90s for the same reason.
  */
-const FEE_CONFIG_FETCH_TIMEOUT_MS = 5_000;
+const FEE_CONFIG_FETCH_TIMEOUT_MS = 30_000;
 
 export async function getFacilitatorFeeConfig(): Promise<FacilitatorFeeConfig | null> {
   try {

@@ -317,6 +317,9 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(body.resource.serviceName).toBe("Fretchen Image Generation");
       expect(body.resource.tags).toEqual(["image-generation", "x402", "nft"]);
       expect(body.resource.iconUrl).toBe("https://imagegen-agent.fretchen.eu/favicon.png");
+      // The bazaar discovery validation requires an absolute resource URL — a relative
+      // path keeps the route unindexable ("resource must start with 'https://'").
+      expect(body.resource.url).toBe("https://imagegen-agent.fretchen.eu/imagegen");
       // Buyer-flow guard: the challenge's terms are what they were before the block —
       // all four mainnet entries, all exact-scheme.
       expect(body.accepts).toHaveLength(4);

@@ -189,7 +189,10 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
       return errorResponse(500, "Server configuration error");
     }
     const paymentRequirements = await createBatchSettlementPaymentRequirements({
-      resourceUrl: event.path ?? process.env.LLM_SERVICE_URL ?? "https://api.example.com/llm",
+      // Absolute, from the committed spec's server URL (the same origin as iconUrl): the bazaar
+      // discovery validation rejects a relative resource ("resource must start with 'https://'
+      // when protocol type is http"), so a relative event.path here kept the route unindexable.
+      resourceUrl: `${openapiSpec.servers[0].url}/`,
       description: "AI Assistant chat message",
       mimeType: "application/json",
       price: MAX_PRICE_ATOMIC,
@@ -435,7 +438,9 @@ export async function handle(event: ScwEvent, _context: unknown): Promise<ScwRes
     const paymentRequired = await resourceServer.createPaymentRequiredResponse(
       [paymentRequirements],
       {
-        url: event.path ?? process.env.LLM_SERVICE_URL ?? "https://api.example.com/llm",
+        // Same absolute resource as the challenge — the corrective 402 replaces it wholesale,
+        // and the two advertising the same resource differently is a client-side cache split.
+        url: `${openapiSpec.servers[0].url}/`,
         description: "AI Assistant chat message",
         mimeType: "application/json",
       },

@@ -41,6 +41,7 @@ vi.mock("@x402/evm/batch-settlement/client", () => ({
 
 import {
   createPaidFetch,
+  minimumDepositAtomic,
   PaymentError,
   WebStorageClientChannelStorage,
   readChargedTotal,
@@ -119,6 +120,21 @@ describe("PaymentError", () => {
     expect(err.isDrainedChannel).toBe(false);
     expect(err.status).toBe(502);
     expect(err.body).toBe("<html>Bad Gateway</html>");
+  });
+});
+
+describe("minimumDepositAtomic", () => {
+  /**
+   * The floor is 0.50 in each token's own atomic units. The shipped bug hardcoded the
+   * 6-decimal figure, so EURe's floor was 5×10⁻¹³ EURe — a no-op that let every deposit
+   * collapse to the current request and prompted the wallet per paid call. The decimals
+   * come from the registry via CURRENCY_DECIMALS, so a future token cannot silently
+   * re-introduce this by having a third decimal count.
+   */
+  it("floors at 0.50 in each token's own atomic units", () => {
+    expect(minimumDepositAtomic("USDC")).toBe(500_000n);
+    expect(minimumDepositAtomic("EURC")).toBe(500_000n);
+    expect(minimumDepositAtomic("EURe")).toBe(500_000_000_000_000_000n);
   });
 });
 

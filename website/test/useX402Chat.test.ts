@@ -167,9 +167,7 @@ describe("useX402Chat", () => {
         "fetch",
         vi
           .fn()
-          .mockImplementation(() =>
-            Promise.resolve(new Response(JSON.stringify({ content: "hi" }), { status: 200 })),
-          ),
+          .mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ content: "hi" }), { status: 200 }))),
       );
 
       // Default currency: EURe, 18 decimals.
@@ -177,9 +175,9 @@ describe("useX402Chat", () => {
       await act(async () => {
         await eure.result.current.sendMessage([{ role: "user", content: "Hi" }]);
       });
-      const eureStrategy = mockBatchSettlementEvmScheme.mock.calls[0][1].depositStrategy as (
-        ctx: { minimumDepositAmount: string },
-      ) => string;
+      const eureStrategy = mockBatchSettlementEvmScheme.mock.calls[0][1].depositStrategy as (ctx: {
+        minimumDepositAmount: string;
+      }) => string;
 
       // Below the floor (the SDK's own ~1-3 cent default, or a single search's minimum):
       // clamp up to 0.50 EURe = 5×10^17 atomic.
@@ -197,9 +195,9 @@ describe("useX402Chat", () => {
       await act(async () => {
         await usdc.result.current.sendMessage([{ role: "user", content: "Hi" }]);
       });
-      const usdcStrategy = mockBatchSettlementEvmScheme.mock.calls[1][1].depositStrategy as (
-        ctx: { minimumDepositAmount: string },
-      ) => string;
+      const usdcStrategy = mockBatchSettlementEvmScheme.mock.calls[1][1].depositStrategy as (ctx: {
+        minimumDepositAmount: string;
+      }) => string;
       expect(usdcStrategy({ minimumDepositAmount: "15000" })).toBe("500000");
     });
 

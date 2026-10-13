@@ -157,28 +157,50 @@ describe("useX402Chat", () => {
       expect(mockSetSpendControls.mock.invocationCallOrder[0]).toBeLessThan(mockRegister.mock.invocationCallOrder[0]);
     });
 
-    it("deposit strategy floors deposits/top-ups at $0.50, ignoring the SDK's smaller default", async () => {
+    // The floor is 0.50 in the channel token's own atomic units. EURe (the hook's default
+    // currency) has 18 decimals, so its floor is 5×10^17 — the regression this guards against
+    // hardcoded the 6-decimal USDC figure, which made every EURe deposit one-search-sized and
+    // prompted the wallet on every paid call.
+    it("deposit strategy floors deposits/top-ups at 0.50 of the channel token, ignoring the SDK's smaller default", async () => {
+      // A fresh Response per call: this test runs two hooks, and a Response body is single-use.
       vi.stubGlobal(
         "fetch",
-        vi.fn().mockResolvedValue(new Response(JSON.stringify({ content: "hi" }), { status: 200 })),
+        vi
+          .fn()
+          .mockImplementation(() =>
+            Promise.resolve(new Response(JSON.stringify({ content: "hi" }), { status: 200 })),
+          ),
       );
 
-      const { result } = renderHook(() => useX402Chat(NETWORK));
+      // Default currency: EURe, 18 decimals.
+      const eure = renderHook(() => useX402Chat(NETWORK));
       await act(async () => {
-        await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+        await eure.result.current.sendMessage([{ role: "user", content: "Hi" }]);
       });
+      const eureStrategy = mockBatchSettlementEvmScheme.mock.calls[0][1].depositStrategy as (
+        ctx: { minimumDepositAmount: string },
+      ) => string;
 
-      const { depositStrategy } = mockBatchSettlementEvmScheme.mock.calls[0][1] as {
-        depositStrategy: (ctx: { minimumDepositAmount: string }) => string;
-      };
-
-      // Below the floor (e.g. the SDK's own ~1-3 cent default): clamp up to $0.50.
-      expect(depositStrategy({ minimumDepositAmount: "15000" })).toBe("500000");
+      // Below the floor (the SDK's own ~1-3 cent default, or a single search's minimum):
+      // clamp up to 0.50 EURe = 5×10^17 atomic.
+      expect(eureStrategy({ minimumDepositAmount: "10000000000000000" })).toBe("500000000000000000");
       // Above the floor (an unusually expensive top-up): the SDK requires >= this amount,
       // so it must be respected, not clamped down.
-      expect(depositStrategy({ minimumDepositAmount: "600000" })).toBe("600000");
+      expect(eureStrategy({ minimumDepositAmount: "600000000000000000" })).toBe("600000000000000000");
       // Exactly at the floor: either value is correct; assert it's still >= minimum.
-      expect(BigInt(depositStrategy({ minimumDepositAmount: "500000" }))).toBeGreaterThanOrEqual(500_000n);
+      expect(BigInt(eureStrategy({ minimumDepositAmount: "500000000000000000" }))).toBeGreaterThanOrEqual(
+        500_000_000_000_000_000n,
+      );
+
+      // A USDC channel keeps the 6-decimal floor: $0.50 = 500_000 atomic.
+      const usdc = renderHook(() => useX402Chat(NETWORK, undefined, "USDC"));
+      await act(async () => {
+        await usdc.result.current.sendMessage([{ role: "user", content: "Hi" }]);
+      });
+      const usdcStrategy = mockBatchSettlementEvmScheme.mock.calls[1][1].depositStrategy as (
+        ctx: { minimumDepositAmount: string },
+      ) => string;
+      expect(usdcStrategy({ minimumDepositAmount: "15000" })).toBe("500000");
     });
 
     it("reuses the same delegated voucher signer across multiple messages", async () => {

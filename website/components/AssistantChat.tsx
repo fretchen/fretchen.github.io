@@ -342,9 +342,9 @@ const CHAT_NETWORKS = ["eip155:10", "eip155:8453"] as const;
 
 // localStorage key for the user's explicit network choice. Worth persisting rather than
 // re-deriving from the wallet each visit: a channel is per (network, receiver) and each one
-// escrows MINIMUM_DEPOSIT_ATOMIC ($0.50, see useX402Chat). If the paid network drifted with
+// escrows 0.50 of the channel token (see useX402Chat). If the paid network drifted with
 // whatever chain the wallet happened to be on, a user would silently open a second channel
-// and lock a second $0.50 that only comes back via a refund or the 24h withdrawDelay.
+// and lock a second 0.50 that only comes back via a refund or the 24h withdrawDelay.
 const NETWORK_PREFERENCE_KEY = "x402-chat-network";
 
 /**

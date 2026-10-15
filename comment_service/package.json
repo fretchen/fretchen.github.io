@@ -39,7 +39,7 @@
     "eslint": "^10.0.0",
     "prettier": "^3.0.0",
     "serverless-scaleway-functions": ">=0.4.16",
-    "tsup": "^8.3.5",
+    "tsup": "^9.0.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.60.0",
     "vitest": "^4.1.11"

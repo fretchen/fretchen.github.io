@@ -37,6 +37,18 @@ import {
   type BundestaktResult,
 } from "../tools/bundestakt";
 import {
+  searchStopTool,
+  planJourneyTool,
+  getDeparturesTool,
+  fetchGeocode,
+  fetchStoptimes,
+  fetchPlan,
+  selectStops,
+  selectBoard,
+  selectJourneys,
+  type TransitousResult,
+} from "../tools/transitous";
+import {
   getAnalyticsTool,
   fetchStats,
   selectAnalytics,
@@ -95,7 +107,7 @@ import { PaymentError, readChargedTotal } from "../utils/x402PaidFetch";
  * requirement; analytics is about honesty — a figure about this site should say it was looked up
  * rather than read as something the model knew.
  */
-type ToolSource = "bundestakt" | "analytics" | "brave";
+type ToolSource = "bundestakt" | "transitous" | "analytics" | "brave";
 
 /**
  * Everything offered to the model, with what the chat loop needs to know about a tool besides its
@@ -160,6 +172,41 @@ export const TOOL_REGISTRY = [
     defaultAgentOnly: false,
     paid: false,
     source: "bundestakt",
+  },
+  // Transitous, the same UX decision as the Bundestakt pair above: three tools and schemas
+  // the model calls separately, one shared row for the visitor (labelled by the group key's
+  // locale value, "Mit Zug & Bus"/"Train & bus" — modes, not the project name, which says
+  // nothing to a visitor), collapsed by `group`. The row's description comes from the first
+  // member (see `toolSelectorOptions`), so `searchStopTool`'s pair below stands for all three.
+  {
+    tool: searchStopTool,
+    label: "assistent.toolTransitSearch",
+    description: "assistent.toolTransitSearchDesc",
+    group: "assistent.capTransitous",
+    ownerScope: null,
+    defaultAgentOnly: false,
+    paid: false,
+    source: "transitous",
+  },
+  {
+    tool: planJourneyTool,
+    label: "assistent.toolTransitPlan",
+    description: "assistent.toolTransitPlanDesc",
+    group: "assistent.capTransitous",
+    ownerScope: null,
+    defaultAgentOnly: false,
+    paid: false,
+    source: "transitous",
+  },
+  {
+    tool: getDeparturesTool,
+    label: "assistent.toolTransitDepartures",
+    description: "assistent.toolTransitDeparturesDesc",
+    group: "assistent.capTransitous",
+    ownerScope: null,
+    defaultAgentOnly: false,
+    paid: false,
+    source: "transitous",
   },
   {
     tool: getPageTool,
@@ -466,9 +513,12 @@ export function AssistantChat() {
   const bundestaktSourceLabel = useLocale({ label: "assistent.bundestaktSource" });
   const analyticsSourceLabel = useLocale({ label: "assistent.analyticsSource" });
   const braveSourceLabel = useLocale({ label: "assistent.braveSource" });
+  const transitousSourceLabel = useLocale({ label: "assistent.transitousSource" });
   // Here rather than at module scope because the labels are translated per render.
   const sourceLinks: Record<ToolSource, { href: string; label: string }> = {
     bundestakt: { href: "https://www.bundestakt.de", label: bundestaktSourceLabel },
+    // Transitous's usage policy asks for visible attribution — this citation line is it.
+    transitous: { href: "https://transitous.org", label: transitousSourceLabel },
     analytics: { href: "/analytics", label: analyticsSourceLabel },
     brave: { href: "https://search.brave.com", label: braveSourceLabel },
   };
@@ -813,6 +863,90 @@ export function AssistantChat() {
   }
 
   /**
+   * Fetches and projects one Transitous endpoint (stop search, departure board, routing).
+   * `tools/transitous.ts` is stateless, so the caching policy lives here: geocode answers
+   * change rarely (24 h), a board goes stale within a minute (60 s), routing answers are
+   * keyed by the exact query (5 min) — politeness, not latency, since Transitous answers in
+   * well under a second. Unlike Bundestakt's `not_found`, a stop search without hits is
+   * still `status: "ok"` (empty list), so the tool stays on offer for a corrected spelling.
+   */
+  /**
+   * A tool argument the model sent as a non-string (or omitted) coerces to the empty string
+   * rather than to "[object Object]" — the empty-argument guards below turn that into a
+   * correctable bad_query answer instead of a request for a nonsense name.
+   */
+  const argString = (v: unknown): string => (typeof v === "string" ? v : "");
+
+  async function loadTransitous(
+    kind: "geocode" | "stoptimes" | "plan",
+    args: Record<string, unknown>,
+  ): Promise<ToolRunResult> {
+    // An empty required argument is an answer the model can act on, not a malfunction: fetching
+    // anyway would 4xx at the API, `fetch_failed` would withdraw the tool for the rest of the
+    // turn, and with it the one thing that fixes the mistake — a corrected query, a real stop
+    // id from search_stop. `recoverable` keeps the tool on offer for the retry.
+    if (kind === "geocode" && !argString(args.query)) {
+      return {
+        result: { status: "bad_query", reason: "search_stop needs a non-empty stop or station name to search for." },
+        recoverable: true,
+      };
+    }
+    if (kind === "stoptimes" && !argString(args.stop_id)) {
+      return {
+        result: { status: "bad_query", reason: "get_departures needs a stop id from search_stop." },
+        recoverable: true,
+      };
+    }
+    if (kind === "plan" && (!argString(args.from) || !argString(args.to))) {
+      return {
+        result: { status: "bad_query", reason: "plan_journey needs from and to stop ids from search_stop." },
+        recoverable: true,
+      };
+    }
+    try {
+      let result: TransitousResult;
+      if (kind === "geocode") {
+        const query = argString(args.query);
+        const raw = await queryClient.fetchQuery({
+          queryKey: ["transitous", "geocode", query],
+          queryFn: () => fetchGeocode(query),
+          staleTime: 24 * 60 * 60_000,
+          retry: 0,
+        });
+        result = selectStops(raw);
+      } else if (kind === "stoptimes") {
+        const stopId = argString(args.stop_id);
+        const time = typeof args.time === "string" ? args.time : undefined;
+        const raw = await queryClient.fetchQuery({
+          queryKey: ["transitous", "stoptimes", stopId, time ?? null],
+          queryFn: () => fetchStoptimes(stopId, undefined, time),
+          staleTime: 60_000,
+          retry: 0,
+        });
+        result = selectBoard(raw);
+      } else {
+        const from = argString(args.from);
+        const to = argString(args.to);
+        const departure = typeof args.departure === "string" ? args.departure : undefined;
+        const arriveBy = args.arrive_by === true;
+        const railOnly = args.rail_only === true;
+        const raw = await queryClient.fetchQuery({
+          queryKey: ["transitous", "plan", from, to, departure ?? null, arriveBy, railOnly],
+          queryFn: () =>
+            fetchPlan({ from, to, time: departure, arriveBy, transitModes: railOnly ? "RAIL" : undefined }),
+          staleTime: 5 * 60_000,
+          retry: 0,
+        });
+        result = selectJourneys(raw);
+      }
+      return { result };
+    } catch (err) {
+      // fetchQuery rethrows the fetcher's error; the module owns the wire-level failure shape.
+      return { result: fetchFailed(err) };
+    }
+  }
+
+  /**
    * Reads the site's own traffic figures. `GET /stats` takes no range and always returns the
    * trailing year, so it is fetched once and every `range` is a local slice of that one payload.
    *
@@ -987,6 +1121,9 @@ export function AssistantChat() {
   toolRunners[generateImageTool.function.name] = runImageToolHere;
   toolRunners[getSitzungenTool.function.name] = (args) => loadBundestakt("sitzungen", args);
   toolRunners[searchClaimsTool.function.name] = (args) => loadBundestakt("claims", args);
+  toolRunners[searchStopTool.function.name] = (args) => loadTransitous("geocode", args);
+  toolRunners[planJourneyTool.function.name] = (args) => loadTransitous("plan", args);
+  toolRunners[getDeparturesTool.function.name] = (args) => loadTransitous("stoptimes", args);
   toolRunners[getPageTool.function.name] = loadPage;
   toolRunners[searchWebTool.function.name] = loadSearch;
   toolRunners[fetchUrlTool.function.name] = loadFetch;

@@ -98,6 +98,9 @@ export default {
     toolWebSearch: "Im Web suchen",
     toolFetchUrl: "Links öffnen",
     toolSiteAnalytics: "Website-Statistik",
+    toolTransitSearch: "Haltestellen suchen",
+    toolTransitPlan: "Verbindungen planen",
+    toolTransitDepartures: "Abfahrten",
     // Eine Zeile pro Fähigkeit — der Anlass war ein Test, in dem jemand nicht wusste, was
     // "Bundestagssitzungen" bedeutet. Kurz und konkret, keine Fachbegriffe ohne Erklärung.
     toolImageGenerationDesc: "Erstellt ein Bild aus deiner Beschreibung.",
@@ -110,10 +113,23 @@ export default {
     toolWebSearchDesc: "Sucht aktuelle Informationen im Internet.",
     toolFetchUrlDesc: "Liest eine Seite, die du verlinkst.",
     toolSiteAnalyticsDesc: "Wie oft diese Website besucht wird.",
+    // Die hier ist die, die tatsächlich angezeigt wird: die zusammengefasste Fahrplan-Zeile
+    // in ToolSelector kommt vom ersten Eintrag der Gruppe (siehe TOOL_REGISTRY), und das
+    // ist dieser — sie beschreibt deshalb die ganze Fähigkeit und nennt die Verkehrsmittel,
+    // weil das Zeilenlabel ("Fahrplan") bewusst gattungsneutral bleibt.
+    toolTransitSearchDesc:
+      "Züge, Busse und Fähren in ganz Europa – Verbindungen und Abfahrten, mit Echtzeit, wo Betreiber sie liefern.",
+    toolTransitPlanDesc: "Plant eine Verbindung von Tür zu Tür – Züge, Busse, Fähren.",
+    toolTransitDeparturesDesc: "Die nächsten Abfahrten einer Haltestelle.",
     // Zeilentitel für die zusammengefasste Zeile in ToolSelector (get_sitzungen +
     // search_claims). Eigener Name statt "Bundestagssitzungen": kurz, ein Eigenname, den
     // niemand nachschlagen muss — die Beschreibung darunter erklärt, was es tut.
     capBundestag: "Bundestag",
+    // Zeilentitel für die zusammengefasste Zeile (search_stop + plan_journey +
+    // get_departures). Bewusst kein Eigenname wie bei capBundestag ("Bundestag" kennt jeder,
+    // "Transitous" niemand) und auch nicht "Fahrplan" — ein Zeitplan ist auch das Konzert-
+    // Programm; "Mit Zug & Bus" nennt die Verkehrsmittel, die Fähre nennt die Beschreibung.
+    capTransitous: "Mit Zug & Bus",
     emptyState: "Starte eine Unterhaltung, indem du unten eine Nachricht eingibst.",
     doorIntro: "Hallo — ich bin der KI-Assistent dieser Website.",
     doorCan:
@@ -161,6 +177,7 @@ export default {
     bundestaktSource: "Quelle: Bundestakt",
     analyticsSource: "Quelle: Analytics",
     braveSource: "Quelle: Brave Search",
+    transitousSource: "Quelle: Transitous",
     errorPrefix: "Fehler:",
     unknownError: "Unbekannter Fehler",
     loading: "Lädt...",

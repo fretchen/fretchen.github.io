@@ -1,0 +1,524 @@
+[
+  {
+    "type": "STOP",
+    "name": "Heidelberg Hbf",
+    "id": "de-DELFI_de:08221:1160",
+    "lat": 49.40357,
+    "lon": 8.675442000000002,
+    "country": "DE",
+    "zip": "69115",
+    "tz": "Europe/Berlin",
+    "areas": [
+      {
+        "name": "Deutschland",
+        "adminLevel": 2,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "Baden-Württemberg",
+        "adminLevel": 4,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "Regierungsbezirk Karlsruhe",
+        "adminLevel": 5,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "Heidelberg",
+        "adminLevel": 6,
+        "matched": false,
+        "unique": true,
+        "default": true
+      },
+      {
+        "name": "Weststadt",
+        "adminLevel": 9,
+        "matched": false,
+        "unique": false,
+        "default": false
+      }
+    ],
+    "score": -32.124732971191406,
+    "modes": [
+      "HIGHSPEED_RAIL",
+      "LONG_DISTANCE",
+      "COACH",
+      "RIDE_SHARING",
+      "REGIONAL_RAIL",
+      "SUBURBAN",
+      "TRAM",
+      "BUS",
+      "ODM"
+    ],
+    "importance": 0.003857618197798729
+  },
+  {
+    "type": "PLACE",
+    "category": "hotel_16",
+    "name": "ibis Heidelberg Hauptbahnhof",
+    "id": "way/[87645977]",
+    "lat": 49.4036051,
+    "lon": 8.6767446,
+    "country": "DE",
+    "zip": "69115",
+    "tz": "Europe/Berlin",
+    "areas": [
+      {
+        "name": "Deutschland",
+        "adminLevel": 2,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "Baden-Württemberg",
+        "adminLevel": 4,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "Regierungsbezirk Karlsruhe",
+        "adminLevel": 5,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "Heidelberg",
+        "adminLevel": 6,
+        "matched": false,
+        "unique": true,
+        "default": true
+      },
+      {
+        "name": "Weststadt",
+        "adminLevel": 9,
+        "matched": false,
+        "unique": false,
+        "default": false
+      }
+    ],
+    "score": -27.5
+  },
+  {
+    "type": "STOP",
+    "name": "Bahnstadt, Hauptbahnhof Süd",
+    "id": "de-DELFI_de:08221:4272:1:TrRiO",
+    "lat": 49.40181,
+    "lon": 8.674195,
+    "country": "DE",
+    "zip": "69115",
+    "tz": "Europe/Berlin",
+    "areas": [
+      {
+        "name": "Deutschland",
+        "adminLevel": 2,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "Baden-Württemberg",
+        "adminLevel": 4,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "Regierungsbezirk Karlsruhe",
+        "adminLevel": 5,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "Heidelberg",
+        "adminLevel": 6,
+        "matched": true,
+        "unique": true,
+        "default": true
+      },
+      {
+        "name": "Bahnstadt",
+        "adminLevel": 9,
+        "matched": false,
+        "unique": false,
+        "default": false
+      }
+    ],
+    "score": -26.631120681762695,
+    "modes": ["TRAM", "BUS"],
+    "importance": 0.000045373457396635786
+  },
+  {
+    "type": "PLACE",
+    "category": "hotel_16",
+    "name": "Meininger Heidelberg Hauptbahnhof",
+    "id": "way/[753509904]",
+    "lat": 49.3987481,
+    "lon": 8.677719,
+    "country": "DE",
+    "zip": "69115",
+    "tz": "Europe/Berlin",
+    "areas": [
+      {
+        "name": "Deutschland",
+        "adminLevel": 2,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "Baden-Württemberg",
+        "adminLevel": 4,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "Regierungsbezirk Karlsruhe",
+        "adminLevel": 5,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "Heidelberg",
+        "adminLevel": 6,
+        "matched": false,
+        "unique": true,
+        "default": true
+      },
+      {
+        "name": "Weststadt",
+        "adminLevel": 9,
+        "matched": false,
+        "unique": false,
+        "default": false
+      }
+    ],
+    "score": -26.25
+  },
+  {
+    "type": "PLACE",
+    "category": "none",
+    "name": "Heidelberg Hauptbahnhof Ost",
+    "id": "node/[5795035409]",
+    "lat": 49.4044187,
+    "lon": 8.6780409,
+    "country": "DE",
+    "zip": "69115",
+    "tz": "Europe/Berlin",
+    "areas": [
+      {
+        "name": "Deutschland",
+        "adminLevel": 2,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "Baden-Württemberg",
+        "adminLevel": 4,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "Regierungsbezirk Karlsruhe",
+        "adminLevel": 5,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "Heidelberg",
+        "adminLevel": 6,
+        "matched": false,
+        "unique": true,
+        "default": true
+      },
+      {
+        "name": "Bergheim",
+        "adminLevel": 9,
+        "matched": false,
+        "unique": false,
+        "default": false
+      }
+    ],
+    "score": -24.75
+  },
+  {
+    "type": "STOP",
+    "name": "Hauptbahnhof Süd",
+    "id": "at-Railway-Current-Reference-Data-2026_de:09162:100:11:11",
+    "lat": 48.13988,
+    "lon": 11.557491,
+    "country": "DE",
+    "zip": "80335",
+    "tz": "Europe/Berlin",
+    "areas": [
+      {
+        "name": "Deutschland",
+        "adminLevel": 2,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "Bayern",
+        "adminLevel": 4,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "Oberbayern",
+        "adminLevel": 5,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "München",
+        "adminLevel": 6,
+        "matched": false,
+        "unique": true,
+        "default": true
+      },
+      {
+        "name": "Ludwigsvorstadt-Isarvorstadt",
+        "adminLevel": 9,
+        "matched": false,
+        "unique": false,
+        "default": false
+      }
+    ],
+    "score": -18.81806755065918,
+    "modes": ["HIGHSPEED_RAIL", "LONG_DISTANCE", "NIGHT_RAIL", "REGIONAL_RAIL", "SUBURBAN", "SUBWAY", "TRAM", "BUS"],
+    "importance": 0.021757638081908226
+  },
+  {
+    "type": "STOP",
+    "name": "Hauptbahnhof/ZOB",
+    "id": "at-Railway-Current-Reference-Data-2026_de:02000:10950:11:1",
+    "lat": 53.552475,
+    "lon": 10.008094999999999,
+    "level": -1,
+    "country": "DE",
+    "zip": "20099",
+    "tz": "Europe/Berlin",
+    "areas": [
+      {
+        "name": "Deutschland",
+        "adminLevel": 2,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "Hamburg",
+        "adminLevel": 4,
+        "matched": false,
+        "unique": true,
+        "default": true
+      },
+      {
+        "name": "Hamburg-Mitte",
+        "adminLevel": 9,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "St. Georg",
+        "adminLevel": 10,
+        "matched": false,
+        "unique": false,
+        "default": false
+      }
+    ],
+    "score": -18.813016891479492,
+    "modes": ["HIGHSPEED_RAIL", "LONG_DISTANCE", "COACH", "NIGHT_RAIL", "REGIONAL_RAIL", "SUBURBAN", "SUBWAY", "BUS"],
+    "importance": 0.021419377997517586
+  },
+  {
+    "type": "STOP",
+    "name": "Hauptbahnhof (tief)",
+    "id": "at-Railway-Current-Reference-Data-2026_de:08111:6115:1:1",
+    "lat": 48.784748,
+    "lon": 9.183216999999999,
+    "country": "DE",
+    "zip": "70173",
+    "tz": "Europe/Berlin",
+    "areas": [
+      {
+        "name": "Deutschland",
+        "adminLevel": 2,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "Baden-Württemberg",
+        "adminLevel": 4,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "Regierungsbezirk Stuttgart",
+        "adminLevel": 5,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "Stuttgart",
+        "adminLevel": 6,
+        "matched": false,
+        "unique": true,
+        "default": true
+      },
+      {
+        "name": "Stuttgart-Mitte",
+        "adminLevel": 9,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "Hauptbahnhof",
+        "adminLevel": 10,
+        "matched": false,
+        "unique": false,
+        "default": false
+      }
+    ],
+    "score": -18.504125595092773,
+    "modes": [
+      "HIGHSPEED_RAIL",
+      "LONG_DISTANCE",
+      "NIGHT_RAIL",
+      "RIDE_SHARING",
+      "REGIONAL_RAIL",
+      "SUBURBAN",
+      "SUBWAY",
+      "TRAM",
+      "BUS"
+    ],
+    "importance": 0.019253002479672432
+  },
+  {
+    "type": "STOP",
+    "name": "Wien Hauptbahnhof",
+    "id": "at-Railway-Current-Reference-Data-2026_Pat:49:1349",
+    "lat": 48.185190000000006,
+    "lon": 16.376413,
+    "level": 1,
+    "country": "AT",
+    "zip": "1100",
+    "tz": "Europe/Vienna",
+    "areas": [
+      {
+        "name": "Österreich",
+        "adminLevel": 2,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "Wien",
+        "adminLevel": 4,
+        "matched": false,
+        "unique": true,
+        "default": true
+      },
+      {
+        "name": "Favoriten",
+        "adminLevel": 9,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "Katastralgemeinde Favoriten",
+        "adminLevel": 10,
+        "matched": false,
+        "unique": false,
+        "default": false
+      }
+    ],
+    "score": -18.438060760498047,
+    "modes": [
+      "HIGHSPEED_RAIL",
+      "LONG_DISTANCE",
+      "COACH",
+      "NIGHT_RAIL",
+      "REGIONAL_RAIL",
+      "SUBURBAN",
+      "SUBWAY",
+      "TRAM",
+      "BUS"
+    ],
+    "importance": 0.017061332240700722
+  },
+  {
+    "type": "STOP",
+    "name": "Ulm Hauptbahnhof",
+    "id": "at-Railway-Current-Reference-Data-2026_de:08421:1008:31:1",
+    "lat": 48.399345000000004,
+    "lon": 9.982933000000001,
+    "country": "DE",
+    "zip": "89073",
+    "tz": "Europe/Berlin",
+    "areas": [
+      {
+        "name": "Deutschland",
+        "adminLevel": 2,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "Baden-Württemberg",
+        "adminLevel": 4,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "Regierungsbezirk Tübingen",
+        "adminLevel": 5,
+        "matched": false,
+        "unique": false,
+        "default": false
+      },
+      {
+        "name": "Ulm",
+        "adminLevel": 6,
+        "matched": false,
+        "unique": true,
+        "default": true
+      },
+      {
+        "name": "Mitte",
+        "adminLevel": 10,
+        "matched": false,
+        "unique": false,
+        "default": false
+      }
+    ],
+    "score": -18.104284286499023,
+    "modes": ["HIGHSPEED_RAIL", "LONG_DISTANCE", "COACH", "NIGHT_RAIL", "RIDE_SHARING", "REGIONAL_RAIL", "TRAM", "BUS"],
+    "importance": 0.005886611994355917
+  }
+]

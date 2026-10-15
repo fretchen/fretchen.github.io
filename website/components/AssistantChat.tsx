@@ -877,7 +877,10 @@ export function AssistantChat() {
    */
   const argString = (v: unknown): string => (typeof v === "string" ? v : "");
 
-  async function loadTransitous(kind: "geocode" | "stoptimes" | "plan", args: Record<string, unknown>): Promise<ToolRunResult> {
+  async function loadTransitous(
+    kind: "geocode" | "stoptimes" | "plan",
+    args: Record<string, unknown>,
+  ): Promise<ToolRunResult> {
     // An empty required argument is an answer the model can act on, not a malfunction: fetching
     // anyway would 4xx at the API, `fetch_failed` would withdraw the tool for the rest of the
     // turn, and with it the one thing that fixes the mistake — a corrected query, a real stop

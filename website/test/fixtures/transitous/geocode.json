@@ -155,10 +155,7 @@
       }
     ],
     "score": -26.631120681762695,
-    "modes": [
-      "TRAM",
-      "BUS"
-    ],
+    "modes": ["TRAM", "BUS"],
     "importance": 0.000045373457396635786
   },
   {
@@ -306,16 +303,7 @@
       }
     ],
     "score": -18.81806755065918,
-    "modes": [
-      "HIGHSPEED_RAIL",
-      "LONG_DISTANCE",
-      "NIGHT_RAIL",
-      "REGIONAL_RAIL",
-      "SUBURBAN",
-      "SUBWAY",
-      "TRAM",
-      "BUS"
-    ],
+    "modes": ["HIGHSPEED_RAIL", "LONG_DISTANCE", "NIGHT_RAIL", "REGIONAL_RAIL", "SUBURBAN", "SUBWAY", "TRAM", "BUS"],
     "importance": 0.021757638081908226
   },
   {
@@ -359,16 +347,7 @@
       }
     ],
     "score": -18.813016891479492,
-    "modes": [
-      "HIGHSPEED_RAIL",
-      "LONG_DISTANCE",
-      "COACH",
-      "NIGHT_RAIL",
-      "REGIONAL_RAIL",
-      "SUBURBAN",
-      "SUBWAY",
-      "BUS"
-    ],
+    "modes": ["HIGHSPEED_RAIL", "LONG_DISTANCE", "COACH", "NIGHT_RAIL", "REGIONAL_RAIL", "SUBURBAN", "SUBWAY", "BUS"],
     "importance": 0.021419377997517586
   },
   {
@@ -539,16 +518,7 @@
       }
     ],
     "score": -18.104284286499023,
-    "modes": [
-      "HIGHSPEED_RAIL",
-      "LONG_DISTANCE",
-      "COACH",
-      "NIGHT_RAIL",
-      "RIDE_SHARING",
-      "REGIONAL_RAIL",
-      "TRAM",
-      "BUS"
-    ],
+    "modes": ["HIGHSPEED_RAIL", "LONG_DISTANCE", "COACH", "NIGHT_RAIL", "RIDE_SHARING", "REGIONAL_RAIL", "TRAM", "BUS"],
     "importance": 0.005886611994355917
   }
 ]

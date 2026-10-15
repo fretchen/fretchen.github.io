@@ -184,7 +184,10 @@ export { fetchFailed } from "./failure";
 // --- Fetchers: plain fetch, no cache, throw on failure ---------------------------------------
 
 export class TransitousError extends Error {
-  constructor(message: string, readonly status: number | null = null) {
+  constructor(
+    message: string,
+    readonly status: number | null = null,
+  ) {
     super(message);
     this.name = "TransitousError";
   }
@@ -198,8 +201,7 @@ async function get<T>(path: string, params: Record<string, string | undefined>):
   return res.json() as Promise<T>;
 }
 
-export const fetchGeocode = (query: string): Promise<unknown> =>
-  get<unknown[]>("/v1/geocode", { text: query });
+export const fetchGeocode = (query: string): Promise<unknown> => get<unknown[]>("/v1/geocode", { text: query });
 
 export const fetchStoptimes = (stopId: string, n = MAX_BOARD_ROWS, time?: string): Promise<unknown> =>
   get<RawStoptimesResponse>("/v1/stoptimes", { stopId, n: String(n), time });
@@ -222,8 +224,7 @@ export const fetchPlan = (args: {
 
 // --- Selectors: pure, synchronous, operate on already-parsed JSON ---------------------------
 
-const minutesBetween = (a?: string, b?: string) =>
-  a && b ? Math.round((Date.parse(a) - Date.parse(b)) / 60000) : 0;
+const minutesBetween = (a?: string, b?: string) => (a && b ? Math.round((Date.parse(a) - Date.parse(b)) / 60000) : 0);
 
 const clip = (s: unknown, n = MAX_NAME_CHARS): string | null => {
   if (typeof s !== "string" || !s) return null;

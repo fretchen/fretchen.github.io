@@ -117,7 +117,8 @@ export default {
     // in ToolSelector kommt vom ersten Eintrag der Gruppe (siehe TOOL_REGISTRY), und das
     // ist dieser — sie beschreibt deshalb die ganze Fähigkeit und nennt die Verkehrsmittel,
     // weil das Zeilenlabel ("Fahrplan") bewusst gattungsneutral bleibt.
-    toolTransitSearchDesc: "Züge, Busse und Fähren in ganz Europa – Verbindungen und Abfahrten, mit Echtzeit, wo Betreiber sie liefern.",
+    toolTransitSearchDesc:
+      "Züge, Busse und Fähren in ganz Europa – Verbindungen und Abfahrten, mit Echtzeit, wo Betreiber sie liefern.",
     toolTransitPlanDesc: "Plant eine Verbindung von Tür zu Tür – Züge, Busse, Fähren.",
     toolTransitDeparturesDesc: "Die nächsten Abfahrten einer Haltestelle.",
     // Zeilentitel für die zusammengefasste Zeile in ToolSelector (get_sitzungen +

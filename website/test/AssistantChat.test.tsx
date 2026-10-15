@@ -906,9 +906,7 @@ describe("AssistantChat", () => {
       // (TOOL_REGISTRY's `group`, whose locale value is the row label), so one click
       // switches off all three wire names at once.
       fireEvent.click(screen.getAllByLabelText("Train & bus")[0]);
-      expect(window.localStorage.getItem("x402-chat-disabled-tools")).toBe(
-        "search_stop,plan_journey,get_departures",
-      );
+      expect(window.localStorage.getItem("x402-chat-disabled-tools")).toBe("search_stop,plan_journey,get_departures");
 
       sendUserMessage("Hi");
       await waitFor(() => expect(mockSendMessage).toHaveBeenCalledOnce());

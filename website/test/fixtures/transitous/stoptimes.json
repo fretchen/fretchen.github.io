@@ -50,10 +50,7 @@
         "pickupType": "NORMAL",
         "dropoffType": "NORMAL",
         "cancelled": false,
-        "modes": [
-          "TRAM",
-          "BUS"
-        ]
+        "modes": ["TRAM", "BUS"]
       },
       "tripTo": {
         "name": "Viernheim, Bahnhof",
@@ -70,11 +67,7 @@
         "pickupType": "NORMAL",
         "dropoffType": "NORMAL",
         "cancelled": false,
-        "modes": [
-          "TRAM",
-          "BUS",
-          "ODM"
-        ]
+        "modes": ["TRAM", "BUS", "ODM"]
       },
       "agencyId": "7911",
       "agencyName": "RNV HD-MA-Weinheim (Strab)",
@@ -145,9 +138,7 @@
         "pickupType": "NORMAL",
         "dropoffType": "NORMAL",
         "cancelled": false,
-        "modes": [
-          "BUS"
-        ]
+        "modes": ["BUS"]
       },
       "tripTo": {
         "name": "Heidelberg, Universitätsplatz",
@@ -161,9 +152,7 @@
         "pickupType": "NORMAL",
         "dropoffType": "NORMAL",
         "cancelled": false,
-        "modes": [
-          "BUS"
-        ]
+        "modes": ["BUS"]
       },
       "agencyId": "7915",
       "agencyName": "RNV Heidelberg (Bus)",
@@ -237,9 +226,7 @@
         "pickupType": "NORMAL",
         "dropoffType": "NORMAL",
         "cancelled": false,
-        "modes": [
-          "BUS"
-        ]
+        "modes": ["BUS"]
       },
       "tripTo": {
         "name": "Neuenheim, Schwimmbad",
@@ -256,9 +243,7 @@
         "pickupType": "NORMAL",
         "dropoffType": "NORMAL",
         "cancelled": false,
-        "modes": [
-          "BUS"
-        ]
+        "modes": ["BUS"]
       },
       "agencyId": "7915",
       "agencyName": "RNV Heidelberg (Bus)",
@@ -332,12 +317,7 @@
         "pickupType": "NORMAL",
         "dropoffType": "NORMAL",
         "cancelled": false,
-        "modes": [
-          "RIDE_SHARING",
-          "TRAM",
-          "BUS",
-          "ODM"
-        ]
+        "modes": ["RIDE_SHARING", "TRAM", "BUS", "ODM"]
       },
       "tripTo": {
         "name": "Weinheim, Alter OEG-Bahnhof",
@@ -354,12 +334,7 @@
         "pickupType": "NORMAL",
         "dropoffType": "NORMAL",
         "cancelled": false,
-        "modes": [
-          "RIDE_SHARING",
-          "TRAM",
-          "BUS",
-          "ODM"
-        ]
+        "modes": ["RIDE_SHARING", "TRAM", "BUS", "ODM"]
       },
       "agencyId": "7911",
       "agencyName": "RNV HD-MA-Weinheim (Strab)",
@@ -458,10 +433,7 @@
         "pickupType": "NORMAL",
         "dropoffType": "NORMAL",
         "cancelled": false,
-        "modes": [
-          "BUS",
-          "ODM"
-        ]
+        "modes": ["BUS", "ODM"]
       },
       "agencyId": "7927",
       "agencyName": "Busverkehr-Rhein-Neckar",
@@ -537,14 +509,7 @@
         "pickupType": "NORMAL",
         "dropoffType": "NORMAL",
         "cancelled": false,
-        "modes": [
-          "HIGHSPEED_RAIL",
-          "COACH",
-          "REGIONAL_RAIL",
-          "SUBURBAN",
-          "BUS",
-          "ODM"
-        ]
+        "modes": ["HIGHSPEED_RAIL", "COACH", "REGIONAL_RAIL", "SUBURBAN", "BUS", "ODM"]
       },
       "tripTo": {
         "name": "Karlsruhe Hauptbahnhof",
@@ -646,9 +611,7 @@
         "pickupType": "NORMAL",
         "dropoffType": "NORMAL",
         "cancelled": false,
-        "modes": [
-          "TRAM"
-        ]
+        "modes": ["TRAM"]
       },
       "tripTo": {
         "name": "Rohrbach, Süd",
@@ -665,10 +628,7 @@
         "pickupType": "NORMAL",
         "dropoffType": "NORMAL",
         "cancelled": false,
-        "modes": [
-          "TRAM",
-          "BUS"
-        ]
+        "modes": ["TRAM", "BUS"]
       },
       "agencyId": "7910",
       "agencyName": "RNV Heidelberg (Strab)",
@@ -772,14 +732,7 @@
         "pickupType": "NORMAL",
         "dropoffType": "NORMAL",
         "cancelled": false,
-        "modes": [
-          "HIGHSPEED_RAIL",
-          "COACH",
-          "REGIONAL_RAIL",
-          "SUBURBAN",
-          "BUS",
-          "ODM"
-        ]
+        "modes": ["HIGHSPEED_RAIL", "COACH", "REGIONAL_RAIL", "SUBURBAN", "BUS", "ODM"]
       },
       "agencyId": "10449",
       "agencyName": "DB Regio AG Mitte Region Südwest",

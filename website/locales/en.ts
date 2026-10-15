@@ -114,7 +114,8 @@ export default {
     // The one actually shown: the grouped timetable row's description comes from the first
     // entry in that group (see TOOL_REGISTRY), so this describes the whole capability and
     // names the modes — the row label stays deliberately generic.
-    toolTransitSearchDesc: "Trains, buses and ferries across Europe — journeys and departures, with live times where operators publish them.",
+    toolTransitSearchDesc:
+      "Trains, buses and ferries across Europe — journeys and departures, with live times where operators publish them.",
     toolTransitPlanDesc: "Plans a door-to-door journey — trains, buses, ferries.",
     toolTransitDeparturesDesc: "The next departures from a stop.",
     capBundestag: "Bundestag",

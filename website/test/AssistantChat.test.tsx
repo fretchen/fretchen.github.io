@@ -22,6 +22,9 @@ const mockGenerateImage = vi.fn();
 const {
   mockFetchSitzungen,
   mockFetchClaims,
+  mockFetchGeocode,
+  mockFetchStoptimes,
+  mockFetchPlan,
   mockFetchStats,
   mockFetchContentIndex,
   mockFetchPageHtml,
@@ -31,6 +34,9 @@ const {
 } = vi.hoisted(() => ({
   mockFetchSitzungen: vi.fn(),
   mockFetchClaims: vi.fn(),
+  mockFetchGeocode: vi.fn(),
+  mockFetchStoptimes: vi.fn(),
+  mockFetchPlan: vi.fn(),
   mockFetchStats: vi.fn(),
   mockFetchContentIndex: vi.fn(),
   mockFetchPageHtml: vi.fn(),
@@ -125,6 +131,17 @@ vi.mock("../tools/bundestakt", async (importOriginal) => {
   return { ...actual, fetchSitzungen: mockFetchSitzungen, fetchClaims: mockFetchClaims };
 });
 
+// Same for transitous: real selectors, stubbed fetchers.
+vi.mock("../tools/transitous", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../tools/transitous")>();
+  return {
+    ...actual,
+    fetchGeocode: mockFetchGeocode,
+    fetchStoptimes: mockFetchStoptimes,
+    fetchPlan: mockFetchPlan,
+  };
+});
+
 // Same treatment for analytics: real selector, stubbed fetcher.
 vi.mock("../tools/analytics", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../tools/analytics")>();
@@ -156,6 +173,9 @@ import { useWalletConnection } from "../hooks/useWalletConnection";
 import { useAutoNetwork } from "../hooks/useAutoNetwork";
 import sitzungenFixture from "./fixtures/bundestakt/sitzungen.json";
 import claimsFixture from "./fixtures/bundestakt/claims.json";
+import transitousGeocodeFixture from "./fixtures/transitous/geocode.json";
+import transitousStoptimesFixture from "./fixtures/transitous/stoptimes.json";
+import transitousPlanFixture from "./fixtures/transitous/plan.json";
 import { OWNER_SCOPES } from "../utils/getChain";
 import { PaymentError } from "../utils/x402PaidFetch";
 import { MAX_HOPS } from "../utils/toolLoop";
@@ -222,6 +242,9 @@ describe("AssistantChat", () => {
     mockSwitchImageIfNeeded.mockResolvedValue(true);
     mockFetchSitzungen.mockResolvedValue(sitzungenFixture);
     mockFetchClaims.mockResolvedValue(claimsFixture);
+    mockFetchGeocode.mockResolvedValue(transitousGeocodeFixture);
+    mockFetchStoptimes.mockResolvedValue(transitousStoptimesFixture);
+    mockFetchPlan.mockResolvedValue(transitousPlanFixture);
     mockFetchStats.mockResolvedValue(statsFixture());
     mockFetchContentIndex.mockResolvedValue([{ url: "/blog/36/", title: "My static site got a tool loop" }]);
     mockFetchSearch.mockResolvedValue({
@@ -777,6 +800,126 @@ describe("AssistantChat", () => {
       expect(mockFetchSitzungen).toHaveBeenCalledTimes(1);
     });
 
+    it("runs the Transitous search-then-plan chain silently and feeds the projection back", async () => {
+      // Free and read-only, like the Bundestakt lookups: no confirm card, no wallet gate.
+      mockSendMessage
+        .mockResolvedValueOnce(toolCallResponse("search_stop", { query: "Heidelberg Hbf" }))
+        .mockResolvedValueOnce(
+          toolCallResponse("plan_journey", { from: "de-DELFI_de:08221:1160", to: "it-trenitalia_01700:station" }),
+        )
+        .mockResolvedValueOnce(textResponse("The direct EC to Milano leaves at 20:07."));
+
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("How do I get from Heidelberg Hbf to Milano Centrale tomorrow?");
+
+      await waitFor(() => expect(mockSendMessage).toHaveBeenCalledTimes(3));
+      expect(screen.queryByRole("button", { name: /assistent\.toolConfirmGenerate/ })).not.toBeInTheDocument();
+      expect(mockFetchGeocode).toHaveBeenCalledTimes(1);
+      expect(mockFetchPlan).toHaveBeenCalledTimes(1);
+
+      // The tool turns carry the projected answers, not MOTIS's raw multi-hundred-KB reply.
+      const thirdConvo = mockSendMessage.mock.calls[2][0] as { role: string; content: string }[];
+      const toolResults = thirdConvo.filter((m) => m.role === "tool");
+      expect(toolResults).toHaveLength(2);
+      const stops = JSON.parse(toolResults[0].content) as { status: string; stops: { id: string }[] };
+      expect(stops.status).toBe("ok");
+      expect(stops.stops.length).toBeGreaterThan(0);
+      const journeys = JSON.parse(toolResults[1].content) as {
+        status: string;
+        itineraries: { legs: Record<string, unknown>[] }[];
+      };
+      expect(journeys.status).toBe("ok");
+      expect(journeys.itineraries.length).toBeGreaterThan(0);
+      for (const leg of journeys.itineraries.flatMap((it) => it.legs)) {
+        expect(leg.legGeometry).toBeUndefined();
+      }
+    });
+
+    it("withdraws a failed Transitous tool but keeps its siblings on offer", async () => {
+      mockFetchPlan.mockRejectedValue(new Error("Failed to fetch"));
+      mockSendMessage
+        .mockResolvedValueOnce(toolCallResponse("plan_journey", { from: "a", to: "b" }))
+        .mockResolvedValueOnce(textResponse("I could not reach the timetable."));
+
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("How do I get to Milano?");
+
+      await waitFor(() => expect(mockSendMessage).toHaveBeenCalledTimes(2));
+      const offered = (mockSendMessage.mock.calls[1][1] as { tools: { function: { name: string } }[] }).tools;
+      const names = offered.map((t) => t.function.name);
+      expect(names).not.toContain("plan_journey");
+      expect(names).toContain("search_stop");
+      expect(names).toContain("get_departures");
+    });
+
+    it("answers an empty Transitous argument with a recoverable bad_query, not a withdrawal", async () => {
+      // An empty required argument is the model's mistake to correct, not a malfunction of the
+      // tool: withdrawing search_stop would take away the one thing that fixes the next call.
+      mockSendMessage
+        .mockResolvedValueOnce(toolCallResponse("search_stop", {}))
+        .mockResolvedValueOnce(textResponse("Which station did you mean?"));
+
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("When does the next train leave?");
+
+      await waitFor(() => expect(mockSendMessage).toHaveBeenCalledTimes(2));
+      expect(mockFetchGeocode).not.toHaveBeenCalled();
+
+      const secondConvo = mockSendMessage.mock.calls[1][0] as { role: string; content: string }[];
+      const toolResult = secondConvo.find((m) => m.role === "tool");
+      expect(JSON.parse(toolResult!.content)).toMatchObject({ status: "bad_query" });
+
+      const offered = (mockSendMessage.mock.calls[1][1] as { tools: { function: { name: string } }[] }).tools;
+      expect(offered.map((t) => t.function.name)).toContain("search_stop");
+    });
+
+    it("credits Transitous after a successful lookup, but not after a failed one", async () => {
+      // Transitous's usage policy asks for visible attribution, so this line is an obligation,
+      // and equally one not to show when nothing was actually retrieved.
+      mockSendMessage
+        .mockResolvedValueOnce(toolCallResponse("search_stop", { query: "Heidelberg Hbf" }))
+        .mockResolvedValueOnce(textResponse("Heidelberg Hbf is Heidelberg's main station."));
+
+      const { unmount } = renderWithQuery(<AssistantChat />);
+      sendUserMessage("Where is Heidelberg Hbf?");
+      await waitFor(() => expect(screen.getByText("assistent.transitousSource")).toBeInTheDocument());
+      unmount();
+
+      vi.clearAllMocks();
+      mockSwitchIfNeeded.mockResolvedValue(true);
+      mockFetchGeocode.mockRejectedValue(new Error("Failed to fetch"));
+      mockSendMessage
+        .mockResolvedValueOnce(toolCallResponse("search_stop", { query: "Heidelberg Hbf" }))
+        .mockResolvedValueOnce(textResponse("I could not reach the timetable."));
+
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("Where is Heidelberg Hbf?");
+
+      await waitFor(() => expect(screen.getByText("I could not reach the timetable.")).toBeInTheDocument());
+      expect(screen.queryByText("assistent.transitousSource")).not.toBeInTheDocument();
+    });
+
+    it("switching the Transitous row off persists and reaches the next request", async () => {
+      renderWithQuery(<AssistantChat />);
+
+      // search_stop, plan_journey and get_departures present as one merged "Train & bus" row
+      // (TOOL_REGISTRY's `group`, whose locale value is the row label), so one click
+      // switches off all three wire names at once.
+      fireEvent.click(screen.getAllByLabelText("Train & bus")[0]);
+      expect(window.localStorage.getItem("x402-chat-disabled-tools")).toBe(
+        "search_stop,plan_journey,get_departures",
+      );
+
+      sendUserMessage("Hi");
+      await waitFor(() => expect(mockSendMessage).toHaveBeenCalledOnce());
+      const names = (mockSendMessage.mock.calls[0][1] as { tools: { function: { name: string } }[] }).tools.map(
+        (t) => t.function.name,
+      );
+      expect(names).not.toContain("search_stop");
+      expect(names).not.toContain("plan_journey");
+      expect(names).not.toContain("get_departures");
+    });
+
     it("keeps the image tool on offer when a Bundestakt lookup fails", async () => {
       // The regression this guards: a single shared `toolFailed` flag would have disabled
       // generate_image for the rest of the turn because an unrelated, free lookup failed.
@@ -801,13 +944,18 @@ describe("AssistantChat", () => {
       // be sent as `tools: []`. "Nothing left to offer" has to mean the key is absent.
       mockFetchSitzungen.mockRejectedValue(new Error("down"));
       mockFetchClaims.mockRejectedValue(new Error("down"));
+      mockFetchGeocode.mockRejectedValue(new Error("down"));
+      mockFetchStoptimes.mockRejectedValue(new Error("down"));
+      mockFetchPlan.mockRejectedValue(new Error("down"));
       // get_page, search_web and fetch_url are switched off rather than failed: every one of their
       // failures is recoverable by design — a different url, a different query, a different section
       // — so they are never withdrawn, and "everything on offer has failed" can only be reached
       // with them off the table to begin with.
       window.localStorage.setItem("x402-chat-disabled-tools", "get_page,search_web,fetch_url");
 
-      // All three in one hop: the two lookups fail on their own, the image tool via a cancel.
+      // All six in one hop: the five lookups fail on their own, the image tool via a cancel.
+      // The Transitous calls carry well-formed arguments, because an empty one would be a
+      // recoverable bad_query answer, not a failure — and the tool would stay on offer.
       mockSendMessage.mockResolvedValue({
         choices: [
           {
@@ -818,6 +966,9 @@ describe("AssistantChat", () => {
                 { id: "a", type: "function", function: { name: "get_sitzungen", arguments: "{}" } },
                 { id: "b", type: "function", function: { name: "search_claims", arguments: "{}" } },
                 { id: "c", type: "function", function: { name: "generate_image", arguments: "{}" } },
+                { id: "d", type: "function", function: { name: "search_stop", arguments: '{"query":"x"}' } },
+                { id: "e", type: "function", function: { name: "plan_journey", arguments: '{"from":"a","to":"b"}' } },
+                { id: "f", type: "function", function: { name: "get_departures", arguments: '{"stop_id":"x"}' } },
               ],
             },
             finish_reason: "tool_calls",

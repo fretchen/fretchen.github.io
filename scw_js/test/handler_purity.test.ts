@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
  * exists only for the local dev servers; when a handler imported it anyway (even inside
  * a NODE_ENV=test block), Dependabot reported payment-endpoint CVEs that looked
  * production-critical and every triage had to re-verify they were not. The local
- * servers live in dev_server_*.ts, which tsup never bundles.
+ * servers live in dev_server_*.ts, which tsdown never bundles.
  */
 
 const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));

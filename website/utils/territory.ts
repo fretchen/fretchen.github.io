@@ -4,11 +4,13 @@
  * Two page territories:
  *
  *   voice   — brand blue   writing and navigation: home, blog, quantum notes, articles
- *   explore — purple       the lab: the experiments, and every tool reachable from it
+ *   explore — purple       the tool pages: the lab and everything reachable from it,
+ *                           plus the assistant, which has its own nav entry
  *
- * Quantum is `voice`, not `explore`: it is writing, the same as the blog. And the lab's
+ * Quantum is `voice`, not `explore`: it is writing, the same as the blog. The lab's
  * children (`/imagegen`, `/x402`, …) carry the lab's hue — they *are* its contents, so
- * following a card from `/lab` must not change colour.
+ * following a card from `/lab` must not change colour. The assistant is not a lab
+ * child anymore, but it is a tool page all the same, so it keeps the same hue.
  *
  * Orange is deliberately absent here. It means value exchange — collect, support, tip, pay
  * — which is a property of *actions*, not of pages, so it lives on buttons only. Using it

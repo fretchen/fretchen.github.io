@@ -1,3 +1,3 @@
 export function title() {
-  return "AI Assistant with USDC Payment Channels | fretchen.eu";
+  return "AI Assistant with Stablecoin Payment Channels | fretchen.eu";
 }

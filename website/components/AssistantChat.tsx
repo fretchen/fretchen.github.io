@@ -1,6 +1,7 @@
 /**
  * AssistantChat — the interactive core of the x402 batch-settlement chat assistant
- * (`/assistent`). Pays per message via `useX402Chat` (USDC payment channels): the
+ * (`/assistent`). Pays per message via `useX402Chat` (stablecoin payment channels —
+ * EURe by default, EURC and USDC one toggle away): the
  * first message opens a channel (one wallet-signed deposit), later messages are
  * off-chain voucher signatures reusing the open channel.
  */

@@ -45,6 +45,7 @@ import {
   PaymentError,
   WebStorageClientChannelStorage,
   readChargedTotal,
+  readFundableTokens,
 } from "../utils/x402PaidFetch";
 import { formatSpend } from "../utils/x402Prices";
 
@@ -353,5 +354,53 @@ describe("formatSpend", () => {
   it("shows atomic units in the IMAGE_PRICE shape, to a tenth of a cent", () => {
     expect(formatSpend(52_340n, "USDC")).toBe("$0.052 USDC");
     expect(formatSpend(1_000n, "EURC")).toBe("€0.001 EURC");
+  });
+});
+
+describe("readFundableTokens", () => {
+  // Base carries all three settlement tokens; the addresses are chain-utils' own.
+  const BASE_EURE = "0xbf6e2966A9C3D99C9E4D069E04f7Bdb9C8aa762C";
+  const BASE_EURC = "0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42";
+  const BASE_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+  const wallet = "0x1234567890123456789012345678901234567890" as `0x${string}`;
+
+  /** A public client that answers `balanceOf` from a per-address table. */
+  function clientWith(balances: Record<string, bigint | "boom">) {
+    return {
+      readContract: vi.fn(async ({ address }: { address: string }) => {
+        const balance = balances[address];
+        if (balance === "boom") throw new Error("RPC down");
+        return balance;
+      }),
+    };
+  }
+
+  it("funds only the tokens whose wallet balance covers the deposit floor", async () => {
+    // 0 EURe, 1.00 EURC (>= 0.50), 0.10 USDC (< 0.50).
+    const client = clientWith({
+      [BASE_EURE]: 0n,
+      [BASE_EURC]: 1_000_000n,
+      [BASE_USDC]: 100_000n,
+    });
+
+    const fundable = await readFundableTokens(wallet, client, "eip155:8453");
+
+    expect(fundable("EURe")).toBe(false);
+    expect(fundable("EURC")).toBe(true);
+    expect(fundable("USDC")).toBe(false);
+  });
+
+  it("treats a failing read as unfunded — unknown must not trigger a fallback", async () => {
+    const client = clientWith({
+      [BASE_EURE]: "boom",
+      [BASE_EURC]: "boom",
+      [BASE_USDC]: "boom",
+    });
+
+    const fundable = await readFundableTokens(wallet, client, "eip155:8453");
+
+    expect(fundable("EURe")).toBe(false);
+    expect(fundable("EURC")).toBe(false);
+    expect(fundable("USDC")).toBe(false);
   });
 });

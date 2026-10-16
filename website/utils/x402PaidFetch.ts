@@ -1,4 +1,5 @@
 import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
+import { getSettlementTokens } from "@fretchen/chain-utils";
 import { buildStablecoinAllowedAssets } from "../hooks/x402SpendControls";
 import { CURRENCY_DECIMALS, preferCurrency, type PaymentCurrency } from "../hooks/x402Currency";
 // Type-only import — erased at compile time, so no @x402 runtime is pulled into SSR.
@@ -216,6 +217,53 @@ export function minimumDepositAtomic(currency: PaymentCurrency): bigint {
 }
 
 /**
+ * Which settlement tokens this wallet could fund a *new* channel deposit in — the funding
+ * facts behind `selectFundedCurrency` (hooks/x402Currency.ts). Reads `balanceOf` for every
+ * token registered on `network` (three parallel reads), and a token counts as fundable when
+ * the balance covers its `minimumDepositAtomic` floor — the same 0.50 the deposit itself
+ * would move, so the answer cannot drift from what the SDK will actually ask for.
+ *
+ * A failing read (RPC down, unknown token) counts as *unfunded*, never as "try another":
+ * "unknown" must not trigger a currency fallback, or a flaky RPC would silently switch the
+ * token the user chose. Per-call state by design — balances are read fresh at send time,
+ * never cached, matching the "in context of the action" rule of the chain switch.
+ *
+ * `publicClient` is `unknown` and cast inside, the file's own convention: viem's generic
+ * `readContract` cannot be matched structurally, and `createPaidFetch` casts the same value
+ * for the same reason (see the call at `toClientEvmSigner`).
+ */
+export async function readFundableTokens(
+  walletAddress: `0x${string}`,
+  // Unknown, cast below to the minimal shape actually called: viem's generic readContract
+  // cannot be matched structurally, and `createPaidFetch` accepts the same value as unknown
+  // for the same reason. The cast keeps this function any-free.
+  publicClient: unknown,
+  network: string,
+): Promise<(currency: PaymentCurrency) => boolean> {
+  const client = publicClient as { readContract: (call: unknown) => Promise<unknown> };
+  const tokens = getSettlementTokens(network);
+  const held = new Map<PaymentCurrency, bigint | null>();
+  await Promise.all(
+    tokens.map(async (token) => {
+      try {
+        const balance = await client.readContract({
+          address: token.address,
+          functionName: "balanceOf",
+          args: [walletAddress],
+        });
+        held.set(token.symbol, typeof balance === "bigint" ? balance : null);
+      } catch {
+        held.set(token.symbol, null);
+      }
+    }),
+  );
+  return (currency) => {
+    const balance = held.get(currency);
+    return balance !== undefined && balance !== null && balance >= minimumDepositAtomic(currency);
+  };
+}
+
+/**
  * Custom deposit sizing: always deposit/top-up to at least `minimumDepositAtomic(currency)`,
  * regardless of the SDK's default multiplier-of-ceiling formula — see that function's
  * comment for why a fixed floor is the right lever here, not `depositPolicy.depositMultiplier`
@@ -274,10 +322,17 @@ function describePaymentError(status: number, body: string, currency: PaymentCur
     return DRAINED_CHANNEL_MESSAGE.chat;
   }
   if (errorCode?.includes("insufficient_balance")) {
-    // The USDC.e note is USDC's alone: bridged EURC is not a thing people end up holding by accident.
+    // The switch hint is the actionable advice: the guarded-B fallback (useX402Chat) has
+    // already moved the send to a funded token when one exists, so reaching this message
+    // means either a race between the balance read and the deposit, or nothing funded — and
+    // the hint points at the one in-chat fix either way, instead of "go buy <currency>".
+    // Both variants are written to fit `describeFailure`'s 200-char cap: the hint is the part
+    // the model must not lose, and the USDC.e note is shortened, not the hint.
+    // (USDC's note is USDC's alone: bridged EURC is not a thing people end up holding by accident.)
+    const switchHint = "Alternatively, switch the payment currency in the assistant's advanced settings.";
     return currency === "USDC"
-      ? "Not enough USDC in your wallet to fund the payment channel. Note that only native USDC works — a bridged variant such as USDC.e cannot be used."
-      : `Not enough ${currency} in your wallet to fund the payment channel.`;
+      ? `Not enough USDC in your wallet to fund the payment channel. Note that only native USDC works, not USDC.e. ${switchHint}`
+      : `Not enough ${currency} in your wallet to fund the payment channel. ${switchHint}`;
   }
   return `Request failed: ${status} - ${body}`;
 }

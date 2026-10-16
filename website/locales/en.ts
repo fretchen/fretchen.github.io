@@ -169,6 +169,10 @@ export default {
     analyticsSource: "Source: Analytics",
     braveSource: "Source: Brave Search",
     transitousSource: "Source: Transitous",
+    // Guarded-B: when the preferred currency cannot fund the deposit, the chat pays with one
+    // the wallet holds — and says so here, instead of claiming you need to buy EURe first.
+    // The wallet signature remains the moment of consent.
+    walletFallback: "Paid with {used} — your wallet holds no {preferred}. Switch under Advanced.",
     errorPrefix: "Error:",
     unknownError: "Unknown error",
     loading: "Loading...",

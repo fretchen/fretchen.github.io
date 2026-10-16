@@ -17,8 +17,8 @@ import { useWalletClient } from "wagmi";
 import { getConfiguredPublicClient } from "./useConfiguredPublicClient";
 import { useIsWalletConnected } from "./useIsWalletConnected";
 import { probeAccepts, negotiateNetwork, LLM_V1_FLOOR } from "./x402Discovery";
-import { DEFAULT_CURRENCY, offeredCurrency, type PaymentCurrency } from "./x402Currency";
-import { createPaidFetch, type PaidFetch } from "../utils/x402PaidFetch";
+import { DEFAULT_CURRENCY, offeredCurrency, offeredCurrencies, selectFundedCurrency, type PaymentCurrency } from "./x402Currency";
+import { createPaidFetch, readFundableTokens, type PaidFetch } from "../utils/x402PaidFetch";
 import type {
   X402ChatMessage,
   X402ChatResponse,
@@ -68,6 +68,14 @@ export interface UseX402ChatResult {
    * `currency` until the agent has been probed.
    */
   paymentCurrency: PaymentCurrency;
+  /**
+   * When the token this send would have paid in could not fund its deposit and another
+   * token the wallet holds and the agent offers was used instead: `{ preferred, used }`,
+   * per-payment and never persisted (the stored preference stays the user's alone). Null
+   * on every send that paid in the negotiated currency. The component announces it; the
+   * deposit signature was the consent gate.
+   */
+  currencyFallback: { preferred: PaymentCurrency; used: PaymentCurrency } | null;
 }
 
 /**
@@ -100,6 +108,11 @@ export function useX402Chat(
     currency: PaymentCurrency;
     network: string;
     paid: PaymentCurrency;
+  } | null>(null);
+  // The guarded-B fallback of the most recent send, or null — set per send, never persisted.
+  const [currencyFallback, setCurrencyFallback] = useState<{
+    preferred: PaymentCurrency;
+    used: PaymentCurrency;
   } | null>(null);
   const isCurrent =
     negotiated?.agentUrl === agentUrl && negotiated?.preferred === network && negotiated?.currency === currency;
@@ -155,10 +168,6 @@ export function useX402Chat(
       // that — proceed on the preferred network and let the real 402 be the judge.
       const payNetwork = resolved ?? network;
       const paid = offeredCurrency(accepts, payNetwork, currency) ?? currency;
-      setNegotiated({ agentUrl, preferred: network, currency, network: payNetwork, paid });
-      // Synchronously, unlike the state above: this turn's tool calls read it during the very
-      // loop this send belongs to, long before a re-render could deliver the state.
-      payRef.current = { network: payNetwork, currency };
 
       // A readContract-capable client is required: batch-settlement's corrective-402
       // recovery reads channel state on-chain, unlike the exact scheme. Resolved here, not
@@ -167,6 +176,27 @@ export function useX402Chat(
       if (!publicClient) {
         throw new Error(`No public client for network ${payNetwork}`);
       }
+
+      // Guarded-B currency fallback (selectFundedCurrency in x402Currency.ts): when the
+      // token this send would pay in cannot fund its deposit floor, pay in a token the
+      // wallet actually holds and the agent actually offers. `paid` is passed, not the raw
+      // preference, so the seller-side negotiation runs first — a fallback can only replace
+      // a token that could not pay anyway, and never chooses among funded options. The
+      // switch is never persisted, the deposit signature stays the consent gate, and the
+      // component announces the deviation via `currencyFallback`.
+      const candidates = offeredCurrencies(accepts, payNetwork);
+      const fundable =
+        candidates.length > 0
+          ? await readFundableTokens(walletClient.account.address, publicClient, payNetwork)
+          : () => false;
+      const effective = selectFundedCurrency(paid, candidates, fundable);
+      setCurrencyFallback(effective.fellBack ? { preferred: paid, used: effective.currency } : null);
+      setNegotiated({ agentUrl, preferred: network, currency, network: payNetwork, paid: effective.currency });
+      // Synchronously, unlike the state above: this turn's tool calls read it during the very
+      // loop this send belongs to, long before a re-render could deliver the state. The
+      // effective currency, not the preference — the tools must spend on the channel this
+      // turn actually opened.
+      payRef.current = { network: payNetwork, currency: effective.currency };
 
       setStatus("awaiting-signature");
       setError(null);
@@ -269,7 +299,18 @@ export function useX402Chat(
     setPaymentReceipt(null);
   }, []);
 
-  return { sendMessage, paidFetch, status, error, paymentReceipt, reset, isReady, paymentNetwork, paymentCurrency };
+  return {
+    sendMessage,
+    paidFetch,
+    status,
+    error,
+    paymentReceipt,
+    reset,
+    isReady,
+    paymentNetwork,
+    paymentCurrency,
+    currencyFallback,
+  };
 }
 
 export default useX402Chat;

@@ -178,6 +178,10 @@ export default {
     analyticsSource: "Quelle: Analytics",
     braveSource: "Quelle: Brave Search",
     transitousSource: "Quelle: Transitous",
+    // Guarded-B: wenn die bevorzugte Währung die Einzahlung nicht decken kann, zahlt der Chat
+    // automatisch mit einer, die die Wallet hält — und sagt es hier, statt zu behaupten, man
+    // müsse erst EURe kaufen. Die Wallet-Signatur bleibt der Moment der Zustimmung.
+    walletFallback: "Mit {used} gezahlt — deine Wallet hält kein {preferred}. Umstellen unter Erweitert.",
     errorPrefix: "Fehler:",
     unknownError: "Unbekannter Fehler",
     loading: "Lädt...",

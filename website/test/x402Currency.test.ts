@@ -9,9 +9,12 @@ import {
   DEFAULT_CURRENCY,
   PAYMENT_CURRENCIES,
   networksForCurrency,
+  offeredCurrencies,
   preferCurrency,
   readCurrency,
+  selectFundedCurrency,
   storeCurrency,
+  type PaymentCurrency,
 } from "../hooks/x402Currency";
 
 const BASE_EURE = "0xbf6e2966A9C3D99C9E4D069E04f7Bdb9C8aa762C" as const;
@@ -95,5 +98,58 @@ describe("preferCurrency selector", () => {
     expect(paid).toBe("EURe");
     preferCurrency("EURe", (p) => (paid = p))(2, accepts);
     expect(paid).toBe("EURe");
+  });
+});
+
+describe("selectFundedCurrency", () => {
+  /** `fundable` answers "can this token's wallet balance cover the deposit floor". */
+  const funded = (...held: PaymentCurrency[]) => (c: PaymentCurrency) => held.includes(c);
+  const all = ["EURe", "EURC", "USDC"] as const;
+
+  it("keeps the paid currency when it can fund the deposit", () => {
+    expect(selectFundedCurrency("EURe", all, () => true)).toEqual({ currency: "EURe", fellBack: false });
+  });
+
+  it("falls back to the first funded candidate in preference order — EURC before USDC", () => {
+    expect(selectFundedCurrency("EURe", all, funded("EURC", "USDC"))).toEqual({ currency: "EURC", fellBack: true });
+  });
+
+  it("skips an unfunded candidate to the next funded one", () => {
+    expect(selectFundedCurrency("EURe", all, funded("USDC"))).toEqual({ currency: "USDC", fellBack: true });
+  });
+
+  it("keeps today's behavior when nothing is fundable — the failure wording is then honest advice", () => {
+    expect(selectFundedCurrency("EURe", all, () => false)).toEqual({ currency: "EURe", fellBack: false });
+  });
+
+  it("keeps the paid currency when no candidates are offered", () => {
+    expect(selectFundedCurrency("USDC", [], () => true)).toEqual({ currency: "USDC", fellBack: false });
+  });
+
+  it("never picks a currency the seller does not offer, even when its balance would fund it", () => {
+    expect(selectFundedCurrency("EURe", ["USDC"], funded("EURe", "USDC"))).toEqual({ currency: "USDC", fellBack: true });
+  });
+});
+
+describe("offeredCurrencies", () => {
+  it("lists the seller's offered tokens on the network, in preference order", () => {
+    const accepts = [
+      accept("eip155:8453", BASE_USDC),
+      accept("eip155:8453", BASE_EURE),
+      accept("eip155:8453", BASE_EURC),
+    ];
+    expect(offeredCurrencies(accepts, "eip155:8453")).toEqual(["EURe", "EURC", "USDC"]);
+  });
+
+  it("ignores offers on other networks and tokens this site does not pay with", () => {
+    const accepts = [
+      accept("eip155:10", BASE_USDC),
+      accept("eip155:8453", "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85"), // not a settlement token
+    ];
+    expect(offeredCurrencies(accepts, "eip155:8453")).toEqual([]);
+  });
+
+  it("is empty for an unreadable offer — no candidates, no fallback", () => {
+    expect(offeredCurrencies(null, "eip155:8453")).toEqual([]);
   });
 });

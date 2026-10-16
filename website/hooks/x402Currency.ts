@@ -108,3 +108,47 @@ export function offeredCurrency(
   const first = onNetwork[0];
   return first ? currencyOf(first) : null;
 }
+
+/**
+ * The settlement currencies the agent offers on `network`, in `PAYMENT_CURRENCIES` order —
+ * the candidate list for `selectFundedCurrency`. A fallback is only ever chosen from what
+ * the seller actually takes, so a funded token it does not offer is never picked. Empty for
+ * an unreadable offer (`accepts === null`): with no candidates the fallback cannot fire,
+ * and the send proceeds exactly as before.
+ */
+export function offeredCurrencies(accepts: AcceptsEntry[] | null, network: string): PaymentCurrency[] {
+  if (!accepts) return [];
+  const onNetwork = accepts.filter((entry) => entry.network === network);
+  return PAYMENT_CURRENCIES.filter((currency) => onNetwork.some((entry) => currencyOf(entry) === currency));
+}
+
+/**
+ * The guarded-B currency fallback: pay in a token the wallet can actually fund, when the
+ * token the send would pay in cannot cover its deposit floor.
+ *
+ * Pure on purpose — the caller gathers the facts, this only decides:
+ * - `paid` is what the send would pay in after seller-side negotiation (`offeredCurrency`),
+ *   not the raw user preference.
+ * - `candidates` are the tokens the seller offers on the pay network, in
+ *   `PAYMENT_CURRENCIES` order (euro-first), so among two funded alternatives EURC beats USDC.
+ * - `fundable` answers "can the wallet balance cover this token's deposit floor".
+ *
+ * The rules, each of which is a guard agreed in the plan: the paid currency always wins when
+ * it can fund the deposit; a fallback is only ever chosen from what the seller actually offers
+ * (a fundable preference the seller does not take is unusable by construction); and when
+ * nothing is fundable the paid currency stands unchanged — the send then fails with a message
+ * that is honest exactly because this fallback ran first ("recharge" is only correct advice
+ * when no held token could fund it). A fallback never persists: the stored preference is the
+ * user's alone, and the deposit signature remains the consent gate for the new token.
+ */
+export function selectFundedCurrency(
+  paid: PaymentCurrency,
+  candidates: readonly PaymentCurrency[],
+  fundable: (currency: PaymentCurrency) => boolean,
+): { currency: PaymentCurrency; fellBack: boolean } {
+  if (candidates.includes(paid) && fundable(paid)) {
+    return { currency: paid, fellBack: false };
+  }
+  const funded = candidates.find((candidate) => fundable(candidate));
+  return funded ? { currency: funded, fellBack: true } : { currency: paid, fellBack: false };
+}

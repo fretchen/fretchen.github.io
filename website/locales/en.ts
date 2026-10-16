@@ -169,6 +169,7 @@ export default {
     analyticsSource: "Source: Analytics",
     braveSource: "Source: Brave Search",
     transitousSource: "Source: Transitous",
+    walletFallback: "Paid with {used} — your wallet holds no {preferred}. Switch under Advanced.",
     errorPrefix: "Error:",
     unknownError: "Unknown error",
     loading: "Loading...",

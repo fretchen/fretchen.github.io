@@ -1,6 +1,7 @@
 /**
  * AssistantChat — the interactive core of the x402 batch-settlement chat assistant
- * (`/assistent`). Pays per message via `useX402Chat` (USDC payment channels): the
+ * (`/assistent`). Pays per message via `useX402Chat` (stablecoin payment channels —
+ * EURe by default, EURC and USDC one toggle away): the
  * first message opens a channel (one wallet-signed deposit), later messages are
  * off-chain voucher signatures reusing the open channel.
  */
@@ -554,6 +555,10 @@ export function AssistantChat() {
   const networkFallbackLabel = useLocale({ label: "assistent.networkFallback" });
   const eurcBaseOnlyLabel = useLocale({ label: "payment.eurcBaseOnly" });
   const currencyFallbackLabel = useLocale({ label: "payment.currencyFallback" });
+  // The wallet-side note: guarded-B fell back to a token the wallet can fund. Named apart from
+  // `payment.currencyFallback` (the agent-side note below) because the reasons differ — "the
+  // agent doesn't take it" and "your wallet holds none of it" must not share a sentence.
+  const walletFallbackLabel = useLocale({ label: "assistent.walletFallback" });
 
   // Mobile detection
   React.useEffect(() => {
@@ -704,6 +709,7 @@ export function AssistantChat() {
     paymentReceipt,
     paymentNetwork,
     paymentCurrency,
+    currencyFallback,
     status: chatStatus,
   } = useX402Chat(desiredNetwork, agentUrl, currency);
   const { network, switchIfNeeded, getSwitchError } = useAutoNetwork([paymentNetwork]);
@@ -1413,8 +1419,10 @@ export function AssistantChat() {
               </p>
             )}
             {/* Separately from the network fallback above: the agent may accept the negotiated
-                network but only in the other currency (e.g. USDC-only on Base). */}
-            {paymentCurrency !== currency && (
+                network but only in the other currency (e.g. USDC-only on Base). Suppressed when
+                the wallet note is active — then the deviation is the wallet's, not the agent's,
+                and the wrong attribution would be worse than silence. */}
+            {paymentCurrency !== currency && !currencyFallback && (
               <p className={chat.networkNote}>
                 {currencyFallbackLabel} {paymentCurrency}.
               </p>
@@ -1597,6 +1605,17 @@ export function AssistantChat() {
                   </div>
                 </div>
               ))
+            )}
+
+            {currencyFallback && (
+              // One honest line when the send switched token: the deviation is announced, the
+              // stored preference stays untouched (the hook never persists a fallback), and
+              // the line quietly teaches where the currency setting lives.
+              <div className={chat.messageSource}>
+                {walletFallbackLabel
+                  .replaceAll("{used}", currencyFallback.used)
+                  .replaceAll("{preferred}", currencyFallback.preferred)}
+              </div>
             )}
 
             {isLoading && (

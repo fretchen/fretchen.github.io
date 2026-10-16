@@ -58,6 +58,7 @@ vi.mock("../hooks/useX402Chat", () => ({
     isReady: true,
     paymentNetwork: "eip155:10",
     paymentCurrency: "USDC",
+    currencyFallback: null,
   })),
   DEFAULT_LLM_AGENT_URL: "https://llm-agent.fretchen.eu",
 }));
@@ -280,6 +281,7 @@ describe("AssistantChat", () => {
       isReady: true,
       paymentNetwork: "eip155:10",
       paymentCurrency: "USDC",
+      currencyFallback: null,
     });
     vi.mocked(useWalletConnection).mockReturnValue({
       address: "0x1234567890123456789012345678901234567890",
@@ -410,6 +412,7 @@ describe("AssistantChat", () => {
       isReady: true,
       paymentNetwork: "eip155:10",
       paymentCurrency: "USDC",
+      currencyFallback: null,
     });
     mockSendMessage.mockImplementation(() => new Promise(() => {})); // never resolves: stay loading
 
@@ -494,6 +497,7 @@ describe("AssistantChat", () => {
       isReady: true,
       paymentNetwork: "eip155:8453",
       paymentCurrency: "EURC",
+      currencyFallback: null,
     });
 
     renderWithQuery(<AssistantChat />);
@@ -571,6 +575,7 @@ describe("AssistantChat", () => {
       isReady: true,
       paymentNetwork: "eip155:8453",
       paymentCurrency: "EURC",
+      currencyFallback: null,
     });
     mockSendMessage.mockRejectedValueOnce(
       new PaymentError(402, JSON.stringify({ error: "insufficient_balance" }), "EURC"),
@@ -916,6 +921,34 @@ describe("AssistantChat", () => {
       expect(names).not.toContain("search_stop");
       expect(names).not.toContain("plan_journey");
       expect(names).not.toContain("get_departures");
+    });
+
+    it("announces a wallet-driven currency switch, and does not blame the agent for it", () => {
+      const { unmount } = renderWithQuery(<AssistantChat />);
+      expect(screen.queryByText(/assistent\.walletFallback/)).not.toBeInTheDocument();
+      unmount();
+
+      // EURe preferred, the wallet could only fund USDC — the hook fell back and reports it.
+      // paymentCurrency differs from the preference too, which alone would trigger the
+      // agent-side note; the wallet note must supersede it, or the UI would attribute the
+      // switch to the agent when it was the wallet.
+      vi.mocked(useX402Chat).mockReturnValue({
+        sendMessage: mockSendMessage,
+        paidFetch: mockPaidFetch,
+        status: "idle",
+        error: null,
+        paymentReceipt: null,
+        reset: vi.fn(),
+        isReady: true,
+        paymentNetwork: "eip155:10",
+        paymentCurrency: "USDC",
+        currencyFallback: { preferred: "EURe", used: "USDC" },
+      });
+
+      renderWithQuery(<AssistantChat />);
+
+      expect(screen.getByText(/assistent\.walletFallback/)).toBeInTheDocument();
+      expect(screen.queryByText(/payment\.currencyFallback/)).not.toBeInTheDocument();
     });
 
     it("keeps the image tool on offer when a Bundestakt lookup fails", async () => {
@@ -1532,6 +1565,7 @@ describe("AssistantChat", () => {
         isReady: true,
         paymentNetwork: "eip155:8453",
         paymentCurrency: "USDC",
+        currencyFallback: null,
       });
 
       renderWithQuery(<AssistantChat />);
@@ -1555,6 +1589,7 @@ describe("AssistantChat", () => {
         isReady: true,
         paymentNetwork: "eip155:8453",
         paymentCurrency: "USDC",
+        currencyFallback: null,
       });
 
       renderWithQuery(<AssistantChat />);

@@ -58,6 +58,16 @@ vi.mock("@x402/evm/batch-settlement/client", () => ({
     mockReadChannelBalanceAndTotalClaimed(signer, channelId),
 }));
 
+// The funding-facts reader is unit-tested in x402PaidFetch.test.ts; here its answer is
+// injected, so these tests cover exactly the wiring: candidates, selection, announcement
+// state, and what reaches createPaidFetch. vi.hoisted because the factory below spreads
+// this in immediately — a plain const is still uninitialised when the hoisted vi.mock runs.
+const mockReadFundableTokens = vi.hoisted(() => vi.fn());
+vi.mock("../utils/x402PaidFetch", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../utils/x402PaidFetch")>();
+  return { ...actual, readFundableTokens: mockReadFundableTokens };
+});
+
 const NETWORK = "eip155:84532";
 const mockWalletClient = {
   account: { address: "0x1234567890123456789012345678901234567890" },
@@ -71,6 +81,9 @@ describe("useX402Chat", () => {
     // Every case here probes the same agent URL; a cached hit would serve the previous case's
     // accepts[] and silently defeat the per-case fetch mocks.
     resetAcceptsCache();
+    // The default: everything fundable, so the paid currency always wins and the existing
+    // cases see today's behavior. Tests that need a fallback override this themselves.
+    mockReadFundableTokens.mockResolvedValue(() => true);
     mockGetPaymentSettleResponse.mockReturnValue({
       success: true,
       transaction: "0xdeposit",
@@ -951,6 +964,142 @@ describe("useX402Chat", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  describe("guarded-B currency fallback", () => {
+    // LLM_V1_FLOOR is mainnet-only, and mainnet Base is the one network carrying all three
+    // settlement tokens — so this describe negotiates on eip155:8453, not the Sepolia NETWORK
+    // the rest of the file uses.
+    const PAY_BASE = "eip155:8453";
+    // Base Sepolia's registered settlement tokens (chain-utils' own addresses) — the asset
+    // field is what maps an accepts entry to a currency the site can pay with.
+    const BASE_EURE = "0xbf6e2966A9C3D99C9E4D069E04f7Bdb9C8aa762C";
+    const BASE_EURC = "0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42";
+    const BASE_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+
+    const isProbe = (init?: RequestInit) => {
+      try {
+        return (JSON.parse(init?.body as string) as { model?: string }).model === "probe";
+      } catch {
+        return false;
+      }
+    };
+
+    /** An agent that 402s the probe with all three tokens offered on NETWORK, then succeeds. */
+    function stubAgentOfferingAllTokens() {
+      const accepts = [
+        { scheme: "batch-settlement", network: PAY_BASE, payTo: "0xabc", asset: BASE_EURE },
+        { scheme: "batch-settlement", network: PAY_BASE, payTo: "0xabc", asset: BASE_EURC },
+        { scheme: "batch-settlement", network: PAY_BASE, payTo: "0xabc", asset: BASE_USDC },
+      ];
+      const header = btoa(JSON.stringify({ accepts }));
+      vi.stubGlobal(
+        "fetch",
+        vi.fn((_input: string, init?: RequestInit) =>
+          Promise.resolve(
+            isProbe(init)
+              ? new Response("{}", { status: 402, headers: { "Payment-Required": header } })
+              : new Response(JSON.stringify({ content: "hi" }), { status: 200 }),
+          ),
+        ),
+      );
+    }
+
+    beforeEach(() => {
+      vi.mocked(useWalletClient).mockReturnValue(buildWalletClientData({ data: mockWalletClient }));
+      vi.mocked(useAccount).mockReturnValue(buildAccountData({ isConnected: true }));
+    });
+
+    it("keeps the paid currency and reports no fallback when it can fund the deposit", async () => {
+      stubAgentOfferingAllTokens();
+
+      const { result } = renderHook(() => useX402Chat(PAY_BASE));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+      });
+
+      expect(result.current.paymentCurrency).toBe("EURe");
+      expect(result.current.currencyFallback).toBeNull();
+    });
+
+    it("falls back to the first funded candidate and reports the deviation", async () => {
+      stubAgentOfferingAllTokens();
+      // EURe (the default and the paid currency) is unfunded; both EURC and USDC are funded,
+      // so the registry order picks EURC — the euro-first candidate.
+      mockReadFundableTokens.mockResolvedValue((c: string) => c === "EURC" || c === "USDC");
+
+      const { result } = renderHook(() => useX402Chat(PAY_BASE));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+      });
+
+      expect(result.current.paymentCurrency).toBe("EURC");
+      expect(result.current.currencyFallback).toEqual({ preferred: "EURe", used: "EURC" });
+    });
+
+    it("keeps today's behavior when nothing is fundable — the failure wording is then honest advice", async () => {
+      stubAgentOfferingAllTokens();
+      mockReadFundableTokens.mockResolvedValue(() => false);
+
+      const { result } = renderHook(() => useX402Chat(PAY_BASE));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+      });
+
+      expect(result.current.paymentCurrency).toBe("EURe");
+      expect(result.current.currencyFallback).toBeNull();
+    });
+
+    it("never reads balances when the agent offer is unreadable — unknown must not switch tokens", async () => {
+      // No 402 on the probe: accepts is null, candidates are empty, and the read is skipped.
+      vi.stubGlobal(
+        "fetch",
+        vi.fn((_input: string, init?: RequestInit) =>
+          Promise.resolve(
+            isProbe(init)
+              ? new Response("{}", { status: 200 })
+              : new Response(JSON.stringify({ content: "hi" }), { status: 200 }),
+          ),
+        ),
+      );
+
+      const { result } = renderHook(() => useX402Chat(PAY_BASE));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+      });
+
+      expect(mockReadFundableTokens).not.toHaveBeenCalled();
+      expect(result.current.paymentCurrency).toBe("EURe");
+      expect(result.current.currencyFallback).toBeNull();
+    });
+
+    it("does not fall back to a token the agent does not offer, even when it is the only funded one", async () => {
+      // The agent offers EURe and USDC only; EURC is funded but unofferable.
+      const accepts = [
+        { scheme: "batch-settlement", network: PAY_BASE, payTo: "0xabc", asset: BASE_EURE },
+        { scheme: "batch-settlement", network: PAY_BASE, payTo: "0xabc", asset: BASE_USDC },
+      ];
+      const header = btoa(JSON.stringify({ accepts }));
+      vi.stubGlobal(
+        "fetch",
+        vi.fn((_input: string, init?: RequestInit) =>
+          Promise.resolve(
+            isProbe(init)
+              ? new Response("{}", { status: 402, headers: { "Payment-Required": header } })
+              : new Response(JSON.stringify({ content: "hi" }), { status: 200 }),
+          ),
+        ),
+      );
+      mockReadFundableTokens.mockResolvedValue((c: string) => c === "EURC");
+
+      const { result } = renderHook(() => useX402Chat(PAY_BASE));
+      await act(async () => {
+        await result.current.sendMessage([{ role: "user", content: "Hi" }]);
+      });
+
+      expect(result.current.paymentCurrency).toBe("EURe");
+      expect(result.current.currencyFallback).toBeNull();
+    });
   });
 });
 

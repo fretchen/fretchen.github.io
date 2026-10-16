@@ -17,7 +17,13 @@ import { useWalletClient } from "wagmi";
 import { getConfiguredPublicClient } from "./useConfiguredPublicClient";
 import { useIsWalletConnected } from "./useIsWalletConnected";
 import { probeAccepts, negotiateNetwork, LLM_V1_FLOOR } from "./x402Discovery";
-import { DEFAULT_CURRENCY, offeredCurrency, offeredCurrencies, selectFundedCurrency, type PaymentCurrency } from "./x402Currency";
+import {
+  DEFAULT_CURRENCY,
+  offeredCurrency,
+  offeredCurrencies,
+  selectFundedCurrency,
+  type PaymentCurrency,
+} from "./x402Currency";
 import { createPaidFetch, readFundableTokens, type PaidFetch } from "../utils/x402PaidFetch";
 import type {
   X402ChatMessage,

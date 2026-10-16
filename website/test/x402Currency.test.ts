@@ -103,7 +103,10 @@ describe("preferCurrency selector", () => {
 
 describe("selectFundedCurrency", () => {
   /** `fundable` answers "can this token's wallet balance cover the deposit floor". */
-  const funded = (...held: PaymentCurrency[]) => (c: PaymentCurrency) => held.includes(c);
+  const funded =
+    (...held: PaymentCurrency[]) =>
+    (c: PaymentCurrency) =>
+      held.includes(c);
   const all = ["EURe", "EURC", "USDC"] as const;
 
   it("keeps the paid currency when it can fund the deposit", () => {
@@ -127,7 +130,10 @@ describe("selectFundedCurrency", () => {
   });
 
   it("never picks a currency the seller does not offer, even when its balance would fund it", () => {
-    expect(selectFundedCurrency("EURe", ["USDC"], funded("EURe", "USDC"))).toEqual({ currency: "USDC", fellBack: true });
+    expect(selectFundedCurrency("EURe", ["USDC"], funded("EURe", "USDC"))).toEqual({
+      currency: "USDC",
+      fellBack: true,
+    });
   });
 });
 

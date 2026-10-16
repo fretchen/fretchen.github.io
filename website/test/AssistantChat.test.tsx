@@ -1566,7 +1566,7 @@ describe("AssistantChat", () => {
         paymentNetwork: "eip155:8453",
         paymentCurrency: "USDC",
         currencyFallback: null,
-    });
+      });
 
       renderWithQuery(<AssistantChat />);
 
@@ -1590,7 +1590,7 @@ describe("AssistantChat", () => {
         paymentNetwork: "eip155:8453",
         paymentCurrency: "USDC",
         currencyFallback: null,
-    });
+      });
 
       renderWithQuery(<AssistantChat />);
 

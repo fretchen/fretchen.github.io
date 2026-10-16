@@ -62,6 +62,7 @@ export default function LayoutDefault({ children }: { children: React.ReactNode 
             <NavMark />
             <div className={layout.navigationLinks} ref={navigationRef}>
               <NavItem href="/blog">Blog</NavItem>
+              <NavItem href="/assistent">Assistant</NavItem>
               <NavItem href="/quantum">Quantum</NavItem>
               <NavItem href="/lab">Lab</NavItem>
               <OwnerNavLinks />

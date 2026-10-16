@@ -4,7 +4,7 @@
  * Extracted once `openapi.llm.json` became the second spec generated this way (genimg was the
  * first). Deliberately a **local module, not a `shared/` package**: the genuinely common surface is
  * ~20 lines, and a `shared/` package would add a `file:` build-ordering dependency to this
- * package's deploy path — `build` runs the generators before `tsup`, so an unbuilt shared package
+ * package's deploy path — `build` runs the generators before `tsdown`, so an unbuilt shared package
  * would break `npm run build` and `npm run deploy`. Promote it only when a third *package* needs it.
  * See `genimg-openai-compat-migration.md` §3.
  *

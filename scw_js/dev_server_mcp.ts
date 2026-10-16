@@ -1,5 +1,5 @@
 // Local dev server for the MCP endpoint. Runs only via `npm run dev:mcp`
-// (NODE_ENV=test npx tsx dev_server_mcp.ts) and is not in tsup's entry list, so it is
+// (NODE_ENV=test npx tsx dev_server_mcp.ts) and is not in tsdown's entry list, so it is
 // never bundled or deployed. It serves handle() over fastify on port 8086 — point the
 // MCP inspector (npx @modelcontextprotocol/inspector) at http://127.0.0.1:8086/mcp to
 // exercise initialize/tools/list/tools/call before any deploy. Deployed handlers must

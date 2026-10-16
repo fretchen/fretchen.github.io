@@ -5,7 +5,7 @@
   "type": "module",
   "main": "dist/analytics.js",
   "scripts": {
-    "build": "tsup",
+    "build": "tsdown",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -47,7 +47,7 @@
     "eslint": "^10.0.0",
     "prettier": "^3.0.0",
     "serverless-scaleway-functions": ">=0.4.16",
-    "tsup": "^9.0.0",
+    "tsdown": "^0.23.1",
     "tsx": "^4.23.5",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.60.0",

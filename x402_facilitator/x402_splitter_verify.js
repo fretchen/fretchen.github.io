@@ -9,7 +9,7 @@
  * See README → "Fee model history" for why the merchant-pays model won.
  *
  * Not deployed and not built: no function in `serverless.yml` routes here, and it is
- * excluded from the tsup `entry` list so it does not ship in the deploy archive.
+ * excluded from the tsdown `entry` list so it does not ship in the deploy archive.
  *
  * Retained, not dead: this is a working implementation of the alternative, and the
  * contract at 0x7e67bf96ADbf4a813DD7b0A3Ca3060a937018946 (Optimism Sepolia) is referenced

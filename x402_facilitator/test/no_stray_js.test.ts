@@ -21,7 +21,6 @@ const SKIP = new Set(["node_modules", "dist", "coverage", ".serverless", "notebo
 // The only `.js` files this package intentionally keeps, as paths relative to ROOT.
 const ALLOWED_JS = new Set([
   "eslint.config.js",
-  "tsup.config.js",
   "vitest.config.js",
   "vitest.integration.config.js",
   "x402_splitter_facilitator.js",

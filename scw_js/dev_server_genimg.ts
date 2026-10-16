@@ -1,5 +1,5 @@
 // Local dev server for the genimg x402 seller. Runs only via `npm run dev:x402`
-// (NODE_ENV=test npx tsx dev_server_genimg.ts) and is not in tsup's entry list, so it is
+// (NODE_ENV=test npx tsx dev_server_genimg.ts) and is not in tsdown's entry list, so it is
 // never bundled or deployed. It serves handle() over fastify on port 8082, with the
 // payment headers exposed for browser clients. Deployed handlers must stay free of
 // fastify — enforced by test/handler_purity.test.ts.

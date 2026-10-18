@@ -88,3 +88,26 @@ Tasks 1-5 of the port plan are done (scaffold, bundle gate, SigV4 spike, verbati
 tests, native routing + tests). Task 6 (deploy + trials) is pending user-side setup: bunny CLI
 install + login (or dashboard paste of `dist/index.js`), and the secrets above configured on
 the script. The formal switch (moving `web-agent.fretchen.eu` off Scaleway) is out of scope.
+
+## Deploy paths (both can coexist)
+
+Bunny publishes whichever deployment happened **last**, so a manual CLI deploy and the
+GitHub Action interoperate by design — deploy from the laptop for an experiment, and the
+next push to `main` overwrites it back to the committed state.
+
+1. **Manual (CLI):** `npm run deploy` (= build + `bunny scripts deploy dist/index.js`),
+   needs the bunny CLI — `curl -fsSL https://cli.bunny.net/install.sh | sh` (single binary,
+   independent of the nvm-managed Node that a global npm install would bind it to) — then
+   `bunny login`.
+2. **GitHub Actions:** `.github/workflows/deploy-bunny-js.yml` — on push to `main` touching
+   `bunny_js/**` or the shared libs, builds (with the repo's shared-deps-first ordering) and
+   publishes `dist/index.js` via the official `BunnyWay/actions/deploy-script` action.
+   Requires two repo secrets, both from the bunny dashboard
+   (**Script -> Deployments -> Settings**):
+   - `BUNNYJS_SCRIPT_ID` — the script's id
+   - `BUNNYJS_DEPLOY_KEY` — the per-script deploy key (deliberately chosen over the
+     account-wide API key the CLI-in-CI variant would need — narrower blast radius)
+
+The workflow ships code only; the script's environment variables and secrets are configured
+on the script itself (dashboard or `bunny scripts env set`), so a repo-side leak cannot leak
+the Brave key, the authorizer key, or the S3 channel-store credentials.

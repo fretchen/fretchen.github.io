@@ -70,15 +70,15 @@ false`; Node builtins stay external and MUST be imported through the `node:` pre
 
 ## Trial matrix (Task 6 — fill in as trials run)
 
-| #   | Check                                                                                                                                     | Result  |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| 1   | Unpaid `GET /search` at the bunny URL → 402 + `Payment-Required` header                                                                   | pending |
-| 2   | `GET /openapi.json`, `/.well-known/agent-registration.json`, `/favicon.png` at the bunny URL                                              | pending |
-| 3   | Deployed SigV4 probe (`scripts/sigv4_probe.ts` as its own script) against the real bucket                                                 | pending |
-| 4   | Paid `/fetch` ($0.001) — buyer: `scw_js/notebooks/search_x402_buyer.ipynb` with `SERVICE_URL` at the bunny URL → 200 + `Payment-Response` | pending |
-| 5   | Paid `/search` ($0.01) via the same notebook → 200 + results                                                                              | pending |
-| 6   | Channel record in S3 updated; next `llmx402cron` run claims it cleanly (observability logs)                                               | pending |
-| 7   | Cold-start spot checks at the bunny URL                                                                                                   | pending |
+| #   | Check                                                                                                                                                  | Result  |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- |
+| 1   | Unpaid `GET /search` at the bunny URL → 402 + `Payment-Required` header                                                                                | pending |
+| 2   | `GET /openapi.json`, `/.well-known/agent-registration.json`, `/favicon.png` at the bunny URL                                                           | pending |
+| 3   | Deployed SigV4 probe (`scripts/sigv4_probe.ts` as its own script) against the real bucket                                                              | pending |
+| 4   | Paid `/fetch` ($0.001) — buyer: `bunny_js/notebooks/search_x402_buyer.ipynb`, `SERVER` = "bunny-trial" with `TRIAL_URL` set → 200 + `Payment-Response` | pending |
+| 5   | Paid `/search` ($0.01) via the same notebook → 200 + results                                                                                           | pending |
+| 6   | Channel record in S3 updated; next `llmx402cron` run claims it cleanly (observability logs)                                                            | pending |
+| 7   | Cold-start spot checks at the bunny URL                                                                                                                | pending |
 
 Budget: ≤ ~$0.10 of real purchases.
 

@@ -111,3 +111,25 @@ next push to `main` overwrites it back to the committed state.
 The workflow ships code only; the script's environment variables and secrets are configured
 on the script itself (dashboard or `bunny scripts env set`), so a repo-side leak cannot leak
 the Brave key, the authorizer key, or the S3 channel-store credentials.
+
+## First deploy (one-time)
+
+`npm run deploy` alone fails the first time — it pushes to a remote script that must exist,
+and the `.bunny/script.json` link comes out of the create step. One-time sequence:
+
+1. `bunny scripts create --type standalone` — creates the remote script and links this
+   directory (writes `.bunny/script.json`, gitignored — machine-local, like the docs treat it).
+2. Upload the env from `.env` with `bunny scripts env set`, marking the sensitive keys with
+   `--secret` (RECEIVER_AUTHORIZER_PRIVATE_KEY, BRAVE_API_KEY, SCW_ACCESS_KEY, SCW_SECRET_KEY,
+   RPC_URL_*). Skip `TEST_WALLET_PRIVATE_KEY` — buyer-side only, the server must never see it.
+   Verify with `bunny scripts env list`.
+3. `npm run deploy` — builds, uploads, publishes; prints the live `*.bunny.run` URL.
+4. `bunny scripts env set SEARCH_SERVICE_URL https://<that-url>.bunny.run` and redeploy, so
+   the 402 advertises the trial origin instead of the parity default.
+5. Unpaid smoke: `curl -D - 'https://<that-url>.bunny.run/search?q=x402'` → 402 +
+   `Payment-Required` header.
+6. For the GitHub Action: `bunny scripts show` gives the script id; the deploy key is in the
+   dashboard (Script -> Deployments -> Settings). Add both as the `BUNNYJS_*` repo secrets.
+
+After the first deploy, the Action and manual `npm run deploy` are interchangeable — last
+deployment wins.

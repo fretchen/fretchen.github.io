@@ -1,0 +1,1348 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+// ===== Mocks (vi.hoisted ensures these are available when vi.mock factories run) =====
+
+const {
+  mockCallLLMAPI,
+  mockTokensToCost,
+  mockCreateLLMResourceServer,
+  mockCreateBatchSettlementPaymentRequirements,
+  mockCreate402Response,
+  mockExtractPaymentPayload,
+  mockCreateSettlementHeaders,
+  mockGetBatchSettlementNetworks,
+  mockIsTestnet,
+  mockVerifyPayment,
+  mockSettlePayment,
+  mockCreatePaymentRequiredResponse,
+  mockEnhancePaymentRequirements,
+  mockScheme,
+  mockReleaseLock,
+} = vi.hoisted(() => {
+  // enhancePaymentRequirements() is called for real verify/settle calls (not just the
+  // 402-building path) — see sc_llm_x402.ts's paymentRequirements construction. Echo the
+  // base requirements back unchanged, which is enough for the handler-logic tests here.
+  const mockEnhancePaymentRequirements = vi.fn().mockImplementation(async (base: unknown) => base);
+  return {
+    mockReleaseLock: vi.fn(),
+    mockCallLLMAPI: vi.fn(),
+    // Real formula (matches llm_service.ts's actual tokensToCost: separate
+    // input/output rates per provider — see LLM_PROVIDERS there), not a fixed stub — so
+    // tests can verify the settlement amount actually tracks whatever usage callLLMAPI
+    // returns, not just the flat ceiling. Called once at module load (for the ceiling,
+    // MAX_PRICE_ATOMIC, one per currency) — must work before beforeEach runs. Simplified to a
+    // single shared denominator (valid since both providers below have inDen === outDen
+    // === 100n today; the real implementation cross-multiplies to not assume that).
+    mockTokensToCost: vi.fn().mockImplementation(
+      (
+        usage: {
+          prompt_tokens: bigint | number | string;
+          completion_tokens: bigint | number | string;
+        },
+        provider: string,
+        symbol: "USDC" | "EURC" | "EURe",
+        decimals: number,
+      ) => {
+        // One rate card per currency, as in llm_service.ts: $0.50/$1.50 and €0.44/€1.50 —
+        // EURe shares the EUR card, rescaled to its 18 decimals like the real tokensToCost.
+        const RATES: Record<string, Record<string, { in: bigint; out: bigint; den: bigint }>> = {
+          mistral: {
+            USDC: { in: 50n, out: 150n, den: 100n },
+            EURC: { in: 44n, out: 150n, den: 100n },
+            EURe: { in: 44n, out: 150n, den: 100n },
+          },
+        };
+        const rate = RATES[provider]?.[symbol];
+        if (!rate) throw new Error(`Unknown LLM provider: ${provider}`);
+        const p = BigInt(usage.prompt_tokens);
+        const c = BigInt(usage.completion_tokens);
+        const base = (p * rate.in + c * rate.out) / rate.den;
+        return decimals === 6 ? base : base * 10n ** BigInt(decimals - 6);
+      },
+    ),
+    mockCreateLLMResourceServer: vi.fn(),
+    mockCreateBatchSettlementPaymentRequirements: vi.fn(),
+    mockCreate402Response: vi.fn(),
+    mockExtractPaymentPayload: vi.fn(),
+    mockCreateSettlementHeaders: vi.fn(),
+    mockGetBatchSettlementNetworks: vi.fn(),
+    // Testnet networks (Base/Optimism Sepolia) must take the mock-LLM path — see the
+    // useMock gate in sc_llm_x402.ts. Default matches chain-utils' TESTNET_NETWORKS.
+    mockIsTestnet: vi
+      .fn()
+      .mockImplementation((net: string) => net === "eip155:84532" || net === "eip155:11155420"),
+    mockVerifyPayment: vi.fn(),
+    mockSettlePayment: vi.fn(),
+    mockCreatePaymentRequiredResponse: vi.fn(),
+    mockEnhancePaymentRequirements,
+    mockScheme: { enhancePaymentRequirements: mockEnhancePaymentRequirements },
+  };
+});
+
+vi.mock("../src/llm_service.js", () => ({
+  callLLMAPI: mockCallLLMAPI,
+  tokensToCost: mockTokensToCost,
+  // Real, tiny implementations (keep in sync with llm_service.ts): the handler validates the
+  // request `model` against these, so a mock that omitted them would fail every request.
+  resolveModel: (modelId: string) =>
+    modelId === "mistral-large-latest" ? { provider: "mistral" } : null,
+  advertisedModelIds: () => ["mistral-large-latest"],
+}));
+
+vi.mock("../src/x402_server.js", () => ({
+  createLLMResourceServer: mockCreateLLMResourceServer,
+  createBatchSettlementPaymentRequirements: mockCreateBatchSettlementPaymentRequirements,
+  create402Response: mockCreate402Response,
+  extractPaymentPayload: mockExtractPaymentPayload,
+  createSettlementHeaders: mockCreateSettlementHeaders,
+  getBatchSettlementNetworks: mockGetBatchSettlementNetworks,
+  releaseLock: mockReleaseLock,
+  // Real implementation (pure bigint math, no side effects) — keep in sync with
+  // x402_server.ts's actual formatUsdcAtomicAsDecimalUsd.
+  formatUsdcAtomicAsDecimalUsd: (atomicAmount: string) => {
+    const atomic = BigInt(atomicAmount);
+    const divisor = 1_000_000n;
+    const whole = atomic / divisor;
+    const fraction = (atomic % divisor).toString().padStart(6, "0");
+    const trimmedFraction = fraction.replace(/0+$/, "");
+    return trimmedFraction ? `${whole}.${trimmedFraction}` : whole.toString();
+  },
+}));
+
+// The real stablecoin registry — which asset a seller prices is the thing under test here.
+vi.mock("@fretchen/chain-utils", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@fretchen/chain-utils")>()),
+  isTestnet: mockIsTestnet,
+}));
+
+// ===== Import after mocks =====
+
+import { handleLLMRequest } from "../src/llm_routes.js";
+
+/**
+ * Legacy view over the native Response, so the assertions ported from scw_js stay
+ * shape-identical: statusCode, a flat lowercase headers map, and the body as text.
+ */
+const handle = async (request: Request, _context?: unknown) => {
+  const res = await handleLLMRequest(request);
+  const headers: Record<string, string> = {};
+  res.headers.forEach((value, key) => {
+    headers[key] = value;
+  });
+  return { statusCode: res.status, headers, body: await res.text() };
+};
+import { USDC_ADDRESSES, EURC_ADDRESSES } from "@fretchen/chain-utils";
+
+// ===== Helpers =====
+
+const VALID_ADDRESS = "0x1234567890abcdef1234567890abcdef12345678";
+
+// The endpoint's request body is the OpenAI chat-completions shape.
+const TEST_MODEL = "mistral-large-latest";
+
+/** A minimal well-formed tool definition, for the tools cap and forwarding tests. */
+const TEST_TOOL = {
+  type: "function",
+  function: {
+    name: "generate_image",
+    description: "Generate an image from a prompt.",
+    parameters: { type: "object", properties: { prompt: { type: "string" } } },
+  },
+};
+
+// callLLMAPI now resolves to an OpenAI chat.completion object; build one for the mock.
+function openAiCompletion(
+  content: string,
+  usage = { prompt_tokens: 5, completion_tokens: 7, total_tokens: 12 },
+) {
+  return {
+    id: "chatcmpl-test",
+    object: "chat.completion" as const,
+    created: 0,
+    model: "test-model",
+    choices: [{ index: 0, message: { role: "assistant", content }, finish_reason: "stop" }],
+    usage,
+  };
+}
+
+const LLM_ORIGIN = "https://llm-agent.fretchen.eu";
+
+function makeEvent(overrides: Record<string, unknown> = {}): Request {
+  const {
+    httpMethod = "POST",
+    headers = {},
+    body = JSON.stringify({ model: TEST_MODEL, messages: [{ role: "user", content: "hi" }] }),
+    path = "/",
+    ...rest
+  } = overrides as Record<string, unknown>;
+  if (Object.keys(rest).length > 0) {
+    throw new Error("makeEvent got an unhandled override key: " + Object.keys(rest).join(","));
+  }
+  const pathStr = path as string;
+  const joined = pathStr.startsWith("/") ? pathStr : "/" + pathStr;
+  return new Request(LLM_ORIGIN + joined, {
+    method: httpMethod as string,
+    headers: headers as Record<string, string>,
+    body: httpMethod === "GET" || httpMethod === "HEAD" ? undefined : (body as string),
+  });
+}
+
+const samplePaymentPayload = {
+  accepted: {
+    network: "eip155:84532",
+    scheme: "batch-settlement",
+    asset: USDC_ADDRESSES["eip155:84532"],
+  },
+  payload: { type: "voucher" },
+};
+
+// ===== Tests =====
+
+describe("sc_llm_x402", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.NFT_WALLET_PUBLIC_KEY = VALID_ADDRESS;
+
+    mockCreateLLMResourceServer.mockReturnValue({
+      resourceServer: {
+        verifyPayment: mockVerifyPayment,
+        settlePayment: mockSettlePayment,
+        createPaymentRequiredResponse: mockCreatePaymentRequiredResponse,
+      },
+      scheme: mockScheme,
+    });
+    mockGetBatchSettlementNetworks.mockReturnValue(["eip155:10", "eip155:8453", "eip155:84532"]);
+    mockExtractPaymentPayload.mockReturnValue(null);
+    mockCreateBatchSettlementPaymentRequirements.mockResolvedValue({
+      x402Version: 2,
+      resource: { url: "/llmx402", description: "", mimeType: "application/json" },
+      accepts: [],
+    });
+    mockCreate402Response.mockReturnValue({
+      statusCode: 402,
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+    mockCreatePaymentRequiredResponse.mockResolvedValue({
+      x402Version: 2,
+      error: "cap_exceeded",
+      resource: { url: "/llmx402", description: "", mimeType: "application/json" },
+      accepts: [],
+    });
+    mockCreateSettlementHeaders.mockReturnValue({ "Payment-Response": "encoded" });
+    mockCallLLMAPI.mockResolvedValue(openAiCompletion("answer"));
+    mockVerifyPayment.mockResolvedValue({ isValid: true, payer: "0xpayer" });
+    mockSettlePayment.mockResolvedValue({
+      success: true,
+      transaction: "",
+      network: "eip155:84532",
+    });
+  });
+
+  describe("basic request validation", () => {
+    it("returns 200 for OPTIONS preflight", async () => {
+      const res = await handle(makeEvent({ httpMethod: "OPTIONS" }) as never, {});
+      expect(res.statusCode).toBe(200);
+    });
+
+    it("includes GET in the OPTIONS preflight allow-list", async () => {
+      // Regression guard: GET must stay allowed so GET /openapi.json passes preflight
+      // for browser-based x402 discovery crawlers.
+      const res = await handle(makeEvent({ httpMethod: "OPTIONS" }) as never, {});
+      expect(res.headers["access-control-allow-methods"]).toContain("GET");
+    });
+
+    it("exposes Payment-Response on the OPTIONS preflight", async () => {
+      // Without this the browser cannot read the settlement header, the client SDK's cached
+      // channel balance never advances, and every message signs a fresh $0.50 deposit.
+      const res = await handle(makeEvent({ httpMethod: "OPTIONS" }) as never, {});
+      expect(res.headers["access-control-expose-headers"]).toContain("Payment-Response");
+    });
+
+    it("returns 400 for a non-POST method", async () => {
+      const res = await handle(makeEvent({ httpMethod: "GET" }) as never, {});
+      expect(res.statusCode).toBe(400);
+    });
+
+    it("serves the OpenAPI discovery document on GET /openapi.json", async () => {
+      const res = await handle(
+        makeEvent({ httpMethod: "GET", path: "/openapi.json" }) as never,
+        {},
+      );
+      expect(res.statusCode).toBe(200);
+      expect(res.headers["content-type"]).toBe("application/json");
+      expect(res.headers["access-control-allow-origin"]).toBe("*");
+
+      const body = JSON.parse(res.body);
+      expect(body.openapi).toBe("3.1.0");
+      expect(body.info.title).toBeTruthy();
+      // Declares the llm/v1 service contract so discovery clients can classify it.
+      expect(body["x-service-type"]).toBe("llm/v1");
+      expect(body.paths["/"].post["x-payment-info"]).toEqual({
+        protocols: ["x402"],
+        price: { mode: "dynamic", currency: "USD", min: "0", max: "0.03" },
+      });
+      expect(body.paths["/"].post.responses["402"]).toBeDefined();
+    });
+
+    it("serves the ERC-8004 registration file on GET and HEAD /.well-known/agent-registration.json", async () => {
+      const res = await handle(
+        makeEvent({ httpMethod: "GET", path: "/.well-known/agent-registration.json" }) as never,
+        {},
+      );
+      expect(res.statusCode).toBe(200);
+      expect(res.headers["content-type"]).toBe("application/json");
+      expect(res.headers["access-control-allow-origin"]).toBe("*");
+      expect(JSON.parse(res.body).services[0].endpoint).toBe(
+        "https://llm-agent.fretchen.eu/openapi.json",
+      );
+      expect(JSON.parse(res.body).services).toContainEqual({
+        name: "agentWallet",
+        endpoint: `eip155:8453:${VALID_ADDRESS}`,
+      });
+
+      const head = await handle(
+        makeEvent({ httpMethod: "HEAD", path: "/.well-known/agent-registration.json" }) as never,
+        {},
+      );
+      expect(head.statusCode).toBe(200);
+      expect(head.body).toBe("");
+    });
+
+    it("serves openapi.json without a leading slash in the path too", async () => {
+      const res = await handle(makeEvent({ httpMethod: "GET", path: "openapi.json" }) as never, {});
+      expect(res.statusCode).toBe(200);
+      expect(JSON.parse(res.body).openapi).toBe("3.1.0");
+    });
+
+    // /favicon.ico is swallowed by the Scaleway gateway before the function runs, so we
+    // serve the icon at /favicon.png (a COMMON_FAVICON_PATHS fallback that reaches us).
+    // The Scaleway twin served base64 + isBase64Encoded; the native edge serves raw bytes.
+    it("serves the favicon as raw bytes on GET /favicon.png", async () => {
+      const res = await handleLLMRequest(makeEvent({ httpMethod: "GET", path: "/favicon.png" }));
+      expect(res.status).toBe(200);
+      expect(res.headers.get("content-type")).toBe("image/jpeg");
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      expect(bytes.length).toBeGreaterThan(0);
+      expect(bytes[0]).toBe(0xff);
+      expect(bytes[1]).toBe(0xd8);
+    });
+
+    it("answers a HEAD /favicon.png probe with 200 and an image content-type", async () => {
+      const res = await handle(
+        makeEvent({ httpMethod: "HEAD", path: "/favicon.png" }) as never,
+        {},
+      );
+      expect(res.statusCode).toBe(200);
+      expect(res.headers["content-type"]).toBe("image/jpeg");
+      expect(res.body).toBe("");
+    });
+
+    // x402scan fetches the origin root and parses <link rel="icon"> before probing any
+    // favicon path. An HTML-accepting GET on "/" must return that discovery HTML.
+    it("serves favicon-discovery HTML on GET / when the client accepts HTML", async () => {
+      const res = await handle(
+        makeEvent({
+          httpMethod: "GET",
+          path: "/",
+          headers: { accept: "text/html,application/xhtml+xml" },
+        }) as never,
+        {},
+      );
+      expect(res.statusCode).toBe(200);
+      expect(res.headers["content-type"]).toContain("text/html");
+      expect(res.body).toContain('rel="icon"');
+      expect(res.body).toContain("/favicon.png");
+    });
+
+    // An x402 payment client GETs / without an HTML Accept header — it must fall through
+    // to the normal "only POST" rejection, not receive HTML.
+    it("does NOT serve HTML on GET / without an HTML Accept header", async () => {
+      const res = await handle(
+        makeEvent({ httpMethod: "GET", path: "/", headers: {} }) as never,
+        {},
+      );
+      expect(res.statusCode).toBe(400);
+    });
+
+    // Regression guard: x-payment-info.price.max must track the real, live price
+    // ceiling (USDC_MAX_PRICE_PER_MESSAGE), not a value hardcoded in openapi.llm.json —
+    // otherwise the served discovery doc silently drifts from actual 402 behavior if
+    // LLM_ESTIMATED_TOKENS_PER_MESSAGE or the provider's rate card ever changes. Proves
+    // this by re-importing the module with a different token estimate and checking the
+    // served price.max changes accordingly, rather than coincidentally matching a literal.
+    it("serves a price.max that tracks LLM_ESTIMATED_TOKENS_PER_MESSAGE, not a hardcoded value", async () => {
+      const originalEstimate = process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE;
+      process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE = "4000";
+      vi.resetModules();
+      try {
+        const mod = await import("../src/llm_routes.js");
+        const res = await mod.handleLLMRequest(
+          makeEvent({ httpMethod: "GET", path: "/openapi.json" }),
+        );
+        expect(res.status).toBe(200);
+        const body = JSON.parse(await res.text());
+        // 4000 tokens * 150n/100n (mistral output rate, mocked to match llm_service.ts) = 6000n
+        // atomic units = "0.006" decimal USD -- distinct from the static file's "0.03".
+        expect(body.paths["/"].post["x-payment-info"].price.max).toBe("0.006");
+      } finally {
+        if (originalEstimate === undefined) {
+          delete process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE;
+        } else {
+          process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE = originalEstimate;
+        }
+        vi.resetModules();
+      }
+    });
+
+    it("returns 400 for malformed JSON body", async () => {
+      const res = await handle(makeEvent({ body: "{ not valid" }) as never, {});
+      expect(res.statusCode).toBe(400);
+    });
+
+    /**
+     * Request validation runs on the PAID path only — an unpaid request gets the 402
+     * challenge whatever its body says (see the "payment challenge precedes validation"
+     * block below for why). These therefore attach a payment first; the property that
+     * matters is that a malformed *paid* request is rejected before it is ever charged,
+     * which each case asserts via `mockVerifyPayment` never being called.
+     */
+    function paidEvent(bodyFields: Record<string, unknown>) {
+      mockExtractPaymentPayload.mockReturnValue(samplePaymentPayload);
+      return makeEvent({ body: JSON.stringify(bodyFields) });
+    }
+
+    it("returns 400 (OpenAI-shaped) when messages is missing or empty", async () => {
+      const res = await handle(paidEvent({ model: TEST_MODEL, messages: [] }) as never, {});
+      expect(res.statusCode).toBe(400);
+      expect(JSON.parse(res.body).error.type).toBe("invalid_request_error");
+      expect(mockVerifyPayment).not.toHaveBeenCalled();
+    });
+
+    it("returns 404 model_not_found for an unadvertised model", async () => {
+      const res = await handle(
+        paidEvent({ model: "gpt-4o", messages: [{ role: "user", content: "hi" }] }) as never,
+        {},
+      );
+      expect(res.statusCode).toBe(404);
+      expect(JSON.parse(res.body).error.code).toBe("model_not_found");
+      expect(mockVerifyPayment).not.toHaveBeenCalled();
+    });
+
+    it("rejects stream: true with an OpenAI-shaped error", async () => {
+      const res = await handle(
+        paidEvent({
+          model: TEST_MODEL,
+          messages: [{ role: "user", content: "hi" }],
+          stream: true,
+        }) as never,
+        {},
+      );
+      expect(res.statusCode).toBe(400);
+      expect(JSON.parse(res.body).error.code).toBe("stream_unsupported");
+      expect(mockVerifyPayment).not.toHaveBeenCalled();
+    });
+
+    it("returns 400 for an invalid useDummyData flag", async () => {
+      const res = await handle(
+        paidEvent({
+          model: TEST_MODEL,
+          messages: [{ role: "user", content: "hi" }],
+          useDummyData: "yes",
+        }) as never,
+        {},
+      );
+      expect(res.statusCode).toBe(400);
+      expect(mockVerifyPayment).not.toHaveBeenCalled();
+    });
+
+    /**
+     * The llm/v1 contract this repo publishes — and asks other agent builders to implement
+     * via checkLlmV1Agent / the /agent-onboarding guide — requires that an unpaid POST be
+     * answered with the payment challenge. Validating the body first broke that: a client
+     * discovering the payment terms (which network, which asset) had to already know a
+     * valid model id to be told, and this agent failed its own compatibility checker.
+     * The website's network negotiation reads exactly this 402, so these are load-bearing.
+     */
+    describe("payment challenge precedes request validation", () => {
+      it.each([
+        ["an empty messages array", { model: "probe", messages: [] }],
+        ["an unknown model", { model: "probe", messages: [{ role: "user", content: "hi" }] }],
+        ["no fields at all", {}],
+        [
+          "stream: true",
+          { model: TEST_MODEL, messages: [{ role: "user", content: "hi" }], stream: true },
+        ],
+      ])("challenges an unpaid request with %s", async (_label, body) => {
+        const res = await handle(makeEvent({ body: JSON.stringify(body) }) as never, {});
+        expect(res.statusCode).toBe(402);
+        expect(mockCreate402Response).toHaveBeenCalled();
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
+      });
+    });
+
+    it("returns 500 when NFT_WALLET_PUBLIC_KEY is missing", async () => {
+      delete process.env.NFT_WALLET_PUBLIC_KEY;
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(500);
+    });
+
+    it("returns 500 when NFT_WALLET_PUBLIC_KEY is not a valid hex address", async () => {
+      process.env.NFT_WALLET_PUBLIC_KEY = "not-an-address";
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(500);
+    });
+
+    it("returns 500 when the resource server fails to configure", async () => {
+      mockCreateLLMResourceServer.mockImplementation(() => {
+        throw new Error("RECEIVER_AUTHORIZER_PRIVATE_KEY not configured");
+      });
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(500);
+    });
+  });
+
+  describe("missing payment", () => {
+    it("returns a 402 built from createBatchSettlementPaymentRequirements", async () => {
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(402);
+      // Ceiling: the whole 20000-token estimate priced as completion (output) tokens
+      // at Mistral's $1.50/M rate — 20000 * 150 / 100 = 30000.
+      expect(mockCreateBatchSettlementPaymentRequirements).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payTo: VALID_ADDRESS,
+          scheme: mockScheme,
+          // Absolute resource URL — the bazaar discovery validation rejects a relative one
+          // ("resource must start with 'https://'"), which would keep the route unindexable.
+          resourceUrl: "https://llm-agent.fretchen.eu/",
+          // 20000 tokens at the output rate: $1.50/M and €1.50/M give 30000 in 6 decimals,
+          // and 30000 ×10¹² for EURe's 18 — the same ceiling in each token's own units.
+          price: { USDC: "30000", EURC: "30000", EURe: "30000000000000000" },
+          // Bazaar discovery metadata (docs.x402.org/extensions/bazaar) rides along on the
+          // challenge; metadata-only, the payment terms are untouched.
+          extensions: expect.objectContaining({
+            bazaar: expect.objectContaining({
+              info: expect.objectContaining({
+                input: expect.objectContaining({ method: "POST" }),
+              }),
+            }),
+          }),
+          serviceName: "Fretchen AI Assistant",
+          tags: ["llm", "chat", "x402"],
+          iconUrl: "https://llm-agent.fretchen.eu/favicon.png",
+        }),
+      );
+      expect(mockCreate402Response).toHaveBeenCalled();
+    });
+  });
+
+  describe("network validation", () => {
+    it("returns 402 when the payload has no accepted network", async () => {
+      mockExtractPaymentPayload.mockReturnValue({ payload: { type: "voucher" } });
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(402);
+      expect(mockVerifyPayment).not.toHaveBeenCalled();
+    });
+
+    it("returns 402 when the network is not a batch-settlement network", async () => {
+      mockExtractPaymentPayload.mockReturnValue({
+        accepted: { network: "eip155:11155420" },
+        payload: { type: "voucher" },
+      });
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(402);
+      expect(mockVerifyPayment).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("payment verification", () => {
+    beforeEach(() => {
+      mockExtractPaymentPayload.mockReturnValue(samplePaymentPayload);
+    });
+
+    it("returns 402 when verification is invalid", async () => {
+      mockVerifyPayment.mockResolvedValue({
+        isValid: false,
+        invalidReason: "cap_exceeded",
+        payer: "0xpayer",
+      });
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(402);
+      expect(mockCallLLMAPI).not.toHaveBeenCalled();
+
+      // The failed paymentPayload must be passed through — that's what triggers the SDK's
+      // response-time scheme enrichment (e.g. cumulative-amount-mismatch channelState) for
+      // the client's corrective-retry flow to have anything to recover from.
+      expect(mockCreatePaymentRequiredResponse).toHaveBeenCalledWith(
+        [expect.objectContaining({ scheme: "batch-settlement" })],
+        expect.objectContaining({ mimeType: "application/json" }),
+        "cap_exceeded",
+        { payer: "0xpayer" },
+        undefined,
+        samplePaymentPayload,
+      );
+      expect(mockCreate402Response).toHaveBeenCalledWith(
+        await mockCreatePaymentRequiredResponse.mock.results[0].value,
+      );
+    });
+
+    it("returns 402 when verification is invalid and omits payer from extensions if absent", async () => {
+      mockVerifyPayment.mockResolvedValue({ isValid: false, invalidReason: "cap_exceeded" });
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(402);
+      expect(mockCreatePaymentRequiredResponse).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        "cap_exceeded",
+        undefined,
+        undefined,
+        samplePaymentPayload,
+      );
+    });
+
+    it("returns 402 when verifyPayment throws", async () => {
+      mockVerifyPayment.mockRejectedValue(new Error("facilitator unreachable"));
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(402);
+      expect(mockCallLLMAPI).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("LLM call", () => {
+    beforeEach(() => {
+      mockExtractPaymentPayload.mockReturnValue(samplePaymentPayload);
+    });
+
+    /**
+     * The endpoint forwards the caller's chat params to the upstream model rather than dropping
+     * them — Mistral owns that contract, the way @x402/evm owns the payment-payload contract in
+     * x402_facilitator. Silently dropping a `temperature` the caller set would mean charging for a
+     * request not fulfilled as asked; rejecting it would make this a worse API than the one it
+     * imitates. See llm_schemas.ts.
+     */
+    describe("chat params are forwarded upstream", () => {
+      it("passes an unlisted param through to callLLMAPI", async () => {
+        const res = await handle(
+          makeEvent({
+            body: JSON.stringify({
+              model: TEST_MODEL,
+              messages: [{ role: "user", content: "hi" }],
+              temperature: 0,
+              top_p: 0.1,
+            }),
+          }) as never,
+          {},
+        );
+
+        expect(res.statusCode).toBe(200);
+        // 4th arg is the forwarded-params bag.
+        expect(mockCallLLMAPI).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.anything(),
+          expect.anything(),
+          { temperature: 0, top_p: 0.1 },
+        );
+      });
+
+      it("never forwards the keys we own", async () => {
+        await handle(
+          makeEvent({
+            body: JSON.stringify({
+              model: TEST_MODEL,
+              messages: [{ role: "user", content: "hi" }],
+              useDummyData: true,
+              payment: { some: "payload" },
+              temperature: 0.5,
+            }),
+          }) as never,
+          {},
+        );
+
+        const forwarded = mockCallLLMAPI.mock.calls[0][3];
+        // model/messages are set by us downstream; useDummyData and payment are ours entirely and
+        // must never reach the upstream model.
+        expect(forwarded).toEqual({ temperature: 0.5 });
+      });
+
+      it("forwards an empty bag when the caller sends nothing extra", async () => {
+        // Guards the byte-identical-to-before case: a plain request must not gain stray keys.
+        await handle(makeEvent() as never, {});
+        expect(mockCallLLMAPI.mock.calls[0][3]).toEqual({});
+      });
+
+      it("forwards tools and tool_choice, which are declared but not stripped", async () => {
+        // The direct counterpart to "accepts n=1, which is what we actually serve" below: every
+        // other declared key is consumed here, but tools/tool_choice are declared (so the spec
+        // names them and the caps apply) *and* forwarded, because the model is what must see
+        // them. Dropping them would charge for a completion that ignored the caller's tools.
+        await handle(
+          makeEvent({
+            body: JSON.stringify({
+              model: TEST_MODEL,
+              messages: [{ role: "user", content: "draw a cat" }],
+              tools: [TEST_TOOL],
+              tool_choice: "auto",
+            }),
+          }) as never,
+          {},
+        );
+
+        expect(mockCallLLMAPI.mock.calls[0][3]).toEqual({
+          tools: [TEST_TOOL],
+          tool_choice: "auto",
+        });
+      });
+
+      it("accepts a non-standard message role and forwards it verbatim", async () => {
+        // `role` is not a cost-mover, so the handler does not restrict it to the OpenAI three and
+        // the published schema must not either (LLMChatMessageSchema.role is z.string()). A role
+        // the upstream adds later — e.g. "tool" — has to reach Mistral untouched.
+        const res = await handle(
+          makeEvent({
+            body: JSON.stringify({
+              model: TEST_MODEL,
+              messages: [
+                { role: "user", content: "hi" },
+                { role: "tool", content: "result" },
+              ],
+            }),
+          }) as never,
+          {},
+        );
+
+        expect(res.statusCode).toBe(200);
+        const forwardedPrompt = mockCallLLMAPI.mock.calls[0][0];
+        expect(forwardedPrompt).toEqual([
+          { role: "user", content: "hi" },
+          { role: "tool", content: "result" },
+        ]);
+      });
+    });
+
+    /**
+     * The three exceptions to forwarding: params that move cost past the fixed per-message
+     * ceiling. Rejected rather than ignored, so a caller learns their limit instead of being
+     * quietly billed for something else.
+     */
+    describe("cost-moving params are rejected", () => {
+      const cases = [
+        { param: "n", body: { n: 5 } },
+        { param: "max_tokens", body: { max_tokens: 8000 } },
+      ];
+
+      for (const { param, body: extra } of cases) {
+        it(`rejects ${param} with a message naming the ceiling`, async () => {
+          const res = await handle(
+            makeEvent({
+              body: JSON.stringify({
+                model: TEST_MODEL,
+                messages: [{ role: "user", content: "hi" }],
+                ...extra,
+              }),
+            }) as never,
+            {},
+          );
+
+          expect(res.statusCode).toBe(400);
+          const parsed = JSON.parse(res.body);
+          expect(parsed.error.param).toBe(param);
+          expect(parsed.error.message).toMatch(/ceiling/i);
+          // Rejected before the upstream is called, so nothing is spent.
+          expect(mockCallLLMAPI).not.toHaveBeenCalled();
+          expect(mockSettlePayment).not.toHaveBeenCalled();
+        });
+      }
+
+      it("accepts n=1, which is what we actually serve", async () => {
+        const res = await handle(
+          makeEvent({
+            body: JSON.stringify({
+              model: TEST_MODEL,
+              messages: [{ role: "user", content: "hi" }],
+              n: 1,
+            }),
+          }) as never,
+          {},
+        );
+
+        expect(res.statusCode).toBe(200);
+        // n is ours to control, so it is not forwarded even when valid.
+        expect(mockCallLLMAPI.mock.calls[0][3]).toEqual({});
+      });
+    });
+
+    describe("tools are capped rather than refused", () => {
+      // Unlike the params above, tools are a feature — but tool definitions are input tokens
+      // billed on every hop, so an uncapped array inflates the metered cost for free. The byte cap
+      // must bite before verifyPayment, or a caller could make us pay for the inference.
+      function toolsEvent(tools: unknown) {
+        return makeEvent({
+          body: JSON.stringify({
+            model: TEST_MODEL,
+            messages: [{ role: "user", content: "hi" }],
+            tools,
+          }),
+        }) as never;
+      }
+
+      it("does not cap the tool count — only bytes are billed", async () => {
+        const res = await handle(toolsEvent(Array(12).fill(TEST_TOOL)), {});
+        expect(res.statusCode).toBe(200);
+      });
+
+      it("rejects a tools array over the byte cap before any payment is verified", async () => {
+        // Two tools, but one carries a huge description — bytes, not count, are what is billed.
+        const fat = {
+          ...TEST_TOOL,
+          function: { ...TEST_TOOL.function, description: "x".repeat(9000) },
+        };
+        const res = await handle(toolsEvent([TEST_TOOL, fat]), {});
+
+        expect(res.statusCode).toBe(400);
+        expect(JSON.parse(res.body).error.param).toBe("tools");
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
+        expect(mockCallLLMAPI).not.toHaveBeenCalled();
+      });
+
+      it("rejects a malformed tool definition", async () => {
+        const res = await handle(toolsEvent([{ type: "function", function: { name: "" } }]), {});
+
+        expect(res.statusCode).toBe(400);
+        expect(JSON.parse(res.body).error.param).toBe("tools");
+      });
+
+      it("measures the byte cap in UTF-8 bytes, not UTF-16 code units", async () => {
+        // ~3200 three-byte chars: ~3200 UTF-16 units (under the 8192 cap by that measure) but
+        // ~9600 UTF-8 bytes (over it). Must be rejected — tool definitions are billed by byte.
+        const wide = {
+          ...TEST_TOOL,
+          function: { ...TEST_TOOL.function, description: "あ".repeat(3200) },
+        };
+        const res = await handle(toolsEvent([wide]), {});
+
+        expect(res.statusCode).toBe(400);
+        expect(JSON.parse(res.body).error.param).toBe("tools");
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
+      });
+    });
+
+    describe("messages are capped by serialized size", () => {
+      // The same reasoning as the tools cap above, applied to the far larger input: conversation
+      // turns are input tokens billed on every hop, while the charge is capped at a fixed
+      // per-message ceiling. Without this, one request filling the model's context window cost
+      // several times what it settled for, repeatably.
+      function messagesEvent(messages: unknown) {
+        return makeEvent({
+          body: JSON.stringify({ model: TEST_MODEL, messages }),
+        }) as never;
+      }
+
+      it("rejects a conversation over the byte cap before any payment is verified", async () => {
+        const res = await handle(
+          messagesEvent([{ role: "user", content: "x".repeat(200_000) }]),
+          {},
+        );
+
+        expect(res.statusCode).toBe(400);
+        expect(JSON.parse(res.body).error.param).toBe("messages");
+        expect(JSON.parse(res.body).error.message).toMatch(/ceiling/i);
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
+        expect(mockCallLLMAPI).not.toHaveBeenCalled();
+        expect(mockSettlePayment).not.toHaveBeenCalled();
+      });
+
+      it("counts the whole conversation, not the largest single turn", async () => {
+        // Twenty turns, each comfortably small on its own, summing to over the cap.
+        const messages = Array.from({ length: 20 }, () => ({
+          role: "user",
+          content: "y".repeat(10_000),
+        }));
+        const res = await handle(messagesEvent(messages), {});
+
+        expect(res.statusCode).toBe(400);
+        expect(JSON.parse(res.body).error.param).toBe("messages");
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
+      });
+
+      it("measures the cap in UTF-8 bytes, not UTF-16 code units", async () => {
+        // ~70k three-byte chars: ~70k UTF-16 units (under the 196608 cap by that measure) but
+        // ~210k UTF-8 bytes (over it). Billed by byte, so it must be rejected.
+        const res = await handle(
+          messagesEvent([{ role: "user", content: "あ".repeat(70_000) }]),
+          {},
+        );
+
+        expect(res.statusCode).toBe(400);
+        expect(JSON.parse(res.body).error.param).toBe("messages");
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
+      });
+
+      it("accepts a conversation just under the cap", async () => {
+        const res = await handle(
+          messagesEvent([{ role: "user", content: "z".repeat(190_000) }]),
+          {},
+        );
+        expect(res.statusCode).toBe(200);
+      });
+    });
+
+    describe("tool_choice is restricted to the published enum", () => {
+      function toolChoiceEvent(tool_choice: unknown) {
+        return makeEvent({
+          body: JSON.stringify({
+            model: TEST_MODEL,
+            messages: [{ role: "user", content: "hi" }],
+            tools: [TEST_TOOL],
+            tool_choice,
+          }),
+        }) as never;
+      }
+
+      it.each([
+        ["a forced string", "required"],
+        ["a named function", { type: "function", function: { name: "generate_image" } }],
+      ])("rejects %s before any payment is verified", async (_label, choice) => {
+        const res = await handle(toolChoiceEvent(choice), {});
+
+        expect(res.statusCode).toBe(400);
+        expect(JSON.parse(res.body).error.param).toBe("tool_choice");
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
+        expect(mockCallLLMAPI).not.toHaveBeenCalled();
+      });
+
+      it('forwards tool_choice: "none"', async () => {
+        const res = await handle(toolChoiceEvent("none"), {});
+        expect(res.statusCode).toBe(200);
+        expect(mockCallLLMAPI.mock.calls[0][3]).toEqual({
+          tools: [TEST_TOOL],
+          tool_choice: "none",
+        });
+      });
+    });
+
+    describe("tool-call conversation turns", () => {
+      it("accepts an assistant turn with null content and tool_calls", async () => {
+        // The shape a caller replays on the second hop. The old check required a string content
+        // and rejected this with a 400, making a tool loop impossible to continue.
+        const res = await handle(
+          makeEvent({
+            body: JSON.stringify({
+              model: TEST_MODEL,
+              messages: [
+                { role: "user", content: "draw a cat" },
+                {
+                  role: "assistant",
+                  content: null,
+                  tool_calls: [
+                    {
+                      id: "call_1",
+                      type: "function",
+                      function: { name: "generate_image", arguments: "{}" },
+                    },
+                  ],
+                },
+                { role: "tool", tool_call_id: "call_1", content: '{"status":"ok"}' },
+              ],
+            }),
+          }) as never,
+          {},
+        );
+
+        expect(res.statusCode).toBe(200);
+        // The whole turn, tool_call_id included, must reach the model untouched.
+        expect(mockCallLLMAPI.mock.calls[0][0]).toHaveLength(3);
+        expect(mockCallLLMAPI.mock.calls[0][0][2]).toEqual({
+          role: "tool",
+          tool_call_id: "call_1",
+          content: '{"status":"ok"}',
+        });
+      });
+
+      it("rejects a message whose tool_calls entries are malformed", async () => {
+        const res = await handle(
+          makeEvent({
+            body: JSON.stringify({
+              model: TEST_MODEL,
+              messages: [{ role: "assistant", content: null, tool_calls: [{ id: "call_1" }] }],
+            }),
+          }) as never,
+          {},
+        );
+
+        expect(res.statusCode).toBe(400);
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
+      });
+
+      it("rejects a message with an empty tool_calls array", async () => {
+        // content: null is only allowed when the turn actually carries a call. An empty array
+        // would otherwise reach Mistral, 400 there, and surface as an opaque 500.
+        const res = await handle(
+          makeEvent({
+            body: JSON.stringify({
+              model: TEST_MODEL,
+              messages: [{ role: "assistant", content: null, tool_calls: [] }],
+            }),
+          }) as never,
+          {},
+        );
+
+        expect(res.statusCode).toBe(400);
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
+      });
+
+      it("rejects a message with a non-string content", async () => {
+        const res = await handle(
+          makeEvent({
+            body: JSON.stringify({
+              model: TEST_MODEL,
+              messages: [{ role: "user", content: 42 }],
+            }),
+          }) as never,
+          {},
+        );
+
+        expect(res.statusCode).toBe(400);
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
+      });
+
+      it("still rejects a message with neither content nor tool_calls", async () => {
+        const res = await handle(
+          makeEvent({
+            body: JSON.stringify({
+              model: TEST_MODEL,
+              messages: [{ role: "user" }],
+            }),
+          }) as never,
+          {},
+        );
+
+        expect(res.statusCode).toBe(400);
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
+      });
+
+      it("still rejects an explicit tool_calls: null with no content", async () => {
+        const res = await handle(
+          makeEvent({
+            body: JSON.stringify({
+              model: TEST_MODEL,
+              messages: [{ role: "assistant", content: null, tool_calls: null }],
+            }),
+          }) as never,
+          {},
+        );
+
+        expect(res.statusCode).toBe(400);
+        expect(mockVerifyPayment).not.toHaveBeenCalled();
+      });
+
+      it("accepts a replayed assistant turn with content and an explicit tool_calls: null", async () => {
+        // Real-world shape: an llm/v1 caller that forwards an upstream's own message verbatim
+        // gets tool_calls: null (not omitted) on a plain turn — see upstream_schemas.ts for the
+        // production incident. The published request schema must accept the same thing it just
+        // learned to accept from the upstream, or a well-behaved caller gets a 400 for it.
+        const res = await handle(
+          makeEvent({
+            body: JSON.stringify({
+              model: TEST_MODEL,
+              messages: [
+                { role: "user", content: "draw a cat" },
+                { role: "assistant", content: "Here you go!", tool_calls: null },
+                { role: "user", content: "thanks" },
+              ],
+            }),
+          }) as never,
+          {},
+        );
+
+        expect(res.statusCode).toBe(200);
+      });
+    });
+
+    it("does not settle when the LLM API token is missing", async () => {
+      // Our own misconfiguration, not the caller's fault: a 500, and above all no charge.
+      mockCallLLMAPI.mockRejectedValue(
+        new Error(
+          "API token not found. Please configure the MISTRAL_API_KEY environment variable.",
+        ),
+      );
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(500);
+      expect(mockSettlePayment).not.toHaveBeenCalled();
+      // Verified but never settled: the channel lock is released rather than left to block the
+      // next message for LLM_MAX_TIMEOUT_SECONDS.
+      expect(mockReleaseLock).toHaveBeenCalledOnce();
+    });
+
+    it("returns 500 for other LLM API errors", async () => {
+      mockCallLLMAPI.mockRejectedValue(new Error("upstream exploded"));
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(500);
+    });
+
+    it("forces the mock LLM path on a testnet payment (no real inference spend)", async () => {
+      // Base Sepolia payment is valueless, so callLLMAPI must be invoked with dummy=true
+      // even though the request did not ask for it — mirrors genimg's useMockImage.
+      mockExtractPaymentPayload.mockReturnValue(samplePaymentPayload); // eip155:84532
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(200);
+      // Third arg is the fixed provider — this endpoint always uses Mistral, live or mock.
+      expect(mockCallLLMAPI).toHaveBeenCalledWith(expect.anything(), true, "mistral", {});
+    });
+
+    it("uses the real LLM path on a mainnet payment", async () => {
+      mockExtractPaymentPayload.mockReturnValue({
+        accepted: {
+          network: "eip155:8453",
+          scheme: "batch-settlement",
+          asset: USDC_ADDRESSES["eip155:8453"],
+        },
+        payload: { type: "voucher" },
+      });
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(200);
+      expect(mockCallLLMAPI).toHaveBeenCalledWith(expect.anything(), false, "mistral", {});
+    });
+
+    // ═══════════════════════════════════════════════════════════
+    // SECURITY: testnet must never reach the real Mistral API — see the guard
+    // in sc_llm_x402.ts. Absent/true stay mocked (unaffected, both real callers
+    // — website + notebook — never send useDummyData at all); an explicit
+    // false is a caller error, rejected outright rather than silently downgraded.
+    // ═══════════════════════════════════════════════════════════
+
+    it("rejects an explicit useDummyData=false on a testnet network", async () => {
+      const res = await handle(
+        makeEvent({
+          body: JSON.stringify({
+            model: TEST_MODEL,
+            messages: [{ role: "user", content: "hi" }],
+            useDummyData: false,
+          }),
+        }) as never,
+        {},
+      );
+      expect(res.statusCode).toBe(400);
+      expect(JSON.parse(res.body).error).toMatch(/Real inference is not available on testnet/);
+      expect(mockVerifyPayment).not.toHaveBeenCalled();
+      expect(mockCallLLMAPI).not.toHaveBeenCalled();
+    });
+
+    it("allows an explicit useDummyData=true on a testnet network (still mocks)", async () => {
+      const res = await handle(
+        makeEvent({
+          body: JSON.stringify({
+            model: TEST_MODEL,
+            messages: [{ role: "user", content: "hi" }],
+            useDummyData: true,
+          }),
+        }) as never,
+        {},
+      );
+      expect(res.statusCode).toBe(200);
+      expect(mockCallLLMAPI).toHaveBeenCalledWith(expect.anything(), true, "mistral", {});
+    });
+
+    it("allows an explicit useDummyData=false on a mainnet network (real path proceeds)", async () => {
+      mockExtractPaymentPayload.mockReturnValue({
+        accepted: {
+          network: "eip155:8453",
+          scheme: "batch-settlement",
+          asset: USDC_ADDRESSES["eip155:8453"],
+        },
+        payload: { type: "voucher" },
+      });
+      const res = await handle(
+        makeEvent({
+          body: JSON.stringify({
+            model: TEST_MODEL,
+            messages: [{ role: "user", content: "hi" }],
+            useDummyData: false,
+          }),
+        }) as never,
+        {},
+      );
+      expect(res.statusCode).toBe(200);
+      expect(mockCallLLMAPI).toHaveBeenCalledWith(expect.anything(), false, "mistral", {});
+    });
+  });
+
+  describe("settlement", () => {
+    beforeEach(() => {
+      mockExtractPaymentPayload.mockReturnValue(samplePaymentPayload);
+    });
+
+    /**
+     * The regression that cost ~$7.40 of locked escrow: the settled 200 sent
+     * `Payment-Response` but never exposed it, so cross-origin browsers read null, the
+     * client SDK's cached channel record never advanced, and each message re-deposited
+     * $0.50. Asserting only the OPTIONS preflight would have passed the whole time — the
+     * settled 200 builds its headers from CORS_HEADERS separately, and that is the path
+     * that was broken. Assert the header is BOTH present and readable.
+     */
+    it("exposes Payment-Response on the settled 200, not just sends it", async () => {
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(200);
+      expect(res.headers["payment-response"]).toBe("encoded");
+      expect(res.headers["access-control-expose-headers"]).toContain("Payment-Response");
+    });
+
+    it("returns 200 with the LLM response and settlement headers on success", async () => {
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.choices[0].message.content).toBe("answer");
+      expect(body.object).toBe("chat.completion");
+      expect(body.usage).toBeDefined();
+      expect(res.headers["payment-response"]).toBe("encoded");
+      expect(mockSettlePayment).toHaveBeenCalledTimes(1);
+
+      // The requirements passed to verify/settle must go through the scheme's own
+      // enhancePaymentRequirements() — a raw, un-enhanced object is missing
+      // extra.receiverAuthorizer/withdrawDelay, which makes the facilitator reject every
+      // real deposit with receiver_authorizer_mismatch (found via a live Base Sepolia run).
+      expect(mockEnhancePaymentRequirements).toHaveBeenCalledWith(
+        expect.objectContaining({ scheme: "batch-settlement", network: "eip155:84532" }),
+        expect.objectContaining({ scheme: "batch-settlement", network: "eip155:84532" }),
+        [],
+      );
+      const enhancedRequirements = await mockEnhancePaymentRequirements.mock.results[0]?.value;
+      expect(mockVerifyPayment).toHaveBeenCalledWith(samplePaymentPayload, enhancedRequirements);
+    });
+
+    it("returns 402 when settlement reports success:false", async () => {
+      mockSettlePayment.mockResolvedValue({ success: false, errorReason: "cap_exceeded" });
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(402);
+      expect(JSON.parse(res.body).error).toMatch(/cap_exceeded/);
+    });
+
+    it("returns 402 when settlePayment throws", async () => {
+      mockSettlePayment.mockRejectedValue(new Error("channel_busy"));
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(402);
+      expect(JSON.parse(res.body).error).toMatch(/channel_busy/);
+    });
+
+    // ═══════════════════════════════════════════════════════════
+    // Usage-based billing: settlement amount must track the LLM's real token
+    // usage, not the flat ceiling advertised at 402/verify time.
+    // ═══════════════════════════════════════════════════════════
+
+    it("settles for the LLM's actual token usage, not the ceiling", async () => {
+      // 200 prompt + 800 completion -> 0.5*200 + 1.5*800 = 100 + 1200 = 1300 (Mistral
+      // rates), well under the 30000 ceiling (20000 tokens, all priced as completion).
+      mockCallLLMAPI.mockResolvedValue(
+        openAiCompletion("answer", {
+          prompt_tokens: 200,
+          completion_tokens: 800,
+          total_tokens: 1000,
+        }),
+      );
+
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(200);
+
+      // verifyPayment must still see the pre-authorized ceiling (30000) — the client signed
+      // its voucher against that, and handleBeforeVerify requires an exact match.
+      const enhancedRequirements = await mockEnhancePaymentRequirements.mock.results[0]?.value;
+      expect(mockVerifyPayment).toHaveBeenCalledWith(
+        samplePaymentPayload,
+        expect.objectContaining({ amount: "30000" }),
+      );
+
+      // settlePayment must see the real, usage-derived amount instead.
+      expect(mockSettlePayment).toHaveBeenCalledWith(
+        samplePaymentPayload,
+        expect.objectContaining({ ...enhancedRequirements, amount: "1300" }),
+      );
+    });
+
+    it("caps the settlement amount at the ceiling when usage runs over the estimate", async () => {
+      // 1000 prompt + 20000 completion -> 0.5*1000 + 1.5*20000 = 500 + 30000 = 30500, which
+      // exceeds the 30000 ceiling — must be capped there rather than settling for more
+      // than the client authorized (or aborting).
+      mockCallLLMAPI.mockResolvedValue(
+        openAiCompletion("answer", {
+          prompt_tokens: 1000,
+          completion_tokens: 20000,
+          total_tokens: 21000,
+        }),
+      );
+
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(200);
+      expect(mockSettlePayment).toHaveBeenCalledWith(
+        samplePaymentPayload,
+        expect.objectContaining({ amount: "30000" }),
+      );
+    });
+
+    it("settles for zero when the mock LLM path reports its placeholder usage", async () => {
+      // Matches genimg's useMockImage convention (never real inference spend) — a testnet/
+      // dummy response should bill for what it actually cost: effectively nothing.
+      mockCallLLMAPI.mockResolvedValue({
+        content: "I am a placeholder for the LLM response",
+        usage: { prompt_tokens: 5, completion_tokens: 15, total_tokens: 15 },
+        model: "placeholder model",
+      });
+
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(200);
+      // 5 prompt + 15 completion -> 0.5*5 + 1.5*15 = 2.5 + 22.5 = 25 exactly.
+      expect(mockSettlePayment).toHaveBeenCalledWith(
+        samplePaymentPayload,
+        expect.objectContaining({ amount: "25" }),
+      );
+    });
+  });
+
+  describe("stablecoin choice", () => {
+    const EURC = EURC_ADDRESSES["eip155:84532"];
+    const eurcPayload = {
+      accepted: { network: "eip155:84532", scheme: "batch-settlement", asset: EURC },
+      payload: { type: "voucher" },
+    };
+
+    it("prices a EURC channel on the EUR rate card, with EURC's own domain", async () => {
+      mockExtractPaymentPayload.mockReturnValue(eurcPayload);
+      // 200 prompt + 800 completion: 1300 on the USD card (the settle tests above), 1288 on the
+      // EUR card (200 × €0.44/M + 800 × €1.50/M). Distinct on purpose — it shows which card priced it.
+      mockCallLLMAPI.mockResolvedValue(
+        openAiCompletion("answer", {
+          prompt_tokens: 200,
+          completion_tokens: 800,
+          total_tokens: 1000,
+        }),
+      );
+
+      const res = await handle(makeEvent() as never, {});
+      expect(res.statusCode).toBe(200);
+
+      // Ceiling: 20000 tokens × €1.50/M = 30000. Settle: 88 + 1200 = 1288.
+      expect(mockVerifyPayment).toHaveBeenCalledWith(
+        eurcPayload,
+        expect.objectContaining({
+          asset: EURC,
+          amount: "30000",
+          extra: expect.objectContaining({ name: "EURC" }),
+        }),
+      );
+      expect(mockSettlePayment).toHaveBeenCalledWith(
+        eurcPayload,
+        expect.objectContaining({ asset: EURC, amount: "1288" }),
+      );
+    });
+
+    it("refuses a token that is not a stablecoin on that network", async () => {
+      mockExtractPaymentPayload.mockReturnValue({
+        ...eurcPayload,
+        accepted: { ...eurcPayload.accepted, asset: "0x0000000000000000000000000000000000000001" },
+      });
+
+      const res = await handle(makeEvent() as never, {});
+
+      expect(res.statusCode).toBe(402);
+      expect(mockVerifyPayment).not.toHaveBeenCalled();
+    });
+  });
+});

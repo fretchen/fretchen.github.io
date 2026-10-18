@@ -66,4 +66,4 @@ jobs:
           # exactly this one script, not the account.
           script_id: ${{ secrets.BUNNYJS_SCRIPT_ID }}
           deploy_key: ${{ secrets.BUNNYJS_DEPLOY_KEY }}
-          file: "bunny_js/dist/index.js"
+          file: "bunny_js/dist/searchapi.js"

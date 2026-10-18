@@ -4,7 +4,7 @@
   "description": "Bunny Edge Script twins of the scw_js x402 sellers. First port: searchapi (web-agent).",
   "type": "module",
   "scripts": {
-    "build": "tsdown",
+    "build": "npm run build:searchapi && npm run build:llm",
     "test": "NODE_ENV=test vitest run",
     "test:watch": "NODE_ENV=test vitest",
     "test:coverage": "NODE_ENV=test vitest run --coverage",
@@ -14,7 +14,9 @@
     "format:check": "prettier --check .",
     "check": "tsc --noEmit && npm run lint && npm run format:check && npm run test",
     "dev": "deno run -A src/index.ts",
-    "deploy": "npm run build && bunny scripts deploy dist/index.js"
+    "deploy": "npm run build && bunny scripts deploy dist/searchapi.js",
+    "build:searchapi": "tsdown src/searchapi.ts",
+    "build:llm": "tsdown src/llm.ts"
   },
   "keywords": [
     "bunny.net",

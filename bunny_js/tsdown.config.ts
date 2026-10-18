@@ -44,7 +44,7 @@ const nodeBuiltinPlugin = {
 };
 
 export default defineConfig({
-  entry: ["src/index.ts"],
+  entry: ["src/searchapi.ts"],
   format: "esm",
   // The bundle runs in bunny's Deno isolate, not Node: "neutral" keeps Node builtins
   // external (resolved by Deno at runtime via the plugin above) instead of letting the

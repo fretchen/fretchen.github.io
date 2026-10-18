@@ -23,13 +23,13 @@ the bunny-provided URL until a formal switch.
 
 ## Commands
 
-- `npm run build` — tsdown bundle to a **single** `dist/index.js` (bunny deploys one file).
+- `npm run build` — tsdown bundle to a **single** `dist/searchapi.js` (bunny deploys one file).
 - `npm run dev` — local serve via Deno on 127.0.0.1:8080. Pass real env with
   `--env-file=.env` for the paid-path machinery (the unpaid 402 path needs
   `NFT_WALLET_PUBLIC_KEY` + `RECEIVER_AUTHORIZER_PRIVATE_KEY`).
 - `npm test` — vitest (165 tests: 108 ported + the translated routes suite (incl. cache-control)).
 - `npm run check` — typecheck + lint + format + tests.
-- `npm run deploy` — build, then `bunny scripts deploy dist/index.js` (needs the bunny CLI,
+- `npm run deploy` — build, then `bunny scripts deploy dist/searchapi.js` (needs the bunny CLI,
   installed and logged in).
 
 Ordering (repo rule): `npm run build` in `shared/chain-utils` and `shared/s3-utils` first —
@@ -61,7 +61,7 @@ it is inert without another credential, plain — and plain stays inspectable wh
 
 ## Known limits / decisions
 
-- **Single-file bundle, 1 MB limit.** tsdown emits one `dist/index.js` with `codeSplitting:
+- **Single-file bundle, 1 MB limit.** tsdown emits one `dist/searchapi.js` with `codeSplitting:
 false`; Node builtins stay external and MUST be imported through the `node:` prefix
   (bunny's Deno resolves them; the bundler plugin rewrites bare ones). Measured: **~397 KB**.
 - **The platform rewrites Cache-Control: no-store to no-cache.** The twin sends `no-store`
@@ -99,7 +99,7 @@ Budget: ≤ ~$0.10 of real purchases.
 
 Tasks 1-5 of the port plan are done (scaffold, bundle gate, SigV4 spike, verbatim stack +
 tests, native routing + tests). Task 6 (deploy + trials) is pending user-side setup: bunny CLI
-install + login (or dashboard paste of `dist/index.js`), and the secrets above configured on
+install + login (or dashboard paste of `dist/searchapi.js`), and the secrets above configured on
 the script. The formal switch (moving `web-agent.fretchen.eu` off Scaleway) is out of scope.
 
 ## Deploy paths (both can coexist)
@@ -108,13 +108,13 @@ Bunny publishes whichever deployment happened **last**, so a manual CLI deploy a
 GitHub Action interoperate by design — deploy from the laptop for an experiment, and the
 next push to `main` overwrites it back to the committed state.
 
-1. **Manual (CLI):** `npm run deploy` (= build + `bunny scripts deploy dist/index.js`),
+1. **Manual (CLI):** `npm run deploy` (= build + `bunny scripts deploy dist/searchapi.js`),
    needs the bunny CLI — `curl -fsSL https://cli.bunny.net/install.sh | sh` (single binary,
    independent of the nvm-managed Node that a global npm install would bind it to) — then
    `bunny login`.
 2. **GitHub Actions:** `.github/workflows/deploy-bunny-js.yml` — on push to `main` touching
    `bunny_js/**` or the shared libs, builds (with the repo's shared-deps-first ordering) and
-   publishes `dist/index.js` via the official `BunnyWay/actions/deploy-script` action.
+   publishes `dist/searchapi.js` via the official `BunnyWay/actions/deploy-script` action.
    Requires two repo secrets, both from the bunny dashboard
    (**Script -> Deployments -> Settings**):
    - `BUNNYJS_SCRIPT_ID` — the script's id

@@ -256,6 +256,22 @@ describe("OPTIONS preflight", () => {
     expect(res.headers["access-control-allow-methods"]).toContain("GET");
   });
 
+  /** The bunny twin sits behind a pull zone (a real CDN); anything cached here would replay
+   *  a purchased result — with its Payment-Response receipt — to the next caller. */
+  test("sends Cache-Control: no-store on every response", async () => {
+    const res = await handle(makeRequest("OPTIONS", "search", { auth: null }));
+    expect(res.headers["cache-control"]).toBe("no-store");
+
+    const unpaid = await handle(makeRequest("GET", "search", { auth: null }));
+    expect(unpaid.statusCode).toBe(402);
+    expect(unpaid.headers["cache-control"]).toBe("no-store");
+
+    mockExtractPaymentPayload.mockReturnValue(payment());
+    const paid = await handle(makeRequest("GET", "search", { auth: null, query: { q: "x402" } }));
+    expect(paid.statusCode).toBe(200);
+    expect(paid.headers["cache-control"]).toBe("no-store");
+  });
+
   /** Both directions, and they are unrelated despite the similar names: the payment header must be
    *  allowed on the request, and the settlement header must be readable on the response. Without
    *  the second, a browser buyer's channel record goes stale and it re-deposits every call. */

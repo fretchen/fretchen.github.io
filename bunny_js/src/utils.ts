@@ -48,6 +48,11 @@ export const EXPOSED_X402_HEADERS =
  * the browser preflight fails. `Expose-Headers` is the other direction — which RESPONSE
  * headers the client may read.
  *
+ * `Cache-Control: no-store` is a bunny_js addition with no scw_js counterpart: unlike the
+ * Scaleway function, this script is served through a bunny pull zone (a real CDN), and a
+ * cached paid 200 would replay a purchased result — with its Payment-Response receipt
+ * header — to the next caller. Nothing this seller returns may be cached.
+ *
  * Keep this in sync with @x402/fetch; the OPTIONS test enforces it.
  */
 export const CORS_HEADERS = {
@@ -56,5 +61,6 @@ export const CORS_HEADERS = {
     "Content-Type, PAYMENT-SIGNATURE, X-PAYMENT, Access-Control-Expose-Headers",
   "Access-Control-Allow-Methods": "GET, HEAD, POST, OPTIONS",
   "Access-Control-Expose-Headers": EXPOSED_X402_HEADERS,
+  "Cache-Control": "no-store",
   "Content-Type": "application/json",
 };

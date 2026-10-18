@@ -40,16 +40,24 @@ they are `file:` dependencies.
 Same values the Scaleway function uses — the twin must quote the **same channel tuple**
 (receiver, receiver authorizer, withdraw delay) or its channels are unusable:
 
-| Variable                                                             | Use                                                                                                     |
-| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `NFT_WALLET_PUBLIC_KEY`                                              | receiver/payTo (agent wallet)                                                                           |
-| `RECEIVER_AUTHORIZER_PRIVATE_KEY`                                    | signs batch-settlement locks/refund authorizations                                                      |
-| `BRAVE_API_KEY`                                                      | Brave LLM Context API                                                                                   |
-| `SCW_S3_BUCKET`, `SCW_ACCESS_KEY`, `SCW_SECRET_KEY`, `SCW_S3_REGION` | channel storage (the same bucket `llmx402cron` on Scaleway claims)                                      |
-| `RPC_URL_EIP155_10`, `RPC_URL_EIP155_8453`                           | viem chain reads for channel sync (public endpoints are rate-limited)                                   |
-| `FACILITATOR_URL`                                                    | defaults to `https://facilitator.fretchen.eu`                                                           |
-| `LLM_WITHDRAW_DELAY_SECONDS`                                         | defaults to 86400 — must match production                                                               |
-| `SEARCH_SERVICE_URL`                                                 | advertised `resource.url` base; set to the bunny trial URL while trialing, production default otherwise |
+`bunny scripts env set` kinds — the criterion is not relevance but what a readable
+value is worth: plain variables are stored unencrypted and readable back via
+`env list`/`env pull`; `--secret` ones are encrypted and redacted. If a value
+authenticates, signs, or bills it is a secret; if a public 402 response already reveals it or
+it is inert without another credential, plain — and plain stays inspectable when debugging.
+
+| Variable                                   | bunny kind              | Use                                                                                                                                                                                                             |
+| ------------------------------------------ | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NFT_WALLET_PUBLIC_KEY`                    | plain                   | receiver/payTo (agent wallet) — a public address                                                                                                                                                                |
+| `RECEIVER_AUTHORIZER_PRIVATE_KEY`          | secret (`--secret`)     | signs batch-settlement locks/refund authorizations                                                                                                                                                              |
+| `BRAVE_API_KEY`                            | secret (`--secret`)     | Brave LLM Context API (metered)                                                                                                                                                                                 |
+| `SCW_S3_BUCKET`                            | plain                   | channel-store bucket name — NOT in `.env`; set explicitly (`my-imagestore`): the s3-utils code default points there today, but the twin must not depend on a fallback that could change                         |
+| `SCW_S3_REGION`                            | plain                   | `nl-ams` — not in `.env` either; set explicitly alongside the bucket                                                                                                                                            |
+| `SCW_ACCESS_KEY` + `SCW_SECRET_KEY`        | secret (`--secret`)     | channel storage (the same bucket `llmx402cron` on Scaleway claims) — most sensitive pair                                                                                                                        |
+| `RPC_URL_EIP155_10`, `RPC_URL_EIP155_8453` | secret (`--secret`)     | viem chain reads — NOT in `.env`: production runs unset on viem's public defaults (the accepted tradeoff in scw_js's serverless.yml). Set as `--secret` only if rate limits bite — real values embed an API key |
+| `FACILITATOR_URL`                          | plain (code default ok) | `https://facilitator.fretchen.eu`                                                                                                                                                                               |
+| `LLM_WITHDRAW_DELAY_SECONDS`               | plain (code default ok) | 86400 — must match production                                                                                                                                                                                   |
+| `SEARCH_SERVICE_URL`                       | plain                   | advertised `resource.url` base; the bunny trial URL while trialing, production default otherwise                                                                                                                |
 
 ## Known limits / decisions
 
@@ -70,15 +78,15 @@ false`; Node builtins stay external and MUST be imported through the `node:` pre
 
 ## Trial matrix (Task 6 — fill in as trials run)
 
-| #   | Check                                                                                                                                                  | Result  |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- |
-| 1   | Unpaid `GET /search` at the bunny URL → 402 + `Payment-Required` header                                                                                | pending |
-| 2   | `GET /openapi.json`, `/.well-known/agent-registration.json`, `/favicon.png` at the bunny URL                                                           | pending |
-| 3   | Deployed SigV4 probe (`scripts/sigv4_probe.ts` as its own script) against the real bucket                                                              | pending |
-| 4   | Paid `/fetch` ($0.001) — buyer: `bunny_js/notebooks/search_x402_buyer.ipynb`, `SERVER` = "bunny-trial" with `TRIAL_URL` set → 200 + `Payment-Response` | pending |
-| 5   | Paid `/search` ($0.01) via the same notebook → 200 + results                                                                                           | pending |
-| 6   | Channel record in S3 updated; next `llmx402cron` run claims it cleanly (observability logs)                                                            | pending |
-| 7   | Cold-start spot checks at the bunny URL                                                                                                                | pending |
+| #   | Check                                                                                                                                                  | Result                                                                                                       |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| 1   | Unpaid `GET /search` at the bunny URL → 402 + `Payment-Required` header                                                                                | **PASS** 2026-10-18: 402 + Payment-Required, mainnet-only accepts, receiver 0xAAEBC1…239C, `cdn-cache: MISS` |
+| 2   | `GET /openapi.json`, `/.well-known/agent-registration.json`, `/favicon.png` at the bunny URL                                                           | **PASS** 2026-10-18: 200s, correct content types and sizes (6.3 KB / 1.2 KB / 31 KB)                         |
+| 3   | Deployed SigV4 probe (`scripts/sigv4_probe.ts` as its own script) against the real bucket                                                              | pending                                                                                                      |
+| 4   | Paid `/fetch` ($0.001) — buyer: `bunny_js/notebooks/search_x402_buyer.ipynb`, `SERVER` = "bunny-trial" with `TRIAL_URL` set → 200 + `Payment-Response` | pending                                                                                                      |
+| 5   | Paid `/search` ($0.01) via the same notebook → 200 + results                                                                                           | pending                                                                                                      |
+| 6   | Channel record in S3 updated; next `llmx402cron` run claims it cleanly (observability logs)                                                            | pending                                                                                                      |
+| 7   | Cold-start spot checks at the bunny URL                                                                                                                | pending                                                                                                      |
 
 Budget: ≤ ~$0.10 of real purchases.
 

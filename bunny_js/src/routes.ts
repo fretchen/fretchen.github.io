@@ -94,6 +94,11 @@ function toResponse(http: HttpResponse): Response {
   for (const [key, value] of Object.entries(http.headers)) {
     headers[key] = byteStringHeaderValue(value);
   }
+  // The pull zone in front of this script is a real CDN; a cached paid 200 would replay a
+  // purchased result — with its Payment-Response receipt — to the next caller. The ported
+  // create402Response emits no Cache-Control (the Scaleway function had no CDN), so the
+  // conversion layer pins it. CORS_HEADERS covers the responses routes.ts builds directly.
+  headers["Cache-Control"] ??= "no-store";
   return new Response(http.body, { status: http.statusCode, headers });
 }
 

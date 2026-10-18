@@ -1,0 +1,90 @@
+# bunny_js
+
+Bunny Edge Script twins of the `scw_js` x402 sellers. First port: **searchapi** (the
+`web-agent.fretchen.eu` seller — Brave `/search` + `/fetch`, paid per call via x402
+batch-settlement). The Scaleway function stays live and untouched; this twin is trialed at
+the bunny-provided URL until a formal switch.
+
+## Architecture
+
+- `src/routes.ts` — the **only new code**: the routing layer, natively against web-standard
+  `Request`/`Response`, a line-by-line mirror of `scw_js/search_api.ts` (route table, ordering
+  rules, and the payment/settlement comments carried over).
+- Everything else in `src/` is **ported verbatim** from `scw_js` (import paths only):
+  the shared seller stack (`x402_server.ts`, channel storage/sync), the services
+  (`search_service.ts`, `web_fetch_service.ts` with the SSRF defence), schemas, discovery,
+  favicon, `openapi.search.json`. Two deliberate deviations:
+  - `logger.ts` is a pino-shaped console shim — pino is a Node-runtime library; bunny logs go
+    to the dashboard, and the observability `logger.error` alert convention does not apply.
+  - `utils.ts` ports only the platform-neutral half (CORS/parseJsonBody); the ScwResponse
+    envelope helpers are not ported — there is no Scaleway envelope here.
+- `src/runtime-shims.ts` — pins the Node `Buffer`/`process` globals the ported code assumes,
+  imported FIRST by the entry so they exist before any ported module's top-level code runs.
+
+## Commands
+
+- `npm run build` — tsdown bundle to a **single** `dist/index.js` (bunny deploys one file).
+- `npm run dev` — local serve via Deno on 127.0.0.1:8080. Pass real env with
+  `--env-file=../scw_js/.env` for the paid-path machinery (the unpaid 402 path needs
+  `NFT_WALLET_PUBLIC_KEY` + `RECEIVER_AUTHORIZER_PRIVATE_KEY`).
+- `npm test` — vitest (164 tests: 108 ported + the translated routes suite).
+- `npm run check` — typecheck + lint + format + tests.
+- `npm run deploy` — build, then `bunny scripts deploy dist/index.js` (needs the bunny CLI,
+  installed and logged in).
+
+Ordering (repo rule): `npm run build` in `shared/chain-utils` and `shared/s3-utils` first —
+they are `file:` dependencies.
+
+## Environment / secrets (bunny script env vars)
+
+Same values the Scaleway function uses — the twin must quote the **same channel tuple**
+(receiver, receiver authorizer, withdraw delay) or its channels are unusable:
+
+| Variable                                                             | Use                                                                                                     |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `NFT_WALLET_PUBLIC_KEY`                                              | receiver/payTo (agent wallet)                                                                           |
+| `RECEIVER_AUTHORIZER_PRIVATE_KEY`                                    | signs batch-settlement locks/refund authorizations                                                      |
+| `BRAVE_API_KEY`                                                      | Brave LLM Context API                                                                                   |
+| `SCW_S3_BUCKET`, `SCW_ACCESS_KEY`, `SCW_SECRET_KEY`, `SCW_S3_REGION` | channel storage (the same bucket `llmx402cron` on Scaleway claims)                                      |
+| `RPC_URL_EIP155_10`, `RPC_URL_EIP155_8453`                           | viem chain reads for channel sync (public endpoints are rate-limited)                                   |
+| `FACILITATOR_URL`                                                    | defaults to `https://facilitator.fretchen.eu`                                                           |
+| `LLM_WITHDRAW_DELAY_SECONDS`                                         | defaults to 86400 — must match production                                                               |
+| `SEARCH_SERVICE_URL`                                                 | advertised `resource.url` base; set to the bunny trial URL while trialing, production default otherwise |
+
+## Known limits / decisions
+
+- **Single-file bundle, 1 MB limit.** tsdown emits one `dist/index.js` with `codeSplitting:
+false`; Node builtins stay external and MUST be imported through the `node:` prefix
+  (bunny's Deno resolves them; the bundler plugin rewrites bare ones). Measured: **~397 KB**.
+- **Non-latin1 header bytes.** Web `Headers` reject the raw-JSON `X-Payment` header when the
+  bazaar metadata contains em-dashes/ellipses; `routes.ts` escapes non-latin1 codepoints as
+  JSON `\uXXXX` — lossless for any JSON-parsing client.
+- **`node:dns/promises`** (SSRF defence) and `node:crypto` (SigV4) are untested on bunny's
+  Deno 1.x specifically — `scripts/sigv4_probe.ts` is the deployed probe for the S3 half
+  (local Deno: PASS). Deployed runtime verification is part of the trial matrix below.
+- **50 subrequests/request** — a paid request uses: S3 ops (lock/charge) + RPC reads (channel
+  sync) + 1 upstream + facilitator calls. Well within the cap, but `getFacilitatorFeeConfig`
+  style fetch storms would not be.
+- **No cron at the edge** — `llmx402cron` stays on Scaleway and claims the channels this twin
+  charges, unchanged, because the channel storage is the same bucket.
+
+## Trial matrix (Task 6 — fill in as trials run)
+
+| #   | Check                                                                                                                                     | Result  |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| 1   | Unpaid `GET /search` at the bunny URL → 402 + `Payment-Required` header                                                                   | pending |
+| 2   | `GET /openapi.json`, `/.well-known/agent-registration.json`, `/favicon.png` at the bunny URL                                              | pending |
+| 3   | Deployed SigV4 probe (`scripts/sigv4_probe.ts` as its own script) against the real bucket                                                 | pending |
+| 4   | Paid `/fetch` ($0.001) — buyer: `scw_js/notebooks/search_x402_buyer.ipynb` with `SERVICE_URL` at the bunny URL → 200 + `Payment-Response` | pending |
+| 5   | Paid `/search` ($0.01) via the same notebook → 200 + results                                                                              | pending |
+| 6   | Channel record in S3 updated; next `llmx402cron` run claims it cleanly (observability logs)                                               | pending |
+| 7   | Cold-start spot checks at the bunny URL                                                                                                   | pending |
+
+Budget: ≤ ~$0.10 of real purchases.
+
+## Status
+
+Tasks 1-5 of the port plan are done (scaffold, bundle gate, SigV4 spike, verbatim stack +
+tests, native routing + tests). Task 6 (deploy + trials) is pending user-side setup: bunny CLI
+install + login (or dashboard paste of `dist/index.js`), and the secrets above configured on
+the script. The formal switch (moving `web-agent.fretchen.eu` off Scaleway) is out of scope.

@@ -64,6 +64,11 @@ it is inert without another credential, plain — and plain stays inspectable wh
 - **Single-file bundle, 1 MB limit.** tsdown emits one `dist/index.js` with `codeSplitting:
 false`; Node builtins stay external and MUST be imported through the `node:` prefix
   (bunny's Deno resolves them; the bundler plugin rewrites bare ones). Measured: **~397 KB**.
+- **The platform rewrites Cache-Control: no-store to no-cache.** The twin sends `no-store`
+  on every response (a bunny_js addition: the pull zone in front is a real CDN and a cached
+  paid 200 would replay a purchase); bunny's edge normalizes it to `no-cache`, observed live
+  on 2026-10-18. Still safe — no-cache forces revalidation, and the responses carry no
+  validators, so every hit is an origin fetch and paid responses cannot be replayed.
 - **Non-latin1 header bytes.** Web `Headers` reject the raw-JSON `X-Payment` header when the
   bazaar metadata contains em-dashes/ellipses; `routes.ts` escapes non-latin1 codepoints as
   JSON `\uXXXX` — lossless for any JSON-parsing client.

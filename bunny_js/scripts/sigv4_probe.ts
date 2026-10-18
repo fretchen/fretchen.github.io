@@ -4,7 +4,7 @@
  * (what bunny's isolate also runs): one put, one read-back, one delete against the real
  * Scaleway Object Storage bucket, under a throwaway prefix.
  *
- * Run: deno run -A --env-file=../scw_js/.env scripts/sigv4_probe.ts
+ * Run: deno run -A --env-file=.env scripts/sigv4_probe.ts
  */
 import { deleteS3Object, getS3Object, putS3Object } from "@fretchen/s3-utils";
 

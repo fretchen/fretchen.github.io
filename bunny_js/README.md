@@ -25,7 +25,7 @@ the bunny-provided URL until a formal switch.
 
 - `npm run build` — tsdown bundle to a **single** `dist/index.js` (bunny deploys one file).
 - `npm run dev` — local serve via Deno on 127.0.0.1:8080. Pass real env with
-  `--env-file=../scw_js/.env` for the paid-path machinery (the unpaid 402 path needs
+  `--env-file=.env` for the paid-path machinery (the unpaid 402 path needs
   `NFT_WALLET_PUBLIC_KEY` + `RECEIVER_AUTHORIZER_PRIVATE_KEY`).
 - `npm test` — vitest (164 tests: 108 ported + the translated routes suite).
 - `npm run check` — typecheck + lint + format + tests.

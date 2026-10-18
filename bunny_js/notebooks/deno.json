@@ -1,0 +1,5 @@
+{
+  "$comment": "Scoped to this dir only — does not affect the parent bunny_js npm/vitest project. nodeModulesDir: auto gives THIS folder its own local node_modules (bunny_js/notebooks/node_modules, with its .deno store), driven purely by the npm: specifiers in the notebooks — no package.json needed; the dir already exists, which is what makes \"auto\" use it (Deno 2's \"auto\" only creates the dir when a package.json exists in scope, so recreate it by temporarily setting \"true\" and running any import once). Same fix as scw_js/notebooks/deno.json and x402_facilitator/notebooks/deno.json — without this file, Deno auto-detects ../package.json as an ancestor and switches npm: resolution to that package's node_modules (byonm-style), which only has bunny_js's own deps (no @x402/fetch, different viem) and breaks the buyer notebook's imports. lock: false disables deno.lock creation/checking for this dir.",
+  "nodeModulesDir": "auto",
+  "lock": false
+}

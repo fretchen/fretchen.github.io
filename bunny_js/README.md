@@ -27,7 +27,7 @@ the bunny-provided URL until a formal switch.
 - `npm run dev` — local serve via Deno on 127.0.0.1:8080. Pass real env with
   `--env-file=.env` for the paid-path machinery (the unpaid 402 path needs
   `NFT_WALLET_PUBLIC_KEY` + `RECEIVER_AUTHORIZER_PRIVATE_KEY`).
-- `npm test` — vitest (164 tests: 108 ported + the translated routes suite).
+- `npm test` — vitest (165 tests: 108 ported + the translated routes suite (incl. cache-control)).
 - `npm run check` — typecheck + lint + format + tests.
 - `npm run deploy` — build, then `bunny scripts deploy dist/index.js` (needs the bunny CLI,
   installed and logged in).

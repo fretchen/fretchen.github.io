@@ -1,0 +1,59 @@
+name: Test Bunny JS Edge Script
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+      - "bunny_js/**"
+      - "shared/chain-utils/**"
+      - "shared/s3-utils/**"
+      - ".github/workflows/test-bunny-js.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "bunny_js/**"
+      - "shared/chain-utils/**"
+      - "shared/s3-utils/**"
+      - ".github/workflows/test-bunny-js.yml"
+
+jobs:
+  test-bunny-js:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: |
+            bunny_js/package-lock.json
+            shared/chain-utils/package-lock.json
+            shared/s3-utils/package-lock.json
+
+      # Repo ordering rule (AGENTS.md -> Commands): the shared file: dependencies must be
+      # built before bunny_js can build and typecheck against them.
+      - name: Install and build chain-utils
+        working-directory: ./shared/chain-utils
+        run: npm ci && npm run build
+
+      - name: Install and build s3-utils
+        working-directory: ./shared/s3-utils
+        run: npm ci && npm run build
+
+      - name: Install dependencies
+        working-directory: ./bunny_js
+        run: npm ci
+
+      - name: Run quality checks (typecheck + lint + format + tests)
+        working-directory: ./bunny_js
+        run: npm run check
+        env:
+          NODE_ENV: test
+          CI: true

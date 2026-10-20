@@ -123,7 +123,7 @@ async function handle(request: Request) {
   return { statusCode: res.status, headers, body: await res.text() };
 }
 
-let handleRequest: typeof import("../src/routes.js").handleRequest;
+let handleRequest: typeof import("../src/searchapi_routes.js").handleRequest;
 let validAuth: string;
 
 beforeEach(async () => {
@@ -190,7 +190,7 @@ beforeEach(async () => {
     "fetch",
     vi.fn().mockResolvedValue({ ok: true, json: async () => braveResponse() }),
   );
-  handleRequest = (await import("../src/routes.js")).handleRequest;
+  handleRequest = (await import("../src/searchapi_routes.js")).handleRequest;
 });
 
 afterEach(() => {

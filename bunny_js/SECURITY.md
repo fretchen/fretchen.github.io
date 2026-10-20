@@ -10,23 +10,41 @@ Report privately via [GitHub Security Advisories](https://github.com/fretchen/fr
 
 ## Scope
 
-The bunny.net Edge Script twin of the `searchapi` seller: `bunny_js/` code, the deployed
-script (id 97472, `bunnyjs-vlyol.bunny.run`), its script env, the GitHub Action
-(`.github/workflows/deploy-bunny-js.yml`), and the bunny CLI credential on the dev machine.
+The bunny.net Edge Script twins of the x402 sellers — all of `bunny_js/` code and the three
+deployed scripts it builds to:
+
+| Twin      | Script id | URL                            | Tools served                        |
+| --------- | --------- | ------------------------------ | ----------------------------------- |
+| searchapi | 97472     | `bunnyjs-vlyol.bunny.run`      | `/search` + `/fetch` (Brave)        |
+| llm       | 97948     | `fretchen-llm-2dirg.bunny.run` | chat completions (Mistral)          |
+| mcp       | 97949     | `fretchen-mcp-53eoc.bunny.run` | both, over stateless JSON-RPC (MCP) |
+
+Plus each script's env, the GitHub Action
+(`.github/workflows/deploy-bunny-js.yml` — one deploy step per script, one per-script
+deploy-key secret pair), and the bunny CLI credential on the dev machine.
 See [../.github/THREAT_MODEL.md](../.github/THREAT_MODEL.md) for the asset inventory and
 blast radius — the bunny surface has its own rows there (assets, blast radius, trust
-boundary, 2026-10-18 audit).
+boundary, 2026-10-18 audit, three-script update 2026-10-20).
 
 ---
 
 ## Known Open Issues
 
-| Area                                       | Severity | Status                                                                                   |
-| ------------------------------------------ | -------- | ---------------------------------------------------------------------------------------- |
-| Deploy-key blast radius                    | Medium   | Bounded — trigger hygiene (push-to-main only) + rotate-on-suspicion; see THREAT_MODEL §2 |
-| Deployed-runtime SigV4 + DNS verification  | Low      | Pending — local Deno PASS; both failure branches verified fail-closed; see below         |
-| Undici-specific error matching on the edge | Low      | Watch item — unreachable hosts may 500 instead of 400 on bunny's runtime; see below      |
-| `.env` copy drift vs `scw_js/.env`         | Low      | Accepted for the trial — the two secret sets must be rotated/copied together             |
+| Area                                       | Severity | Status                                                                                                                                      |
+| ------------------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Deploy-key blast radius (×3, one per twin) | Medium   | Bounded — trigger hygiene (push-to-main only) + rotate-on-suspicion; see THREAT_MODEL §2                                                    |
+| Secret-set copies across two platforms     | Medium   | Accepted for the trial — scw_js + up to three script envs carry the S3 pair and authorizer key; every copy must rotate together (see below) |
+| Deployed-runtime SigV4 + DNS verification  | Low      | Pending — local Deno PASS; both failure branches verified fail-closed; see below                                                            |
+| Undici-specific error matching on the edge | Low      | Watch item — unreachable hosts may 500 instead of 400 on bunny's runtime; see below                                                         |
+| `.env` copy drift vs `scw_js/.env`         | Low      | Accepted for the trial — the two secret sets must be rotated/copied together                                                                |
+
+**Secret-copy rotation coupling (2026-10-20, three-script update).** The channel-store S3
+credential pair and the receiver-authorizer private key exist in `scw_js`'s Scaleway secrets
+and in each twin's script env — searchapi, llm, and mcp all charge the same S3 channel
+store. A rotation that touches any one copy must touch all of them in the same change, or
+the twins and Scaleway diverge on what "the same channel tuple" means. `BRAVE_API_KEY`
+couples searchapi + mcp; `MISTRAL_API_KEY` couples llm + mcp. No buyer key or owner key
+exists in any script env.
 
 **Deployed-runtime verification (2026-10-18 audit).** `node:crypto` (SigV4) and
 `node:dns/promises` (the `/fetch` SSRF defence) are unverified on bunny's Deno 1.x — the
@@ -63,6 +81,21 @@ matcher with Deno's error shapes on first observation, not speculatively.
   has no cloud metadata service, and the private-range block is enforced identically.
 - Repo hygiene: `.env` untracked and gitignored in both packages; tracked files contain only
   published test keys, public addresses, and the public ownership proof.
+
+## Fixed / Verified (2026-10-20 review, llm + mcp twins)
+
+- `structuredClone` on the llm twin's `GET /openapi.json` path was replaced with a JSON
+  round-trip — an unverified Node-global on bunny's Deno 1.x, and lossless for a JSON
+  document by construction.
+- The MCP wrapper's POST body is read capped at 1 MB (declared `Content-Length` checked up
+  front, the stream read refused mid-body past the cap) — the edge imposes no
+  platform-level request-size cap the way Scaleway did, so the twin encodes its own. A
+  streamed-oversize test pins the 413.
+- Payment flows on the new twins verified against the review checklist: settle-after-success
+  and lock release on upstream failure hold in `llm_routes.ts` (the 40 s completion cap
+  releases the lock explicitly; the advertised lock TTL is scw's 120), the mcp relay
+  duplicates no pricing (it calls the real handlers in-process), and every response path
+  spreads `CORS_HEADERS` (which carries the `no-store` pin).
 
 ---
 

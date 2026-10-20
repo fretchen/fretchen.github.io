@@ -29,6 +29,7 @@ import { AGENT_REGISTRATION_PATH, buildAgentRegistration } from "./agent_registr
 import { faviconBase64, faviconContentType } from "./favicon.js";
 import openapiSpec from "./openapi.search.json" with { type: "json" };
 import { buildSearchBazaarExtension } from "./bazaar_discovery.js";
+import { toResponse } from "./response.js";
 import {
   create402Response,
   createBatchSettlementPaymentRequirements,
@@ -36,7 +37,6 @@ import {
   createSettlementHeaders,
   extractPaymentPayload,
   releaseLock,
-  type HttpResponse,
   type SdkPaymentPayload,
   type SdkPaymentRequirements,
 } from "./x402_server.js";
@@ -72,34 +72,6 @@ const FAVICON_BYTES = Uint8Array.from(atob(faviconBase64), (c) => c.charCodeAt(0
 
 function jsonResponse(statusCode: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status: statusCode, headers: CORS_HEADERS });
-}
-
-/**
- * A web-standard Response cannot carry non-latin1 header bytes (the Headers API rejects them
- * as "not a valid ByteString"), and the 402's X-Payment / the 200's X-Payment-Response are
- * raw JSON whose bazaar metadata contains em-dashes, arrows and ellipses. JSON \uXXXX escapes
- * decode to the exact same string, so escaping non-latin1 codepoints keeps the header's
- * meaning identical for any JSON-parsing client — the base64 Payment-Required /
- * Payment-Response headers are ASCII and pass through untouched.
- */
-function byteStringHeaderValue(value: string): string {
-  return value.replace(/[\u0100-\uFFFF]/g, (ch) => {
-    return `\\u${ch.charCodeAt(0).toString(16).padStart(4, "0")}`;
-  });
-}
-
-/** The ported x402 helpers still speak the {statusCode, headers, body} envelope. */
-function toResponse(http: HttpResponse): Response {
-  const headers: Record<string, string> = {};
-  for (const [key, value] of Object.entries(http.headers)) {
-    headers[key] = byteStringHeaderValue(value);
-  }
-  // The pull zone in front of this script is a real CDN; a cached paid 200 would replay a
-  // purchased result — with its Payment-Response receipt — to the next caller. The ported
-  // create402Response emits no Cache-Control (the Scaleway function had no CDN), so the
-  // conversion layer pins it. CORS_HEADERS covers the responses routes.ts builds directly.
-  headers["Cache-Control"] ??= "no-store";
-  return new Response(http.body, { status: http.statusCode, headers });
 }
 
 function parsePath(rawPath: string): string {

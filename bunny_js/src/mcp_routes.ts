@@ -79,6 +79,54 @@ function parseMessage(rawBody: string): JsonRpcMessage | "parse-error" | "invali
   return message as JsonRpcMessage;
 }
 
+/**
+ * Cap on one JSON-RPC message — bounds the wrapper itself. The tools' handlers impose their
+ * own, smaller caps on the fields they charge for (the llm router meters messages at
+ * MAX_MESSAGES_BYTES = 192 KB); this only stops an oversized envelope from being fully
+ * materialized in the 128 MB isolate. 1 MB is generous headroom over the message cap plus
+ * the JSON-RPC envelope and the payment _meta.
+ */
+const MAX_RPC_BYTES = 1_000_000;
+
+/**
+ * Reads the POST body up to MAX_RPC_BYTES and refuses beyond it, so an oversized body is
+ * rejected without ever being fully buffered. The Content-Length check refuses a declared
+ * oversize up front; the stream read catches a chunked body that lies about or omits it.
+ * (Deviation from scw: the Scaleway function leaned on the platform's request-size cap; the
+ * edge imposes no comparable one, so the twin encodes its own.)
+ */
+async function readCappedBody(request: Request): Promise<string | "too-large"> {
+  const declared = Number(request.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > MAX_RPC_BYTES) {
+    return "too-large";
+  }
+  if (!request.body) {
+    return "";
+  }
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    total += value.byteLength;
+    if (total > MAX_RPC_BYTES) {
+      await reader.cancel();
+      return "too-large";
+    }
+    chunks.push(value);
+  }
+  const body = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(body);
+}
+
 async function dispatch(
   method: string,
   id: unknown,
@@ -180,7 +228,17 @@ export async function handleMCPRequest(request: Request): Promise<Response> {
     });
   }
 
-  const message = parseMessage(await request.text());
+  // The body is read capped (see readCappedBody): an oversized message is refused with 413
+  // before anything is parsed, locked, or paid for.
+  const rawBody = await readCappedBody(request);
+  if (rawBody === "too-large") {
+    return new Response(JSON.stringify({ error: `Request body exceeds 1 MB.` }), {
+      status: 413,
+      headers: { ...CORS_HEADERS },
+    });
+  }
+
+  const message = parseMessage(rawBody);
   if (message === "parse-error") {
     return jsonRpcError(null, -32700, "Parse error");
   }

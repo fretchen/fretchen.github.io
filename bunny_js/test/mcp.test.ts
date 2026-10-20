@@ -185,6 +185,35 @@ describe("mcp_routes (stateless paid MCP endpoint)", () => {
       expect(res.id).toBeNull();
     });
 
+    /**
+     * The wrapper reads the POST body capped: an oversized message is refused with 413
+     * before it is fully buffered, parsed, or paid for. This exercises the STREAM path
+     * (no Content-Length, so the per-chunk accounting is what trips the cap).
+     */
+    it("refuses a streamed POST body over the 1 MB cap with 413, CORS intact", async () => {
+      const chunk = new TextEncoder().encode("x".repeat(64 * 1024));
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          for (let i = 0; i < 17; i++) {
+            // 17 x 64 KB = 1,088,000 bytes — past the 1,000,000-byte cap mid-stream.
+            controller.enqueue(chunk);
+          }
+          controller.close();
+        },
+      });
+      const res = await handle(
+        new Request("https://mcp-agent.fretchen.eu/mcp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: stream,
+          // undici requires it for a streamed body; the edge runtime does not send one.
+          duplex: "half",
+        } as RequestInit),
+      );
+      expect(res.status).toBe(413);
+      expect(res.headers.get("access-control-allow-origin")).toBe("*");
+    });
+
     it("rejects JSON-RPC batches — this server speaks single messages", async () => {
       const res = await rpc([{ jsonrpc: "2.0", id: 1, method: "ping" }]);
       if (!("error" in res)) throw new Error("expected error response");

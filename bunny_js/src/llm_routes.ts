@@ -125,7 +125,10 @@ export async function handleLLMRequest(request: Request): Promise<Response> {
     // The static file's x-payment-info.price.max is a documentation-only baseline —
     // MAX_PRICE_ATOMIC is the real, live ceiling, so override it here rather than let the
     // served discovery doc silently drift from the actual runtime 402 behavior (scw parity).
-    const spec = structuredClone(openapiSpec) as typeof openapiSpec;
+    // DEVIATION from scw: the clone is a JSON round-trip, not structuredClone — the spec is
+    // a JSON document (lossless by construction), and structuredClone is a Node-global the
+    // bunny Deno 1.x isolate has not been verified to expose.
+    const spec = JSON.parse(JSON.stringify(openapiSpec)) as typeof openapiSpec;
     spec.paths["/"].post["x-payment-info"].price.max = formatUsdcAtomicAsDecimalUsd(
       MAX_PRICE_ATOMIC.USDC,
     );

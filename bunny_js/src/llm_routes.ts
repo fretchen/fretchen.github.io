@@ -6,13 +6,18 @@
  * testnet-mock gate), with THREE deliberate deviations:
  *
  * 1. **The 40-second completion cap.** bunny's edge kills a request at ~59 s wall clock
- *    (measured 2026-10-18, 504 at 59.2 s), so the twin advertises/verifies with
- *    LLM_MAX_TIMEOUT_SECONDS = 40 (vs the scw original's 120) and races the upstream call
- *    at the same bound. If the edge ever killed an in-flight completion, the client would
- *    get a 504 while verify-settle never finished — an orphaned channel lock; answering a
- *    timeout BEFORE the ceiling (lock released, nothing settled) is the only safe shape.
- *    maxTimeoutSeconds is per-route, not part of channelId, so channels funded against the
- *    scw chat's 120 s advertisement remain usable here.
+ *    (measured 2026-10-18, 504 at 59.2 s), so the twin races the upstream call at
+ *    LLM_COMPLETION_BOUND_SECONDS = 40. If the edge ever killed an in-flight completion,
+ *    the client would get a 504 while verify-settle never finished — an orphaned channel
+ *    lock; answering a timeout BEFORE the ceiling (lock released, nothing settled) is the
+ *    only safe shape. The ADVERTISED maxTimeoutSeconds stays 120, scw parity
+ *    (LLM_MAX_TIMEOUT_SECONDS, imported from the ported x402_server.js): the SDK derives
+ *    the EIP-3009 deposit's validBefore from it (now + maxTimeoutSeconds), and that window
+ *    must cover signing → transit → verify → the upstream call (up to 40 s) → settle
+ *    broadcast → inclusion. 40 s was measured too tight on a real Base-mainnet USDC
+ *    deposit — the facilitator's deposit() reverted with "FiatTokenV2: authorization is
+ *    expired" (2026-10-20). maxTimeoutSeconds is per-route, not part of channelId, so
+ *    channels funded against the scw chat's 120 s advertisement remain usable here.
  * 2. **The upstream call is raced.** scw_js's callLLMAPI has no timeout of its own — the
  *    Scaleway platform ceiling bounded it. This router adds the race explicitly.
  * 3. **openapi.json is served with the live price ceiling** — identical to scw (kept, since
@@ -42,6 +47,7 @@ import {
   extractPaymentPayload,
   createSettlementHeaders,
   getBatchSettlementNetworks,
+  LLM_MAX_TIMEOUT_SECONDS,
   formatUsdcAtomicAsDecimalUsd,
   releaseLock,
   type SdkPaymentPayload,
@@ -54,11 +60,10 @@ import { buildLlmBazaarExtension } from "./bazaar_discovery.js";
 import openapiSpec from "./openapi.llm.json" with { type: "json" };
 
 /**
- * The lock TTL and completion bound for the twin — see the header's deviation 1.
- * Must be identical at advertise and verify time (the SDK treats it as immutable across
- * the pair, like scw's 120).
+ * The completion bound for the twin — see the header's deviation 1. Bounds the upstream
+ * race only; it is never advertised or verified against.
  */
-export const LLM_MAX_TIMEOUT_SECONDS = 40;
+export const LLM_COMPLETION_BOUND_SECONDS = 40;
 
 /** The favicon as raw bytes — web Response bodies are bytes, not Scaleway base64 strings. */
 const FAVICON_BYTES = Uint8Array.from(atob(faviconBase64), (c) => c.charCodeAt(0));
@@ -413,17 +418,18 @@ export async function handleLLMRequest(request: Request): Promise<Response> {
           () =>
             reject(
               new Error(
-                `LLM completion exceeded the twin's ${LLM_MAX_TIMEOUT_SECONDS} s bound (the bunny edge kills requests at ~59 s)`,
+                `LLM completion exceeded the twin's ${LLM_COMPLETION_BOUND_SECONDS} s bound (the bunny edge kills requests at ~59 s)`,
               ),
             ),
-          LLM_MAX_TIMEOUT_SECONDS * 1000,
+          LLM_COMPLETION_BOUND_SECONDS * 1000,
         ),
       ),
     ]);
   } catch (error) {
     logger.error({ err: error }, "Error during answer generation");
     // Verified but never settled: release the channel lock, or the next message waits out
-    // LLM_MAX_TIMEOUT_SECONDS behind `channel_busy` for an answer that was never charged.
+    // LLM_MAX_TIMEOUT_SECONDS (the lock TTL) behind `channel_busy` for an answer that was
+    // never charged.
     await releaseLock(resourceServer, paymentPayload as SdkPaymentPayload, paymentRequirements);
     return jsonError(500, (error as Error).message);
   }

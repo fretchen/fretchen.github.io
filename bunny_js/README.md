@@ -114,15 +114,21 @@ next push to `main` overwrites it back to the committed state.
 1. **Manual (CLI):** `npm run deploy` (= build + `bunny scripts deploy dist/searchapi.js`),
    needs the bunny CLI — `curl -fsSL https://cli.bunny.net/install.sh | sh` (single binary,
    independent of the nvm-managed Node that a global npm install would bind it to) — then
-   `bunny login`.
+   `bunny login`. The llm and mcp twins deploy by naming their bundle and script id
+   explicitly: `bunny scripts deploy dist/llm.js <LLM_SCRIPT_ID>` and
+   `bunny scripts deploy dist/mcp.js <MCP_SCRIPT_ID>`.
 2. **GitHub Actions:** `.github/workflows/deploy-bunny-js.yml` — on push to `main` touching
    `bunny_js/**` or the shared libs, builds (with the repo's shared-deps-first ordering) and
-   publishes `dist/searchapi.js` via the official `BunnyWay/actions/deploy-script` action.
-   Requires two repo secrets, both from the bunny dashboard
-   (**Script -> Deployments -> Settings**):
-   - `BUNNYJS_SCRIPT_ID` — the script's id
-   - `BUNNYJS_DEPLOY_KEY` — the per-script deploy key (deliberately chosen over the
-     account-wide API key the CLI-in-CI variant would need — narrower blast radius)
+   publishes all three bundles via the official `BunnyWay/actions/deploy-script` action:
+   `dist/searchapi.js`, `dist/llm.js`, `dist/mcp.js`. Requires two repo secrets per script,
+   both from the bunny dashboard (**Script -> Deployments -> Settings**):
+   - `BUNNYJS_SCRIPT_ID` / `BUNNYJS_DEPLOY_KEY` — the searchapi script
+   - `BUNNYLLM_SCRIPT_ID` / `BUNNYLLM_DEPLOY_KEY` — the llm script
+   - `BUNNYMCP_SCRIPT_ID` / `BUNNYMCP_DEPLOY_KEY` — the mcp script
+
+   (Per-script deploy keys are deliberately chosen over the account-wide API key a
+   CLI-in-CI variant would need — narrower blast radius. A step whose secrets are missing
+   fails; the searchapi step runs first, so its deploy is never blocked by the others.)
 
 The workflow ships code only; the script's environment variables and secrets are configured
 on the script itself (dashboard or `bunny scripts env set`), so a repo-side leak cannot leak
@@ -135,17 +141,28 @@ and the `.bunny/script.json` link comes out of the create step. One-time sequenc
 
 1. `bunny scripts create --type standalone` — creates the remote script and links this
    directory (writes `.bunny/script.json`, gitignored — machine-local, like the docs treat it).
+   For the SECOND and THIRD script, add `--no-link` — the directory's link belongs to
+   searchapi, and `create` without it would silently repoint `.bunny/script.json`; the
+   other twins take their id from the create output (or `bunny scripts list`) instead.
 2. Upload the env from `.env` with `bunny scripts env set`, marking the sensitive keys with
-   `--secret` (RECEIVER_AUTHORIZER_PRIVATE_KEY, BRAVE_API_KEY, SCW_ACCESS_KEY, SCW_SECRET_KEY,
-   RPC_URL_*). Skip `TEST_WALLET_PRIVATE_KEY` — buyer-side only, the server must never see it.
-   Verify with `bunny scripts env list`.
-3. `npm run deploy` — builds, uploads, publishes; prints the live `*.bunny.run` URL.
-4. `bunny scripts env set SEARCH_SERVICE_URL https://<that-url>.bunny.run` and redeploy, so
-   the 402 advertises the trial origin instead of the parity default.
+   `--secret` (RECEIVER_AUTHORIZER_PRIVATE_KEY, BRAVE_API_KEY, MISTRAL_API_KEY,
+   SCW_ACCESS_KEY, SCW_SECRET_KEY, RPC_URL_*). Skip `TEST_WALLET_PRIVATE_KEY` — buyer-side
+   only, the server must never see it. Verify with `bunny scripts env list`. Per script:
+   - **searchapi** — the channel stack + `BRAVE_API_KEY` (web_search/fetch) + `SCW_S3_*`.
+   - **llm** — the channel stack + `MISTRAL_API_KEY` (chat_completion) + `SCW_S3_*`.
+   - **mcp** — the union: both `BRAVE_API_KEY` and `MISTRAL_API_KEY` (its bundle embeds
+     both tools) + `SCW_S3_*`.
+3. `npm run deploy` (searchapi) / `bunny scripts deploy dist/llm.js <id>` /
+   `bunny scripts deploy dist/mcp.js <id>` — publishes each; the output prints the live
+   `*.bunny.run` URL.
+4. `bunny scripts env set SEARCH_SERVICE_URL https://<that-url>.bunny.run` on the searchapi
+   script and redeploy, so the 402 advertises the trial origin instead of the parity default.
+   (llm/mcp have no equivalent — their 402s quote the spec's committed server URL.)
 5. Unpaid smoke: `curl -D - 'https://<that-url>.bunny.run/search?q=x402'` → 402 +
    `Payment-Required` header.
-6. For the GitHub Action: `bunny scripts show` gives the script id; the deploy key is in the
-   dashboard (Script -> Deployments -> Settings). Add both as the `BUNNYJS_*` repo secrets.
+6. For the GitHub Action: `bunny scripts show` (or `list`) gives each script id; the deploy
+   keys are in the dashboard (Script -> Deployments -> Settings). Add each pair as the
+   `BUNNYJS_*` / `BUNNYLLM_*` / `BUNNYMCP_*` repo secrets.
 
 After the first deploy, the Action and manual `npm run deploy` are interchangeable — last
 deployment wins.

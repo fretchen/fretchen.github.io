@@ -97,6 +97,9 @@ vi.mock("../src/x402_server.js", () => ({
   createSettlementHeaders: mockCreateSettlementHeaders,
   getBatchSettlementNetworks: mockGetBatchSettlementNetworks,
   releaseLock: mockReleaseLock,
+  // Real value (the scw-verbatim advertised maxTimeoutSeconds / lock TTL), imported by
+  // llm_routes.ts — see the constant's twin of this comment there.
+  LLM_MAX_TIMEOUT_SECONDS: 120,
   // Real implementation (pure bigint math, no side effects) — keep in sync with
   // x402_server.ts's actual formatUsdcAtomicAsDecimalUsd.
   formatUsdcAtomicAsDecimalUsd: (atomicAmount: string) => {
@@ -1069,7 +1072,7 @@ describe("sc_llm_x402", () => {
       expect(res.statusCode).toBe(500);
       expect(mockSettlePayment).not.toHaveBeenCalled();
       // Verified but never settled: the channel lock is released rather than left to block the
-      // next message for LLM_MAX_TIMEOUT_SECONDS.
+      // next message for LLM_MAX_TIMEOUT_SECONDS (the lock TTL).
       expect(mockReleaseLock).toHaveBeenCalledOnce();
     });
 

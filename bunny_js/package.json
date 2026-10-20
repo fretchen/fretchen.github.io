@@ -13,11 +13,14 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "tsc --noEmit && npm run lint && npm run format:check && npm run test",
-    "dev": "deno run -A src/index.ts",
+    "dev": "npm run dev:searchapi",
     "deploy": "npm run build && bunny scripts deploy dist/searchapi.js",
     "build:searchapi": "tsdown src/searchapi.ts",
     "build:llm": "tsdown src/llm.ts",
-    "build:mcp": "tsdown src/mcp.ts"
+    "build:mcp": "tsdown src/mcp.ts",
+    "dev:searchapi": "deno run -A --sloppy-imports src/searchapi.ts",
+    "dev:llm": "deno run -A --sloppy-imports src/llm.ts",
+    "dev:mcp": "deno run -A --sloppy-imports src/mcp.ts"
   },
   "keywords": [
     "bunny.net",

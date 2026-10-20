@@ -25,11 +25,11 @@ the bunny-provided URL until a formal switch.
 
 - `npm run build` — tsdown bundle to a **single** `dist/searchapi.js` (bunny deploys one file).
 - `npm run dev:searchapi` / `dev:llm` / `dev:mcp` — local serve of one twin via Deno on
-  127.0.0.1 (from source, no build needed; `--sloppy-imports` is included for the shared
-  packages' extensionless tsc output). Pass real env with
-  `--env-file=.env` (e.g. `deno run -A --env-file=.env src/mcp.ts`) for the paid-path
-  machinery; the unpaid 402 path needs `NFT_WALLET_PUBLIC_KEY` +
-  `RECEIVER_AUTHORIZER_PRIVATE_KEY`.
+  127.0.0.1 (from source, no build needed; `--sloppy-imports` covers the shared packages'
+  extensionless tsc output, and `--env-file=.env` is baked in — a missing `.env` only warns).
+  The paid path needs `NFT_WALLET_PUBLIC_KEY` + `RECEIVER_AUTHORIZER_PRIVATE_KEY` in `.env`;
+  extra args go after `--` (`npm run dev:mcp -- --port 8081`-style), because npm eats
+  unknown flags like `--env-file` itself.
 - `npm test` — vitest (165 tests: 108 ported + the translated routes suite (incl. cache-control)).
 - `npm run check` — typecheck + lint + format + tests.
 - `npm run deploy` — build, then `bunny scripts deploy dist/searchapi.js` (needs the bunny CLI,

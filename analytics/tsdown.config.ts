@@ -28,7 +28,17 @@ export default defineConfig({
     // @fretchen/chain-utils imports it directly) but tsdown's alwaysBundle
     // doesn't bundle a package's own dependencies unless they're named too —
     // omitting it here shipped a broken `import "viem"` straight to production.
-    alwaysBundle: ["@fretchen/s3-utils", "@fretchen/chain-utils", "viem", "isbot"],
+    // The viem entry is a regex, not the string "viem": tsdown matches string
+    // patterns exactly or via picomatch, and neither covers a subpath, so
+    // "viem/chains" — a side-effect import @fretchen/chain-utils' barrel
+    // re-emits — stayed external, crashed the deployed function with
+    // ERR_MODULE_NOT_FOUND, and surfaced in the dashboard as "Failed to fetch".
+    alwaysBundle: ["@fretchen/s3-utils", "@fretchen/chain-utils", /^viem(\/|$)/, "isbot"],
+    // Build-time guard for the same failure: any bare specifier that survives
+    // into the emitted chunks and is not one of the two dev-only externals
+    // above fails the build, instead of shipping a dist that cannot load
+    // without node_modules. Relative imports and node: builtins are skipped.
+    onlyImport: ["dotenv", "@scaleway/serverless-functions"],
   },
   // createRequire banner for packages that use dynamic require() (like pino).
   // The import is aliased: rolldown's own runtime chunks import `createRequire`

@@ -52,6 +52,11 @@ export default defineConfig({
   platform: "neutral",
   target: "es2022",
   outDir: "dist",
+  // The three build:* scripts invoke tsdown once per entry (rolldown cannot emit multiple
+  // single-file bundles in one pass), and each invocation cleans outDir by default — without
+  // this, `npm run build` would end with only the LAST entry's bundle in dist/, and the
+  // deploy steps for the other two would ship stale or missing files.
+  clean: false,
   fixedExtension: false,
   dts: false,
   // Not deployed (the script upload is dist/index.js alone) but kept next to it so a

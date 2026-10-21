@@ -381,6 +381,22 @@ export const researchNotes = css({
   "& li": { marginBottom: "xs" },
 });
 
+/**
+ * The post-answer rating strip: one row — heading, target buttons, the widget itself — between
+ * the scrolling message list and the composer, aligned with the receipt link above it. Wraps on
+ * narrow screens rather than overflowing; the widget is muted chrome like the research rows,
+ * because the answer is the content and the rating is an offer, not a call to action.
+ */
+export const rateBlock = css({
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "center",
+  gap: "sm",
+  paddingX: "4",
+  fontSize: "xs",
+  color: "textMuted",
+});
+
 export const loadingBubble = css({
   // The 80% cap sits on `loadingColumn`, which holds this bubble and the research status row.
   maxWidth: "100%",

@@ -181,6 +181,23 @@ export default {
     toolConfirmSizeLabel: "Size",
     toolConfirmMintNotice: "This will mint an NFT to your wallet.",
     toolConfirmGenerate: "Generate ($0.07)",
+    // On-chain rating (FeedbackWidget): 1–5 stars written to the ERC-8004 ReputationRegistry.
+    rateHeading: "Rate this chat",
+    rateAssistant: "Assistant",
+    rateStars: "{n} of 5",
+    rateDisclosure:
+      "Public and permanent on Base, sent from your wallet. Costs a dust amount of ETH in gas (typically under $0.01).",
+    rateDetailsSummary: "What happens with my rating?",
+    rateDetailsBody:
+      "Your rating is written to the ERC-8004 Reputation Registry on Base ({registry}), where anyone can read it — the agent's profile on 8004scan.io shows it too. It cannot be edited afterwards.",
+    rateSend: "Send rating",
+    rateWallet: "Confirm in your wallet…",
+    rateConfirming: "Waiting for confirmation…",
+    rateDone: "Rating sent — thank you.",
+    rateFailed: "Rating failed: {error}",
+    rateSelfBlocked: "This wallet cannot rate this agent: its owner and operators are excluded by the contract.",
+    rateConnect: "Connect your wallet to rate",
+    rateSwitch: "Switch to Base",
   },
   walletoptions: {
     connect: "Connect",

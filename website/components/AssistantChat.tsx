@@ -101,6 +101,7 @@ import { button } from "../styled-system/recipes";
 import { PageHeader } from "./PageHeader";
 import { FretchenLogo } from "./FretchenLogo";
 import { GetFundsModal } from "./GetFundsModal";
+import { FeedbackWidget, FEEDBACK_TARGETS } from "./FeedbackWidget";
 import { PaymentError, readChargedTotal } from "../utils/x402PaidFetch";
 
 /**
@@ -492,6 +493,14 @@ export function AssistantChat() {
     spent: bigint;
     notes: ResearchNote[];
   } | null>(null);
+  // Whether any turn of this chat has paid the search agent (ERC-8004 agent 97600) — both
+  // `search_web` and `fetch_url` buy from it (tools/search.ts, tools/webFetch.ts). Latched for
+  // the session, not per turn: offering to rate the search service only makes sense if it
+  // actually served this chat.
+  const [webToolsUsed, setWebToolsUsed] = useState(false);
+  // Which of the two ratable agents the rating block targets. The assistent is the default;
+  // the search option only exists once webToolsUsed is true.
+  const [ratingTarget, setRatingTarget] = useState<"assistent" | "search">("assistent");
   // Read by the loop before each hop. A ref, not state: the loop is already running inside an
   // event handler and must see the press without waiting for a re-render. `stopPressed` is only the
   // button's own feedback.
@@ -506,6 +515,11 @@ export function AssistantChat() {
   const currentLocale = useCurrentLocale();
   const stopAndAnswerLabel = useLocale({ label: "assistent.stopAndAnswer" });
   const researchNotesLabel = useLocale({ label: "assistent.researchNotes" });
+  const rateHeadingLabel = useLocale({ label: "assistent.rateHeading" });
+  const rateAssistantLabel = useLocale({ label: "assistent.rateAssistant" });
+  // The search rating target reuses the ToolSelector's label, so "offered" and "ratable" always
+  // name the same thing in both locales.
+  const rateSearchLabel = useLocale({ label: "assistent.toolWebSearch" });
   const chatTotalLabel = useLocale({ label: "assistent.chatTotal" });
   const teenModeLabel = useLocale({ label: "assistent.teenMode" });
   const teenModeOfferLabel = useLocale({ label: "assistent.teenModeOffer" });
@@ -1267,8 +1281,14 @@ export function AssistantChat() {
         shouldStop: () => stopRequestedRef.current,
         onPhase: (phase) => {
           setLoopPhase(phase);
-          if (phase.kind === "tool" && phase.name === searchWebTool.function.name) searches++;
-          if (phase.kind === "tool" && phase.name === fetchUrlTool.function.name) pages++;
+          if (phase.kind === "tool" && phase.name === searchWebTool.function.name) {
+            searches++;
+            setWebToolsUsed(true);
+          }
+          if (phase.kind === "tool" && phase.name === fetchUrlTool.function.name) {
+            pages++;
+            setWebToolsUsed(true);
+          }
           if (phase.kind === "tool" && phase.name === noteFindingsTool.function.name) {
             notes.push(...parseNotes(phase.args));
           }
@@ -1615,6 +1635,37 @@ export function AssistantChat() {
                 {walletFallbackLabel
                   .replaceAll("{used}", currencyFallback.used)
                   .replaceAll("{preferred}", currencyFallback.preferred)}
+              </div>
+            )}
+
+            {/* The post-answer rating strip — outside the scrolling message list, so it stays in
+              view under the chatbox rather than scrolling away with the answers. One strip per
+              chat, shown only when the last completed message is an assistant reply (a rating
+              after an error reply is legitimate feedback too, so errors do not suppress it).
+              The assistent is always ratable; the search agent only once its tools ran. */}
+            {!isLoading && messages.length > 0 && messages[messages.length - 1].role === "assistant" && (
+              <div className={chat.rateBlock}>
+                <span>{rateHeadingLabel}</span>
+                <button
+                  type="button"
+                  className={button({ visual: "secondary", size: "sm", active: ratingTarget === "assistent" })}
+                  onClick={() => setRatingTarget("assistent")}
+                >
+                  {rateAssistantLabel}
+                </button>
+                {webToolsUsed && (
+                  <button
+                    type="button"
+                    className={button({ visual: "secondary", size: "sm", active: ratingTarget === "search" })}
+                    onClick={() => setRatingTarget("search")}
+                  >
+                    {rateSearchLabel}
+                  </button>
+                )}
+                <FeedbackWidget
+                  agentId={FEEDBACK_TARGETS[ratingTarget].agentId}
+                  endpoint={FEEDBACK_TARGETS[ratingTarget].endpoint}
+                />
               </div>
             )}
 

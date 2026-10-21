@@ -125,6 +125,19 @@ vi.mock("../components/AgentInfoPanel", () => ({
   AgentInfoPanel: () => null,
 }));
 
+// The widget's own behavior (transaction shape, chain switch, revert copy) is
+// FeedbackWidget.test.tsx. Here it is a stub that exposes the props it was pointed at; the real
+// FEEDBACK_TARGETS stay, so the assertions run against the actual agentIds and endpoints.
+vi.mock("../components/FeedbackWidget", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../components/FeedbackWidget")>();
+  return {
+    ...actual,
+    FeedbackWidget: (props: { agentId: number; endpoint: string }) => (
+      <div data-testid="feedback-widget" data-agent-id={props.agentId} data-endpoint={props.endpoint} />
+    ),
+  };
+});
+
 // Only the two fetchers are stubbed; the real selectors run against the Step 1 fixtures, so
 // these tests cover the wiring *and* the actual projection rather than a hand-written stand-in.
 vi.mock("../tools/bundestakt", async (importOriginal) => {
@@ -1465,6 +1478,89 @@ describe("AssistantChat", () => {
 
       await screen.findByDisplayValue("x");
       expect(screen.getByPlaceholderText("assistent.placeholder")).toBeDisabled();
+    });
+  });
+
+  /**
+   * The post-answer rating strip: which targets it offers and which ERC-8004 agent the widget is
+   * pointed at. The assistent is always ratable; the search agent only once a web tool actually
+   * ran in this chat — the option must not appear for a plain chat or a non-web tool turn.
+   */
+  describe("on-chain rating", () => {
+    /** The strip's own container, so assertions cannot match the ToolSelector's labels. */
+    const strip = () => screen.getByText("assistent.rateHeading").closest("div") as HTMLElement;
+    const widget = () => screen.getByTestId("feedback-widget");
+
+    it("shows the strip under the chatbox once a turn has answered, assistent by default", async () => {
+      mockSendMessage.mockResolvedValueOnce(textResponse("Hello there."));
+
+      renderWithQuery(<AssistantChat />);
+      expect(screen.queryByText("assistent.rateHeading")).not.toBeInTheDocument();
+
+      sendUserMessage("Hi");
+      await waitFor(() => expect(screen.getByText("Hello there.")).toBeInTheDocument());
+
+      expect(within(strip()).getByRole("button", { name: "assistent.rateAssistant" })).toBeInTheDocument();
+      expect(within(strip()).queryByRole("button", { name: "assistent.toolWebSearch" })).not.toBeInTheDocument();
+      expect(widget()).toHaveAttribute("data-agent-id", "97599");
+      expect(widget()).toHaveAttribute("data-endpoint", "https://llm-agent.fretchen.eu");
+    });
+
+    it("hides the strip while the next turn is in flight", async () => {
+      let releaseSecondTurn: (value: unknown) => void = () => {};
+      mockSendMessage
+        .mockResolvedValueOnce(textResponse("First answer."))
+        .mockImplementationOnce(() => new Promise((resolve) => (releaseSecondTurn = resolve)));
+
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("One");
+      await waitFor(() => expect(screen.getByText("First answer.")).toBeInTheDocument());
+      expect(screen.getByText("assistent.rateHeading")).toBeInTheDocument();
+
+      sendUserMessage("Two");
+      await waitFor(() => expect(screen.queryByText("assistent.rateHeading")).not.toBeInTheDocument());
+
+      releaseSecondTurn(textResponse("Second answer."));
+      await waitFor(() => expect(screen.getByText("assistent.rateHeading")).toBeInTheDocument());
+    });
+
+    it("offers the search target only after a web tool ran, and points the widget at it", async () => {
+      mockPaidFetch.mockImplementation(
+        async () => new Response(JSON.stringify({ results: [{ url: "https://a.example", title: "A", text: "a" }] })),
+      );
+      mockSendMessage
+        .mockResolvedValueOnce(toolCallResponse("search_web", { query: "cod stocks" }))
+        .mockResolvedValueOnce(textResponse("Answered from the web."));
+
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("Research cod stocks");
+
+      await waitFor(() => expect(screen.getByText("Answered from the web.")).toBeInTheDocument());
+      const searchButton = within(strip()).getByRole("button", { name: "assistent.toolWebSearch" });
+
+      // The assistent stays the default; rating the search is an explicit opt-in.
+      expect(widget()).toHaveAttribute("data-agent-id", "97599");
+      fireEvent.click(searchButton);
+      expect(widget()).toHaveAttribute("data-agent-id", "97600");
+      expect(widget()).toHaveAttribute("data-endpoint", "https://web-agent.fretchen.eu");
+
+      // And back.
+      fireEvent.click(within(strip()).getByRole("button", { name: "assistent.rateAssistant" }));
+      expect(widget()).toHaveAttribute("data-agent-id", "97599");
+    });
+
+    it("does not offer the search target when only non-web tools ran", async () => {
+      mockFetchSitzungen.mockResolvedValue(sitzungenFixture);
+      mockSendMessage
+        .mockResolvedValueOnce(toolCallResponse("get_sitzungen", {}))
+        .mockResolvedValueOnce(textResponse("Sessions listed."));
+
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("List sessions");
+
+      await waitFor(() => expect(screen.getByText("Sessions listed.")).toBeInTheDocument());
+      expect(within(strip()).queryByRole("button", { name: "assistent.toolWebSearch" })).not.toBeInTheDocument();
+      expect(widget()).toHaveAttribute("data-agent-id", "97599");
     });
   });
 

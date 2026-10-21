@@ -68,7 +68,7 @@ jobs:
         run: npm run build
 
       - name: Deploy searchapi twin to Bunny Edge Scripting
-        uses: BunnyWay/actions/deploy-script@main
+        uses: BunnyWay/actions/deploy-script@931a74b9c45ea9f9f01435fbbf1649830e67d3b3 # 2026-10-12 main; a mutable ref here is code-exec with the deploy keys — bump deliberately
         with:
           # BUNNYJS_SCRIPT_ID and BUNNYJS_DEPLOY_KEY are repo secrets; both come from the
           # bunny dashboard: Script -> Deployments -> Settings. The deploy key authorizes
@@ -78,7 +78,7 @@ jobs:
           file: "bunny_js/dist/searchapi.js"
 
       - name: Deploy llm twin to Bunny Edge Scripting
-        uses: BunnyWay/actions/deploy-script@main
+        uses: BunnyWay/actions/deploy-script@931a74b9c45ea9f9f01435fbbf1649830e67d3b3 # 2026-10-12 main; a mutable ref here is code-exec with the deploy keys — bump deliberately
         with:
           # Same per-script secret pair pattern as searchapi, its own script id and its
           # own deploy key — narrower blast radius than an account-wide API key.
@@ -87,7 +87,7 @@ jobs:
           file: "bunny_js/dist/llm.js"
 
       - name: Deploy mcp twin to Bunny Edge Scripting
-        uses: BunnyWay/actions/deploy-script@main
+        uses: BunnyWay/actions/deploy-script@931a74b9c45ea9f9f01435fbbf1649830e67d3b3 # 2026-10-12 main; a mutable ref here is code-exec with the deploy keys — bump deliberately
         with:
           # The mcp bundle embeds the llm and search tools (see mcp_tools.ts), so this one
           # script serves both web_search and chat_completion.

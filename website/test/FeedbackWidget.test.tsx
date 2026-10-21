@@ -126,7 +126,7 @@ describe("FeedbackWidget", () => {
     });
   });
 
-  it("sends one transaction per bundled target, in order, and settles with both links", async () => {
+  it("sends one transaction per bundled target, in order, with a link per submission", async () => {
     renderWidget(BUNDLED);
 
     fireEvent.click(stars()[5 - 1]);
@@ -147,7 +147,8 @@ describe("FeedbackWidget", () => {
       }),
     );
 
-    // One explorer link per landed transaction, in order.
+    // One explorer link per submitted transaction, in order. Submission, not inclusion —
+    // the links are the status source (see the widget's send comment).
     const links = screen.getAllByRole("link");
     expect(links).toHaveLength(2);
     expect(links[0]).toHaveAttribute("href", "https://basescan.org/tx/0xhash0");
@@ -157,7 +158,7 @@ describe("FeedbackWidget", () => {
     expect(stars()[0]).toBeDisabled();
   });
 
-  it("keeps what landed and says what failed when the second prompt is rejected", async () => {
+  it("keeps what was submitted and says what failed when the second prompt is rejected", async () => {
     mockWriteContractAsync
       .mockResolvedValueOnce("0xhash0")
       .mockRejectedValueOnce(new Error("User rejected the request"));
@@ -167,7 +168,7 @@ describe("FeedbackWidget", () => {
     fireEvent.click(screen.getByRole("button", { name: "assistent.rateSend" }));
 
     await waitFor(() => expect(screen.getByText(/assistent\.ratePartialFailed/)).toBeInTheDocument());
-    // The assistent's transaction landed and is linked; the failed one is not retried.
+    // The assistent's transaction was submitted and is linked; the failed one is not retried.
     expect(screen.getAllByRole("link")).toHaveLength(1);
     expect(screen.getAllByRole("link")[0]).toHaveAttribute("href", "https://basescan.org/tx/0xhash0");
     expect(screen.queryByRole("button", { name: "assistent.rateSend" })).not.toBeInTheDocument();

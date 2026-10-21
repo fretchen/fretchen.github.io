@@ -151,8 +151,23 @@ describe("mcp_routes (stateless paid MCP endpoint)", () => {
      * content, 200 discovery HTML at the root when the caller accepts HTML, and DELETE
      * keeps 405 (session termination is genuinely not a thing here, per the MCP spec).
      */
-    it("answers GET like a normal origin (404 + notice), not the scw blanket 405", async () => {
+    /**
+     * GET /mcp: the Streamable HTTP spec's answer for a stateless server without the
+     * optional GET SSE stream — 405 Allow: POST. 404 here read as "endpoint does not
+     * exist" to 8004scan's health probe (marked healthy-POST-serving endpoint unhealthy).
+     */
+    it("answers GET on the MCP endpoint with 405 Allow: POST, not 404", async () => {
       const res = await handle(new Request("https://mcp-agent.fretchen.eu/mcp", { method: "GET" }));
+      expect(res.status).toBe(405);
+      expect(res.headers.get("allow")).toBe("POST");
+      const body = JSON.parse(await res.text()) as { error: string };
+      expect(body.error).toContain("POST only");
+    });
+
+    it("answers GET on a contentless path with the honest 404 + notice", async () => {
+      const res = await handle(
+        new Request("https://mcp-agent.fretchen.eu/other", { method: "GET" }),
+      );
       expect(res.status).toBe(404);
       const body = JSON.parse(await res.text()) as { error: string };
       expect(body.error).toContain("POST only");

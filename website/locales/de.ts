@@ -203,9 +203,10 @@ export default {
       "Deine Bewertung wird in die ERC-8004 Reputation Registry auf Base geschrieben ({registry}) und ist öffentlich lesbar — unter anderem im Agent-Profil auf 8004scan.io. Sie lässt sich danach nicht bearbeiten.",
     rateSend: "Bewertung senden",
     rateWallet: "In deiner Wallet bestätigen…",
-    rateDone: "Bewertung gesendet — danke.",
+    rateDone: "Bewertung übermittelt — danke.",
     rateFailed: "Bewertung fehlgeschlagen: {error}",
-    ratePartialFailed: "Der Assistent wurde bewertet; die Bewertung der Websuche ist fehlgeschlagen: {error}",
+    ratePartialFailed:
+      "Die Bewertung des Assistenten wurde übermittelt; die Bewertung der Websuche ist fehlgeschlagen: {error}",
     rateSelfBlocked:
       "Diese Wallet kann diesen Agenten nicht bewerten: Eigentümer und Operatoren des Agenten sind vertraglich ausgeschlossen.",
     rateConnect: "Wallet zum Bewerten verbinden",

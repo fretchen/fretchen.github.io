@@ -170,6 +170,9 @@ export function FeedbackWidget({ targets }: FeedbackWidgetProps) {
   // One wallet prompt per target, in order: the registry has no batching path, so a bundled
   // pick is a sequential loop. A rejection stops the loop where it stands — what already
   // landed stays on chain and is shown as a partial result, nothing is retried silently.
+  // writeContractAsync resolves at SUBMISSION, not inclusion: a transaction that reverts at
+  // execution still reaches the settled view, which is why the copy says "submitted" and the
+  // basescan links are the status source.
   const send = async () => {
     if (stars === 0 || sending) return;
     setSending(true);

@@ -495,12 +495,9 @@ export function AssistantChat() {
   } | null>(null);
   // Whether any turn of this chat has paid the search agent (ERC-8004 agent 97600) — both
   // `search_web` and `fetch_url` buy from it (tools/search.ts, tools/webFetch.ts). Latched for
-  // the session, not per turn: offering to rate the search service only makes sense if it
-  // actually served this chat.
+  // the session, not per turn: the search agent is only rated once it actually served this
+  // chat, bundled into the same star pick as the assistent rather than offered as a choice.
   const [webToolsUsed, setWebToolsUsed] = useState(false);
-  // Which of the two ratable agents the rating block targets. The assistent is the default;
-  // the search option only exists once webToolsUsed is true.
-  const [ratingTarget, setRatingTarget] = useState<"assistent" | "search">("assistent");
   // Read by the loop before each hop. A ref, not state: the loop is already running inside an
   // event handler and must see the press without waiting for a re-render. `stopPressed` is only the
   // button's own feedback.
@@ -515,11 +512,6 @@ export function AssistantChat() {
   const currentLocale = useCurrentLocale();
   const stopAndAnswerLabel = useLocale({ label: "assistent.stopAndAnswer" });
   const researchNotesLabel = useLocale({ label: "assistent.researchNotes" });
-  const rateHeadingLabel = useLocale({ label: "assistent.rateHeading" });
-  const rateAssistantLabel = useLocale({ label: "assistent.rateAssistant" });
-  // The search rating target reuses the ToolSelector's label, so "offered" and "ratable" always
-  // name the same thing in both locales.
-  const rateSearchLabel = useLocale({ label: "assistent.toolWebSearch" });
   const chatTotalLabel = useLocale({ label: "assistent.chatTotal" });
   const teenModeLabel = useLocale({ label: "assistent.teenMode" });
   const teenModeOfferLabel = useLocale({ label: "assistent.teenModeOffer" });
@@ -1627,6 +1619,22 @@ export function AssistantChat() {
               ))
             )}
 
+            {/* In-stream rating, directly under the last completed answer — the same position
+              as that answer's own cost line, because the stars rate that answer. At rest it is
+              nothing but five muted glyphs; the disclosure appears only at the moment of
+              commitment (FeedbackWidget). One star pick rates every agent that served this
+              chat: the assistent always, the search agent once its tools ran — the user never
+              chooses a target, because they experienced one answer, not two services. */}
+            {!isLoading && messages.length > 0 && messages[messages.length - 1].role === "assistant" && (
+              <div className={chat.rateBlock}>
+                <FeedbackWidget
+                  targets={
+                    webToolsUsed ? [FEEDBACK_TARGETS.assistent, FEEDBACK_TARGETS.search] : [FEEDBACK_TARGETS.assistent]
+                  }
+                />
+              </div>
+            )}
+
             {currencyFallback && (
               // One honest line when the send switched token: the deviation is announced, the
               // stored preference stays untouched (the hook never persists a fallback), and
@@ -1635,37 +1643,6 @@ export function AssistantChat() {
                 {walletFallbackLabel
                   .replaceAll("{used}", currencyFallback.used)
                   .replaceAll("{preferred}", currencyFallback.preferred)}
-              </div>
-            )}
-
-            {/* The post-answer rating strip — outside the scrolling message list, so it stays in
-              view under the chatbox rather than scrolling away with the answers. One strip per
-              chat, shown only when the last completed message is an assistant reply (a rating
-              after an error reply is legitimate feedback too, so errors do not suppress it).
-              The assistent is always ratable; the search agent only once its tools ran. */}
-            {!isLoading && messages.length > 0 && messages[messages.length - 1].role === "assistant" && (
-              <div className={chat.rateBlock}>
-                <span>{rateHeadingLabel}</span>
-                <button
-                  type="button"
-                  className={button({ visual: "secondary", size: "sm", active: ratingTarget === "assistent" })}
-                  onClick={() => setRatingTarget("assistent")}
-                >
-                  {rateAssistantLabel}
-                </button>
-                {webToolsUsed && (
-                  <button
-                    type="button"
-                    className={button({ visual: "secondary", size: "sm", active: ratingTarget === "search" })}
-                    onClick={() => setRatingTarget("search")}
-                  >
-                    {rateSearchLabel}
-                  </button>
-                )}
-                <FeedbackWidget
-                  agentId={FEEDBACK_TARGETS[ratingTarget].agentId}
-                  endpoint={FEEDBACK_TARGETS[ratingTarget].endpoint}
-                />
               </div>
             )}
 

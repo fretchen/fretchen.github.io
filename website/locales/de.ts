@@ -191,19 +191,21 @@ export default {
     toolConfirmMintNotice: "Dies erzeugt ein NFT in deiner Wallet.",
     toolConfirmGenerate: "Generieren (0,07 $)",
     // On-Chain-Bewertung (FeedbackWidget): 1–5 Sterne in die ERC-8004 ReputationRegistry.
-    rateHeading: "Diesen Chat bewerten",
-    rateAssistant: "Assistent",
+    // Im Ruhezustand zeigt das Widget nur Sterne; der Hinweis erscheint erst mit dem ersten
+    // Stern. Hat ein Web-Tool bedient, bewertet ein Klick beide Agenten (der gebündelte Text).
     rateStars: "{n} von 5",
     rateDisclosure:
       "Öffentlich und dauerhaft auf Base, aus deiner Wallet gesendet. Kostet eine minimale Menge ETH an Gas (in der Regel unter 0,01 $).",
+    rateDisclosureBundled:
+      "Bewertet den Assistenten und die von ihm genutzte Websuche — öffentlich und dauerhaft auf Base, aus deiner Wallet gesendet. Kostet eine minimale Menge ETH an Gas (in der Regel unter 0,01 $).",
     rateDetailsSummary: "Was passiert mit meiner Bewertung?",
     rateDetailsBody:
       "Deine Bewertung wird in die ERC-8004 Reputation Registry auf Base geschrieben ({registry}) und ist öffentlich lesbar — unter anderem im Agent-Profil auf 8004scan.io. Sie lässt sich danach nicht bearbeiten.",
     rateSend: "Bewertung senden",
     rateWallet: "In deiner Wallet bestätigen…",
-    rateConfirming: "Warte auf Bestätigung…",
     rateDone: "Bewertung gesendet — danke.",
     rateFailed: "Bewertung fehlgeschlagen: {error}",
+    ratePartialFailed: "Der Assistent wurde bewertet; die Bewertung der Websuche ist fehlgeschlagen: {error}",
     rateSelfBlocked:
       "Diese Wallet kann diesen Agenten nicht bewerten: Eigentümer und Operatoren des Agenten sind vertraglich ausgeschlossen.",
     rateConnect: "Wallet zum Bewerten verbinden",

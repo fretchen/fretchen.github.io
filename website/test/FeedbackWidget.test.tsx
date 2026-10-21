@@ -1,21 +1,31 @@
 /**
  * FeedbackWidget tests. The wagmi hooks are the global setup.ts mocks, overridden per test;
  * useLocale is the global key-passthrough mock, so locale strings are asserted by their keys
- * (the AssistantChat tests document this habit). What matters here is the on-chain argument
- * shape — the widget's whole job is one correct giveFeedback transaction.
+ * (the AssistantChat tests document this habit). The interaction is quiet-trigger → explain at
+ * the moment of commitment → confirm: at rest the widget is five glyphs and nothing else, and
+ * the disclosure, details, Send and Cancel appear together once a star is picked. One star
+ * pick is sent as one giveFeedback transaction per target, in order — what matters here is
+ * that argument shape per agent, the sequential loop, and the honest partial-failure state.
  */
 
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen, fireEvent } from "@testing-library/react";
-import { useAccount, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { useAccount, useWriteContract } from "wagmi";
 import { useLocale } from "../hooks/useLocale";
 import { useWalletConnection } from "../hooks/useWalletConnection";
 import { buildAccountData, mockSwitchChainAsync } from "./setup";
 import { renderWithQuery } from "./testUtils";
-import { FeedbackWidget, FEEDBACK, FEEDBACK_TARGETS, REPUTATION_REGISTRY_ABI } from "../components/FeedbackWidget";
+import {
+  FeedbackWidget,
+  FEEDBACK,
+  FEEDBACK_TARGETS,
+  REPUTATION_REGISTRY_ABI,
+  type FeedbackTarget,
+} from "../components/FeedbackWidget";
 
 const mockConnectWallet = vi.fn();
+const mockWriteContractAsync = vi.fn();
 
 vi.mock("../hooks/useWalletConnection", () => ({
   useWalletConnection: vi.fn(() => ({
@@ -26,65 +36,88 @@ vi.mock("../hooks/useWalletConnection", () => ({
   })),
 }));
 
-const mockWriteContract = vi.fn();
-
 /** Builder pattern per setup.ts (`buildAccountData`): the literal is loose, the builder owns the
  *  cast to the wagmi hook's return type. */
-function writeContractData(overrides: { isPending?: boolean; error?: Error | null; data?: `0x${string}` } = {}) {
+function writeContractData() {
   return {
-    writeContract: mockWriteContract,
-    writeContractAsync: vi.fn(),
+    writeContract: vi.fn(),
+    writeContractAsync: mockWriteContractAsync,
     isPending: false,
     error: null,
     data: undefined,
-    ...overrides,
   } as unknown as ReturnType<typeof useWriteContract>;
 }
 
-function receiptData(overrides: { isLoading?: boolean; isSuccess?: boolean } = {}) {
-  return { isLoading: false, isSuccess: false, data: undefined, ...overrides } as unknown as ReturnType<
-    typeof useWaitForTransactionReceipt
-  >;
-}
-
-/** The connected, on-Base default every test starts from. */
+/** The connected, on-Base default every test starts from, with a wallet that confirms every
+ *  transaction and returns a distinct hash per submission. */
 function connectOnBase() {
   vi.mocked(useAccount).mockReturnValue(buildAccountData({ isConnected: true, chainId: 8453 }));
   vi.mocked(useWriteContract).mockReturnValue(writeContractData());
-  vi.mocked(useWaitForTransactionReceipt).mockReturnValue(receiptData());
+  let n = 0;
+  mockWriteContractAsync.mockImplementation(async () => `0xhash${n++}` as `0x${string}`);
 }
 
 const ZERO_HASH = `0x${"0".repeat(64)}`;
 
-function renderWidget() {
-  return renderWithQuery(
-    <FeedbackWidget agentId={FEEDBACK_TARGETS.assistent.agentId} endpoint={FEEDBACK_TARGETS.assistent.endpoint} />,
-  );
+const SINGLE: readonly FeedbackTarget[] = [FEEDBACK_TARGETS.assistent];
+const BUNDLED: readonly FeedbackTarget[] = [FEEDBACK_TARGETS.assistent, FEEDBACK_TARGETS.search];
+
+function renderWidget(targets: readonly FeedbackTarget[] = SINGLE) {
+  return renderWithQuery(<FeedbackWidget targets={targets} />);
 }
+
+const stars = () => screen.getAllByRole("button", { name: "assistent.rateStars" });
 
 describe("FeedbackWidget", () => {
   beforeEach(() => {
     connectOnBase();
   });
 
-  it("renders five stars, the pre-send disclosure, and the details block", () => {
+  it("shows nothing but five stars at rest — no disclosure, no buttons", () => {
     renderWidget();
 
-    // All five star buttons share the mocked label key; the {n} placeholder is only filled in
-    // the real locale, so the row is asserted by count, not by distinct names.
-    expect(screen.getAllByRole("button", { name: "assistent.rateStars" })).toHaveLength(5);
-    expect(screen.getByText("assistent.rateDisclosure")).toBeInTheDocument();
-    expect(screen.getByText("assistent.rateDetailsSummary")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "assistent.rateSend" })).toBeDisabled();
+    // All five star buttons share the mocked label key; the row is asserted by count, not by
+    // distinct names.
+    expect(stars()).toHaveLength(5);
+    expect(screen.queryByText("assistent.rateDisclosure")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "assistent.rateSend" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "assistent.cancel" })).not.toBeInTheDocument();
+    expect(screen.queryByText("assistent.rateDetailsSummary")).not.toBeInTheDocument();
   });
 
-  it("sends the exact giveFeedback transaction for a 4-star rating of the assistent", () => {
+  it("reveals the disclosure, details question, Send and Cancel the moment a star is picked", () => {
     renderWidget();
 
-    fireEvent.click(screen.getAllByRole("button", { name: "assistent.rateStars" })[3]);
+    fireEvent.click(stars()[3]);
+
+    expect(screen.getByText("assistent.rateDisclosure")).toBeInTheDocument();
+    expect(screen.getByText("assistent.rateDetailsSummary")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "assistent.rateSend" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "assistent.cancel" })).toBeInTheDocument();
+
+    // The details stay one level deeper until the question is clicked.
+    fireEvent.click(screen.getByText("assistent.rateDetailsSummary"));
+    expect(screen.getByText("assistent.rateDetailsBody")).toBeInTheDocument();
+  });
+
+  it("says the rating covers the web search too when a web tool served the chat", () => {
+    renderWidget(BUNDLED);
+
+    fireEvent.click(stars()[3]);
+
+    expect(screen.queryByText("assistent.rateDisclosure")).not.toBeInTheDocument();
+    expect(screen.getByText("assistent.rateDisclosureBundled")).toBeInTheDocument();
+  });
+
+  it("sends the exact giveFeedback transaction for a 4-star single-target rating", async () => {
+    renderWidget(SINGLE);
+
+    fireEvent.click(stars()[3]);
     fireEvent.click(screen.getByRole("button", { name: "assistent.rateSend" }));
 
-    expect(mockWriteContract).toHaveBeenCalledWith({
+    await waitFor(() => expect(screen.getByText("assistent.rateDone")).toBeInTheDocument());
+    expect(mockWriteContractAsync).toHaveBeenCalledTimes(1);
+    expect(mockWriteContractAsync).toHaveBeenCalledWith({
       address: FEEDBACK.registry,
       abi: REPUTATION_REGISTRY_ABI,
       functionName: "giveFeedback",
@@ -93,65 +126,109 @@ describe("FeedbackWidget", () => {
     });
   });
 
-  it("records the search service's endpoint and agentId when rating it", () => {
-    renderWithQuery(
-      <FeedbackWidget agentId={FEEDBACK_TARGETS.search.agentId} endpoint={FEEDBACK_TARGETS.search.endpoint} />,
-    );
+  it("sends one transaction per bundled target, in order, and settles with both links", async () => {
+    renderWidget(BUNDLED);
 
-    fireEvent.click(screen.getAllByRole("button", { name: "assistent.rateStars" })[4]);
+    fireEvent.click(stars()[5 - 1]);
     fireEvent.click(screen.getByRole("button", { name: "assistent.rateSend" }));
 
-    expect(mockWriteContract).toHaveBeenCalledWith(
+    await waitFor(() => expect(screen.getByText("assistent.rateDone")).toBeInTheDocument());
+    expect(mockWriteContractAsync).toHaveBeenCalledTimes(2);
+    expect(mockWriteContractAsync).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        args: [97599n, 5n, 0, "", "", "https://llm-agent.fretchen.eu", "", ZERO_HASH],
+      }),
+    );
+    expect(mockWriteContractAsync).toHaveBeenNthCalledWith(
+      2,
       expect.objectContaining({
         args: [97600n, 5n, 0, "", "", "https://web-agent.fretchen.eu", "", ZERO_HASH],
       }),
     );
+
+    // One explorer link per landed transaction, in order.
+    const links = screen.getAllByRole("link");
+    expect(links).toHaveLength(2);
+    expect(links[0]).toHaveAttribute("href", "https://basescan.org/tx/0xhash0");
+    expect(links[1]).toHaveAttribute("href", "https://basescan.org/tx/0xhash1");
+    // The stars stay, filled to the picked value, and can no longer be changed.
+    expect(stars()[4].textContent).toBe("★");
+    expect(stars()[0]).toBeDisabled();
   });
 
-  it("offers a switch to Base when the wallet is on another chain", () => {
-    vi.mocked(useAccount).mockReturnValue(buildAccountData({ isConnected: true, chainId: 10 }));
-    renderWidget();
+  it("keeps what landed and says what failed when the second prompt is rejected", async () => {
+    mockWriteContractAsync
+      .mockResolvedValueOnce("0xhash0")
+      .mockRejectedValueOnce(new Error("User rejected the request"));
 
-    const switchButton = screen.getByRole("button", { name: "assistent.rateSwitch" });
-    fireEvent.click(switchButton);
+    renderWidget(BUNDLED);
+    fireEvent.click(stars()[3]);
+    fireEvent.click(screen.getByRole("button", { name: "assistent.rateSend" }));
 
-    expect(mockSwitchChainAsync).toHaveBeenCalledWith({ chainId: 8453 });
-    expect(mockWriteContract).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByText(/assistent\.ratePartialFailed/)).toBeInTheDocument());
+    // The assistent's transaction landed and is linked; the failed one is not retried.
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+    expect(screen.getAllByRole("link")[0]).toHaveAttribute("href", "https://basescan.org/tx/0xhash0");
+    expect(screen.queryByRole("button", { name: "assistent.rateSend" })).not.toBeInTheDocument();
   });
 
-  it("maps the self-feedback revert to its own sentence", () => {
-    vi.mocked(useWriteContract).mockReturnValue(
-      writeContractData({ error: new Error("execution reverted: Self-feedback not allowed") }),
-    );
-    renderWidget();
+  it("maps the self-feedback revert to its own sentence and offers no links", async () => {
+    mockWriteContractAsync.mockRejectedValueOnce(new Error("execution reverted: Self-feedback not allowed"));
 
-    expect(screen.getByText("assistent.rateSelfBlocked")).toBeInTheDocument();
+    renderWidget(SINGLE);
+    fireEvent.click(stars()[3]);
+    fireEvent.click(screen.getByRole("button", { name: "assistent.rateSend" }));
+
+    await waitFor(() => expect(screen.getByText("assistent.rateSelfBlocked")).toBeInTheDocument());
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
-  it("truncates any other error to one line", () => {
+  it("truncates any other error to one line", async () => {
     // The passthrough mock returns the key, which contains no {error} placeholder — so this one
     // test overrides it with the real English shape to exercise the replace-and-truncate path.
     vi.mocked(useLocale).mockImplementation(({ label }) =>
       label === "assistent.rateFailed" ? "Rating failed: {error}" : (label as string),
     );
-    vi.mocked(useWriteContract).mockReturnValue(writeContractData({ error: new Error("e".repeat(300)) }));
-    renderWidget();
+    mockWriteContractAsync.mockRejectedValueOnce(new Error("e".repeat(300)));
+
+    renderWidget(SINGLE);
+    fireEvent.click(stars()[3]);
+    fireEvent.click(screen.getByRole("button", { name: "assistent.rateSend" }));
 
     // 200-char cap: the 300-char message arrives as 199 chars plus the ellipsis.
-    expect(screen.getByText(/^Rating failed: e{199}…$/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/^Rating failed: e{199}…$/)).toBeInTheDocument());
   });
 
-  it("shows the confirmed state with a basescan link once the transaction lands", () => {
-    const hash = "0xabc123" as `0x${string}`;
-    vi.mocked(useWriteContract).mockReturnValue(writeContractData({ data: hash }));
-    vi.mocked(useWaitForTransactionReceipt).mockReturnValue(receiptData({ isSuccess: true }));
+  it("Cancel clears the confirm area and empties the stars again", () => {
     renderWidget();
 
-    expect(screen.getByText("assistent.rateDone")).toBeInTheDocument();
-    expect(screen.getByRole("link")).toHaveAttribute("href", `https://basescan.org/tx/${hash}`);
+    fireEvent.click(stars()[2]);
+    expect(screen.getByText("assistent.rateDisclosure")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "assistent.cancel" }));
+
+    expect(screen.queryByText("assistent.rateDisclosure")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "assistent.rateSend" })).not.toBeInTheDocument();
+    // The third star is empty again — the glyph is back to ☆.
+    expect(stars()[2].textContent).toBe("☆");
   });
 
-  it("asks to connect when no wallet is connected", () => {
+  it("offers a switch to Base once a star is picked on another chain", () => {
+    vi.mocked(useAccount).mockReturnValue(buildAccountData({ isConnected: true, chainId: 10 }));
+    renderWidget();
+
+    // Nothing asks for a switch at rest — the affordance is a reaction to intent.
+    expect(screen.queryByRole("button", { name: "assistent.rateSwitch" })).not.toBeInTheDocument();
+
+    fireEvent.click(stars()[4]);
+    fireEvent.click(screen.getByRole("button", { name: "assistent.rateSwitch" }));
+
+    expect(mockSwitchChainAsync).toHaveBeenCalledWith({ chainId: 8453 });
+    expect(mockWriteContractAsync).not.toHaveBeenCalled();
+  });
+
+  it("asks to connect once a star is picked without a wallet", () => {
     vi.mocked(useWalletConnection).mockReturnValue({
       address: undefined,
       hasMounted: true,
@@ -160,7 +237,13 @@ describe("FeedbackWidget", () => {
     });
     renderWidget();
 
+    // Stars are visible at rest even without a wallet — the prompt is a reaction to intent.
+    expect(stars()).toHaveLength(5);
+    expect(screen.queryByRole("button", { name: "assistent.rateConnect" })).not.toBeInTheDocument();
+
+    fireEvent.click(stars()[4]);
     fireEvent.click(screen.getByRole("button", { name: "assistent.rateConnect" }));
+
     expect(mockConnectWallet).toHaveBeenCalledWith("feedback");
   });
 });

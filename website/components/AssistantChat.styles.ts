@@ -382,9 +382,9 @@ export const researchNotes = css({
 });
 
 /**
- * The post-answer rating strip: one row — heading, target buttons, the widget itself — between
- * the scrolling message list and the composer, aligned with the receipt link above it. Wraps on
- * narrow screens rather than overflowing; the widget is muted chrome like the research rows,
+ * The in-stream rating row: five muted stars (the FeedbackWidget) plus — only when a web tool
+ * served this chat — the target toggle, sitting directly under the last completed answer like
+ * that answer's own cost line. Wraps on narrow screens rather than overflowing; muted chrome,
  * because the answer is the content and the rating is an offer, not a call to action.
  */
 export const rateBlock = css({
@@ -392,7 +392,7 @@ export const rateBlock = css({
   flexWrap: "wrap",
   alignItems: "center",
   gap: "sm",
-  paddingX: "4",
+  marginTop: "xs",
   fontSize: "xs",
   color: "textMuted",
 });

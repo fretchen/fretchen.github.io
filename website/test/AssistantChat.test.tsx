@@ -125,15 +125,19 @@ vi.mock("../components/AgentInfoPanel", () => ({
   AgentInfoPanel: () => null,
 }));
 
-// The widget's own behavior (transaction shape, chain switch, revert copy) is
-// FeedbackWidget.test.tsx. Here it is a stub that exposes the props it was pointed at; the real
-// FEEDBACK_TARGETS stay, so the assertions run against the actual agentIds and endpoints.
+// The widget's own behavior (per-target transaction shape, sequential send, partial failure)
+// is FeedbackWidget.test.tsx. Here it is a stub that exposes the targets it was pointed at;
+// the real FEEDBACK_TARGETS stay, so the assertions run against the actual agentIds and
+// endpoints.
 vi.mock("../components/FeedbackWidget", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../components/FeedbackWidget")>();
   return {
     ...actual,
-    FeedbackWidget: (props: { agentId: number; endpoint: string }) => (
-      <div data-testid="feedback-widget" data-agent-id={props.agentId} data-endpoint={props.endpoint} />
+    FeedbackWidget: (props: { targets: { agentId: number; endpoint: string }[] }) => (
+      <div
+        data-testid="feedback-widget"
+        data-targets={props.targets.map((t) => `${t.agentId}:${t.endpoint}`).join(" ")}
+      />
     ),
   };
 });
@@ -1482,31 +1486,27 @@ describe("AssistantChat", () => {
   });
 
   /**
-   * The post-answer rating strip: which targets it offers and which ERC-8004 agent the widget is
-   * pointed at. The assistent is always ratable; the search agent only once a web tool actually
-   * ran in this chat — the option must not appear for a plain chat or a non-web tool turn.
+   * The in-stream rating row: where it appears and which ERC-8004 agents one star pick is
+   * sent to. The assistent is always rated; the search agent is bundled into the same pick —
+   * only once a web tool actually served this chat, never as a separate choice.
    */
   describe("on-chain rating", () => {
-    /** The strip's own container, so assertions cannot match the ToolSelector's labels. */
-    const strip = () => screen.getByText("assistent.rateHeading").closest("div") as HTMLElement;
     const widget = () => screen.getByTestId("feedback-widget");
+    const targetsOf = () => widget().getAttribute("data-targets");
 
-    it("shows the strip under the chatbox once a turn has answered, assistent by default", async () => {
+    it("rates the assistant alone under the last answer after a plain chat", async () => {
       mockSendMessage.mockResolvedValueOnce(textResponse("Hello there."));
 
       renderWithQuery(<AssistantChat />);
-      expect(screen.queryByText("assistent.rateHeading")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("feedback-widget")).not.toBeInTheDocument();
 
       sendUserMessage("Hi");
       await waitFor(() => expect(screen.getByText("Hello there.")).toBeInTheDocument());
 
-      expect(within(strip()).getByRole("button", { name: "assistent.rateAssistant" })).toBeInTheDocument();
-      expect(within(strip()).queryByRole("button", { name: "assistent.toolWebSearch" })).not.toBeInTheDocument();
-      expect(widget()).toHaveAttribute("data-agent-id", "97599");
-      expect(widget()).toHaveAttribute("data-endpoint", "https://llm-agent.fretchen.eu");
+      expect(targetsOf()).toBe("97599:https://llm-agent.fretchen.eu");
     });
 
-    it("hides the strip while the next turn is in flight", async () => {
+    it("hides the rating row while the next turn is in flight", async () => {
       let releaseSecondTurn: (value: unknown) => void = () => {};
       mockSendMessage
         .mockResolvedValueOnce(textResponse("First answer."))
@@ -1515,16 +1515,16 @@ describe("AssistantChat", () => {
       renderWithQuery(<AssistantChat />);
       sendUserMessage("One");
       await waitFor(() => expect(screen.getByText("First answer.")).toBeInTheDocument());
-      expect(screen.getByText("assistent.rateHeading")).toBeInTheDocument();
+      expect(widget()).toBeInTheDocument();
 
       sendUserMessage("Two");
-      await waitFor(() => expect(screen.queryByText("assistent.rateHeading")).not.toBeInTheDocument());
+      await waitFor(() => expect(screen.queryByTestId("feedback-widget")).not.toBeInTheDocument());
 
       releaseSecondTurn(textResponse("Second answer."));
-      await waitFor(() => expect(screen.getByText("assistent.rateHeading")).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByTestId("feedback-widget")).toBeInTheDocument());
     });
 
-    it("offers the search target only after a web tool ran, and points the widget at it", async () => {
+    it("bundles the search agent into the same star pick once a web tool ran", async () => {
       mockPaidFetch.mockImplementation(
         async () => new Response(JSON.stringify({ results: [{ url: "https://a.example", title: "A", text: "a" }] })),
       );
@@ -1536,20 +1536,10 @@ describe("AssistantChat", () => {
       sendUserMessage("Research cod stocks");
 
       await waitFor(() => expect(screen.getByText("Answered from the web.")).toBeInTheDocument());
-      const searchButton = within(strip()).getByRole("button", { name: "assistent.toolWebSearch" });
-
-      // The assistent stays the default; rating the search is an explicit opt-in.
-      expect(widget()).toHaveAttribute("data-agent-id", "97599");
-      fireEvent.click(searchButton);
-      expect(widget()).toHaveAttribute("data-agent-id", "97600");
-      expect(widget()).toHaveAttribute("data-endpoint", "https://web-agent.fretchen.eu");
-
-      // And back.
-      fireEvent.click(within(strip()).getByRole("button", { name: "assistent.rateAssistant" }));
-      expect(widget()).toHaveAttribute("data-agent-id", "97599");
+      expect(targetsOf()).toBe("97599:https://llm-agent.fretchen.eu 97600:https://web-agent.fretchen.eu");
     });
 
-    it("does not offer the search target when only non-web tools ran", async () => {
+    it("rates only the assistant when only non-web tools ran", async () => {
       mockFetchSitzungen.mockResolvedValue(sitzungenFixture);
       mockSendMessage
         .mockResolvedValueOnce(toolCallResponse("get_sitzungen", {}))
@@ -1559,8 +1549,7 @@ describe("AssistantChat", () => {
       sendUserMessage("List sessions");
 
       await waitFor(() => expect(screen.getByText("Sessions listed.")).toBeInTheDocument());
-      expect(within(strip()).queryByRole("button", { name: "assistent.toolWebSearch" })).not.toBeInTheDocument();
-      expect(widget()).toHaveAttribute("data-agent-id", "97599");
+      expect(targetsOf()).toBe("97599:https://llm-agent.fretchen.eu");
     });
   });
 

@@ -186,7 +186,12 @@ export function FeedbackWidget({ targets }: FeedbackWidgetProps) {
           abi: REPUTATION_REGISTRY_ABI,
           functionName: "giveFeedback",
           chainId: FEEDBACK.chainId,
-          args: [BigInt(target.agentId), BigInt(stars), 0, "", "", target.endpoint, "", ZERO_HASH],
+          // The EIP-8004 "starred" convention (its value/valueDecimals examples table): tag1
+          // names the semantic, and a starred rating is expressed on a 0-100 scale. The UI's
+          // 1-5 stars map to 20/40/60/80/100. A bare 1-5 value with an empty tag1 is
+          // interface-legal but unclassifiable by an indexer — 8004scan counted such a
+          // feedback (feedback_count) while excluding it from every score (average_score 0).
+          args: [BigInt(target.agentId), BigInt((stars * 100) / 5), 0, "starred", "", target.endpoint, "", ZERO_HASH],
         });
         landed.push(hash);
         setSentHashes([...landed]);

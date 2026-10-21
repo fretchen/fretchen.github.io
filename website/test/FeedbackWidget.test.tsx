@@ -122,7 +122,9 @@ describe("FeedbackWidget", () => {
       abi: REPUTATION_REGISTRY_ABI,
       functionName: "giveFeedback",
       chainId: FEEDBACK.chainId,
-      args: [97599n, 4n, 0, "", "", "https://llm-agent.fretchen.eu", "", ZERO_HASH],
+      // The EIP-8004 "starred" convention: tag1 names the semantic, value on a 0-100 scale
+      // (4 stars -> 80, 5 stars -> 100) — see the widget's args comment.
+      args: [97599n, 80n, 0, "starred", "", "https://llm-agent.fretchen.eu", "", ZERO_HASH],
     });
   });
 
@@ -137,13 +139,13 @@ describe("FeedbackWidget", () => {
     expect(mockWriteContractAsync).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
-        args: [97599n, 5n, 0, "", "", "https://llm-agent.fretchen.eu", "", ZERO_HASH],
+        args: [97599n, 100n, 0, "starred", "", "https://llm-agent.fretchen.eu", "", ZERO_HASH],
       }),
     );
     expect(mockWriteContractAsync).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
-        args: [97600n, 5n, 0, "", "", "https://web-agent.fretchen.eu", "", ZERO_HASH],
+        args: [97600n, 100n, 0, "starred", "", "https://web-agent.fretchen.eu", "", ZERO_HASH],
       }),
     );
 

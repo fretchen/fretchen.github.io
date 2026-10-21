@@ -8,11 +8,17 @@
  * original 405s every GET ("stateless server, the spec allows it"), which generic scanners
  * (x402scan-style icon resolution, plain health checks) read as a dead origin — the root
  * HTML and /favicon.png now resolve, and paths with no content answer 404, the honest
- * "not here" rather than "method broken". What is deliberately NOT served:
- * /.well-known/agent-registration.json and /openapi.json — this origin holds no ERC-8004
- * identity and no REST spec of its own (it relays to the twins that have both), so serving
- * either would fabricate identity. DELETE stays 405 — session termination is the one thing
- * this stateless server genuinely does not do, per the MCP spec's session-less allowance.
+ * "not here" rather than "method broken". ONE exception learned from 8004scan: the MCP
+ * endpoint itself. A health probe GETs the declared endpoint (/mcp), and 404 made it read
+ * the endpoint as nonexistent ("HTTP 404 (cached)" -> unhealthy, while POST initialize
+ * answered in ~300 ms) — the Streamable HTTP spec's GET is the OPTIONAL server-initiated
+ * SSE stream, and a stateless server that offers none answers 405, Allow: POST. So
+ * GET /mcp is 405 (endpoint exists, use POST), every other GET path stays the honest 404.
+ * What is deliberately NOT served: /.well-known/agent-registration.json and
+ * /openapi.json — this origin holds no ERC-8004 identity and no REST spec of its own
+ * (it relays to the twins that have both), so serving either would fabricate identity.
+ * DELETE stays 405 — session termination is the one thing this stateless server genuinely
+ * does not do, per the MCP spec's session-less allowance.
  */
 import { CORS_HEADERS } from "./utils.js";
 import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
@@ -199,6 +205,18 @@ export async function handleMCPRequest(request: Request): Promise<Response> {
         status: 200,
         headers: { ...CORS_HEADERS, "Content-Type": faviconContentType },
       });
+    }
+    // The MCP endpoint itself: the spec's GET is the optional server-initiated SSE stream,
+    // which this stateless server does not offer — 405 Allow: POST, not 404 (see the header
+    // comment: a 404 here read as "endpoint does not exist" to 8004scan's health probe).
+    if (path === "mcp") {
+      return new Response(
+        JSON.stringify({
+          error:
+            "This MCP endpoint is stateless: JSON-RPC 2.0 over POST only. The GET server-initiated stream is not offered; no sessions.",
+        }),
+        { status: 405, headers: { ...CORS_HEADERS, Allow: "POST" } },
+      );
     }
     return new Response(
       JSON.stringify({

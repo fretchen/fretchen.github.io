@@ -125,6 +125,23 @@ vi.mock("../components/AgentInfoPanel", () => ({
   AgentInfoPanel: () => null,
 }));
 
+// The widget's own behavior (per-target transaction shape, sequential send, partial failure)
+// is FeedbackWidget.test.tsx. Here it is a stub that exposes the targets it was pointed at;
+// the real FEEDBACK_TARGETS stay, so the assertions run against the actual agentIds and
+// endpoints.
+vi.mock("../components/FeedbackWidget", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../components/FeedbackWidget")>();
+  return {
+    ...actual,
+    FeedbackWidget: (props: { targets: { agentId: number; endpoint: string }[] }) => (
+      <div
+        data-testid="feedback-widget"
+        data-targets={props.targets.map((t) => `${t.agentId}:${t.endpoint}`).join(" ")}
+      />
+    ),
+  };
+});
+
 // Only the two fetchers are stubbed; the real selectors run against the Step 1 fixtures, so
 // these tests cover the wiring *and* the actual projection rather than a hand-written stand-in.
 vi.mock("../tools/bundestakt", async (importOriginal) => {
@@ -1465,6 +1482,74 @@ describe("AssistantChat", () => {
 
       await screen.findByDisplayValue("x");
       expect(screen.getByPlaceholderText("assistent.placeholder")).toBeDisabled();
+    });
+  });
+
+  /**
+   * The in-stream rating row: where it appears and which ERC-8004 agents one star pick is
+   * sent to. The assistent is always rated; the search agent is bundled into the same pick —
+   * only once a web tool actually served this chat, never as a separate choice.
+   */
+  describe("on-chain rating", () => {
+    const widget = () => screen.getByTestId("feedback-widget");
+    const targetsOf = () => widget().getAttribute("data-targets");
+
+    it("rates the assistant alone under the last answer after a plain chat", async () => {
+      mockSendMessage.mockResolvedValueOnce(textResponse("Hello there."));
+
+      renderWithQuery(<AssistantChat />);
+      expect(screen.queryByTestId("feedback-widget")).not.toBeInTheDocument();
+
+      sendUserMessage("Hi");
+      await waitFor(() => expect(screen.getByText("Hello there.")).toBeInTheDocument());
+
+      expect(targetsOf()).toBe("97599:https://llm-agent.fretchen.eu");
+    });
+
+    it("hides the rating row while the next turn is in flight", async () => {
+      let releaseSecondTurn: (value: unknown) => void = () => {};
+      mockSendMessage
+        .mockResolvedValueOnce(textResponse("First answer."))
+        .mockImplementationOnce(() => new Promise((resolve) => (releaseSecondTurn = resolve)));
+
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("One");
+      await waitFor(() => expect(screen.getByText("First answer.")).toBeInTheDocument());
+      expect(widget()).toBeInTheDocument();
+
+      sendUserMessage("Two");
+      await waitFor(() => expect(screen.queryByTestId("feedback-widget")).not.toBeInTheDocument());
+
+      releaseSecondTurn(textResponse("Second answer."));
+      await waitFor(() => expect(screen.getByTestId("feedback-widget")).toBeInTheDocument());
+    });
+
+    it("bundles the search agent into the same star pick once a web tool ran", async () => {
+      mockPaidFetch.mockImplementation(
+        async () => new Response(JSON.stringify({ results: [{ url: "https://a.example", title: "A", text: "a" }] })),
+      );
+      mockSendMessage
+        .mockResolvedValueOnce(toolCallResponse("search_web", { query: "cod stocks" }))
+        .mockResolvedValueOnce(textResponse("Answered from the web."));
+
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("Research cod stocks");
+
+      await waitFor(() => expect(screen.getByText("Answered from the web.")).toBeInTheDocument());
+      expect(targetsOf()).toBe("97599:https://llm-agent.fretchen.eu 97600:https://web-agent.fretchen.eu");
+    });
+
+    it("rates only the assistant when only non-web tools ran", async () => {
+      mockFetchSitzungen.mockResolvedValue(sitzungenFixture);
+      mockSendMessage
+        .mockResolvedValueOnce(toolCallResponse("get_sitzungen", {}))
+        .mockResolvedValueOnce(textResponse("Sessions listed."));
+
+      renderWithQuery(<AssistantChat />);
+      sendUserMessage("List sessions");
+
+      await waitFor(() => expect(screen.getByText("Sessions listed.")).toBeInTheDocument());
+      expect(targetsOf()).toBe("97599:https://llm-agent.fretchen.eu");
     });
   });
 

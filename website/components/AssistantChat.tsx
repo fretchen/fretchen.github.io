@@ -101,6 +101,7 @@ import { button } from "../styled-system/recipes";
 import { PageHeader } from "./PageHeader";
 import { FretchenLogo } from "./FretchenLogo";
 import { GetFundsModal } from "./GetFundsModal";
+import { FeedbackWidget, FEEDBACK_TARGETS } from "./FeedbackWidget";
 import { PaymentError, readChargedTotal } from "../utils/x402PaidFetch";
 
 /**
@@ -492,6 +493,11 @@ export function AssistantChat() {
     spent: bigint;
     notes: ResearchNote[];
   } | null>(null);
+  // Whether any turn of this chat has paid the search agent (ERC-8004 agent 97600) — both
+  // `search_web` and `fetch_url` buy from it (tools/search.ts, tools/webFetch.ts). Latched for
+  // the session, not per turn: the search agent is only rated once it actually served this
+  // chat, bundled into the same star pick as the assistent rather than offered as a choice.
+  const [webToolsUsed, setWebToolsUsed] = useState(false);
   // Read by the loop before each hop. A ref, not state: the loop is already running inside an
   // event handler and must see the press without waiting for a re-render. `stopPressed` is only the
   // button's own feedback.
@@ -1267,8 +1273,14 @@ export function AssistantChat() {
         shouldStop: () => stopRequestedRef.current,
         onPhase: (phase) => {
           setLoopPhase(phase);
-          if (phase.kind === "tool" && phase.name === searchWebTool.function.name) searches++;
-          if (phase.kind === "tool" && phase.name === fetchUrlTool.function.name) pages++;
+          if (phase.kind === "tool" && phase.name === searchWebTool.function.name) {
+            searches++;
+            setWebToolsUsed(true);
+          }
+          if (phase.kind === "tool" && phase.name === fetchUrlTool.function.name) {
+            pages++;
+            setWebToolsUsed(true);
+          }
           if (phase.kind === "tool" && phase.name === noteFindingsTool.function.name) {
             notes.push(...parseNotes(phase.args));
           }
@@ -1605,6 +1617,22 @@ export function AssistantChat() {
                   </div>
                 </div>
               ))
+            )}
+
+            {/* In-stream rating, directly under the last completed answer — the same position
+              as that answer's own cost line, because the stars rate that answer. At rest it is
+              nothing but five muted glyphs; the disclosure appears only at the moment of
+              commitment (FeedbackWidget). One star pick rates every agent that served this
+              chat: the assistent always, the search agent once its tools ran — the user never
+              chooses a target, because they experienced one answer, not two services. */}
+            {!isLoading && messages.length > 0 && messages[messages.length - 1].role === "assistant" && (
+              <div className={chat.rateBlock}>
+                <FeedbackWidget
+                  targets={
+                    webToolsUsed ? [FEEDBACK_TARGETS.assistent, FEEDBACK_TARGETS.search] : [FEEDBACK_TARGETS.assistent]
+                  }
+                />
+              </div>
             )}
 
             {currencyFallback && (

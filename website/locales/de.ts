@@ -195,9 +195,9 @@ export default {
     // Stern. Hat ein Web-Tool bedient, bewertet ein Klick beide Agenten (der gebündelte Text).
     rateStars: "{n} von 5",
     rateDisclosure:
-      "Öffentlich und dauerhaft auf Base, aus deiner Wallet gesendet. Kostet eine minimale Menge ETH an Gas (in der Regel unter 0,01 $).",
+      "Öffentlich und dauerhaft auf Base, aus deiner Wallet gesendet. Kostet eine kleine Netzwerkgebühr in ETH (in der Regel unter 0,01 $).",
     rateDisclosureBundled:
-      "Bewertet den Assistenten und die von ihm genutzte Websuche — öffentlich und dauerhaft auf Base, aus deiner Wallet gesendet. Kostet eine minimale Menge ETH an Gas (in der Regel unter 0,01 $).",
+      "Bewertet den Assistenten und die von ihm genutzte Websuche — öffentlich und dauerhaft auf Base, aus deiner Wallet gesendet. Kostet eine kleine Netzwerkgebühr in ETH (in der Regel unter 0,01 $).",
     rateDetailsSummary: "Was passiert mit meiner Bewertung?",
     rateDetailsBody:
       "Deine Bewertung wird in die ERC-8004 Reputation Registry auf Base geschrieben ({registry}) und ist öffentlich lesbar — unter anderem im Agent-Profil auf 8004scan.io. Sie lässt sich danach nicht bearbeiten.",

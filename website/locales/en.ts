@@ -186,9 +186,9 @@ export default {
     // a web tool served the chat, one pick rates both agents (the bundled string).
     rateStars: "{n} of 5",
     rateDisclosure:
-      "Public and permanent on Base, sent from your wallet. Costs a dust amount of ETH in gas (typically under $0.01).",
+      "Public and permanent on Base, sent from your wallet. Costs a small amount of ETH for gas (typically under $0.01).",
     rateDisclosureBundled:
-      "Rates the assistant and the web search it used — public and permanent on Base, sent from your wallet. Costs a dust amount of ETH in gas (typically under $0.01).",
+      "Rates the assistant and the web search it used — public and permanent on Base, sent from your wallet. Costs a small amount of ETH for gas (typically under $0.01).",
     rateDetailsSummary: "What happens with my rating?",
     rateDetailsBody:
       "Your rating is written to the ERC-8004 Reputation Registry on Base ({registry}), where anyone can read it — the agent's profile on 8004scan.io shows it too. It cannot be edited afterwards.",

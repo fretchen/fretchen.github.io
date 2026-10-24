@@ -41,7 +41,7 @@
     "dotenv": "^16.0.0",
     "pino": "^9.0.0",
     "viem": "^2.57.4",
-    "zod": "^4.5.4"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",

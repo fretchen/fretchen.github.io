@@ -20,12 +20,6 @@ const LabPage: React.FC = () => {
         />
 
         <Card
-          title="AI Assistant"
-          description="Chat with an AI assistant. Pay per message with x402 batch-settlement USDC payment channels — no prepaid balance."
-          link="/assistent"
-        />
-
-        <Card
           title="x402"
           description="Pay per request, verified and settled on-chain — no accounts, no signup. This site runs all three roles: buyer, seller, and the facilitator connecting them."
           link="/x402"

@@ -20,6 +20,7 @@ describe("prompt files", () => {
   it("carries the tool contract's known content", () => {
     // A stable marker per prompt, so a file/getter mix-up cannot pass silently.
     expect(toolContractPrompt.body).toContain("bundestakt.de");
+    expect(toolContractPrompt.body).toContain("transitous.org");
     expect(teenPrompt.body).toContain("teenagers");
     expect(researchPrompt.body).toContain("note_findings");
   });

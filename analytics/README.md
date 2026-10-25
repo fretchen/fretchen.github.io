@@ -159,7 +159,7 @@ npm install
 npm test              # run tests (vitest)
 npm run test:coverage # with coverage report
 npm run lint          # eslint
-npm run build         # tsup → dist/
+npm run build         # tsdown → dist/
 ```
 
 ### Local servers

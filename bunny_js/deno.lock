@@ -1,0 +1,30 @@
+{
+  "version": "5",
+  "remote": {
+    "https://deno.land/std@0.224.0/dotenv/mod.ts": "0180eaeedaaf88647318811cdaa418cc64dc51fb08354f91f5f480d0a1309f7d",
+    "https://deno.land/std@0.224.0/dotenv/parse.ts": "09977ff88dfd1f24f9973a338f0f91bbdb9307eb5ff6085446e7c423e4c7ba0c",
+    "https://deno.land/std@0.224.0/dotenv/stringify.ts": "275da322c409170160440836342eaa7cf012a1d11a7e700d8ca4e7f2f8aa4615"
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@bunny.net/edgescript-sdk@~0.11.2",
+        "npm:@eslint/js@10",
+        "npm:@types/node@^26.1.0",
+        "npm:@vitest/coverage-v8@^4.1.11",
+        "npm:@vitest/eslint-plugin@^1.6.27",
+        "npm:@x402/core@^2.23.0",
+        "npm:@x402/evm@^2.23.0",
+        "npm:@x402/extensions@2.28",
+        "npm:eslint@10",
+        "npm:prettier@^3.6.2",
+        "npm:tsdown@~0.23.1",
+        "npm:typescript-eslint@^8.58.2",
+        "npm:typescript@^5.9.3",
+        "npm:viem@2.57.4",
+        "npm:vitest@^4.1.11",
+        "npm:zod@^4.5.4"
+      ]
+    }
+  }
+}

@@ -38,10 +38,15 @@ export default function Page() {
             description="Game theory and economics, quantum physics, and what I learned building on the web."
             link="/blog"
           />
+          <Card
+            title="Assistant"
+            description="An AI assistant that actually looks things up — pay as you go with stablecoins, no account."
+            link="/assistent"
+          />
           <Card title="Quantum" description="Tutorials and notes on quantum, AMO and more." link="/quantum" />
           <Card
             title="Lab"
-            description="AI image generation, chat assistant, and blockchain-based payments — experiments running on Optimism and Base."
+            description="AI image generation and blockchain-based payments — experiments running on Optimism and Base."
             link="/lab"
           />
         </CardList>

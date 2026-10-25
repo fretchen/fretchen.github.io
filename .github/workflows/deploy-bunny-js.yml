@@ -1,0 +1,96 @@
+name: Deploy Bunny JS twins
+
+# Deploys the bunny Edge Script twins of the x402 sellers: searchapi (web-agent), llm
+# (chat REST), and mcp (the MCP wrapper around them — its bundle embeds both tools, so
+# mcp.js serves web_search and chat_completion on its own). All three coexist with
+# manual CLI deploys by design: bunny publishes whichever deployment happened last, so a
+# manual `bunny scripts deploy` from a laptop stays live only until the next push to main.
+#
+# This workflow ships CODE only. Each script's environment (BRAVE_API_KEY,
+# MISTRAL_API_KEY, the receiver authorizer key, the S3 channel-store credentials, RPC
+# URLs, SEARCH_SERVICE_URL) is configured on the script itself — bunny dashboard or
+# `bunny scripts env set` — and is deliberately not part of CI: a repo leak must not be
+# a secrets leak.
+#
+# Prerequisite per script (one-time, manual): the remote script must already exist —
+# `bunny scripts create <name> --type standalone --no-link` — and its id and per-script
+# deploy key (dashboard: Script -> Deployments -> Settings) must be the matching repo
+# secrets, or the deploy step below fails. The deploy key authorizes exactly that one
+# script, not the account.
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "bunny_js/**"
+      - "shared/chain-utils/**"
+      - "shared/s3-utils/**"
+      - ".github/workflows/deploy-bunny-js.yml"
+
+jobs:
+  deploy-bunny-js:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: |
+            bunny_js/package-lock.json
+            shared/chain-utils/package-lock.json
+            shared/s3-utils/package-lock.json
+
+      # Repo ordering rule (AGENTS.md -> Commands): the shared file: dependencies must be
+      # built before bunny_js can build against them.
+      - name: Install and build chain-utils
+        working-directory: ./shared/chain-utils
+        run: npm ci && npm run build
+
+      - name: Install and build s3-utils
+        working-directory: ./shared/s3-utils
+        run: npm ci && npm run build
+
+      - name: Install dependencies
+        working-directory: ./bunny_js
+        run: npm ci
+
+      - name: Build the single-file bundle
+        working-directory: ./bunny_js
+        run: npm run build
+
+      - name: Deploy searchapi twin to Bunny Edge Scripting
+        uses: BunnyWay/actions/deploy-script@931a74b9c45ea9f9f01435fbbf1649830e67d3b3 # 2026-10-12 main; a mutable ref here is code-exec with the deploy keys — bump deliberately
+        with:
+          # BUNNYJS_SCRIPT_ID and BUNNYJS_DEPLOY_KEY are repo secrets; both come from the
+          # bunny dashboard: Script -> Deployments -> Settings. The deploy key authorizes
+          # exactly this one script, not the account.
+          script_id: ${{ secrets.BUNNYJS_SCRIPT_ID }}
+          deploy_key: ${{ secrets.BUNNYJS_DEPLOY_KEY }}
+          file: "bunny_js/dist/searchapi.js"
+
+      - name: Deploy llm twin to Bunny Edge Scripting
+        uses: BunnyWay/actions/deploy-script@931a74b9c45ea9f9f01435fbbf1649830e67d3b3 # 2026-10-12 main; a mutable ref here is code-exec with the deploy keys — bump deliberately
+        with:
+          # Same per-script secret pair pattern as searchapi, its own script id and its
+          # own deploy key — narrower blast radius than an account-wide API key.
+          script_id: ${{ secrets.BUNNYLLM_SCRIPT_ID }}
+          deploy_key: ${{ secrets.BUNNYLLM_DEPLOY_KEY }}
+          file: "bunny_js/dist/llm.js"
+
+      - name: Deploy mcp twin to Bunny Edge Scripting
+        uses: BunnyWay/actions/deploy-script@931a74b9c45ea9f9f01435fbbf1649830e67d3b3 # 2026-10-12 main; a mutable ref here is code-exec with the deploy keys — bump deliberately
+        with:
+          # The mcp bundle embeds the llm and search tools (see mcp_tools.ts), so this one
+          # script serves both web_search and chat_completion.
+          script_id: ${{ secrets.BUNNYMCP_SCRIPT_ID }}
+          deploy_key: ${{ secrets.BUNNYMCP_DEPLOY_KEY }}
+          file: "bunny_js/dist/mcp.js"

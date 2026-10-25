@@ -47,7 +47,7 @@ plugins:
 package:
   patterns:
     # Exclude everything, then include ONLY the bundled runtime output.
-    # (tsup inlines all deps into dist/*.js, so nothing else is needed at runtime.)
+    # (tsdown inlines all deps into dist/*.js, so nothing else is needed at runtime.)
     # This is robust: it won't accidentally package new large dirs like
     # notebooks/node_modules (created by Deno), which previously bloated the
     # upload archive past Scaleway's limit.

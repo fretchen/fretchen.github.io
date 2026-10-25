@@ -381,6 +381,22 @@ export const researchNotes = css({
   "& li": { marginBottom: "xs" },
 });
 
+/**
+ * The in-stream rating row: five muted stars (the FeedbackWidget) plus — only when a web tool
+ * served this chat — the target toggle, sitting directly under the last completed answer like
+ * that answer's own cost line. Wraps on narrow screens rather than overflowing; muted chrome,
+ * because the answer is the content and the rating is an offer, not a call to action.
+ */
+export const rateBlock = css({
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "center",
+  gap: "sm",
+  marginTop: "xs",
+  fontSize: "xs",
+  color: "textMuted",
+});
+
 export const loadingBubble = css({
   // The 80% cap sits on `loadingColumn`, which holds this bubble and the research status row.
   maxWidth: "100%",

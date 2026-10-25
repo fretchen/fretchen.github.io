@@ -1,0 +1,341 @@
+/**
+ * Zod schemas for the LLM endpoint's wire contract.
+ *
+ * Single source for the generated `openapi.llm.json` (see `scripts/generate-openapi-llm.ts`).
+ *
+ * **The rule: forward the body, reject only what moves cost past the metered ceiling.** The body
+ * goes to the upstream model, which owns the chat-param contract — an unlisted OpenAI param
+ * (`temperature`, `top_p`, `seed`, …) is passed through and simply works. But this endpoint meters
+ * each message against a fixed ceiling (2000 output tokens ≈ $0.003, see `sc_llm_x402.ts`), so
+ * `stream`, `n` and `max_tokens` are rejected; see `REJECTED_PARAMS` below for why each. `tools` is
+ * the middle case: capped rather than refused, since a caller can inflate it.
+ *
+ * Hence `z.looseObject` on the request side — `z.object` publishes `additionalProperties: false`,
+ * a strictness the handler does not enforce (see the OpenAPI rule in the repo `CLAUDE.md`). The
+ * response side stays `z.object`: `callLLMAPI` reconstructs the envelope field by field.
+ *
+ * These schemas are PUBLISHED UI: `website/pages/agent-onboarding` and `website/pages/x402/buyers`
+ * render them from the live deployed spec via `SpecParamTable`. Every `.describe()` below is
+ * user-facing copy, and the exported schema *names* are load-bearing — renaming either breaks
+ * both pages.
+ */
+
+import { z } from "zod";
+import { advertisedModelIds, tokensToCost } from "./llm_service.js";
+import { TOKEN_DECIMALS, type PriceList } from "./stablecoin_pricing.js";
+import type { SettlementTokenSymbol } from "@fretchen/chain-utils";
+
+/**
+ * The model ids this endpoint advertises. Derived from `advertisedModelIds()` in `llm_service.ts`
+ * (the runtime source of truth, keyed off `LLM_PROVIDERS`) rather than hand-copied, so the
+ * published `model` enum cannot list a model the endpoint doesn't serve, or omit one it does.
+ * `llm_service.ts` does not import this file, so the dependency direction is safe.
+ */
+export const ADVERTISED_LLM_MODELS = advertisedModelIds() as [string, ...string[]];
+
+// ── Pricing ──
+// Lives here, beside the schemas, for the same reason `PRICE_ATOMIC` lives in
+// `search_schemas.ts`: consumers that must not import a handler (the OpenAPI generator,
+// the MCP tool table) still need the exact advertised ceiling.
+
+/**
+ * The token estimate a per-message price ceiling is derived from. Env-overridable for test
+ * environments; see `sc_llm_x402.ts` for the full rationale of the value.
+ */
+const MAX_TOKENS_PER_MESSAGE = process.env.LLM_ESTIMATED_TOKENS_PER_MESSAGE ?? "20000";
+
+/** The provider the ceiling is priced on — see `llm_service.ts`'s LLM_PROVIDERS. */
+const LLM_PROVIDER = "mistral";
+
+// No real prompt/completion split exists yet for the ceiling, so price the entire
+// estimate as completion (output) tokens — the pricier of the two rates for a
+// provider with an asymmetric split like Mistral's. This guarantees the ceiling is
+// never an underestimate relative to whatever the real split turns out to be;
+// `getSettleAmount`'s cap in `sc_llm_x402.ts` still protects the ceiling from ever
+// being exceeded.
+//
+// One ceiling per token, each priced on the provider's own rate card in that currency — three
+// parallel price systems, no conversion (see llm_service.ts). EURe's ceiling is the same EUR
+// arithmetic rescaled to 18 decimals (tokensToCost's `decimals`).
+const maxPriceFor = (symbol: SettlementTokenSymbol): string =>
+  tokensToCost(
+    { prompt_tokens: 0, completion_tokens: MAX_TOKENS_PER_MESSAGE },
+    LLM_PROVIDER,
+    symbol,
+    TOKEN_DECIMALS[symbol],
+  ).toString();
+
+/** The per-message price ceiling in each stablecoin's own atomic units — the 402's price. */
+export const MAX_PRICE_ATOMIC: PriceList = {
+  USDC: maxPriceFor("USDC"),
+  EURC: maxPriceFor("EURC"),
+  EURe: maxPriceFor("EURe"),
+};
+
+/**
+ * Real, usage-derived charge for this message in `symbol`'s atomic units, from that currency's
+ * rate card, capped at the same currency's pre-authorized ceiling (`MAX_PRICE_ATOMIC`) — a
+ * response that somehow runs over the estimate still settles for the max rather than aborting
+ * with cap_exceeded; the difference is absorbed as under-billing, not a fund-safety issue (the
+ * client is always protected by the voucher's signed ceiling).
+ *
+ * Shared by the REST chat (`sc_llm_x402.ts`) and the MCP `chat_completion` tool — both settle the
+ * real usage, never the flat ceiling they advertise.
+ */
+export function getSettleAmount(
+  usage: { prompt_tokens: number; completion_tokens: number },
+  symbol: SettlementTokenSymbol,
+): string {
+  const actualCost = tokensToCost(usage, LLM_PROVIDER, symbol, TOKEN_DECIMALS[symbol]);
+  const maxCost = BigInt(MAX_PRICE_ATOMIC[symbol]);
+  return (actualCost > maxCost ? maxCost : actualCost).toString();
+}
+
+// ── Tools ──
+
+/** Bytes, not a tool count: what is billed is the serialized definitions, on every hop. A count
+ *  cap on top of this bounded nothing the byte cap does not already bound. */
+export const MAX_TOOLS_BYTES = 8192;
+
+/** One tool call the model wants made. `arguments` is a JSON *string*, per OpenAI. */
+export const LLMToolCallSchema = z.looseObject({
+  id: z.string().describe("Echo this back as tool_call_id on the matching tool result message."),
+  type: z.literal("function"),
+  function: z.looseObject({
+    name: z.string(),
+    arguments: z.string().describe("JSON-encoded arguments, as a string."),
+  }),
+});
+
+/**
+ * Tool definitions a caller may offer the model. `function.parameters` stays loose: it is a JSON
+ * Schema the upstream model owns.
+ *
+ * The byte cap is a `.refine()`, which `z.toJSONSchema` does not render, so it is restated in the
+ * `.describe()` on the request field. We enforce slightly more than the JSON Schema alone
+ * publishes — the safe direction, and the prose closes the gap for a reader.
+ */
+export const LLMToolsSchema = z
+  .array(
+    z.looseObject({
+      type: z.literal("function"),
+      function: z.looseObject({
+        name: z.string().min(1),
+        description: z.string().optional(),
+        parameters: z.looseObject({}).optional(),
+      }),
+    }),
+  )
+  .refine((tools) => Buffer.byteLength(JSON.stringify(tools), "utf8") <= MAX_TOOLS_BYTES, {
+    error: `tools must serialize to at most ${MAX_TOOLS_BYTES} bytes`,
+  });
+
+// ── Request ──
+
+/**
+ * Byte cap on the serialized `messages` array, for the same reason `tools` has one: conversation
+ * turns are input tokens charged on every hop, and the per-message charge is capped at a fixed
+ * ceiling (see `USDC_MAX_PRICE_PER_MESSAGE` in `sc_llm_x402.ts`), so an uncapped conversation is
+ * billed at a flat rate no matter what it costs us. `tools` was capped and this was not, which
+ * left the far larger of the two open: a request filling the model's context window cost several
+ * times the ceiling it was charged, repeatably.
+ *
+ * Sized from the ceiling: 20000 output tokens ≈ 30000 atomic USDC, which at the $0.50/M *input*
+ * rate buys ~60,000 input tokens ≈ ~240 KB of English. 192 KB stays under that with room for
+ * `tools` (8 KB) and the system turn. Raised from 64 KB together with the ceiling, for multi-hop
+ * web research; the two move together or the cap stops matching what is charged.
+ *
+ * Enforced as a byte count rather than a character count because that is what the upstream bills
+ * against; a `.refine()` here would not survive `z.toJSONSchema`, so the handler checks it and
+ * the `messages` field restates it in prose below.
+ */
+export const MAX_MESSAGES_BYTES = 196_608;
+
+export const LLMChatMessageSchema = z
+  .looseObject({
+    role: z
+      .string()
+      .describe(
+        'The speaker\'s role. Forwarded to the upstream model as sent — deliberately not restricted to the OpenAI "system"/"user"/"assistant" set, so a role the upstream adds later (e.g. "tool") works without a schema change, matching how the handler validates it.',
+      ),
+    content: z
+      .string()
+      .nullable()
+      .optional()
+      .describe(
+        "The message text. Required except on an assistant turn that carries tool_calls, where it is null.",
+      ),
+    tool_calls: z
+      .array(LLMToolCallSchema)
+      .min(1) // an assistant turn either carries a tool call or omits the key — never []
+      .nullable() // a caller replaying an upstream turn verbatim sends the null; see upstream_schemas.ts
+      .optional()
+      .describe("Present when replaying an assistant turn that requested tool calls."),
+    tool_call_id: z
+      .string()
+      .optional()
+      .describe("On a role:'tool' message, the id of the call this message answers."),
+  })
+  .describe("One turn of the conversation.")
+  // Array.isArray, not `!== undefined`: null !== undefined is true, so that check would accept
+  // a genuinely empty {content: null, tool_calls: null} turn now that tool_calls is nullable.
+  .refine((m) => (m.content !== null && m.content !== undefined) || Array.isArray(m.tool_calls), {
+    error: "message must have content unless it carries tool_calls",
+  });
+
+/**
+ * The params rejected with a 400 because they move cost past the metered ceiling.
+ *
+ * One list, three consumers: the schema fields below (`doc`), the handler's rejection loop in
+ * `sc_llm_x402.ts`, and the generated 400 description and x-guidance (`specPhrase`/`name`). `n`
+ * and `max_tokens` once became 400 causes the published spec never mentioned; this is what stops
+ * that recurring.
+ */
+export interface RejectedParam {
+  readonly name: string;
+  readonly predicate: (value: unknown) => boolean;
+  readonly code: string;
+  /** OpenAI error `param`. Omitted for stream, whose wire shape predates the param field. */
+  readonly errorParam?: string;
+  readonly message: string;
+  /** The schema field's `.describe()` — published UI, hence separate copy from `message`. */
+  readonly doc: string;
+  readonly specPhrase: string;
+}
+
+// Annotated rather than `as const satisfies`, which narrows each entry to its own literal type and
+// leaves `errorParam` missing from the `stream` member of the union.
+export const REJECTED_PARAMS: readonly RejectedParam[] = [
+  {
+    name: "stream",
+    predicate: (v: unknown) => v === true,
+    code: "stream_unsupported",
+    message: "Streaming (stream: true) is not supported by this endpoint.",
+    doc: "Streaming is not supported. Each message settles on its final token usage, which requires the whole completion, so stream:true is rejected rather than silently buffered.",
+    specPhrase: "stream:true",
+  },
+  {
+    name: "n",
+    predicate: (v: unknown) => v !== undefined && v !== 1,
+    code: "unsupported_value",
+    errorParam: "n",
+    message:
+      "Only n=1 is supported. Each message is metered against a fixed per-message price ceiling, and additional completions multiply output tokens past it.",
+    doc: "Only n=1 is supported. Each message is metered against a fixed per-message price ceiling, and additional completions multiply output tokens past it.",
+    specPhrase: "n other than 1",
+  },
+  {
+    name: "max_tokens",
+    predicate: (v: unknown) => v !== undefined,
+    code: "unsupported_value",
+    errorParam: "max_tokens",
+    message:
+      "'max_tokens' is not supported. Output length is bounded by the per-message price ceiling this endpoint meters against, not by a caller-supplied limit.",
+    doc: "Not supported. Output length is bounded by the per-message price ceiling this endpoint meters against, not by a caller-supplied limit.",
+    specPhrase: "any max_tokens",
+  },
+];
+
+function rejected(name: string): RejectedParam {
+  const param = REJECTED_PARAMS.find((p) => p.name === name);
+  if (!param) {
+    throw new Error(`No REJECTED_PARAMS entry named '${name}'`);
+  }
+  return param;
+}
+
+export const LLMChatRequestSchema = z
+  .looseObject({
+    model: z
+      .enum(ADVERTISED_LLM_MODELS)
+      .describe(
+        "The model to use. Only the advertised model id(s) are served; others return model_not_found.",
+      ),
+    messages: z
+      .array(LLMChatMessageSchema)
+      .min(1)
+      .describe(
+        `The conversation so far. At most ${MAX_MESSAGES_BYTES} bytes serialized — conversation turns are input tokens charged on every hop, and this endpoint meters each message against a fixed price ceiling, so an uncapped conversation would be billed far below what it costs to serve.`,
+      ),
+    // Only the prose comes from REJECTED_PARAMS; the constraints must stay literal, because
+    // OWN_REQUEST_KEYS reads Object.keys(shape) and z.infer would lose the field types.
+    stream: z.literal(false).optional().describe(rejected("stream").doc),
+    n: z.literal(1).optional().describe(rejected("n").doc),
+    max_tokens: z.never().optional().describe(rejected("max_tokens").doc),
+    tools: LLMToolsSchema.optional().describe(
+      `Tool definitions offered to the model, OpenAI shape. At most ${MAX_TOOLS_BYTES} bytes serialized — tool definitions are input tokens charged on every hop, so an uncapped array inflates the metered cost. A tool call comes back as choices[].message.tool_calls with finish_reason: "tool_calls"; execute it and send the result back as a role:"tool" message. This endpoint never calls a tool itself.`,
+    ),
+    tool_choice: z
+      .enum(["auto", "none"])
+      .optional()
+      .describe(
+        'Whether the model may call a tool. Only "auto" and "none" are served; a forced or named choice is not.',
+      ),
+    useDummyData: z
+      .boolean()
+      .optional()
+      .describe(
+        "Vendor extension (not OpenAI): forces a mock completion. Testnet networks always mock regardless. The mock is tool-aware — offered a tool with no result in the conversation yet it returns a tool_calls turn, and once a role:'tool' message is present it answers with text — so the whole tool loop can be exercised without a billed completion.",
+      ),
+    payment: z
+      .unknown()
+      .optional()
+      .describe(
+        "Vendor extension: x402 payment payload, as a body fallback for clients that cannot set the PAYMENT-SIGNATURE / X-PAYMENT header. Passed through as received; validated by @x402/evm, not here.",
+      ),
+  })
+  .describe(
+    "OpenAI chat-completions request body, plus this agent's vendor extensions. Unlisted fields are forwarded to the upstream model rather than dropped or rejected — except stream, n and max_tokens, which are rejected with a 400 because they move cost past the metered per-message ceiling.",
+  );
+
+export type LLMChatRequest = z.infer<typeof LLMChatRequestSchema>;
+
+/**
+ * Keys declared above that must still be sent upstream.
+ *
+ * `sc_llm_x402.ts` strips every declared key from the bag it forwards, on the principle that a
+ * declared key is one this endpoint handles itself. `tools`/`tool_choice` are the exception — the
+ * model is the thing that has to see them. Without this set they would be silently dropped and the
+ * caller charged for a completion that ignored their tools.
+ */
+export const FORWARDED_OWN_KEYS = new Set<string>(["tools", "tool_choice"]);
+
+// ── Response ──
+
+export const LLMChatResponseSchema = z
+  .object({
+    id: z.string(),
+    object: z.literal("chat.completion"),
+    created: z.number().int().describe("Unix timestamp (seconds)."),
+    model: z.string(),
+    choices: z.array(
+      z.object({
+        index: z.number().int(),
+        message: z.object({
+          role: z.string(),
+          content: z
+            .string()
+            .nullable()
+            .describe("The generated reply, or null when the model is requesting a tool call."),
+          tool_calls: z
+            .array(LLMToolCallSchema)
+            .min(1)
+            .optional()
+            .describe(
+              "Present only when finish_reason is tool_calls. Execute them and send the results back as role:'tool' messages carrying the matching tool_call_id.",
+            ),
+        }),
+        finish_reason: z.string().nullable(),
+      }),
+    ),
+    usage: z
+      .object({
+        prompt_tokens: z.number().int(),
+        completion_tokens: z.number().int(),
+        total_tokens: z.number().int(),
+      })
+      .describe("Token usage; the settled charge is derived from it."),
+  })
+  .describe("OpenAI chat.completion object.");
+
+export type LLMChatResponse = z.infer<typeof LLMChatResponseSchema>;

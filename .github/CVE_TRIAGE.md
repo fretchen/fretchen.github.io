@@ -32,7 +32,7 @@ Look up the manifest path and package name in the tier table below. Most triage 
 | `pino` | scw_js / x402_facilitator prod dep | **T3** |
 | `dotenv` | serverless prod dep | **T3** |
 | `undici` | transitive dep in `eth/` (Hardhat) | **T4** |
-| `vite`, `vitest`, `tsup`, `eslint`, `typescript` | devDependencies everywhere | **T4** |
+| `vite`, `vitest`, `tsdown`, `eslint`, `typescript` | devDependencies everywhere | **T4** |
 | `hardhat` and all `@nomicfoundation/*` | `eth/` devDependencies | **T4** |
 | `jupyterlab`, `jupyter-server` | `notebooks/` local only | **T4** |
 | `growth-agent` pip deps | cron container, no public surface | **T4** |

@@ -1,6 +1,7 @@
 import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
+import { getSettlementTokens } from "@fretchen/chain-utils";
 import { buildStablecoinAllowedAssets } from "../hooks/x402SpendControls";
-import { preferCurrency, type PaymentCurrency } from "../hooks/x402Currency";
+import { CURRENCY_DECIMALS, preferCurrency, type PaymentCurrency } from "../hooks/x402Currency";
 // Type-only import — erased at compile time, so no @x402 runtime is pulled into SSR.
 import type {
   ClientChannelStorage,
@@ -190,35 +191,91 @@ function getOrCreateVoucherSigner(walletAddress: string) {
   return privateKeyToAccount(privateKey);
 }
 
-// Floor for channel deposits/top-ups, in the channel token's atomic units (6 decimals for both
-// USDC and EURC) — 0.50 of whichever token the channel is in. The reasoning below is in dollars
-// but holds the same in euros.
+// Floor for channel deposits/top-ups: 0.50 of whichever token the channel is in, in that
+// token's own atomic units. There is no exchange rate anywhere (prices are parallel
+// per-token systems), so "0.50" means the same figure in dollars for USDC and in euros for
+// EURe — only the decimals differ, and `CURRENCY_DECIMALS` carries them (6 for USDC/EURC,
+// 18 for EURe). A fixed atomic number instead of this lookup was the per-search-permit bug:
+// 500_000 atomic is $0.50 of USDC but 5×10⁻¹³ EURe, a no-op floor that collapsed every EURe
+// deposit to exactly the current request and prompted the wallet on every paid call.
+//
 // The SDK's own default (depositMultiplier x per-message ceiling) tracks whatever the
 // ceiling happens to be, currently ~$0.003/message, so it sizes deposits at ~1-3 cents:
 // enough for only ~5 messages worst-case before another on-chain top-up (a real tx, a
-// real wallet-adjacent wait) is needed. $0.50 comfortably covers a full multi-message
+// real wallet-adjacent wait) is needed. 0.50 comfortably covers a full multi-message
 // session (100s of messages even at worst-case per-message pricing) while keeping the
 // number small on the two axes that actually matter for this app: it's the blast radius
 // of the localStorage voucher-signer above if it ever leaks (bounded to this amount,
 // never more), and the capital a user has locked up if the server stops cooperating and
-// they have to wait out withdrawDelay to exit unilaterally. Both are trivial at $0.50;
+// they have to wait out withdrawDelay to exit unilaterally. Both are trivial at 0.50;
 // neither improves by going lower, so lower just buys more top-up friction for no benefit.
 //
-// The paid tool calls do not move this: a search is $0.01 and a fetch $0.001 against a
-// $0.50 escrow.
-export const MINIMUM_DEPOSIT_ATOMIC = 500_000n;
+// The paid tool calls do not move this: a search is 0.01 and a fetch 0.001 (in the
+// channel token's own system) against a 0.50 escrow.
+export function minimumDepositAtomic(currency: PaymentCurrency): bigint {
+  return 5n * 10n ** BigInt(CURRENCY_DECIMALS[currency] - 1);
+}
 
 /**
- * Custom deposit sizing: always deposit/top-up to at least `MINIMUM_DEPOSIT_ATOMIC`,
- * regardless of the SDK's default multiplier-of-ceiling formula — see the constant's
+ * Which settlement tokens this wallet could fund a *new* channel deposit in — the funding
+ * facts behind `selectFundedCurrency` (hooks/x402Currency.ts). Reads `balanceOf` for every
+ * token registered on `network` (three parallel reads), and a token counts as fundable when
+ * the balance covers its `minimumDepositAtomic` floor — the same 0.50 the deposit itself
+ * would move, so the answer cannot drift from what the SDK will actually ask for.
+ *
+ * A failing read (RPC down, unknown token) counts as *unfunded*, never as "try another":
+ * "unknown" must not trigger a currency fallback, or a flaky RPC would silently switch the
+ * token the user chose. Per-call state by design — balances are read fresh at send time,
+ * never cached, matching the "in context of the action" rule of the chain switch.
+ *
+ * `publicClient` is `unknown` and cast inside, the file's own convention: viem's generic
+ * `readContract` cannot be matched structurally, and `createPaidFetch` casts the same value
+ * for the same reason (see the call at `toClientEvmSigner`).
+ */
+export async function readFundableTokens(
+  walletAddress: `0x${string}`,
+  // Unknown, cast below to the minimal shape actually called: viem's generic readContract
+  // cannot be matched structurally, and `createPaidFetch` accepts the same value as unknown
+  // for the same reason. The cast keeps this function any-free.
+  publicClient: unknown,
+  network: string,
+): Promise<(currency: PaymentCurrency) => boolean> {
+  const client = publicClient as { readContract: (call: unknown) => Promise<unknown> };
+  const tokens = getSettlementTokens(network);
+  const held = new Map<PaymentCurrency, bigint | null>();
+  await Promise.all(
+    tokens.map(async (token) => {
+      try {
+        const balance = await client.readContract({
+          address: token.address,
+          functionName: "balanceOf",
+          args: [walletAddress],
+        });
+        held.set(token.symbol, typeof balance === "bigint" ? balance : null);
+      } catch {
+        held.set(token.symbol, null);
+      }
+    }),
+  );
+  return (currency) => {
+    const balance = held.get(currency);
+    return balance !== undefined && balance !== null && balance >= minimumDepositAtomic(currency);
+  };
+}
+
+/**
+ * Custom deposit sizing: always deposit/top-up to at least `minimumDepositAtomic(currency)`,
+ * regardless of the SDK's default multiplier-of-ceiling formula — see that function's
  * comment for why a fixed floor is the right lever here, not `depositPolicy.depositMultiplier`
  * (which would still scale with the ceiling rather than decoupling from it).
  * `minimumDepositAmount` is the true minimum the SDK needs for the top-up in progress; the
  * SDK requires the returned amount be >= it, so it's respected as a floor of its own.
  */
-function depositStrategy(context: BatchSettlementDepositStrategyContext): string {
-  const required = BigInt(context.minimumDepositAmount);
-  return (required > MINIMUM_DEPOSIT_ATOMIC ? required : MINIMUM_DEPOSIT_ATOMIC).toString();
+function depositStrategyFor(floor: bigint): (context: BatchSettlementDepositStrategyContext) => string {
+  return (context) => {
+    const required = BigInt(context.minimumDepositAmount);
+    return (required > floor ? required : floor).toString();
+  };
 }
 
 /**
@@ -265,10 +322,17 @@ function describePaymentError(status: number, body: string, currency: PaymentCur
     return DRAINED_CHANNEL_MESSAGE.chat;
   }
   if (errorCode?.includes("insufficient_balance")) {
-    // The USDC.e note is USDC's alone: bridged EURC is not a thing people end up holding by accident.
+    // The switch hint is the actionable advice: the guarded-B fallback (useX402Chat) has
+    // already moved the send to a funded token when one exists, so reaching this message
+    // means either a race between the balance read and the deposit, or nothing funded — and
+    // the hint points at the one in-chat fix either way, instead of "go buy <currency>".
+    // Both variants are written to fit `describeFailure`'s 200-char cap: the hint is the part
+    // the model must not lose, and the USDC.e note is shortened, not the hint.
+    // (USDC's note is USDC's alone: bridged EURC is not a thing people end up holding by accident.)
+    const switchHint = "Alternatively, switch the payment currency in the assistant's advanced settings.";
     return currency === "USDC"
-      ? "Not enough USDC in your wallet to fund the payment channel. Note that only native USDC works — a bridged variant such as USDC.e cannot be used."
-      : `Not enough ${currency} in your wallet to fund the payment channel.`;
+      ? `Not enough USDC in your wallet to fund the payment channel. Note that only native USDC works, not USDC.e. ${switchHint}`
+      : `Not enough ${currency} in your wallet to fund the payment channel. ${switchHint}`;
   }
   return `Request failed: ${status} - ${body}`;
 }
@@ -402,9 +466,14 @@ export async function createPaidFetch({
   // rather than "this channel is on another chain" — see resyncFromChain.
   const storage = new WebStorageClientChannelStorage(window.localStorage, network);
   // Delegate voucher signing to a persisted local key so only the deposit/top-up prompts the
-  // real wallet — see getOrCreateVoucherSigner's doc comment.
+  // real wallet — see getOrCreateVoucherSigner's doc comment. The deposit floor follows the
+  // channel's currency: a USDC channel escrows $0.50, an EURe one 0.50 EURe.
   const voucherSigner = getOrCreateVoucherSigner(walletClient.account.address);
-  const scheme = new BatchSettlementEvmScheme(signer, { storage, voucherSigner, depositStrategy });
+  const scheme = new BatchSettlementEvmScheme(signer, {
+    storage,
+    voucherSigner,
+    depositStrategy: depositStrategyFor(minimumDepositAtomic(currency)),
+  });
 
   // The selector picks the entry in `currency` among what the spend controls let through (see
   // x402Currency.ts); the seller lists both tokens on Base.

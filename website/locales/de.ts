@@ -98,6 +98,9 @@ export default {
     toolWebSearch: "Im Web suchen",
     toolFetchUrl: "Links öffnen",
     toolSiteAnalytics: "Website-Statistik",
+    toolTransitSearch: "Haltestellen suchen",
+    toolTransitPlan: "Verbindungen planen",
+    toolTransitDepartures: "Abfahrten",
     // Eine Zeile pro Fähigkeit — der Anlass war ein Test, in dem jemand nicht wusste, was
     // "Bundestagssitzungen" bedeutet. Kurz und konkret, keine Fachbegriffe ohne Erklärung.
     toolImageGenerationDesc: "Erstellt ein Bild aus deiner Beschreibung.",
@@ -110,10 +113,23 @@ export default {
     toolWebSearchDesc: "Sucht aktuelle Informationen im Internet.",
     toolFetchUrlDesc: "Liest eine Seite, die du verlinkst.",
     toolSiteAnalyticsDesc: "Wie oft diese Website besucht wird.",
+    // Die hier ist die, die tatsächlich angezeigt wird: die zusammengefasste Fahrplan-Zeile
+    // in ToolSelector kommt vom ersten Eintrag der Gruppe (siehe TOOL_REGISTRY), und das
+    // ist dieser — sie beschreibt deshalb die ganze Fähigkeit und nennt die Verkehrsmittel,
+    // weil das Zeilenlabel ("Fahrplan") bewusst gattungsneutral bleibt.
+    toolTransitSearchDesc:
+      "Züge, Busse und Fähren in ganz Europa – Verbindungen und Abfahrten, mit Echtzeit, wo Betreiber sie liefern.",
+    toolTransitPlanDesc: "Plant eine Verbindung von Tür zu Tür – Züge, Busse, Fähren.",
+    toolTransitDeparturesDesc: "Die nächsten Abfahrten einer Haltestelle.",
     // Zeilentitel für die zusammengefasste Zeile in ToolSelector (get_sitzungen +
     // search_claims). Eigener Name statt "Bundestagssitzungen": kurz, ein Eigenname, den
     // niemand nachschlagen muss — die Beschreibung darunter erklärt, was es tut.
     capBundestag: "Bundestag",
+    // Zeilentitel für die zusammengefasste Zeile (search_stop + plan_journey +
+    // get_departures). Bewusst kein Eigenname wie bei capBundestag ("Bundestag" kennt jeder,
+    // "Transitous" niemand) und auch nicht "Fahrplan" — ein Zeitplan ist auch das Konzert-
+    // Programm; "Mit Zug & Bus" nennt die Verkehrsmittel, die Fähre nennt die Beschreibung.
+    capTransitous: "Mit Zug & Bus",
     emptyState: "Starte eine Unterhaltung, indem du unten eine Nachricht eingibst.",
     doorIntro: "Hallo — ich bin der KI-Assistent dieser Website.",
     doorCan:
@@ -161,6 +177,8 @@ export default {
     bundestaktSource: "Quelle: Bundestakt",
     analyticsSource: "Quelle: Analytics",
     braveSource: "Quelle: Brave Search",
+    transitousSource: "Quelle: Transitous",
+    walletFallback: "Mit {used} gezahlt — deine Wallet hält kein {preferred}. Umstellen unter Erweitert.",
     errorPrefix: "Fehler:",
     unknownError: "Unbekannter Fehler",
     loading: "Lädt...",
@@ -172,6 +190,27 @@ export default {
     toolConfirmSizeLabel: "Größe",
     toolConfirmMintNotice: "Dies erzeugt ein NFT in deiner Wallet.",
     toolConfirmGenerate: "Generieren (0,07 $)",
+    // On-Chain-Bewertung (FeedbackWidget): 1–5 Sterne in die ERC-8004 ReputationRegistry.
+    // Im Ruhezustand zeigt das Widget nur Sterne; der Hinweis erscheint erst mit dem ersten
+    // Stern. Hat ein Web-Tool bedient, bewertet ein Klick beide Agenten (der gebündelte Text).
+    rateStars: "{n} von 5",
+    rateDisclosure:
+      "Öffentlich und dauerhaft auf Base, aus deiner Wallet gesendet. Kostet eine kleine Netzwerkgebühr in ETH (in der Regel unter 0,01 $).",
+    rateDisclosureBundled:
+      "Bewertet den Assistenten und die von ihm genutzte Websuche — öffentlich und dauerhaft auf Base, aus deiner Wallet gesendet. Kostet eine kleine Netzwerkgebühr in ETH (in der Regel unter 0,01 $).",
+    rateDetailsSummary: "Was passiert mit meiner Bewertung?",
+    rateDetailsBody:
+      "Deine Bewertung wird in die ERC-8004 Reputation Registry auf Base geschrieben ({registry}) und ist öffentlich lesbar — unter anderem im Agent-Profil auf 8004scan.io. Sie lässt sich danach nicht bearbeiten.",
+    rateSend: "Bewertung senden",
+    rateWallet: "In deiner Wallet bestätigen…",
+    rateDone: "Bewertung übermittelt — danke.",
+    rateFailed: "Bewertung fehlgeschlagen: {error}",
+    ratePartialFailed:
+      "Die Bewertung des Assistenten wurde übermittelt; die Bewertung der Websuche ist fehlgeschlagen: {error}",
+    rateSelfBlocked:
+      "Diese Wallet kann diesen Agenten nicht bewerten: Eigentümer und Operatoren des Agenten sind vertraglich ausgeschlossen.",
+    rateConnect: "Wallet zum Bewerten verbinden",
+    rateSwitch: "Zu Base wechseln",
   },
   walletoptions: {
     connect: "Verbinden",

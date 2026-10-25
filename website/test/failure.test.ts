@@ -20,6 +20,9 @@ describe("paymentFailed", () => {
 
     expect(result?.status).toBe("payment_failed");
     expect(result?.reason).toMatch(/USDC/i);
+    // The model's advice must point at the in-chat switch, not at buying the missing token —
+    // the guarded-B fallback makes this error a race-era residue, and the switch is the fix.
+    expect(result?.reason).toMatch(/switch the payment currency in the assistant's advanced settings/i);
   });
 
   /**

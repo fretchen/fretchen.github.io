@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "bunny-cli": {
+      "source": "BunnyWay/cli",
+      "sourceType": "github",
+      "skillPath": "skills/bunny-cli/SKILL.md",
+      "computedHash": "fee30431f94a9dcfbd0e207d7191b0fef052ce6090b472ee31ed3ab4ab089b62"
+    },
     "hardhat": {
       "source": "nomicfoundation/hardhat-skills",
       "sourceType": "github",

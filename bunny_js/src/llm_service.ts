@@ -1,0 +1,343 @@
+import type { SettlementTokenSymbol } from "@fretchen/chain-utils";
+import { logger } from "./logger.js";
+import { UpstreamChatCompletionSchema, flattenUpstreamContent } from "./upstream_schemas.js";
+
+interface LLMProviderConfig {
+  displayName: string; // for error messages/logs — e.g. "Could not reach Mistral: ..."
+  baseUrl: string; // no trailing "/chat/completions" — appended at call time
+  defaultModel: string;
+  apiKeyEnvVar: string;
+  // Price per 1,000,000 tokens, num/den to stay exact bigint math — one rate card per
+  // settlement token, each as the provider publishes it in that currency. Parallel price
+  // systems: a EURC or EURe cost is computed from the EUR card, never converted from the USD one.
+  pricePerMillion: Record<SettlementTokenSymbol, { input: RatePerMillion; output: RatePerMillion }>;
+}
+
+interface RatePerMillion {
+  num: bigint;
+  den: bigint;
+}
+
+const LLM_PROVIDERS: Record<string, LLMProviderConfig> = {
+  mistral: {
+    displayName: "Mistral",
+    baseUrl: "https://api.mistral.ai/v1",
+    defaultModel: "mistral-large-latest",
+    apiKeyEnvVar: "MISTRAL_API_KEY",
+    // Mistral Large 3, mistral.ai/pricing/api — re-verify before any mainnet cutover; Mistral
+    // has repriced materially before. The EUR card is the page's own EUR view (behind its
+    // currency toggle), read 2026-09-26; it is not a conversion of the USD card.
+    pricePerMillion: {
+      USDC: { input: { num: 50n, den: 100n }, output: { num: 150n, den: 100n } }, // $0.50 / $1.50 (2026-07-21)
+      EURC: { input: { num: 44n, den: 100n }, output: { num: 150n, den: 100n } }, // €0.44 / €1.50 (2026-09-26)
+      // Same euro card as EURC: EURe is a euro like EURC, so the provider's EUR prices apply
+      // unchanged — only the atomic scale differs (18 decimals, passed by the caller).
+      EURe: { input: { num: 44n, den: 100n }, output: { num: 150n, den: 100n } }, // €0.44 / €1.50
+    },
+  },
+};
+
+function getLLMProviderConfig(provider: string): LLMProviderConfig {
+  const config = LLM_PROVIDERS[provider];
+  if (!config) {
+    throw new Error(
+      `Unknown LLM provider: ${provider}. Valid providers: ${Object.keys(LLM_PROVIDERS).join(", ")}`,
+    );
+  }
+  return config;
+}
+
+/** One tool call the model wants made. `arguments` is a JSON *string*, per OpenAI. */
+export interface LLMToolCall {
+  id: string;
+  type: "function";
+  function: { name: string; arguments: string };
+}
+
+/**
+ * `content` is nullable and `tool_calls` optional so an assistant turn that requests a tool can be
+ * replayed back to the model on the next hop. A tool *result* turn is `{ role: "tool",
+ * tool_call_id, content }` — `role` is unconstrained, so it needs no separate variant.
+ */
+export interface LLMMessage {
+  role: string;
+  content?: string | null;
+  tool_calls?: LLMToolCall[];
+  tool_call_id?: string;
+}
+
+export interface LLMUsage {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+}
+
+/**
+ * An OpenAI chat-completion response object. Mistral (and the other OpenAI-compatible
+ * upstreams in LLM_PROVIDERS) already return this shape, so we forward it largely as-is
+ * rather than unwrapping it — the endpoint's public contract is the OpenAI chat-completions
+ * shape. `usage` is load-bearing: the batch-settlement handler prices the settled amount
+ * from it (see getSettleAmount in sc_llm_x402.ts).
+ */
+export interface LLMResponse {
+  id: string;
+  object: "chat.completion";
+  created: number;
+  model: string;
+  choices: Array<{
+    index: number;
+    message: { role: string; content: string | null; tool_calls?: LLMToolCall[] };
+    finish_reason: string | null;
+  }>;
+  usage: LLMUsage;
+}
+
+/**
+ * Resolve an OpenAI-style `model` id (as sent by a caller in the request body) to the
+ * internal provider whose config serves it. Returns `null` for an unknown/unsupported model
+ * so the handler can answer with an OpenAI-shaped `model_not_found` error. One provider is
+ * registered today; adding another means an entry in LLM_PROVIDERS and its id in
+ * advertisedModelIds().
+ */
+export function resolveModel(modelId: string): { provider: string } | null {
+  for (const [provider, config] of Object.entries(LLM_PROVIDERS)) {
+    if (config.defaultModel === modelId) {
+      return { provider };
+    }
+  }
+  return null;
+}
+
+/** The model ids this endpoint currently advertises + serves (for OpenAPI enum + validation). */
+export function advertisedModelIds(): string[] {
+  return [LLM_PROVIDERS.mistral.defaultModel];
+}
+
+/**
+ * The stand-in for the provider, used on testnet and whenever a caller sends `useDummyData: true`.
+ *
+ * Input-aware rather than a fixed string: the endpoint behaviour worth exercising around a tool
+ * call — handing `tool_calls` back to the client, then accepting a `role: "tool"` follow-up — is
+ * only reachable if the stand-in actually asks for a tool. With a fixed text answer, a tool loop
+ * could only be driven against real, billed Mistral, which rules it out for the local dev server
+ * the frontend loop is built against and for `notebooks/sc_llm_x402_buyer.ipynb` on testnet.
+ *
+ * Returns a *raw* upstream shape rather than a finished LLMResponse, so it flows through the same
+ * schema + rebuild as a real completion below. That is what lets the mock cover the two things
+ * that otherwise need a mainnet run: the schema accepting `content: null`, and the rebuild
+ * preserving `tool_calls`. `created` and the per-choice `index`/`role` are omitted on purpose, to
+ * exercise the synthesis a real provider's omissions would.
+ */
+function buildMockUpstreamResponse(
+  prompt: LLMMessage[],
+  forwardedParams: Record<string, unknown>,
+): unknown {
+  const tools = forwardedParams.tools;
+  const firstTool = Array.isArray(tools)
+    ? (tools[0] as { function?: { name?: unknown } } | undefined)
+    : undefined;
+  const toolName = typeof firstTool?.function?.name === "string" ? firstTool.function.name : null;
+  const toolAlreadyRan = prompt.some((m) => m.role === "tool");
+
+  // Identical in both branches, so getSettleAmount — and the settlement assertions built on it —
+  // do not depend on which branch ran.
+  const usage = { prompt_tokens: 5, completion_tokens: 15, total_tokens: 15 };
+
+  // A tool was offered and nothing has come back yet: ask for it. `arguments` is deliberately an
+  // empty JSON object — the endpoint never checks tool-call arguments against the tool's own
+  // `parameters` (that is the caller's job), so inventing plausible ones would be theatre.
+  if (toolName && !toolAlreadyRan) {
+    return {
+      id: "chatcmpl-mock",
+      model: "placeholder-model",
+      choices: [
+        {
+          message: {
+            content: null,
+            tool_calls: [
+              {
+                id: "call_mock_1",
+                type: "function",
+                function: { name: toolName, arguments: "{}" },
+              },
+            ],
+          },
+          finish_reason: "tool_calls",
+        },
+      ],
+      usage,
+    };
+  }
+
+  const content = toolAlreadyRan
+    ? "**Placeholder response**\n\n" +
+      "The tool result came back, so this is the *mock* answer that would normally summarise it."
+    : "**Placeholder response**\n\n" +
+      "This is a *mock* answer used for local/testnet testing. It includes:\n\n" +
+      "- a list item\n" +
+      "- some `inline code`\n" +
+      "- a [link](https://example.com)\n\n" +
+      "```js\nconsole.log('mock code block');\n```";
+
+  return {
+    id: "chatcmpl-mock",
+    model: "placeholder-model",
+    choices: [{ message: { content }, finish_reason: "stop" }],
+    usage,
+  };
+}
+
+export async function callLLMAPI(
+  prompt: LLMMessage[],
+  dummy = false,
+  provider = "mistral",
+  forwardedParams: Record<string, unknown> = {},
+): Promise<LLMResponse> {
+  const config = getLLMProviderConfig(provider);
+
+  if (!prompt || !prompt.length) {
+    throw new Error("No prompt provided.");
+  }
+
+  // The mock and the real provider converge on one validated tail below, rather than the mock
+  // short-circuiting with a finished envelope. Sharing the tail is the point: a regression in the
+  // schema or the rebuild now fails on the mock path too, where it is free to catch.
+  let raw: unknown;
+  if (dummy) {
+    logger.info({ provider }, "Using mock upstream completion");
+    raw = buildMockUpstreamResponse(prompt, forwardedParams);
+  } else {
+    const apiToken = process.env[config.apiKeyEnvVar];
+    logger.info({ provider }, "Work with real API");
+    if (!apiToken) {
+      throw new Error(
+        `API token not found. Please configure the ${config.apiKeyEnvVar} environment variable.`,
+      );
+    }
+
+    logger.debug({ prompt }, "Generating answer for prompt");
+
+    // Forward the caller's remaining chat params to the upstream model rather than dropping them —
+    // `temperature`, `top_p`, `stop`, `seed` and the like cost us nothing and are the upstream's
+    // contract to honour. Our own `model` and `messages` are written last so they always win: the
+    // model id is resolved against what we actually serve, and `messages` has already been
+    // validated. sc_llm_x402.ts strips the params that would move cost past the metered ceiling
+    // before we get here (see its deny-list), so anything still present is safe to pass on.
+    const body = { ...forwardedParams, model: config.defaultModel, messages: prompt };
+
+    logger.debug("Sending answer generation request...");
+    const response = await fetch(`${config.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      logger.error(
+        { provider, status: response.status, statusText: response.statusText },
+        "LLM API error",
+      );
+      throw new Error(
+        `Could not reach ${config.displayName}: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    raw = await response.json();
+  }
+
+  // Upstream is OpenAI-compatible; forward its chat-completion envelope, synthesizing only
+  // the fields a given provider might omit (id/created/object) so our response is a
+  // well-formed OpenAI chat.completion regardless of upstream quirks.
+  //
+  // Validated rather than cast: `usage` feeds getSettleAmount() in sc_llm_x402.ts, which runs
+  // after the try/catch around this function has closed, so a non-numeric prompt_tokens threw out
+  // of handle() as an unhandled rejection. The schema subsumes the old
+  // `!firstChoice || !data.usage` guard.
+  const parsed = UpstreamChatCompletionSchema.safeParse(raw);
+  if (!parsed.success) {
+    const upstreamModel = (raw as { model?: unknown } | null)?.model;
+    logger.error(
+      { provider, issues: parsed.error.issues },
+      "Upstream returned a completion we cannot bill from",
+    );
+    throw new Error(
+      `LLM API returned an incomplete completion (model: ${
+        typeof upstreamModel === "string" ? upstreamModel : config.defaultModel
+      })`,
+    );
+  }
+  const data = parsed.data;
+  return {
+    id: data.id ?? `chatcmpl-${Date.now()}`,
+    object: "chat.completion",
+    created: data.created ?? Math.floor(Date.now() / 1000),
+    model: data.model ?? config.defaultModel,
+    choices: data.choices.map((c, i) => ({
+      index: c.index ?? i,
+      message: {
+        role: c.message.role ?? "assistant",
+        // Upstream may send a string, an array of content parts, or null — our published
+        // envelope says `string | null`, so normalize rather than republish the variation.
+        content: flattenUpstreamContent(c.message.content),
+        // Conditional, so an ordinary completion keeps its exact previous shape instead of
+        // serializing a `tool_calls: undefined` key. `message` is rebuilt field by field, so
+        // anything not named here is dropped — which is how tool_calls used to vanish while
+        // finish_reason: "tool_calls" survived, producing self-contradictory JSON.
+        ...(c.message.tool_calls ? { tool_calls: c.message.tool_calls } : {}),
+      },
+      finish_reason: c.finish_reason ?? "stop",
+    })),
+    usage: data.usage,
+  };
+}
+
+function parseTokenCount(tokenCount: bigint | number | string): bigint {
+  if (typeof tokenCount === "bigint") {
+    return tokenCount;
+  }
+  if (typeof tokenCount === "number") {
+    if (!Number.isFinite(tokenCount) || tokenCount < 0) {
+      throw new TypeError("tokenCount must be a non-negative finite number when given as number");
+    }
+    return BigInt(Math.floor(tokenCount));
+  }
+  if (typeof tokenCount === "string" && /^\d+$/.test(tokenCount)) {
+    return BigInt(tokenCount);
+  }
+  throw new TypeError("tokenCount must be a bigint, number, or numeric string");
+}
+
+/**
+ * Cost of `usage` in `symbol`'s atomic units, from the provider's rate card in that currency,
+ * pricing prompt and completion tokens separately — providers typically charge more
+ * for completion (output) tokens than prompt (input) tokens, so a single blended rate would
+ * systematically mis-price a provider with an asymmetric split (e.g. Mistral: $0.50/M input vs
+ * $1.50/M output — a 3x gap. See LLM_PROVIDERS above).
+ *
+ * Prices are quoted per 1,000,000 tokens and USDC/EURC have 6 decimals, so for those two the
+ * 1e6 factors cancel exactly and the raw cross-product is already atomic. `decimals` rescales
+ * that for anything else: EURe's 18 decimals multiply the result by 10¹² — forgetting this
+ * would undercharge EURe messages by twelve orders of magnitude, silently. A card is read as
+ * 1 USD = 1 USDC and 1 EUR = 1 EURC = 1 EURe.
+ */
+export function tokensToCost(
+  usage: {
+    prompt_tokens: bigint | number | string;
+    completion_tokens: bigint | number | string;
+  },
+  provider: string,
+  symbol: SettlementTokenSymbol,
+  decimals: number,
+): bigint {
+  const config = getLLMProviderConfig(provider);
+  const p = parseTokenCount(usage.prompt_tokens);
+  const c = parseTokenCount(usage.completion_tokens);
+  const { input, output } = config.pricePerMillion[symbol];
+  const { num: inNum, den: inDen } = input;
+  const { num: outNum, den: outDen } = output;
+  // Cross-multiply to keep one shared denominator instead of assuming inDen === outDen.
+  // No explicit 1e6 factor here — the "per 1,000,000 tokens" divisor and the tokens' 6
+  // decimals cancel exactly; `decimals` then rescales from that 6-decimal base.
+  const base = (p * inNum * outDen + c * outNum * inDen) / (inDen * outDen);
+  return decimals === 6 ? base : base * 10n ** BigInt(decimals - 6);
+}

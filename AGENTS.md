@@ -11,6 +11,7 @@ Monorepo for a blockchain-based AI service platform. Each subdirectory is an ind
 | `website/`            | Frontend (Vike SSR + React 19 + Panda CSS)                  | [`README`](website/README.md) · [`AGENTS.md`](website/AGENTS.md) |
 | `eth/`                | Solidity smart contracts (Hardhat, Optimism L2)             | [`README`](eth/README.md) · [`AGENTS.md`](eth/AGENTS.md)         |
 | `scw_js/`             | Serverless backend (Scaleway Functions, AI image gen + LLM) | [`README`](scw_js/README.md)                                     |
+| `bunny_js/`           | Bunny Edge Script twins of the `scw_js` x402 sellers (first: searchapi) | [`README`](bunny_js/README.md)                         |
 | `x402_facilitator/`   | EIP-3009 USDC payment facilitator (Scaleway Functions)      | [`README`](x402_facilitator/README.md)                           |
 | `comment_service/`    | Blog comment backend (Scaleway Functions)                   | [`README`](comment_service/README.md)                            |
 | `analytics/`          | Serverless pageview counter (Scaleway Functions, S3-backed) | [`README`](analytics/README.md)                                  |

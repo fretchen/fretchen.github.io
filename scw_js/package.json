@@ -8,7 +8,7 @@
     "generate:openapi:llm": "tsx scripts/generate-openapi-llm.ts && prettier --write --log-level warn openapi.llm.json",
     "generate:openapi:search": "tsx scripts/generate-openapi-search.ts && prettier --write --log-level warn openapi.search.json",
     "generate:openapi": "npm run generate:openapi:genimg && npm run generate:openapi:llm && npm run generate:openapi:search",
-    "build": "npm run generate:openapi && tsup",
+    "build": "npm run generate:openapi && tsdown",
     "predeploy": "npm run fee-allowances",
     "deploy": "npm run build && npx osls deploy",
     "fee-allowances": "tsx scripts/fee_allowances.ts",
@@ -44,7 +44,7 @@
     "fastify": "^5.12.1",
     "prettier": "^3.6.2",
     "serverless-scaleway-functions": ">=0.5.1",
-    "tsup": "^8.5.1",
+    "tsdown": "^0.23.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.58.2",
     "vitest": "^4.1.11"

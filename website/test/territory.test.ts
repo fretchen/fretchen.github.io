@@ -21,8 +21,10 @@ describe("territoryFor", () => {
     expect(territoryFor("/quantum/qml/3")).toBe("voice");
   });
 
-  it("gives the lab and everything reachable from it one hue", () => {
-    // The point of the map: following a card from /lab must not change colour.
+  it("gives the tool pages one hue — the lab's children and the nav-promoted assistant", () => {
+    // The point of the map: following a card from /lab must not change colour. The
+    // assistant moved out of the lab into the nav, but it is a tool page all the
+    // same, so it keeps the explore hue rather than the writing blue.
     for (const path of ["/lab", "/imagegen", "/x402", "/assistent", "/agent-onboarding"]) {
       expect(territoryFor(path), path).toBe("explore");
     }

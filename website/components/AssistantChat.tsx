@@ -1,6 +1,7 @@
 /**
  * AssistantChat — the interactive core of the x402 batch-settlement chat assistant
- * (`/assistent`). Pays per message via `useX402Chat` (USDC payment channels): the
+ * (`/assistent`). Pays per message via `useX402Chat` (stablecoin payment channels —
+ * EURe by default, EURC and USDC one toggle away): the
  * first message opens a channel (one wallet-signed deposit), later messages are
  * off-chain voucher signatures reusing the open channel.
  */
@@ -36,6 +37,18 @@ import {
   fetchFailed,
   type BundestaktResult,
 } from "../tools/bundestakt";
+import {
+  searchStopTool,
+  planJourneyTool,
+  getDeparturesTool,
+  fetchGeocode,
+  fetchStoptimes,
+  fetchPlan,
+  selectStops,
+  selectBoard,
+  selectJourneys,
+  type TransitousResult,
+} from "../tools/transitous";
 import {
   getAnalyticsTool,
   fetchStats,
@@ -88,6 +101,7 @@ import { button } from "../styled-system/recipes";
 import { PageHeader } from "./PageHeader";
 import { FretchenLogo } from "./FretchenLogo";
 import { GetFundsModal } from "./GetFundsModal";
+import { FeedbackWidget, FEEDBACK_TARGETS } from "./FeedbackWidget";
 import { PaymentError, readChargedTotal } from "../utils/x402PaidFetch";
 
 /**
@@ -95,7 +109,7 @@ import { PaymentError, readChargedTotal } from "../utils/x402PaidFetch";
  * requirement; analytics is about honesty — a figure about this site should say it was looked up
  * rather than read as something the model knew.
  */
-type ToolSource = "bundestakt" | "analytics" | "brave";
+type ToolSource = "bundestakt" | "transitous" | "analytics" | "brave";
 
 /**
  * Everything offered to the model, with what the chat loop needs to know about a tool besides its
@@ -160,6 +174,41 @@ export const TOOL_REGISTRY = [
     defaultAgentOnly: false,
     paid: false,
     source: "bundestakt",
+  },
+  // Transitous, the same UX decision as the Bundestakt pair above: three tools and schemas
+  // the model calls separately, one shared row for the visitor (labelled by the group key's
+  // locale value, "Mit Zug & Bus"/"Train & bus" — modes, not the project name, which says
+  // nothing to a visitor), collapsed by `group`. The row's description comes from the first
+  // member (see `toolSelectorOptions`), so `searchStopTool`'s pair below stands for all three.
+  {
+    tool: searchStopTool,
+    label: "assistent.toolTransitSearch",
+    description: "assistent.toolTransitSearchDesc",
+    group: "assistent.capTransitous",
+    ownerScope: null,
+    defaultAgentOnly: false,
+    paid: false,
+    source: "transitous",
+  },
+  {
+    tool: planJourneyTool,
+    label: "assistent.toolTransitPlan",
+    description: "assistent.toolTransitPlanDesc",
+    group: "assistent.capTransitous",
+    ownerScope: null,
+    defaultAgentOnly: false,
+    paid: false,
+    source: "transitous",
+  },
+  {
+    tool: getDeparturesTool,
+    label: "assistent.toolTransitDepartures",
+    description: "assistent.toolTransitDeparturesDesc",
+    group: "assistent.capTransitous",
+    ownerScope: null,
+    defaultAgentOnly: false,
+    paid: false,
+    source: "transitous",
   },
   {
     tool: getPageTool,
@@ -342,9 +391,9 @@ const CHAT_NETWORKS = ["eip155:10", "eip155:8453"] as const;
 
 // localStorage key for the user's explicit network choice. Worth persisting rather than
 // re-deriving from the wallet each visit: a channel is per (network, receiver) and each one
-// escrows MINIMUM_DEPOSIT_ATOMIC ($0.50, see useX402Chat). If the paid network drifted with
+// escrows 0.50 of the channel token (see useX402Chat). If the paid network drifted with
 // whatever chain the wallet happened to be on, a user would silently open a second channel
-// and lock a second $0.50 that only comes back via a refund or the 24h withdrawDelay.
+// and lock a second 0.50 that only comes back via a refund or the 24h withdrawDelay.
 const NETWORK_PREFERENCE_KEY = "x402-chat-network";
 
 /**
@@ -444,6 +493,11 @@ export function AssistantChat() {
     spent: bigint;
     notes: ResearchNote[];
   } | null>(null);
+  // Whether any turn of this chat has paid the search agent (ERC-8004 agent 97600) — both
+  // `search_web` and `fetch_url` buy from it (tools/search.ts, tools/webFetch.ts). Latched for
+  // the session, not per turn: the search agent is only rated once it actually served this
+  // chat, bundled into the same star pick as the assistent rather than offered as a choice.
+  const [webToolsUsed, setWebToolsUsed] = useState(false);
   // Read by the loop before each hop. A ref, not state: the loop is already running inside an
   // event handler and must see the press without waiting for a re-render. `stopPressed` is only the
   // button's own feedback.
@@ -466,9 +520,12 @@ export function AssistantChat() {
   const bundestaktSourceLabel = useLocale({ label: "assistent.bundestaktSource" });
   const analyticsSourceLabel = useLocale({ label: "assistent.analyticsSource" });
   const braveSourceLabel = useLocale({ label: "assistent.braveSource" });
+  const transitousSourceLabel = useLocale({ label: "assistent.transitousSource" });
   // Here rather than at module scope because the labels are translated per render.
   const sourceLinks: Record<ToolSource, { href: string; label: string }> = {
     bundestakt: { href: "https://www.bundestakt.de", label: bundestaktSourceLabel },
+    // Transitous's usage policy asks for visible attribution — this citation line is it.
+    transitous: { href: "https://transitous.org", label: transitousSourceLabel },
     analytics: { href: "/analytics", label: analyticsSourceLabel },
     brave: { href: "https://search.brave.com", label: braveSourceLabel },
   };
@@ -504,6 +561,10 @@ export function AssistantChat() {
   const networkFallbackLabel = useLocale({ label: "assistent.networkFallback" });
   const eurcBaseOnlyLabel = useLocale({ label: "payment.eurcBaseOnly" });
   const currencyFallbackLabel = useLocale({ label: "payment.currencyFallback" });
+  // The wallet-side note: guarded-B fell back to a token the wallet can fund. Named apart from
+  // `payment.currencyFallback` (the agent-side note below) because the reasons differ — "the
+  // agent doesn't take it" and "your wallet holds none of it" must not share a sentence.
+  const walletFallbackLabel = useLocale({ label: "assistent.walletFallback" });
 
   // Mobile detection
   React.useEffect(() => {
@@ -654,6 +715,7 @@ export function AssistantChat() {
     paymentReceipt,
     paymentNetwork,
     paymentCurrency,
+    currencyFallback,
     status: chatStatus,
   } = useX402Chat(desiredNetwork, agentUrl, currency);
   const { network, switchIfNeeded, getSwitchError } = useAutoNetwork([paymentNetwork]);
@@ -806,6 +868,90 @@ export function AssistantChat() {
       // system prompt depends on the model being able to retry with a corrected one, so the tool
       // has to stay on offer for the rest of the turn.
       return { result, recoverable: result.status === "not_found" };
+    } catch (err) {
+      // fetchQuery rethrows the fetcher's error; the module owns the wire-level failure shape.
+      return { result: fetchFailed(err) };
+    }
+  }
+
+  /**
+   * Fetches and projects one Transitous endpoint (stop search, departure board, routing).
+   * `tools/transitous.ts` is stateless, so the caching policy lives here: geocode answers
+   * change rarely (24 h), a board goes stale within a minute (60 s), routing answers are
+   * keyed by the exact query (5 min) — politeness, not latency, since Transitous answers in
+   * well under a second. Unlike Bundestakt's `not_found`, a stop search without hits is
+   * still `status: "ok"` (empty list), so the tool stays on offer for a corrected spelling.
+   */
+  /**
+   * A tool argument the model sent as a non-string (or omitted) coerces to the empty string
+   * rather than to "[object Object]" — the empty-argument guards below turn that into a
+   * correctable bad_query answer instead of a request for a nonsense name.
+   */
+  const argString = (v: unknown): string => (typeof v === "string" ? v : "");
+
+  async function loadTransitous(
+    kind: "geocode" | "stoptimes" | "plan",
+    args: Record<string, unknown>,
+  ): Promise<ToolRunResult> {
+    // An empty required argument is an answer the model can act on, not a malfunction: fetching
+    // anyway would 4xx at the API, `fetch_failed` would withdraw the tool for the rest of the
+    // turn, and with it the one thing that fixes the mistake — a corrected query, a real stop
+    // id from search_stop. `recoverable` keeps the tool on offer for the retry.
+    if (kind === "geocode" && !argString(args.query)) {
+      return {
+        result: { status: "bad_query", reason: "search_stop needs a non-empty stop or station name to search for." },
+        recoverable: true,
+      };
+    }
+    if (kind === "stoptimes" && !argString(args.stop_id)) {
+      return {
+        result: { status: "bad_query", reason: "get_departures needs a stop id from search_stop." },
+        recoverable: true,
+      };
+    }
+    if (kind === "plan" && (!argString(args.from) || !argString(args.to))) {
+      return {
+        result: { status: "bad_query", reason: "plan_journey needs from and to stop ids from search_stop." },
+        recoverable: true,
+      };
+    }
+    try {
+      let result: TransitousResult;
+      if (kind === "geocode") {
+        const query = argString(args.query);
+        const raw = await queryClient.fetchQuery({
+          queryKey: ["transitous", "geocode", query],
+          queryFn: () => fetchGeocode(query),
+          staleTime: 24 * 60 * 60_000,
+          retry: 0,
+        });
+        result = selectStops(raw);
+      } else if (kind === "stoptimes") {
+        const stopId = argString(args.stop_id);
+        const time = typeof args.time === "string" ? args.time : undefined;
+        const raw = await queryClient.fetchQuery({
+          queryKey: ["transitous", "stoptimes", stopId, time ?? null],
+          queryFn: () => fetchStoptimes(stopId, undefined, time),
+          staleTime: 60_000,
+          retry: 0,
+        });
+        result = selectBoard(raw);
+      } else {
+        const from = argString(args.from);
+        const to = argString(args.to);
+        const departure = typeof args.departure === "string" ? args.departure : undefined;
+        const arriveBy = args.arrive_by === true;
+        const railOnly = args.rail_only === true;
+        const raw = await queryClient.fetchQuery({
+          queryKey: ["transitous", "plan", from, to, departure ?? null, arriveBy, railOnly],
+          queryFn: () =>
+            fetchPlan({ from, to, time: departure, arriveBy, transitModes: railOnly ? "RAIL" : undefined }),
+          staleTime: 5 * 60_000,
+          retry: 0,
+        });
+        result = selectJourneys(raw);
+      }
+      return { result };
     } catch (err) {
       // fetchQuery rethrows the fetcher's error; the module owns the wire-level failure shape.
       return { result: fetchFailed(err) };
@@ -987,6 +1133,9 @@ export function AssistantChat() {
   toolRunners[generateImageTool.function.name] = runImageToolHere;
   toolRunners[getSitzungenTool.function.name] = (args) => loadBundestakt("sitzungen", args);
   toolRunners[searchClaimsTool.function.name] = (args) => loadBundestakt("claims", args);
+  toolRunners[searchStopTool.function.name] = (args) => loadTransitous("geocode", args);
+  toolRunners[planJourneyTool.function.name] = (args) => loadTransitous("plan", args);
+  toolRunners[getDeparturesTool.function.name] = (args) => loadTransitous("stoptimes", args);
   toolRunners[getPageTool.function.name] = loadPage;
   toolRunners[searchWebTool.function.name] = loadSearch;
   toolRunners[fetchUrlTool.function.name] = loadFetch;
@@ -1124,8 +1273,14 @@ export function AssistantChat() {
         shouldStop: () => stopRequestedRef.current,
         onPhase: (phase) => {
           setLoopPhase(phase);
-          if (phase.kind === "tool" && phase.name === searchWebTool.function.name) searches++;
-          if (phase.kind === "tool" && phase.name === fetchUrlTool.function.name) pages++;
+          if (phase.kind === "tool" && phase.name === searchWebTool.function.name) {
+            searches++;
+            setWebToolsUsed(true);
+          }
+          if (phase.kind === "tool" && phase.name === fetchUrlTool.function.name) {
+            pages++;
+            setWebToolsUsed(true);
+          }
           if (phase.kind === "tool" && phase.name === noteFindingsTool.function.name) {
             notes.push(...parseNotes(phase.args));
           }
@@ -1276,8 +1431,10 @@ export function AssistantChat() {
               </p>
             )}
             {/* Separately from the network fallback above: the agent may accept the negotiated
-                network but only in the other currency (e.g. USDC-only on Base). */}
-            {paymentCurrency !== currency && (
+                network but only in the other currency (e.g. USDC-only on Base). Suppressed when
+                the wallet note is active — then the deviation is the wallet's, not the agent's,
+                and the wrong attribution would be worse than silence. */}
+            {paymentCurrency !== currency && !currencyFallback && (
               <p className={chat.networkNote}>
                 {currencyFallbackLabel} {paymentCurrency}.
               </p>
@@ -1460,6 +1617,33 @@ export function AssistantChat() {
                   </div>
                 </div>
               ))
+            )}
+
+            {/* In-stream rating, directly under the last completed answer — the same position
+              as that answer's own cost line, because the stars rate that answer. At rest it is
+              nothing but five muted glyphs; the disclosure appears only at the moment of
+              commitment (FeedbackWidget). One star pick rates every agent that served this
+              chat: the assistent always, the search agent once its tools ran — the user never
+              chooses a target, because they experienced one answer, not two services. */}
+            {!isLoading && messages.length > 0 && messages[messages.length - 1].role === "assistant" && (
+              <div className={chat.rateBlock}>
+                <FeedbackWidget
+                  targets={
+                    webToolsUsed ? [FEEDBACK_TARGETS.assistent, FEEDBACK_TARGETS.search] : [FEEDBACK_TARGETS.assistent]
+                  }
+                />
+              </div>
+            )}
+
+            {currencyFallback && (
+              // One honest line when the send switched token: the deviation is announced, the
+              // stored preference stays untouched (the hook never persists a fallback), and
+              // the line quietly teaches where the currency setting lives.
+              <div className={chat.messageSource}>
+                {walletFallbackLabel
+                  .replaceAll("{used}", currencyFallback.used)
+                  .replaceAll("{preferred}", currencyFallback.preferred)}
+              </div>
             )}
 
             {isLoading && (

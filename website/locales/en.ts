@@ -99,6 +99,9 @@ export default {
     toolWebSearch: "Web search",
     toolFetchUrl: "Fetch URL",
     toolSiteAnalytics: "Site analytics",
+    toolTransitSearch: "Find stops",
+    toolTransitPlan: "Plan journeys",
+    toolTransitDepartures: "Departures",
     toolImageGenerationDesc: "Creates a picture from your description.",
     // The one actually shown: the grouped Bundestag row's description comes from the first
     // entry in that group (see TOOL_REGISTRY), and that is this one.
@@ -108,7 +111,20 @@ export default {
     toolWebSearchDesc: "Looks up current information on the web.",
     toolFetchUrlDesc: "Reads a page you link.",
     toolSiteAnalyticsDesc: "How often this website is visited.",
+    // The one actually shown: the grouped timetable row's description comes from the first
+    // entry in that group (see TOOL_REGISTRY), so this describes the whole capability and
+    // names the modes — the row label stays deliberately generic.
+    toolTransitSearchDesc:
+      "Trains, buses and ferries across Europe — journeys and departures, with live times where operators publish them.",
+    toolTransitPlanDesc: "Plans a door-to-door journey — trains, buses, ferries.",
+    toolTransitDeparturesDesc: "The next departures from a stop.",
     capBundestag: "Bundestag",
+    // Row title for the collapsed timetable row (search_stop + plan_journey +
+    // get_departures). Deliberately not a proper name like capBundestag ("Bundestag" needs
+    // no lookup, "Transitous" needs one for everyone) and not "Timetables" either — a
+    // schedule is also a concert programme; "Train & bus" names the modes, the ferry is
+    // named by the description. The citation names the data source.
+    capTransitous: "Train & bus",
     emptyState: "Start a conversation by typing a message below.",
     // The greeting a first-time visitor sees from the default agent: what this is, what it
     // assumes and costs, where it can be wrong (IDENTITY.md → welcoming, honest).
@@ -152,6 +168,8 @@ export default {
     bundestaktSource: "Source: Bundestakt",
     analyticsSource: "Source: Analytics",
     braveSource: "Source: Brave Search",
+    transitousSource: "Source: Transitous",
+    walletFallback: "Paid with {used} — your wallet holds no {preferred}. Switch under Advanced.",
     errorPrefix: "Error:",
     unknownError: "Unknown error",
     loading: "Loading...",
@@ -163,6 +181,25 @@ export default {
     toolConfirmSizeLabel: "Size",
     toolConfirmMintNotice: "This will mint an NFT to your wallet.",
     toolConfirmGenerate: "Generate ($0.07)",
+    // On-chain rating (FeedbackWidget): 1–5 stars written to the ERC-8004 ReputationRegistry.
+    // At rest the widget shows stars only; the disclosure appears once a star is picked. When
+    // a web tool served the chat, one pick rates both agents (the bundled string).
+    rateStars: "{n} of 5",
+    rateDisclosure:
+      "Public and permanent on Base, sent from your wallet. Costs a small network fee in ETH (typically under $0.01).",
+    rateDisclosureBundled:
+      "Rates the assistant and the web search it used — public and permanent on Base, sent from your wallet. Costs a small network fee in ETH (typically under $0.01).",
+    rateDetailsSummary: "What happens with my rating?",
+    rateDetailsBody:
+      "Your rating is written to the ERC-8004 Reputation Registry on Base ({registry}), where anyone can read it — the agent's profile on 8004scan.io shows it too. It cannot be edited afterwards.",
+    rateSend: "Send rating",
+    rateWallet: "Confirm in your wallet…",
+    rateDone: "Rating submitted — thank you.",
+    rateFailed: "Rating failed: {error}",
+    ratePartialFailed: "The assistant's rating was submitted; the web search rating failed: {error}",
+    rateSelfBlocked: "This wallet cannot rate this agent: its owner and operators are excluded by the contract.",
+    rateConnect: "Connect your wallet to rate",
+    rateSwitch: "Switch to Base",
   },
   walletoptions: {
     connect: "Connect",

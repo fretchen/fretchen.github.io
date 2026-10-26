@@ -11,9 +11,10 @@ import { SvgLineChart } from "./SvgLineChart";
  * in the post, which stays authoritative for exact values.
  */
 
-export const X_TICKS = ["2002", "2005", "2009", "2013", "2017", "2021", "2025"].map(
-  (label, index) => ({ index, label }),
-);
+export const X_TICKS = ["2002", "2005", "2009", "2013", "2017", "2021", "2025"].map((label, index) => ({
+  index,
+  label,
+}));
 
 // Tableau-10 blue / red — series identity, not brand (see palette.ts).
 export const WEST = "#4e79a7";

@@ -40,12 +40,10 @@ export default function TrustAxisTuner() {
   const plotH = HEIGHT - margin.top - margin.bottom;
 
   const xScale = (i: number) => margin.left + (i / (n - 1)) * plotW;
-  const trustY = (v: number) =>
-    margin.top + plotH - ((v - trustMin) / (trustMax - trustMin)) * plotH;
+  const trustY = (v: number) => margin.top + plotH - ((v - trustMin) / (trustMax - trustMin)) * plotH;
   const voteY = (v: number) => margin.top + plotH - (v / VOTE_MAX) * plotH;
 
-  const line = (values: number[], y: (v: number) => number) =>
-    values.map((v, i) => `${xScale(i)},${y(v)}`).join(" ");
+  const line = (values: number[], y: (v: number) => number) => values.map((v, i) => `${xScale(i)},${y(v)}`).join(" ");
 
   const legend = [
     { label: "Vertrauen West", color: WEST, dash: false },
@@ -133,20 +131,8 @@ export default function TrustAxisTuner() {
           <g clipPath="url(#trust-axis-tuner-plot)">
             <polyline points={line(TRUST_WEST, trustY)} fill="none" stroke={WEST} strokeWidth={2} />
             <polyline points={line(TRUST_OST, trustY)} fill="none" stroke={OST} strokeWidth={2} />
-            <polyline
-              points={line(VOTE_WEST, voteY)}
-              fill="none"
-              stroke={WEST}
-              strokeWidth={2}
-              strokeDasharray="6,4"
-            />
-            <polyline
-              points={line(VOTE_OST, voteY)}
-              fill="none"
-              stroke={OST}
-              strokeWidth={2}
-              strokeDasharray="6,4"
-            />
+            <polyline points={line(VOTE_WEST, voteY)} fill="none" stroke={WEST} strokeWidth={2} strokeDasharray="6,4" />
+            <polyline points={line(VOTE_OST, voteY)} fill="none" stroke={OST} strokeWidth={2} strokeDasharray="6,4" />
           </g>
           <line
             x1={margin.left}
@@ -187,13 +173,7 @@ export default function TrustAxisTuner() {
           <text x={margin.left - 8} y={margin.top + 4} fontSize={10} fill={TICK_COLOR} textAnchor="end">
             {fmt(trustMax)}
           </text>
-          <text
-            x={margin.left - 8}
-            y={margin.top + plotH + 4}
-            fontSize={10}
-            fill={TICK_COLOR}
-            textAnchor="end"
-          >
+          <text x={margin.left - 8} y={margin.top + plotH + 4} fontSize={10} fill={TICK_COLOR} textAnchor="end">
             {fmt(trustMin)}
           </text>
           <text x={margin.left + plotW + 8} y={margin.top + 4} fontSize={10} fill={TICK_COLOR}>

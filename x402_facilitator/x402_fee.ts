@@ -23,11 +23,9 @@ import {
   type Hex,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import pino from "pino";
+import { logger } from "./logger";
 import { loadPrivateKey } from "@fretchen/chain-utils";
 import { findFeeToken, getChainConfig, getRpcUrl } from "./chain_utils";
-
-const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
 // ═══════════════════════════════════════════════════════════════
 // Types

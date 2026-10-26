@@ -36,12 +36,10 @@ import {
   type Address,
   type Abi,
 } from "viem";
-import pino from "pino";
+import { logger } from "./logger";
 import { feeAmountFor, getFacilitatorAddress } from "./x402_fee";
 import { getChainConfig, getFeeTokens, getRpcUrl } from "./chain_utils";
 import type { ScalewayEvent, ScalewayResponse } from "./x402_facilitator";
-
-const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
 // Mainnets only — the two networks where real fees accrue and gas actually matters.
 const REPORT_NETWORKS = ["eip155:10", "eip155:8453"] as const;

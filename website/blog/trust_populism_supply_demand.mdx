@@ -1,0 +1,65 @@
+---
+publishing_date: "2026-10-26"
+title: "Warum sinkendes Vertrauen den Populismus nicht erklärt"
+category: "others"
+description: "Weniger politisches Vertrauen soll populistische Wahlerfolge erklären. Ich habe die These mit Daten des European Social Survey und sieben Bundestagswahlen geprüft: Die Korrelation ist real, der kausale Pfeil lässt sich mit den Daten nicht zeigen — und die Angebotsseite des Populismus ist kaum gemessen."
+---
+
+import TrustAxisTuner from "../components/blog/TrustAxisTuner";
+
+In den letzten paar Wochen gab es in Deutschland eine Reihe ziemlich eindrucksvoller Wahlergebnisse, in denen populistische Parteien enorm an Zulauf gewonnen haben.
+Zum selben Zeitpunkt fühlen es sich in Gesprächen regelmässig auch so an, als würde das Vertrauen in die politischen Institutionen zunehmend sinken. Beide Beobachtungen zusammen legen irgendwie die Vermutung nahe, dass Bürger, die bestimmten Institutionen nicht mehr vertrauen, auch populistisch wählen.
+
+Dies habe ich in Vorbereitung dieses Post mal quantitativ modelliert — mit Vertrauensdaten aus dem European Social Survey, den Ergebnissen von sieben Bundestagswahlen und einem Modell, das sauber trennt, was die Daten hergeben und was nicht. Und hier geht die naheliegende Vermutung nicht auf. Ich diskutiere im Anschluss
+auch den Stand der Literatur, welche von Angebot und Nachfrage für populistische Parteien spricht, und was dort für quantitative Modelle fehlt.
+
+## Das naheliegende Modell
+
+Um das Vertrauen zu modellieren, habe ich den [European Social Survey](https://www.europeansocialsurvey.org/) genutzt. Er stellt alle zwei Jahre eine breite Anzahl an Fragen aus ganzen Europa, unter anderem auch wie sehr Menschen dem Bundestag, den Politikerinnen und Politikern oder den Parteien vertrauen. Auf der anderen Seite steht der Stimmenanteil der Parteien, die in der [PopuList](https://www.popu-list.org/) als populistisch klassifiziert sind: AfD, Die Linke, die Republikaner und ab 2025 das BSW. Ich habe beide Ergebnisse auf
+der folgenden Grafik visualisiert.
+
+<TrustAxisTuner />
+
+Ein paar grobe visuelle Punkte gehen in die Richtung der ursprünglichen Vermutung. Im Osten (rote Linien) ist das Vertrauen systematisch geringer und der Wahlanteil für populistische Parteien systematisch höher.
+
+Wenn man aber in die Vertrauensdaten ein wenig reinzoomt wird der Zusammenhang deutlich unklarer.
+Denn bis 2017 gibt es minimal steigendes Vertrauen in die Institutionen, sowohl im Osten als auch im Westen. Und schon in der Zeit steigt der Populismusanteil Stück für Stück. Mit 2017 kehrt sich die Tendenz beim Vertrauen um und die Werte beginnen leicht zu fallen.
+Diese Umkehr ist in den Stimmanteilen in keiner Form wiedergespiegelt.
+
+Weiterhin ist die Vertrauenslücke zwischen Ost und West seit über zwanzig Jahren praktisch konstant.
+Die Stimmenlücke hat sich im selben Zeitraum fast verdoppelt — von 15,2 auf 28,5 Prozentpunkte.
+Wenn sinkendes Vertrauen innerhalb der Regionen den Stimmenanstieg antreiben würde, müsste die Vertrauenslücke mit wachsen.
+
+Das habe ich numerisch modelliert [^1]. In dem Modell werden für Ost und West separat geprüft, was Vertrauensveränderungen mit Stimmanteilsveränderungen zu tun haben. Im Ergebnis sagt darin das Vertrauen die Stimmenentwicklung nicht vorher, die initiale Vermutung kann also nicht gestützt werden.
+
+[^1]: Die Rechnung steht im Notebook [`trust_populism_de_east_west.ipynb`](https://github.com/fretchen/fretchen.github.io/blob/main/notebooks/trust_populism_de_east_west.ipynb) im Repository dieses Blogs.
+
+## Wissenschaftliche Befunde zum Thema
+
+Interessanterweise habe ich danach herausfinden müssen, dass dies ein bekanntes strukturelles Problem ist.
+
+[Algan, Guriev, Papaioannou und Passari](https://www.brookings.edu/articles/the-european-trust-crisis-and-the-rise-of-populism/) haben 2017 mit Regionsdaten aus 26 europäischen Ländern untersucht, wie die Finanzkrise von 2008 Vertrauen und populistisches Wählen verändert hat. Ihr Befund: Der Vertrauensverlust und der Aufstieg nicht-mainstreamiger Parteien gingen gemeinsam einher, weil beides vom selben Arbeitsmarktschock getrieben wurde.
+Der Vertrauensverlust, so ihre Schlussfolgerung, kann nicht als eigenständiger Treiber des populistischen Aufstiegs gelten.
+
+[Gidron und Hall](https://journals.sagepub.com/doi/10.1177/0010414019879947) kommen von der anderen Seite und argumentieren, dass sich die Wähler vor allem sozial marginalisiert fühlen — Populismus ist für sie weniger ein Vertrauens- als ein Integrationsproblem.
+
+Die Metaanalyse von [Scheiring und Kollegen 2024](https://www.cambridge.org/core/journals/british-journal-of-political-science/article/populist-backlash-against-globalization-a-metaanalysis-of-the-causal-evidence/A672BE773701512F9F4E0B171049E4DF) im _British Journal of Political Science_ zeigt, dass ökonomische Unsicherheit als Ursache populistischen Wählens auch nach Korrektur für Publikationsverzerrungen bestehen bleibt und grob ein Drittel der jüngsten Populismuswellen erklärt.
+Ökonomische Not führt also zu Populismus — aber das ist eine andere Variable als politisches Vertrauen.
+
+## Angebot und Nachfrage
+
+Damit ist die Ausgangslage klar: Mangelndes Vertrauen und populistische Wahlerfolge hängen zusammen, aber das Vertrauen reicht nicht für die Vorhersage.
+
+Um einen Schritt weiterzugehen, unterscheidet die Forschung — etwa im Überblick von [Muis und Immerzeel 2017](https://doi.org/10.1177/0011392117717294) — Angebot und Nachfrage: Das Vertrauen liefert Aussagen über die "Nachfrage" nach populistischen Parteien, nicht über das "Angebot" in den entsprechenden Ländern.
+Angebot heißt konkret: Gibt es eine Partei, die die Unzufriedenheit auffängt — mit Kandidaten in den Wahlkreisen, Ortsverbänden und Auftritten in den regionalen Medien? Gemessen wird die Angebotsseite bislang nur für die ganze Partei im ganzen Land: Experten befragen sie, etwa in der [Chapel-Hill-Expertenbefragung](https://www.chesdata.eu/); Wahlprogramme und Reden werden zum Beispiel mit [PopBERT](https://www.cambridge.org/core/journals/political-analysis/article/popbert-detecting-populism-and-its-host-ideologies-in-the-german-bundestag/06C14C50B50D5A7AB45C4A7C8A5AD945) ausgewertet. Das reicht für die Frage dieses Posts nicht — warum der Osten anders wählt als der Westen, kann nur erklären, wer weiß, wie viel Angebot es in Sachsen gibt und wie viel in Bayern.
+
+Ein solches Maß pro Bundesland, vergleichbar mit dem European Social Survey auf der Nachfrageseite, existiert meines Wissens nicht.
+Um diese Lücke für Deutschland zu füllen habe ich die Kandidatenabdeckung der PopuList-Parteien je Bundesland aus den Unterlagen der [Bundeswahlleiterin](https://www.bundeswahlleiterin.de/) analysiert [^2]. Weiter verfolgt habe ich das nicht, denn die Beobachtungen bleiben vorerst unklar: Die Kandidatenabdeckung ist ab 2017 in Ost und West gleichermaßen nahezu vollständig und hat danach keine Variation mehr. Ob sich Angebot und Nachfrage damit gemeinsam modellieren lassen, ist deshalb zu bezweifeln.
+
+[^2]: Datensatz und Validierung stehen im Notebook [`candidate_density_de_nuts1.ipynb`](https://github.com/fretchen/fretchen.github.io/blob/main/notebooks/candidate_density_de_nuts1.ipynb); die Wahlkreisdaten stammen aus den offiziellen Wahlkreis-Dateien der Bundeswahlleiterin.
+
+## Zusammenfassung
+
+Was bleibt, ist ein gemischtes Bild. Misstrauen und populistisches Wählen treten gemeinsam auf, im Osten stärker als im Westen. Aber sinkendes Vertrauen allein erklärt die Wahlerfolge nicht — es sagt weder voraus, wann die Stimmen steigen, noch warum die Ost-West-Lücke wächst. Die einfache Erklärung ist damit erledigt; die bessere braucht eine Angebotsseite, die regional bislang niemand misst.
+
+Für den Alltag heißt das: Zwischen Vertrauenskrise und Populismus besteht ein Zusammenhang — sie erklären einander aber nicht.

@@ -5,8 +5,9 @@
  * Verifies hook state management, error handling, and wallet integration.
  *
  * Most tests below route around the dynamic `@x402/*` imports entirely (no wallet, or
- * asserting synchronously without awaiting generateImage()). The "Spend controls" describe
- * block is the exception: it mocks `@x402/fetch` and `@x402/evm/exact/client` (mirroring
+ * asserting synchronously without awaiting generateImage()). The "Spend controls" and
+ * "Signer composition" describe blocks are the exception: they mock `@x402/fetch`,
+ * `@x402/evm`, `@x402/evm/exact/client`, and the public-client resolver (mirroring
  * `useX402Chat.test.ts`'s pattern) so generateImage()'s real client-setup code runs.
  */
 
@@ -16,11 +17,17 @@ import { useX402ImageGeneration } from "../hooks/useX402ImageGeneration";
 import { buildStablecoinAllowedAssets } from "../hooks/x402SpendControls";
 import { useWalletClient, useAccount } from "wagmi";
 import type { X402GenImgRequest } from "../types/x402";
+import { getConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
 import { buildAccountData, buildWalletClientData } from "./setup";
 
 const mockSetSpendControls = vi.fn();
 const mockRegisterExactEvmScheme = vi.fn();
 const mockGetPaymentSettleResponse = vi.fn();
+// Mirrors the real helper's effect: compose the public client's readContract onto the signer.
+const mockToClientEvmSigner = vi.fn((signerInput: unknown, publicClient: unknown) => ({
+  ...(signerInput as Record<string, unknown>),
+  readContract: (publicClient as { readContract: unknown }).readContract,
+}));
 
 vi.mock("@x402/fetch", () => ({
   // vi.fn() needs a real `function`, not an arrow, to remain usable via `new`.
@@ -37,6 +44,15 @@ vi.mock("@x402/fetch", () => ({
 
 vi.mock("@x402/evm/exact/client", () => ({
   registerExactEvmScheme: (...args: unknown[]) => mockRegisterExactEvmScheme(...args),
+}));
+
+vi.mock("@x402/evm", () => ({
+  toClientEvmSigner: (signerInput: unknown, publicClient: unknown) => mockToClientEvmSigner(signerInput, publicClient),
+}));
+
+vi.mock("../hooks/useConfiguredPublicClient", () => ({
+  useConfiguredPublicClient: vi.fn(),
+  getConfiguredPublicClient: vi.fn(() => ({ readContract: vi.fn() })),
 }));
 
 /** A minimal valid images/v1 envelope — what genimg_x402_token.ts actually returns. */
@@ -262,6 +278,47 @@ describe("useX402ImageGeneration", () => {
       expect(mockSetSpendControls.mock.invocationCallOrder[0]).toBeLessThan(
         mockRegisterExactEvmScheme.mock.invocationCallOrder[0],
       );
+    });
+  });
+
+  // The exact scheme only auto-signs EURe's gasless EIP-2612 permit when the signer carries
+  // the optional readContract capability — without it, EURe payments fail with
+  // permit2_allowance_required (see x402_facilitator/README.md → EURe via Permit2).
+  describe("Signer composition", () => {
+    it("composes the signer with the request network's public client", async () => {
+      connectWallet();
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(envelopeResponse()));
+
+      const { result } = renderHook(() => useX402ImageGeneration());
+      await act(async () => {
+        await result.current.generateImage({ prompt: "A dog on Base", network: "eip155:8453" });
+      });
+
+      expect(getConfiguredPublicClient).toHaveBeenCalledWith("eip155:8453");
+      expect(mockToClientEvmSigner).toHaveBeenCalledWith(
+        expect.objectContaining({ address: "0x1234567890123456789012345678901234567890" }),
+        expect.objectContaining({ readContract: expect.any(Function) }),
+      );
+      const registered = mockRegisterExactEvmScheme.mock.calls[0]?.[1] as {
+        signer: { readContract?: unknown };
+      };
+      expect(registered.signer.readContract).toEqual(expect.any(Function));
+    });
+
+    it("fails loudly when no public client exists for the request's network", async () => {
+      connectWallet();
+      // The real signature does not declare undefined — the hook's guard is for the runtime
+      // reality — so the mock needs the cast to simulate a network with no configured client.
+      vi.mocked(getConfiguredPublicClient).mockReturnValueOnce(undefined as never);
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(envelopeResponse()));
+
+      const { result } = renderHook(() => useX402ImageGeneration());
+      await act(async () => {
+        await expect(result.current.generateImage({ prompt: "A dog", network: "eip155:99999" })).rejects.toThrow(
+          "No public client for network eip155:99999",
+        );
+      });
+      expect(result.current.status).toBe("error");
     });
   });
 

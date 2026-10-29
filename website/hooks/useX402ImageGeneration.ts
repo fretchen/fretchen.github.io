@@ -8,6 +8,7 @@
 import { useState, useCallback } from "react";
 import { useWalletClient } from "wagmi";
 import { useIsWalletConnected } from "./useIsWalletConnected";
+import { getConfiguredPublicClient } from "./useConfiguredPublicClient";
 import { buildStablecoinAllowedAssets } from "./x402SpendControls";
 import { DEFAULT_CURRENCY, preferCurrency, type PaymentCurrency } from "./x402Currency";
 import type { X402GenImgRequest, X402GenImgResponse, X402PaymentReceipt, X402GenerationStatus } from "../types/x402";
@@ -70,14 +71,28 @@ export function useX402ImageGeneration(currency: PaymentCurrency = DEFAULT_CURRE
         // === Dynamic imports (browser-only, like the notebook) ===
         const { x402Client, wrapFetchWithPayment, x402HTTPClient } = await import("@x402/fetch");
         const { registerExactEvmScheme } = await import("@x402/evm/exact/client");
+        const { toClientEvmSigner } = await import("@x402/evm");
 
         // === Create signer adapter for wagmi WalletClient ===
-        // The notebook uses privateKeyToAccount which returns { address, signTypedData }
-        // We adapt wagmi's walletClient to match this interface
-        const signer = {
-          address: walletClient.account.address,
-          signTypedData: walletClient.signTypedData.bind(walletClient),
-        };
+        // Composed with the SDK's toClientEvmSigner and a public client on the request's
+        // network — the same composition as the batch-settlement path (x402PaidFetch.ts).
+        // The bare { address, signTypedData } shape cannot carry EURe: its Permit2 flow
+        // needs the optional `readContract` capability, with which the SDK checks the
+        // Permit2 allowance and auto-signs a gasless EIP-2612 permit when one is missing
+        // (the seller's 402 advertises eip2612GasSponsoring — see x402_facilitator/README.md
+        // → EURe via Permit2). Without it, EURe payments fail with
+        // permit2_allowance_required.
+        const publicClient = getConfiguredPublicClient(request.network);
+        if (!publicClient) {
+          throw new Error(`No public client for network ${request.network}`);
+        }
+        const signer = toClientEvmSigner(
+          {
+            address: walletClient.account.address,
+            signTypedData: walletClient.signTypedData.bind(walletClient),
+          },
+          publicClient,
+        );
 
         // === Setup x402 client (exactly like Quickstart) ===
         // The selector picks the entry in `currency` among what the spend controls let through,

@@ -269,7 +269,10 @@ are twelve orders of magnitude larger than the same nominal price in EURC — `t
 rescales by the token's decimals, and a price literal that assumes 6 decimals is wrong by 10¹².
 EURe has no EIP-3009: its 402 entries carry `assetTransferMethod: "permit2"` and its challenges
 advertise `eip2612GasSponsoring`, so a buyer needs no `approve()` — not to Permit2, not to the
-token contract.
+token contract. The SDK only auto-signs that gasless EIP-2612 permit when the client's signer
+carries the optional `readContract` capability (`toClientEvmSigner(signer, publicClient)` —
+see `website/hooks/useX402ImageGeneration.ts` and `website/utils/x402PaidFetch.ts`); a bare
+`{ address, signTypedData }` signer yields `permit2_allowance_required` instead.
 
 | What           | USDC               | EURC               | EURe               | Where it is set                                                                        |
 | -------------- | ------------------ | ------------------ | ------------------ | -------------------------------------------------------------------------------------- |

@@ -13,9 +13,7 @@ import {
 } from "./x402_schemas";
 import openapiSpec from "./openapi.json" with { type: "json" };
 import type { z } from "zod";
-import pino from "pino";
-
-const logger = pino({ level: process.env.LOG_LEVEL || "info" });
+import { logger } from "./logger";
 
 /**
  * Scaleway Functions event object

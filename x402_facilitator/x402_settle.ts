@@ -26,9 +26,7 @@ import type { z } from "zod";
 import type { FeeStatusSchema, FacilitatorFeePaidSchema, SettleResponseBody } from "./x402_schemas";
 import { isTestWalletBypassed } from "./x402_whitelist";
 import { annotateDecodedRevert } from "./revert_selectors";
-import pino from "pino";
-
-const logger = pino({ level: process.env.LOG_LEVEL || "info" });
+import { logger } from "./logger";
 
 /**
  * The wire shapes below are derived from the Zod schemas in `x402_schemas.ts`, which are

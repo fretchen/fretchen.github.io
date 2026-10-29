@@ -568,8 +568,11 @@ it for, which happens one of two ways:
 as for EIP-3009. The seller pays the fee by the same post-settlement `transferFrom`, in EURe.
 
 `batch-settlement` routes on `requirements.extra.assetTransferMethod` and is not blocked for
-`"permit2"` here, but EURe channels have not been run end to end; treat them as untested until
-the sellers offer EURe.
+`"permit2"` here. EURe channels have run end to end on Base — the `/assistent` sellers offer
+EURe, and 2026-10-26 production logs show a funded EURe channel, per-message voucher
+verification at 0.03 EURe, a mid-session claim settle, and the 12-hourly cron collecting the
+EURe fee. (An earlier revision of this note said to treat EURe channels as untested; that
+stale caveat is obsolete.)
 
 ## EIP-712 Signature Verification
 

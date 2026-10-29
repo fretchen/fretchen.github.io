@@ -15,7 +15,7 @@ import { x402Facilitator } from "@x402/core/facilitator";
 import { toFacilitatorEvmSigner } from "@x402/evm";
 import { ExactEvmScheme } from "@x402/evm/exact/facilitator";
 import { BatchSettlementEvmScheme } from "@x402/evm/batch-settlement/facilitator";
-import pino from "pino";
+import { logger } from "./logger";
 import { evaluateFeeGate, getFacilitatorAddress, loadFacilitatorAccount } from "./x402_fee";
 import {
   getChainConfig,
@@ -23,8 +23,6 @@ import {
   getBatchSettlementNetworks,
   getRpcUrl,
 } from "./chain_utils";
-
-const logger = pino({ level: process.env.LOG_LEVEL || "info" });
 
 /**
  * Create a FacilitatorEvmSigner for a specific network.

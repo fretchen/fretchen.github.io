@@ -761,6 +761,42 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(body.x_nft.transfer_tx).toBeDefined();
     });
 
+    test("should retry the NFT transfer when the first attempt reverts with a bare execution reverted", async () => {
+      // Right after a receipt-confirmed mint, a lagging public RPC answers the
+      // safeTransferFrom gas estimate with a bare "execution reverted" and no
+      // ERC721NonexistentToken data — so matching specific error texts misses it. After a
+      // confirmed mint by the server wallet, any transfer-attempt error is transient RPC
+      // state lag, and the transfer must be retried, not surfaced as mint_failed.
+      const mockTokenId = 42;
+      setupSuccessfulMintingFlow(mockTokenId);
+      mockContract.write.safeTransferFrom
+        .mockRejectedValueOnce(
+          new Error("RpcRequestError: RPC Request failed. Details: execution reverted"),
+        )
+        .mockResolvedValueOnce("0xtransferTx");
+
+      const event = {
+        httpMethod: "POST",
+        headers: {
+          "x-payment": JSON.stringify(validPaymentPayload),
+        },
+        body: JSON.stringify({
+          prompt: "A beautiful sunset",
+        }),
+        path: "/genimg",
+      };
+
+      const response = await handle(event, {});
+
+      expect(response.statusCode).toBe(200);
+      expect(mockContract.write.safeTransferFrom).toHaveBeenCalledTimes(2);
+
+      const body = JSON.parse(response.body);
+      expect(body.x_nft.status).toBe("minted");
+      expect(body.x_nft.token_id).toBe(mockTokenId);
+      expect(body.x_nft.transfer_tx).toBeDefined();
+    });
+
     test("should reject invalid payment", async () => {
       // Mock facilitator verification failure
       global.fetch = vi.fn().mockResolvedValueOnce(

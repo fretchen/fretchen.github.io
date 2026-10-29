@@ -228,7 +228,7 @@ async function mintNFTToClient(
   const tokenId = parseInt(mintLog.topics[3]!, 16);
   logger.info({ tokenId, mintTxHash }, "NFT minted");
 
-  const MAX_TRANSFER_RETRIES = 3;
+  const MAX_TRANSFER_RETRIES = 5;
   const RETRY_DELAY_MS = 2000;
   let transferTxHash: `0x${string}` | undefined;
   let lastError: unknown;
@@ -245,18 +245,21 @@ async function mintNFTToClient(
       break;
     } catch (error) {
       lastError = error;
-      const msg = (error as { message?: string; shortMessage?: string }).message ?? "";
-      const short = (error as { shortMessage?: string }).shortMessage ?? "";
-
-      const isNonExistentToken =
-        msg.includes("ERC721NonexistentToken") || short.includes("ERC721NonexistentToken");
-      const isNonce =
-        msg.includes("nonce too low") ||
-        msg.includes("Nonce provided for the transaction is lower") ||
-        short.includes("nonce too low");
-
-      if ((isNonExistentToken || isNonce) && attempt < MAX_TRANSFER_RETRIES) {
-        logger.warn({ tokenId, attempt, delayMs: RETRY_DELAY_MS }, "Transfer race, retrying");
+      // Retry on any error: the mint is receipt-confirmed and the server wallet owns the
+      // token, so a failed attempt can only be transient RPC state lag — which arrives as a
+      // bare "execution reverted" without the ERC721NonexistentToken data a lagging node's
+      // ownerOf would produce, so matching specific error texts misses it.
+      if (attempt < MAX_TRANSFER_RETRIES) {
+        logger.warn(
+          {
+            tokenId,
+            attempt,
+            maxAttempts: MAX_TRANSFER_RETRIES,
+            err: error,
+            delayMs: RETRY_DELAY_MS,
+          },
+          "Transfer attempt failed, retrying",
+        );
         await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
         continue;
       }

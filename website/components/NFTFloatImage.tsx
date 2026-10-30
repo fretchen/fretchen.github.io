@@ -2,6 +2,7 @@ import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getGenAiNFTAddress, GenImNFTv4ABI } from "@fretchen/chain-utils";
 import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
+import { LEGACY_BLOG_TOKEN_NETWORK } from "../types/BlogPost";
 import { extractPromptFromDescription } from "../utils/nftMetadataUtils";
 import { NFTMetadata } from "../types/components";
 import { nftFloat } from "./NFTFloatImage.styles";
@@ -22,7 +23,7 @@ type NFTFloatData = {
 };
 
 export function NFTFloatImage({ tokenId, network }: NFTFloatImageProps) {
-  const tokenNetwork = network ?? "eip155:10";
+  const tokenNetwork = network ?? LEGACY_BLOG_TOKEN_NETWORK;
   const contractAddress = getGenAiNFTAddress(tokenNetwork);
   const publicClient = useConfiguredPublicClient(tokenNetwork);
 

@@ -2,6 +2,7 @@ import * as React from "react";
 import { entryNftImage } from "./EntryNftImage.styles";
 import { getGenAiNFTAddress, GenImNFTv4ABI } from "@fretchen/chain-utils";
 import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
+import { LEGACY_BLOG_TOKEN_NETWORK } from "../types/BlogPost";
 import { NFTMetadata } from "../types/components";
 
 interface EntryNftImageProps {
@@ -36,7 +37,7 @@ export const EntryNftImage: React.FC<EntryNftImageProps> = ({ tokenId, network, 
   const [imageUrl, setImageUrl] = React.useState<string | null>(fallbackImageUrl ?? null);
   const [isLoading, setIsLoading] = React.useState(!fallbackImageUrl);
 
-  const tokenNetwork = network ?? "eip155:10";
+  const tokenNetwork = network ?? LEGACY_BLOG_TOKEN_NETWORK;
   const publicClient = useConfiguredPublicClient(tokenNetwork);
   const contractAddress = getGenAiNFTAddress(tokenNetwork);
 

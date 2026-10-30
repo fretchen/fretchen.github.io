@@ -3,7 +3,7 @@
  * This replaces the static JSON generation with dynamic loading
  */
 
-import { BlogPost, NFTMetadata, TokenRef, tokenRefKey } from "../types/BlogPost";
+import { BlogPost, NFTMetadata, TokenRef, tokenRefKey, LEGACY_BLOG_TOKEN_NETWORK } from "../types/BlogPost";
 import { getGenAiNFTMainnetNetworks } from "@fretchen/chain-utils";
 import { GLOB_REGISTRY, type SupportedDirectory } from "./globRegistry";
 
@@ -50,7 +50,7 @@ export function extractMetadataFromModule(module: unknown, path: string): Partia
   // stays valid and means Optimism mainnet — every legacy post's token lives there.
   let network: string | undefined;
   if (tokenID !== undefined) {
-    network = (frontmatter.network as string | undefined) ?? "eip155:10";
+    network = (frontmatter.network as string | undefined) ?? LEGACY_BLOG_TOKEN_NETWORK;
     if (!getGenAiNFTMainnetNetworks().includes(network)) {
       throw new InvalidFrontmatterError(
         `${path}: frontmatter network "${network}" is not a GenImNFT mainnet network ` +

@@ -19,6 +19,11 @@ export function tokenRefKey(ref: TokenRef): string {
   return `${ref.network}/${ref.id}`;
 }
 
+/** The frontmatter default for a bare tokenID: every legacy blog token was minted on
+ * Optimism mainnet. Declared once here — the loaders and both image components resolve
+ * against it, and the default must never drift between them. */
+export const LEGACY_BLOG_TOKEN_NETWORK = "eip155:10";
+
 export interface BlogPost {
   title: string;
   content: string;

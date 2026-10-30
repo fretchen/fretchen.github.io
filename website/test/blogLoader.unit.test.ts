@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { sortBlogs, extractMetadataFromModule, attachNFTMetadata, extractTokenIDs } from "../utils/blogLoader";
+import { sortBlogs, extractMetadataFromModule, attachNFTMetadata, extractTokenRefs } from "../utils/blogLoader";
 import type { BlogPost, NFTMetadata } from "../types/BlogPost";
 
 describe("blogLoader - Pure Functions", () => {
@@ -153,16 +153,19 @@ describe("blogLoader - Pure Functions", () => {
       title: `Blog ${tokenID || "none"}`,
       content: "",
       tokenID,
+      // The loader makes the network concrete at parse time, so every blog that has a
+      // tokenID has a network too.
+      network: tokenID !== undefined ? "eip155:10" : undefined,
     });
 
-    const mockNFTMetadata: Record<number, NFTMetadata> = {
-      26: {
+    const mockNFTMetadata: Record<string, NFTMetadata> = {
+      "eip155:10/26": {
         imageUrl: "https://example.com/26.png",
         prompt: "Test prompt 26",
         name: "NFT 26",
         description: "Description 26",
       },
-      42: {
+      "eip155:10/42": {
         imageUrl: "https://example.com/42.png",
         prompt: "Test prompt 42",
         name: "NFT 42",
@@ -215,44 +218,60 @@ describe("blogLoader - Pure Functions", () => {
     });
   });
 
-  describe("extractTokenIDs", () => {
-    const createBlog = (tokenID?: number): BlogPost => ({
+  describe("extractTokenRefs", () => {
+    const createBlog = (tokenID?: number, network?: string): BlogPost => ({
       title: `Blog ${tokenID || "none"}`,
       content: "",
       tokenID,
+      network,
     });
 
-    it("should extract unique tokenIDs", () => {
-      const blogs = [createBlog(26), createBlog(42), createBlog(26), createBlog(99)];
+    it("should extract unique refs", () => {
+      const blogs = [
+        createBlog(26, "eip155:10"),
+        createBlog(42, "eip155:10"),
+        createBlog(26, "eip155:10"),
+        createBlog(99, "eip155:10"),
+      ];
 
-      const result = extractTokenIDs(blogs);
+      const result = extractTokenRefs(blogs);
 
       expect(result).toHaveLength(3);
-      expect(result).toContain(26);
-      expect(result).toContain(42);
-      expect(result).toContain(99);
+      expect(result).toContainEqual({ network: "eip155:10", id: 26 });
+      expect(result).toContainEqual({ network: "eip155:10", id: 42 });
+      expect(result).toContainEqual({ network: "eip155:10", id: 99 });
+    });
+
+    it("distinguishes the same id on two chains", () => {
+      const blogs = [createBlog(12, "eip155:10"), createBlog(12, "eip155:8453")];
+
+      const result = extractTokenRefs(blogs);
+
+      expect(result).toHaveLength(2);
+      expect(result).toContainEqual({ network: "eip155:10", id: 12 });
+      expect(result).toContainEqual({ network: "eip155:8453", id: 12 });
     });
 
     it("should skip blogs without tokenID", () => {
-      const blogs = [createBlog(26), createBlog(), createBlog(42), createBlog()];
+      const blogs = [createBlog(26, "eip155:10"), createBlog(), createBlog(42, "eip155:10"), createBlog()];
 
-      const result = extractTokenIDs(blogs);
+      const result = extractTokenRefs(blogs);
 
       expect(result).toHaveLength(2);
-      expect(result).toContain(26);
-      expect(result).toContain(42);
+      expect(result).toContainEqual({ network: "eip155:10", id: 26 });
+      expect(result).toContainEqual({ network: "eip155:10", id: 42 });
     });
 
     it("should return empty array for blogs without tokenIDs", () => {
       const blogs = [createBlog(), createBlog(), createBlog()];
 
-      const result = extractTokenIDs(blogs);
+      const result = extractTokenRefs(blogs);
 
       expect(result).toEqual([]);
     });
 
     it("should return empty array for empty input", () => {
-      const result = extractTokenIDs([]);
+      const result = extractTokenRefs([]);
 
       expect(result).toEqual([]);
     });

@@ -56,6 +56,7 @@ const EntryList: React.FC<EntryListProps> = ({
                   {(blog.tokenID || blog.nftMetadata?.imageUrl) && (
                     <EntryNftImage
                       tokenId={blog.tokenID}
+                      network={blog.network}
                       fallbackImageUrl={blog.nftMetadata?.imageUrl}
                       nftName={blog.nftMetadata?.name}
                     />

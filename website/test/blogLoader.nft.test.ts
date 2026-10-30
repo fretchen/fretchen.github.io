@@ -33,6 +33,28 @@ vi.mock("../utils/globRegistry", () => ({
             tokenID: 42,
           },
         },
+        "../blog/base_post.mdx": {
+          frontmatter: {
+            title: "Base Post",
+            publishing_date: "2025-01-25",
+            tokenID: 12,
+            network: "eip155:8453",
+          },
+        },
+      },
+    },
+    // Loaded only by the invalid-network test below — a bad declared network must fail
+    // the load rather than degrade into a warning that silently drops the image.
+    "quantum/amo": {
+      modules: {
+        "../quantum/amo/bad_network.mdx": {
+          frontmatter: {
+            title: "Bad Network Post",
+            publishing_date: "2025-01-01",
+            tokenID: 1,
+            network: "eip155:84532",
+          },
+        },
       },
     },
   },
@@ -66,12 +88,13 @@ describe("blogLoader - NFT Metadata Loading (Mocked)", () => {
 
     expect(blogs).toBeDefined();
     expect(Array.isArray(blogs)).toBe(true);
-    expect(blogs.length).toBe(3);
+    expect(blogs.length).toBe(4);
 
     const titles = blogs.map((b) => b.title);
     expect(titles).toContain("Post With Token");
     expect(titles).toContain("Post Without Token");
     expect(titles).toContain("Interactive Post");
+    expect(titles).toContain("Base Post");
   });
 
   it("should sort blogs by publishing_date (oldest first)", async () => {
@@ -81,6 +104,7 @@ describe("blogLoader - NFT Metadata Loading (Mocked)", () => {
     expect(blogs[0].title).toBe("Post Without Token"); // 2025-01-10
     expect(blogs[1].title).toBe("Post With Token"); // 2025-01-15
     expect(blogs[2].title).toBe("Interactive Post"); // 2025-01-20
+    expect(blogs[3].title).toBe("Base Post"); // 2025-01-25
   });
 
   it("should correctly identify blogs with tokenIDs", async () => {
@@ -88,11 +112,32 @@ describe("blogLoader - NFT Metadata Loading (Mocked)", () => {
     const blogs = await loadBlogs("blog", "publishing_date");
 
     const blogsWithToken = blogs.filter((b) => b.tokenID !== undefined);
-    expect(blogsWithToken.length).toBe(2);
+    expect(blogsWithToken.length).toBe(3);
 
     const tokenIDs = blogsWithToken.map((b) => b.tokenID);
     expect(tokenIDs).toContain(26);
     expect(tokenIDs).toContain(42);
+    expect(tokenIDs).toContain(12);
+  });
+
+  it("resolves a bare tokenID to the legacy Optimism default and passes a declared network through", async () => {
+    const { loadBlogs } = await import("../utils/blogLoader");
+    const blogs = await loadBlogs("blog", "publishing_date");
+
+    // Both legacy posts carry no network in their frontmatter; the loader must make the
+    // default concrete so downstream resolution never guesses.
+    expect(blogs.find((b) => b.title === "Post With Token")?.network).toBe("eip155:10");
+    expect(blogs.find((b) => b.title === "Interactive Post")?.network).toBe("eip155:10");
+    expect(blogs.find((b) => b.title === "Base Post")?.network).toBe("eip155:8453");
+    expect(blogs.find((b) => b.title === "Post Without Token")?.network).toBeUndefined();
+  });
+
+  it("fails the load when a post declares a network GenImNFT is not deployed on", async () => {
+    const { loadBlogs } = await import("../utils/blogLoader");
+
+    // Fail the build, not a warning: a Base post whose network is wrong would otherwise
+    // render without its image — exactly the ambiguity this validation removes.
+    await expect(loadBlogs("quantum/amo", "publishing_date")).rejects.toThrow(/not a GenImNFT mainnet network/);
   });
 
   it("should handle blogs without tokenID gracefully", async () => {
@@ -105,33 +150,36 @@ describe("blogLoader - NFT Metadata Loading (Mocked)", () => {
     expect(blogsWithoutToken[0].nftMetadata).toBeUndefined();
   });
 
-  it("should extract unique tokenIDs", async () => {
-    const { extractTokenIDs } = await import("../utils/blogLoader");
+  it("should extract unique token refs, distinguishing the same id on two chains", async () => {
+    const { extractTokenRefs } = await import("../utils/blogLoader");
 
     const mockBlogs: BlogPost[] = [
-      { title: "A", content: "", tokenID: 26 },
-      { title: "B", content: "", tokenID: 42 },
-      { title: "C", content: "", tokenID: 26 }, // Duplicate
-      { title: "D", content: "" }, // No tokenID
+      { title: "A", content: "", tokenID: 26, network: "eip155:10" },
+      { title: "B", content: "", tokenID: 12, network: "eip155:10" },
+      // The collision this exists for: OP #12 and Base #12 are different tokens.
+      { title: "C", content: "", tokenID: 12, network: "eip155:8453" },
+      { title: "D", content: "", tokenID: 26, network: "eip155:10" }, // Duplicate ref
+      { title: "E", content: "" }, // No tokenID
     ];
 
-    const tokenIDs = extractTokenIDs(mockBlogs);
+    const refs = extractTokenRefs(mockBlogs);
 
-    expect(tokenIDs.length).toBe(2);
-    expect(tokenIDs).toContain(26);
-    expect(tokenIDs).toContain(42);
+    expect(refs.length).toBe(3);
+    expect(refs.map((r) => `${r.network}/${r.id}`)).toEqual(
+      expect.arrayContaining(["eip155:10/26", "eip155:10/12", "eip155:8453/12"]),
+    );
   });
 
-  it("should attach NFT metadata correctly", async () => {
+  it("should attach NFT metadata correctly, keyed per network and id", async () => {
     const { attachNFTMetadata } = await import("../utils/blogLoader");
 
     const mockBlogs: BlogPost[] = [
-      { title: "A", content: "", tokenID: 26 },
+      { title: "A", content: "", tokenID: 26, network: "eip155:10" },
       { title: "B", content: "" },
     ];
 
-    const mockNFTMetadata: Record<number, NFTMetadata> = {
-      26: {
+    const mockNFTMetadata: Record<string, NFTMetadata> = {
+      "eip155:10/26": {
         imageUrl: "https://example.com/26.png",
         prompt: "Test prompt",
         name: "NFT 26",
@@ -146,6 +194,39 @@ describe("blogLoader - NFT Metadata Loading (Mocked)", () => {
     expect(result[1].nftMetadata).toBeUndefined();
   });
 
+  it("attaches per-chain metadata when the same id exists on both chains", async () => {
+    const { attachNFTMetadata } = await import("../utils/blogLoader");
+
+    // The live collision: OP #12 and Base #12 are both minted. The key decides which image
+    // a post gets — the bare id never can.
+    const mockBlogs: BlogPost[] = [
+      { title: "OP #12", content: "", tokenID: 12, network: "eip155:10" },
+      { title: "Base #12", content: "", tokenID: 12, network: "eip155:8453" },
+    ];
+
+    const mockNFTMetadata: Record<string, NFTMetadata> = {
+      "eip155:10/12": {
+        imageUrl: "https://example.com/op-12.png",
+        prompt: "p",
+        name: "OP 12",
+        description: "d",
+      },
+      "eip155:8453/12": {
+        imageUrl: "https://example.com/base-12.png",
+        prompt: "p",
+        name: "Base 12",
+        description: "d",
+      },
+    };
+
+    const result = attachNFTMetadata(mockBlogs, mockNFTMetadata);
+
+    expect(result[0].nftMetadata?.name).toBe("OP 12");
+    expect(result[0].nftMetadata?.imageUrl).toBe("https://example.com/op-12.png");
+    expect(result[1].nftMetadata?.name).toBe("Base 12");
+    expect(result[1].nftMetadata?.imageUrl).toBe("https://example.com/base-12.png");
+  });
+
   it("should handle NFT loading errors gracefully", async () => {
     const { loadMultipleNFTMetadataNode } = await import("../utils/nodeNftLoader");
     vi.mocked(loadMultipleNFTMetadataNode).mockRejectedValue(new Error("Network error"));
@@ -155,16 +236,16 @@ describe("blogLoader - NFT Metadata Loading (Mocked)", () => {
     // Should not throw
     const blogs = await loadBlogs("blog", "publishing_date");
 
-    expect(blogs.length).toBe(3);
+    expect(blogs.length).toBe(4);
   });
 
   it("should validate NFT metadata structure", async () => {
     const { attachNFTMetadata } = await import("../utils/blogLoader");
 
-    const mockBlogs: BlogPost[] = [{ title: "A", content: "", tokenID: 123 }];
+    const mockBlogs: BlogPost[] = [{ title: "A", content: "", tokenID: 123, network: "eip155:10" }];
 
-    const mockNFTMetadata: Record<number, NFTMetadata> = {
-      123: {
+    const mockNFTMetadata: Record<string, NFTMetadata> = {
+      "eip155:10/123": {
         imageUrl: "https://example.com/image.png",
         prompt: "Test prompt",
         name: "Test NFT",

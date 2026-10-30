@@ -79,6 +79,8 @@ export interface BlogEntry {
   order?: number;
   content?: string;
   tokenID?: number;
+  /** CAIP-2 network the tokenID lives on; concrete whenever tokenID is set. See BlogPost. */
+  network?: string;
   nftMetadata?: NFTMetadata;
   category?: string; // Primary category
   secondaryCategory?: string; // Optional secondary category

@@ -117,6 +117,7 @@ When implementing after an approved plan:
   category: "blockchain" | "others"
   description: "SEO description in one sentence"
   tokenID: <integer or omit if not yet minted>
+  network: "eip155:10" | "eip155:8453"   # the chain tokenID lives on; omit for Optimism mainnet (the legacy default)
   ---
   ```
 - Import React components only when interactive elements are needed

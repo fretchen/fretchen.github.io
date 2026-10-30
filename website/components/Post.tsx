@@ -34,7 +34,8 @@ type PostComponent = React.ComponentType<{ components?: Record<string, React.Com
 const ReactPostRenderer: React.FC<{
   componentPath: string;
   tokenID?: number;
-}> = ({ componentPath, tokenID }) => {
+  network?: string;
+}> = ({ componentPath, tokenID, network }) => {
   const Component = getPostModule(componentPath) as PostComponent | undefined;
 
   if (!Component) {
@@ -77,7 +78,7 @@ const ReactPostRenderer: React.FC<{
     // ToC scanning lives one level up, on Post's wrapper (see below) — one ref is enough
     // now that content is present synchronously; it doesn't need to be re-scoped per state.
     <div className={`e-content ${post.contentContainer}`}>
-      {tokenID && <NFTFloatImage tokenId={tokenID} />}
+      {tokenID && <NFTFloatImage tokenId={tokenID} network={network} />}
       <Component components={{ pre: MdxPre }} />
     </div>
   );
@@ -90,6 +91,7 @@ export function Post({
   nextPost,
   basePath = "",
   tokenID,
+  network,
   componentPath,
   description,
   category,
@@ -158,7 +160,7 @@ export function Post({
         {/* Carries the ref the ToC scan reads. Deliberately no e-content here: that class
             belongs to the rendered article, which ReactPostRenderer adds once it exists. */}
         <div ref={contentRef}>
-          <ReactPostRenderer componentPath={componentPath ?? ""} tokenID={tokenID} />
+          <ReactPostRenderer componentPath={componentPath ?? ""} tokenID={tokenID} network={network} />
         </div>
 
         {/* Navigation zwischen Posts */}

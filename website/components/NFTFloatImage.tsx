@@ -1,7 +1,6 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useAutoNetwork } from "../hooks/useAutoNetwork";
-import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS } from "@fretchen/chain-utils";
+import { getGenAiNFTAddress, GenImNFTv4ABI } from "@fretchen/chain-utils";
 import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
 import { extractPromptFromDescription } from "../utils/nftMetadataUtils";
 import { NFTMetadata } from "../types/components";
@@ -9,6 +8,11 @@ import { nftFloat } from "./NFTFloatImage.styles";
 
 interface NFTFloatImageProps {
   tokenId: number;
+  /** CAIP-2 network the tokenID lives on. Defaults to eip155:10, matching blogLoader's
+   * frontmatter default. The image follows the post's declaration, not the connected
+   * wallet's network — the two GenImNFT mainnets have independent id sequences, so the
+   * wallet's chain would silently pick the wrong token. */
+  network?: string;
 }
 
 type NFTFloatData = {
@@ -17,13 +21,13 @@ type NFTFloatData = {
   description: string | null;
 };
 
-export function NFTFloatImage({ tokenId }: NFTFloatImageProps) {
-  const { network } = useAutoNetwork(GENAI_NFT_NETWORKS);
-  const contractAddress = getGenAiNFTAddress(network);
-  const publicClient = useConfiguredPublicClient(network);
+export function NFTFloatImage({ tokenId, network }: NFTFloatImageProps) {
+  const tokenNetwork = network ?? "eip155:10";
+  const contractAddress = getGenAiNFTAddress(tokenNetwork);
+  const publicClient = useConfiguredPublicClient(tokenNetwork);
 
   const { data, isPending, isError } = useQuery<NFTFloatData>({
-    queryKey: ["nftFloatData", tokenId, network],
+    queryKey: ["nftFloatData", tokenId, tokenNetwork],
     queryFn: async () => {
       const tokenURI = await publicClient.readContract({
         address: contractAddress,

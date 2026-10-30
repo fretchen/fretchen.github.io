@@ -24,6 +24,7 @@ const App: React.FC = function () {
         content={blog.content}
         publishing_date={blog.publishing_date}
         tokenID={blog.tokenID}
+        network={blog.network}
         componentPath={blog.componentPath}
         prevPost={prevPost}
         nextPost={nextPost}

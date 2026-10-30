@@ -7,9 +7,11 @@ import "@testing-library/jest-dom";
 
 // The on-chain lookup is irrelevant here: every case below is about what the component can
 // render *without* it. Returning undefined leaves the tokenId branch unable to proceed,
-// which is exactly the state SSR is in.
+// which is exactly the state SSR is in. The spy still records which network the component
+// resolved the token on.
+const mockUseConfiguredPublicClient = vi.hoisted(() => vi.fn(() => undefined));
 vi.mock("../hooks/useConfiguredPublicClient", () => ({
-  useConfiguredPublicClient: () => undefined,
+  useConfiguredPublicClient: mockUseConfiguredPublicClient,
 }));
 
 const ART = "https://my-imagestore.s3.nl-ams.scw.cloud/images/art.png";
@@ -35,14 +37,25 @@ describe("EntryNftImage server rendering", () => {
 
   it("falls back to the placeholder when only a tokenId is known", () => {
     // Deliberate boundary, not an oversight. Every post with a tokenID currently gets
-    // build-time metadata, so this path is a fallback — but it stays reachable, because the
-    // build-time loader queries one chain while the component covers all mainnets. When the
-    // server genuinely does not know the URL it must render a placeholder rather than claim
-    // an image it does not have.
+    // build-time metadata, so this path is a fallback — but it stays reachable for the
+    // token whose on-chain metadata changed after the build-time snapshot. When the
+    // server genuinely does not know the URL it must render a placeholder rather than
+    // claim an image it does not have.
     const html = renderToString(<EntryNftImage tokenId={7} />);
 
     expect(html).toContain("Loading NFT artwork");
     expect(html).not.toContain("u-featured");
+  });
+
+  it("resolves the token on its declared network — the legacy default without one", () => {
+    // The two GenImNFT mainnets have independent id sequences (both have a #12), so the
+    // declared network decides whose token #12 this is. There is no try-each and no
+    // chain whose answer could silently win.
+    renderToString(<EntryNftImage tokenId={12} />);
+    expect(mockUseConfiguredPublicClient).toHaveBeenLastCalledWith("eip155:10");
+
+    renderToString(<EntryNftImage tokenId={12} network="eip155:8453" />);
+    expect(mockUseConfiguredPublicClient).toHaveBeenLastCalledWith("eip155:8453");
   });
 
   it("carries the alt text into the server markup", () => {

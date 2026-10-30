@@ -3,11 +3,17 @@
  * This replaces the static JSON generation with dynamic loading
  */
 
-import { BlogPost, NFTMetadata } from "../types/BlogPost";
+import { BlogPost, NFTMetadata, TokenRef, tokenRefKey, LEGACY_BLOG_TOKEN_NETWORK } from "../types/BlogPost";
+import { getGenAiNFTMainnetNetworks } from "@fretchen/chain-utils";
 import { GLOB_REGISTRY, type SupportedDirectory } from "./globRegistry";
 
 // Global cache for build-time to prevent multiple loads during pre-rendering
 const buildTimeCache = new Map<string, BlogPost[]>();
+
+/** A frontmatter problem the build must fail on (an invalid declared network would otherwise
+ * silently render the post without its image — exactly the ambiguity this exists to remove).
+ * Distinguished so the per-file catch in loadBlogs can rethrow it instead of warning. */
+export class InvalidFrontmatterError extends Error {}
 
 /**
  * Extracts metadata from a loaded MDX module.
@@ -39,6 +45,20 @@ export function extractMetadataFromModule(module: unknown, path: string): Partia
   const category = frontmatter.category as string | undefined;
   const secondaryCategory = frontmatter.secondaryCategory as string | undefined;
 
+  // A blog token is identified by id AND chain: the two GenImNFT mainnets have independent
+  // id sequences (both have a #12), so a bare id alone is not an identifier. The bare form
+  // stays valid and means Optimism mainnet — every legacy post's token lives there.
+  let network: string | undefined;
+  if (tokenID !== undefined) {
+    network = (frontmatter.network as string | undefined) ?? LEGACY_BLOG_TOKEN_NETWORK;
+    if (!getGenAiNFTMainnetNetworks().includes(network)) {
+      throw new InvalidFrontmatterError(
+        `${path}: frontmatter network "${network}" is not a GenImNFT mainnet network ` +
+          `(valid: ${getGenAiNFTMainnetNetworks().join(", ")})`,
+      );
+    }
+  }
+
   // Generate fallback title from filename if needed
   const cleanPath = path.replace(/\?.*$/, "");
   const fileName = cleanPath.split("/").pop() || "";
@@ -50,6 +70,7 @@ export function extractMetadataFromModule(module: unknown, path: string): Partia
     publishing_date: publishingDate,
     order: order,
     tokenID: tokenID,
+    network: network,
     description: description,
     componentPath: path,
     category: category,
@@ -58,31 +79,43 @@ export function extractMetadataFromModule(module: unknown, path: string): Partia
 }
 
 /**
- * Attaches NFT metadata to blogs that have tokenIDs.
+ * Attaches NFT metadata to blogs that have tokens.
  * Pure function for easy testing.
  *
  * @param blogs - Array of blog posts
- * @param nftMetadataMap - Map of tokenID to NFTMetadata
+ * @param nftMetadataMap - Map of tokenRefKey(network/id) to NFTMetadata
  * @returns New array with NFT metadata attached
  */
-export function attachNFTMetadata(blogs: BlogPost[], nftMetadataMap: Record<number, NFTMetadata>): BlogPost[] {
+export function attachNFTMetadata(blogs: BlogPost[], nftMetadataMap: Record<string, NFTMetadata>): BlogPost[] {
   return blogs.map((blog) => {
-    if (blog.tokenID && nftMetadataMap[blog.tokenID]) {
-      return { ...blog, nftMetadata: nftMetadataMap[blog.tokenID] };
+    if (blog.tokenID && blog.network) {
+      const metadata = nftMetadataMap[tokenRefKey({ network: blog.network, id: blog.tokenID })];
+      if (metadata) {
+        return { ...blog, nftMetadata: metadata };
+      }
     }
     return blog;
   });
 }
 
 /**
- * Extracts unique tokenIDs from an array of blogs.
+ * Extracts unique token refs (network + id) from an array of blogs.
  * Pure function for easy testing.
  *
  * @param blogs - Array of blog posts
- * @returns Array of unique tokenIDs
+ * @returns Array of unique token refs
  */
-export function extractTokenIDs(blogs: BlogPost[]): number[] {
-  return Array.from(new Set(blogs.flatMap((b) => (b.tokenID ? [b.tokenID] : []))));
+export function extractTokenRefs(blogs: BlogPost[]): TokenRef[] {
+  const seen = new Set<string>();
+  const refs: TokenRef[] = [];
+  for (const blog of blogs) {
+    if (blog.tokenID === undefined || !blog.network) continue;
+    const key = tokenRefKey({ network: blog.network, id: blog.tokenID });
+    if (seen.has(key)) continue;
+    seen.add(key);
+    refs.push({ network: blog.network, id: blog.tokenID });
+  }
+  return refs;
 }
 
 /**
@@ -180,6 +213,10 @@ export async function loadBlogs(
 
       blogs.push(metadata as BlogPost);
     } catch (error) {
+      // An invalid declared network must fail the build, not degrade into a warning —
+      // a Base-minted post that silently renders without its image is the ambiguity this
+      // validation exists to prevent.
+      if (error instanceof InvalidFrontmatterError) throw error;
       console.warn(`[BlogLoader] Failed to process ${path}:`, error);
     }
   }
@@ -188,15 +225,17 @@ export async function loadBlogs(
 
   // Load NFT metadata for blogs with tokenIDs (only during SSR/build)
   if (import.meta.env.SSR) {
-    const tokenIDs = extractTokenIDs(sortedBlogs);
+    const tokenRefs = extractTokenRefs(sortedBlogs);
 
-    if (tokenIDs.length > 0) {
+    if (tokenRefs.length > 0) {
       try {
-        console.log(`[BlogLoader] Loading NFT metadata for ${tokenIDs.length} tokens: ${tokenIDs.join(", ")}`);
+        console.log(
+          `[BlogLoader] Loading NFT metadata for ${tokenRefs.length} tokens: ${tokenRefs.map(tokenRefKey).join(", ")}`,
+        );
 
         // Dynamically import the Node.js-specific NFT loader
         const { loadMultipleNFTMetadataNode } = await import("./nodeNftLoader");
-        const nftMetadataMap = await loadMultipleNFTMetadataNode(tokenIDs);
+        const nftMetadataMap = await loadMultipleNFTMetadataNode(tokenRefs);
 
         // Use pure function for attaching NFT metadata
         const blogsWithNFT = attachNFTMetadata(sortedBlogs, nftMetadataMap);

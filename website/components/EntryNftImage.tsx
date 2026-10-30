@@ -1,25 +1,27 @@
 import * as React from "react";
 import { entryNftImage } from "./EntryNftImage.styles";
-import { getGenAiNFTAddress, GenImNFTv4ABI, GENAI_NFT_NETWORKS, isTestnet } from "@fretchen/chain-utils";
+import { getGenAiNFTAddress, GenImNFTv4ABI } from "@fretchen/chain-utils";
 import { useConfiguredPublicClient } from "../hooks/useConfiguredPublicClient";
+import { LEGACY_BLOG_TOKEN_NETWORK } from "../types/BlogPost";
 import { NFTMetadata } from "../types/components";
 
 interface EntryNftImageProps {
   tokenId?: number;
+  /** CAIP-2 network the tokenID lives on. Defaults to eip155:10, matching blogLoader's
+   * frontmatter default for the legacy bare-tokenID form. */
+  network?: string;
   fallbackImageUrl?: string;
   nftName?: string;
 }
 
-// Filter to mainnet networks only for blog NFTs (they're minted on mainnet)
-const MAINNET_NETWORKS = GENAI_NFT_NETWORKS.filter((n) => !isTestnet(n));
-
 /**
  * Larger NFT image that spans both date and title rows
  *
- * Blog NFTs may be minted on any mainnet (Optimism, Base).
- * This component tries each mainnet until it finds the token.
+ * Resolves the token on its declared network: the frontmatter says which chain a tokenID
+ * belongs to, and the two GenImNFT mainnets have independent id sequences (both have a
+ * #12), so there is nothing to try in order and no chain whose answer could silently win.
  */
-export const EntryNftImage: React.FC<EntryNftImageProps> = ({ tokenId, fallbackImageUrl, nftName }) => {
+export const EntryNftImage: React.FC<EntryNftImageProps> = ({ tokenId, network, fallbackImageUrl, nftName }) => {
   // Seeded from the prop so the FIRST render — including SSR — already has the image.
   // Effects don't run while prerendering, so resolving only in the effect meant the built
   // HTML shipped a placeholder and no u-featured, and that HTML is what Bridgy Fed and every
@@ -35,10 +37,9 @@ export const EntryNftImage: React.FC<EntryNftImageProps> = ({ tokenId, fallbackI
   const [imageUrl, setImageUrl] = React.useState<string | null>(fallbackImageUrl ?? null);
   const [isLoading, setIsLoading] = React.useState(!fallbackImageUrl);
 
-  // Default to first mainnet for public client (we'll try all networks anyway)
-  const defaultNetwork = MAINNET_NETWORKS[0];
-  const publicClient = useConfiguredPublicClient(defaultNetwork);
-  const contractAddress = getGenAiNFTAddress(defaultNetwork);
+  const tokenNetwork = network ?? LEGACY_BLOG_TOKEN_NETWORK;
+  const publicClient = useConfiguredPublicClient(tokenNetwork);
+  const contractAddress = getGenAiNFTAddress(tokenNetwork);
 
   // Fetch metadata from tokenURI
   const fetchNFTMetadata = async (tokenURI: string): Promise<NFTMetadata | null> => {
@@ -71,10 +72,10 @@ export const EntryNftImage: React.FC<EntryNftImageProps> = ({ tokenId, fallbackI
       try {
         setIsLoading(true);
 
-        // Only reachable when build-time metadata is missing. Today every tokenID gets it,
-        // so this is a fallback rather than a hot path — but it has to stay: the build-time
-        // loader queries Optimism mainnet only (utils/nodeNftLoader.ts) while this
-        // component covers all mainnets, so a Base-minted NFT would land here.
+        // Only reachable when build-time metadata is missing, so a fallback rather than a
+        // hot path — but it has to stay for the token whose on-chain metadata changed after
+        // the build-time snapshot was cached. It resolves on the same declared network as
+        // the build-time loader (utils/nodeNftLoader.ts), just live.
         if (tokenId && publicClient) {
           // Get token URI using public client (same as NFTFloatImage)
           const tokenURIResult = await publicClient.readContract({

@@ -70,11 +70,11 @@ def normalize_path(raw: str) -> str | None:
     return path
 
 
-# The two crawler signatures identified and validated in
-# analytics/notebooks/05_traffic_bursts.ipynb against the full export. Kept as
-# the only two rules here deliberately -- a more general bot detector would be
-# over-engineering for a one-off cleanup of a fixed, already-characterised
-# dataset.
+# The three crawler signatures identified and validated in
+# analytics/notebooks/05_traffic_bursts.ipynb (first two) and via the October 2026
+# export cross-check against the interaction-gated beacon (third). Kept as targeted
+# rules deliberately -- a more general bot detector would be over-engineering for a
+# one-off cleanup of a fixed, already-characterised dataset.
 
 
 def is_chronic_crawler(row: dict) -> bool:
@@ -121,6 +121,17 @@ def find_acute_crawler_session_ids(rows: list[dict]) -> set[str]:
     return {r["session_id"] for r in one_shot_no_referrer if r["created_at"][:10] in crawl_days}
 
 
+def is_homepage_monitor(row: dict) -> bool:
+    """The persistent 800x600 signature: 167 rows across every month of the export,
+    no utm, no referrer (166/167), 150 of them on `/`, one-shot sessions or
+    same-second duplicate loads, and -- where the October 2026 export has geo --
+    datacenter locations (Ashburn, VA). Screen resolution is the tell, the same
+    way 1280x1200 is for `is_chronic_crawler`: 800x600 is headless Chrome's
+    default viewport, not a resolution real devices ship with.
+    """
+    return row["screen"] == "800x600"
+
+
 def read_pageviews(
     csv_path: str | Path, hostname: str = f"www.{SITE}", exclude_crawlers: bool = False
 ) -> list[tuple[str, str]]:
@@ -131,11 +142,11 @@ def read_pageviews(
     sessionisation, matching how the beacon counts.
 
     `exclude_crawlers=True` (default off, so existing callers are unaffected)
-    additionally drops rows matching `is_chronic_crawler` or
-    `find_acute_crawler_session_ids` before paths are extracted -- the
-    filtering needs the full row (browser/os/device/screen/referrer/session/
-    country), which is why it happens here rather than after reduction to
-    `(day, path)`.
+    additionally drops rows matching `is_chronic_crawler`,
+    `find_acute_crawler_session_ids`, or `is_homepage_monitor` before paths are
+    extracted -- the filtering needs the full row
+    (browser/os/device/screen/referrer/session/country), which is why it happens
+    here rather than after reduction to `(day, path)`.
     """
     with open(csv_path, newline="", encoding="utf-8") as handle:
         rows = [
@@ -149,7 +160,9 @@ def read_pageviews(
         rows = [
             row
             for row in rows
-            if not is_chronic_crawler(row) and row["session_id"] not in acute_session_ids
+            if not is_chronic_crawler(row)
+            and not is_homepage_monitor(row)
+            and row["session_id"] not in acute_session_ids
         ]
 
     pageviews: list[tuple[str, str]] = []

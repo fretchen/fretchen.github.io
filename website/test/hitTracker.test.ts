@@ -27,7 +27,7 @@ describe("trackHit", () => {
     expect(JSON.parse(body as string)).toEqual({ site: "fretchen.eu", path: "/blog/foo", landing: true });
   });
 
-  it.each(["pointerdown", "pointermove", "keydown", "touchstart"])("counts a %s as an interaction", (type) => {
+  it.each(["pointerdown", "pointermove", "keydown", "touchstart", "wheel"])("counts a %s as an interaction", (type) => {
     trackHit("/blog/foo", true);
     interact(type);
 

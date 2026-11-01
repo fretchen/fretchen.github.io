@@ -2,10 +2,14 @@ import { ANALYTICS_URL } from "./analyticsApi";
 
 /**
  * Deliberately not `scroll`: headless crawlers routinely auto-scroll to trigger
- * lazy loading, while synthesising pointer movement is rarer. Touch devices are
- * still covered — a touch-scroll fires `touchstart`/`pointerdown`.
+ * lazy loading. `wheel` is different — a programmatic `scrollBy` fires `scroll`
+ * but not `wheel`, so a physical wheel turn is evidence of a device in someone's
+ * hand, while a desktop reader who scrolls and reads without ever moving the
+ * pointer is still counted (the October 2026 Umami cross-check showed the
+ * pointer-only gate dropping about half of real readers). Touch devices are
+ * covered too — a touch-scroll fires `touchstart`/`pointerdown`.
  */
-const INTERACTION_EVENTS = ["pointerdown", "pointermove", "keydown", "touchstart"] as const;
+const INTERACTION_EVENTS = ["pointerdown", "pointermove", "keydown", "touchstart", "wheel"] as const;
 
 let pending: AbortController | undefined;
 

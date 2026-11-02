@@ -12,13 +12,9 @@ import { z } from "zod";
 import {
   buildBazaarExtension,
   buildGenimgBazaarExtension,
-  buildLlmBazaarExtension,
-  buildSearchBazaarExtension,
   type BazaarExtension,
 } from "../bazaar_discovery.js";
 import { ImageGenerationRequestSchema } from "../genimg_schemas.js";
-import { LLMChatRequestSchema } from "../llm_schemas.js";
-import { SearchQuerySchema, FetchQuerySchema } from "../search_schemas.js";
 
 /**
  * The HTTP wire form of a block, as a single flat type — the package's `DiscoveryExtension`
@@ -53,7 +49,7 @@ function expectValid(block: BazaarExtension): void {
 }
 
 describe("buildBazaarExtension (wrapper)", () => {
-  const inputSchema = z.toJSONSchema(SearchQuerySchema) as Record<string, unknown>;
+  const inputSchema = z.toJSONSchema(z.object({ q: z.string() })) as Record<string, unknown>;
 
   it("serializes a POST route as a body declaration", () => {
     const { info } = wire(
@@ -111,33 +107,5 @@ describe("per-service bazaar declarations", () => {
     );
     expect(info.output?.example.created).toEqual(expect.any(Number));
     expectValid(block);
-  });
-
-  it("llm: POST, schema from LLMChatRequestSchema", () => {
-    const block = buildLlmBazaarExtension();
-    const { info, schema } = wire(block);
-    expect(info.input.method).toBe("POST");
-    expect(info.input.body?.messages).toEqual([{ role: "user", content: expect.any(String) }]);
-    expect(schema.properties.input.properties.body).toEqual(z.toJSONSchema(LLMChatRequestSchema));
-    expectValid(block);
-  });
-
-  it("search: GET, one declaration per route, schemas from the query schemas", () => {
-    const searchBlock = buildSearchBazaarExtension("search");
-    const search = wire(searchBlock);
-    expect(search.info.input.method).toBe("GET");
-    expect(search.info.input.queryParams?.q).toEqual(expect.any(String));
-    expect(search.schema.properties.input.properties.queryParams).toEqual(
-      z.toJSONSchema(SearchQuerySchema),
-    );
-    expectValid(searchBlock);
-
-    const fetchBlock = buildSearchBazaarExtension("fetch");
-    const fetch = wire(fetchBlock);
-    expect(fetch.info.input.queryParams?.url).toMatch(/^https:\/\//);
-    expect(fetch.schema.properties.input.properties.queryParams).toEqual(
-      z.toJSONSchema(FetchQuerySchema),
-    );
-    expectValid(fetchBlock);
   });
 });

@@ -1,6 +1,6 @@
 ---
 name: "chat-tools"
-description: "Use when: adding, changing or reviewing a tool for the /assistent chat — anything touching website/tools/*.ts, TOOL_REGISTRY or toolRunners in AssistantChat.tsx, the tool loop and its hops, web research (note_findings, compaction, Stop & answer), or the MAX_TOOLS_BYTES / MAX_MESSAGES_BYTES caps in scw_js/llm_schemas.ts. Carries the two-part tool contract, why tool modules stay React-free, and the three constraints that bite silently."
+description: "Use when: adding, changing or reviewing a tool for the /assistent chat — anything touching website/tools/*.ts, TOOL_REGISTRY or toolRunners in AssistantChat.tsx, the tool loop and its hops, web research (note_findings, compaction, Stop & answer), or the MAX_TOOLS_BYTES / MAX_MESSAGES_BYTES caps in bunny_js/src/llm_schemas.ts. Carries the two-part tool contract, why tool modules stay React-free, and the three constraints that bite silently."
 ---
 
 # Chat tools in this repo
@@ -13,7 +13,7 @@ over-budget `tools` array is a 400 the user sees as a broken chat, and an empty 
 ## Where the loop lives — and why that is not an accident
 
 The tool loop runs **in the browser**, in `website/components/AssistantChat.tsx`. The paid endpoint
-`scw_js/sc_llm_x402.ts` forwards `tools` to the model and hands back `tool_calls`; it never executes
+`bunny_js/src/llm_routes.ts` forwards `tools` to the model and hands back `tool_calls`; it never executes
 one. That is not an implementation detail but a **published contract** — the deployed
 `openapi.llm.json` states _"this endpoint never calls a tool on your behalf, and accepts no callback
 or MCP server URL"_, and `/agent-onboarding` renders it.
@@ -87,10 +87,10 @@ if you don't set it, any non-`ok` status withdraws the tool.
 
 ## Three constraints that bite silently
 
-**Two backend caps**, both in `scw_js/llm_schemas.ts`: `MAX_TOOLS_BYTES` (8192) on the serialized
+**Two backend caps**, both in `bunny_js/src/llm_schemas.ts`: `MAX_TOOLS_BYTES` (8192) on the serialized
 tool definitions and `MAX_MESSAGES_BYTES` (192 KB) on the conversation. They are **ours**, not the
 model's — cost guards, because both are input tokens charged on _every hop_ of a turn. There is no
-tool-count cap; what is billed is bytes. Exceeding either is a clean 400 from `sc_llm_x402.ts`, but
+tool-count cap; what is billed is bytes. Exceeding either is a clean 400 from `bunny_js/src/llm_routes.ts`, but
 the user just sees a failed message. Measure before adding: at ~730 bytes per tool, the registry
 plus `note_findings` is measured in `test/page-tool.test.ts`. `MAX_MESSAGES_BYTES` is sized from
 the per-message price ceiling (`LLM_ESTIMATED_TOKENS_PER_MESSAGE`); raise the two together.

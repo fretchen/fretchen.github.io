@@ -5,7 +5,7 @@ import type { PaymentFailure } from "./failure";
 
 /**
  * Web search as a tool for the chat model, bought from the `searchapi` function
- * (`scw_js/search_api.ts`), which proxies Brave's LLM Context API.
+ * (`bunny_js/src/searchapi_routes.ts`), which proxies Brave's LLM Context API.
  *
  * Paid rather than gated: Brave bills per query, and x402 is how a visitor covers that without an
  * allowlist. $0.01 a call in USDC or EURC, settled as a voucher on the channel the chat already

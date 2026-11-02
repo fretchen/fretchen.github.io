@@ -37,7 +37,7 @@ const EXEMPT: Record<string, string> = {
 };
 
 /** Resource-name fragments this package's functions deploy under (serverless.yml). */
-const SCW_JS_FUNCTIONS = ["llmx402", "searchapi", "genimgx402token", "growthapi"];
+const SCW_JS_FUNCTIONS = ["llmx402", "genimgx402token", "growthapi"];
 
 const messages = extractLoggerErrorMessages(PACKAGE_ROOT);
 const rules = extractRules(ALERTS_DIR);

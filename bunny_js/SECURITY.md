@@ -30,13 +30,14 @@ boundary, 2026-10-18 audit, three-script update 2026-10-20).
 
 ## Known Open Issues
 
-| Area                                       | Severity | Status                                                                                                                                      |
-| ------------------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Deploy-key blast radius (×3, one per twin) | Medium   | Bounded — trigger hygiene (push-to-main only) + rotate-on-suspicion; see THREAT_MODEL §2                                                    |
-| Secret-set copies across two platforms     | Medium   | Accepted for the trial — scw_js + up to three script envs carry the S3 pair and authorizer key; every copy must rotate together (see below) |
-| Deployed-runtime SigV4 + DNS verification  | Low      | Pending — local Deno PASS; both failure branches verified fail-closed; see below                                                            |
-| Undici-specific error matching on the edge | Low      | Watch item — unreachable hosts may 500 instead of 400 on bunny's runtime; see below                                                         |
-| `.env` copy drift vs `scw_js/.env`         | Low      | Accepted for the trial — the two secret sets must be rotated/copied together                                                                |
+| Area                                                                                                | Severity | Status                                                                                                                                      |
+| --------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Deploy-key blast radius (×3, one per twin)                                                          | Medium   | Bounded — trigger hygiene (push-to-main only) + rotate-on-suspicion; see THREAT_MODEL §2                                                    |
+| Pre-charge balance gate weaker than the settlement requirement (ported `llm_service`/`llm_schemas`) | Medium   | Open — tracked privately (carried over from `scw_js/SECURITY.md` when the twins retired)                                                    |
+| Secret-set copies across two platforms                                                              | Medium   | Accepted for the trial — scw_js + up to three script envs carry the S3 pair and authorizer key; every copy must rotate together (see below) |
+| Deployed-runtime SigV4 + DNS verification                                                           | Low      | Pending — local Deno PASS; both failure branches verified fail-closed; see below                                                            |
+| Undici-specific error matching on the edge                                                          | Low      | Watch item — unreachable hosts may 500 instead of 400 on bunny's runtime; see below                                                         |
+| `.env` copy drift vs `scw_js/.env`                                                                  | Low      | Accepted for the trial — the two secret sets must be rotated/copied together                                                                |
 
 **Secret-copy rotation coupling (2026-10-20, three-script update).** The channel-store S3
 credential pair and the receiver-authorizer private key exist in `scw_js`'s Scaleway secrets

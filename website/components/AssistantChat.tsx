@@ -1199,7 +1199,7 @@ export function AssistantChat() {
         offeredTools.push({ tool: noteFindingsTool, source: null, paid: false, bookkeeping: true });
       }
 
-      // Full conversation history, as the OpenAI `messages[]` array sc_llm_x402 expects. Tool
+      // Full conversation history, as the OpenAI `messages[]` array the bunny_js llm twin expects. Tool
       // turns pushed inside the loop below live only in this local array — never in `messages`
       // state, so a previous tool call is never replayed to the model on a later message. Its
       // own final text turn is the model's whole memory of having made an image.

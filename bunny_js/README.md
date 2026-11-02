@@ -1,9 +1,12 @@
 # bunny_js
 
-Bunny Edge Script twins of the `scw_js` x402 sellers. First port: **searchapi** (the
-`web-agent.fretchen.eu` seller — Brave `/search` + `/fetch`, paid per call via x402
-batch-settlement). The Scaleway function stays live and untouched; this twin is trialed at
-the bunny-provided URL until a formal switch.
+Bunny Edge Scripts serving the x402 sellers that outgrew `scw_js`: **searchapi**
+(the `web-agent.fretchen.eu` seller — Brave `/search` + `/fetch`), **llm** (the
+`llm-agent.fretchen.eu` chat seller) and **mcp** (the `mcp-agent.fretchen.eu` stateless
+MCP endpoint), all paid per call/message via x402 batch-settlement. The switch is done:
+these scripts are the authoritative servers behind the three `-agent.fretchen.eu`
+domains, and the Scaleway twins they replaced have been deleted from `scw_js` — only
+its `llmx402cron` remains, claiming the channels these twins charge.
 
 ## Architecture
 
@@ -84,26 +87,30 @@ false`; Node builtins stay external and MUST be imported through the `node:` pre
 - **No cron at the edge** — `llmx402cron` stays on Scaleway and claims the channels this twin
   charges, unchanged, because the channel storage is the same bucket.
 
-## Trial matrix (Task 6 — fill in as trials run)
+## Trial matrix (Task 6 — historical; superseded by the production switch)
+
+The formal switch happened: the three `-agent.fretchen.eu` domains serve these scripts in
+production, and the Scaleway twins were deleted from `scw_js`. The unpaid checks were run
+during the trial; the paid/probe rows were overtaken by real production traffic rather than
+closed as one-off exercises, so their results live in the observability logs and on-chain
+settlements, not here.
 
 | #   | Check                                                                                                                                                  | Result                                                                                                       |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | 1   | Unpaid `GET /search` at the bunny URL → 402 + `Payment-Required` header                                                                                | **PASS** 2026-10-18: 402 + Payment-Required, mainnet-only accepts, receiver 0xAAEBC1…239C, `cdn-cache: MISS` |
 | 2   | `GET /openapi.json`, `/.well-known/agent-registration.json`, `/favicon.png` at the bunny URL                                                           | **PASS** 2026-10-18: 200s, correct content types and sizes (6.3 KB / 1.2 KB / 31 KB)                         |
-| 3   | Deployed SigV4 probe (`scripts/sigv4_probe.ts` as its own script) against the real bucket                                                              | pending                                                                                                      |
-| 4   | Paid `/fetch` ($0.001) — buyer: `bunny_js/notebooks/search_x402_buyer.ipynb`, `SERVER` = "bunny-trial" with `TRIAL_URL` set → 200 + `Payment-Response` | pending                                                                                                      |
-| 5   | Paid `/search` ($0.01) via the same notebook → 200 + results                                                                                           | pending                                                                                                      |
-| 6   | Channel record in S3 updated; next `llmx402cron` run claims it cleanly (observability logs)                                                            | pending                                                                                                      |
-| 7   | Cold-start spot checks at the bunny URL                                                                                                                | pending                                                                                                      |
-
-Budget: ≤ ~$0.10 of real purchases.
+| 3   | Deployed SigV4 probe (`scripts/sigv4_probe.ts` as its own script) against the real bucket                                                              | superseded by production use                                                                                 |
+| 4   | Paid `/fetch` ($0.001) — buyer: `bunny_js/notebooks/search_x402_buyer.ipynb`, `SERVER` = "bunny-trial" with `TRIAL_URL` set → 200 + `Payment-Response` | superseded by production use                                                                                 |
+| 5   | Paid `/search` ($0.01) via the same notebook → 200 + results                                                                                           | superseded by production use                                                                                 |
+| 6   | Channel record in S3 updated; next `llmx402cron` run claims it cleanly (observability logs)                                                            | superseded by production use                                                                                 |
+| 7   | Cold-start spot checks at the bunny URL                                                                                                                | superseded by production use                                                                                 |
 
 ## Status
 
-Tasks 1-5 of the port plan are done (scaffold, bundle gate, SigV4 spike, verbatim stack +
-tests, native routing + tests). Task 6 (deploy + trials) is pending user-side setup: bunny CLI
-install + login (or dashboard paste of `dist/searchapi.js`), and the secrets above configured on
-the script. The formal switch (moving `web-agent.fretchen.eu` off Scaleway) is out of scope.
+Ported and production. The three twins serve the llm, web and MCP sellers at their
+`*.fretchen.eu` origins; `scw_js` keeps only `genimgx402token`, `llmx402cron` (which claims
+these twins' channels) and `growthapi`. The original port plan (scaffold, bundle gate, SigV4
+spike, verbatim stack + tests, native routing + tests) is complete.
 
 ## Deploy paths (both can coexist)
 

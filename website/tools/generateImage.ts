@@ -19,7 +19,7 @@ export type ImageSize = (typeof IMAGE_SIZES)[number];
 /**
  * OpenAI function-calling shape.
  *
- * Identical to the object `scw_js/notebooks/sc_llm_x402_buyer.ipynb` and
+ * Identical to the object `bunny_js/notebooks/llm_x402_buyer.ipynb` and
  * `scw_js/imagegen-in-chat-plan_1.md` §2 exercise against the real backend — the same payload
  * is proven there before it ships here.
  *

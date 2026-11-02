@@ -14,7 +14,7 @@ import type {
  *
  * Shared by everything on the site that spends, not just the chat: `/assistent`'s `search_web` and
  * `fetch_url` tools bill onto the
- * **same channel** (`scw_js/search_api.ts` sells as the same receiver, and `computeChannelId`
+ * **same channel** (`bunny_js/src/searchapi_routes.ts` sells as the same receiver, and `computeChannelId`
  * hashes payer, payerAuthorizer, receiver, receiverAuthorizer, token, withdrawDelay and salt — so
  * same wallet plus same voucher signer plus same receiver means the same channel, already funded).
  *
@@ -505,7 +505,7 @@ export async function createPaidFetch({
       return response;
     }
 
-    // Only a 402 is a payment failure. `scw_js/search_api.ts` answers 402 for every one of them —
+    // Only a 402 is a payment failure. `bunny_js/src/searchapi_routes.ts` answers 402 for every one of them —
     // verify, settle, unsupported network — and 400/404/500 for its own refusals (a blocked url, a
     // bad query, an unsupported content type), which it raises AFTER verification and which the
     // caller is meant to read and act on. Throwing on those turned a correctable refusal into

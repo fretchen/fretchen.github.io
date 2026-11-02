@@ -1,9 +1,10 @@
 # observability
 
 Project-wide log access and alerting for every Scaleway function in this repo: `facilitator`,
-`walletreportcron`, `llmx402`, `llmx402cron`, `searchapi`, `genimgx402token`, `growthapi`, the
+`walletreportcron`, `llmx402cron`, `genimgx402token`, `growthapi`, the
 comment service and analytics. It belongs to no single service. Cockpit is scoped to the Scaleway
-_project_, so one token and one set of rules cover all of them.
+_project_, so one token and one set of rules cover all of them. (The llm/search/mcp sellers moved
+to bunny_js — Edge Script logging has no Loki rules here.)
 
 | Path                | What                                                                                                     |
 | ------------------- | -------------------------------------------------------------------------------------------------------- |

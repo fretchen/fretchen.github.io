@@ -3,7 +3,7 @@
  * rather than from hand-written tables (see components/ParamTable.tsx).
  *
  * Runtime rather than build-time on purpose: our services patch live values into the served
- * document — `sc_llm_x402.ts` rewrites `x-payment-info.price.max` from the current token
+ * document — `bunny_js/src/llm_routes.ts` rewrites `x-payment-info.price.max` from the current token
  * pricing before serving it — so a bundled copy would show a stale price.
  *
  * Deliberately separate from `x402Discovery.ts`: that module is the payment/compatibility

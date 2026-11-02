@@ -84,7 +84,7 @@ const note = css({
 
 /**
  * Deep link into the reference implementation at a pinned commit, e.g.
- * <SrcRef path="scw_js/sc_llm_x402.ts" lines="288-324" /> → "sc_llm_x402.ts:288-324".
+ * <SrcRef path="bunny_js/src/llm_routes.ts" lines="353-368" /> → "llm_routes.ts:353-368".
  */
 function SrcRef({ path, lines, label }: { path: string; lines?: string; label?: string }) {
   const file = path.split("/").pop();
@@ -405,8 +405,8 @@ export default function Page() {
             </p>
             <p>
               <SrcRef
-                path="scw_js/notebooks/sc_llm_x402_buyer.ipynb"
-                label="→ sc_llm_x402_buyer.ipynb (Deno notebook)"
+                path="bunny_js/notebooks/llm_x402_buyer.ipynb"
+                label="→ llm_x402_buyer.ipynb (Deno notebook)"
               />
             </p>
 
@@ -424,8 +424,8 @@ export default function Page() {
             <h2>Build it, step by step</h2>
             <p>
               Each step shows the requirement and the real code from our implementation (
-              <a href={`${GH_BLOB}/scw_js/sc_llm_x402.ts`} target="_blank" rel="noopener noreferrer">
-                sc_llm_x402.ts
+              <a href={`${GH_BLOB}/bunny_js/src/llm_routes.ts`} target="_blank" rel="noopener noreferrer">
+                llm_routes.ts
               </a>{" "}
               and{" "}
               <a href={`${GH_BLOB}/scw_js/x402_server.ts`} target="_blank" rel="noopener noreferrer">
@@ -524,8 +524,8 @@ export default function Page() {
     });
   }`}</CodeBlock>
                 <p className={caption}>
-                  Ours: <SrcRef path="scw_js/sc_llm_x402.ts" lines="169-215" /> (validation),{" "}
-                  <SrcRef path="scw_js/sc_llm_x402.ts" lines="78-113" /> (CORS + error helpers).
+                  Ours: <SrcRef path="bunny_js/src/llm_routes.ts" lines="206-275" /> (validation),{" "}
+                  <SrcRef path="bunny_js/src/llm_routes.ts" lines="71-94" /> (CORS + error helpers).
                 </p>
               </Foldable>
             </Step>
@@ -637,7 +637,7 @@ export default function Page() {
   if (!payment) return respond402(await build402Body());`}</CodeBlock>
                 <p className={caption}>
                   Ours: <SrcRef path="scw_js/x402_server.ts" lines="127-171" /> (the 402 body),{" "}
-                  <SrcRef path="scw_js/sc_llm_x402.ts" lines="244-258" /> (the handler branch).
+                  <SrcRef path="bunny_js/src/llm_routes.ts" lines="174-198" /> (the handler branch).
                 </p>
               </Foldable>
               <div className={note}>
@@ -712,9 +712,9 @@ export default function Page() {
   // 5. 200 + the settlement receipt (json() already merges CORS).
   return json(200, completion, settlementHeaders(settlement));`}</CodeBlock>
                 <p className={caption}>
-                  Ours: <SrcRef path="scw_js/sc_llm_x402.ts" lines="260-268" /> (network check),{" "}
-                  <SrcRef path="scw_js/sc_llm_x402.ts" lines="287-362" /> (verify + corrective 402),{" "}
-                  <SrcRef path="scw_js/sc_llm_x402.ts" lines="396-418" /> (settle + response).
+                  Ours: <SrcRef path="bunny_js/src/llm_routes.ts" lines="307-315" /> (network check),{" "}
+                  <SrcRef path="bunny_js/src/llm_routes.ts" lines="370-397" /> (verify + corrective 402),{" "}
+                  <SrcRef path="bunny_js/src/llm_routes.ts" lines="440-463" /> (settle + response).
                 </p>
               </Foldable>
               <Foldable label="Show the other two transport helpers (extract + settlement headers)">
@@ -758,8 +758,8 @@ export default function Page() {
     return (cost > max ? max : cost).toString();
   }`}</CodeBlock>
                 <p className={caption}>
-                  Ours: <SrcRef path="scw_js/llm_service.ts" lines="215-231" /> (the rate maths) and{" "}
-                  <SrcRef path="scw_js/sc_llm_x402.ts" lines="72-76" /> (the ceiling clamp).
+                  Ours: <SrcRef path="bunny_js/src/llm_service.ts" lines="323-345" /> (the rate maths) and{" "}
+                  <SrcRef path="bunny_js/src/llm_schemas.ts" lines="85-91" /> (the ceiling clamp).
                 </p>
               </Foldable>
             </Step>
@@ -840,7 +840,7 @@ export default function Page() {
     return json(200, spec);
   }`}</CodeBlock>
                 <p className={caption}>
-                  Ours: <SrcRef path="scw_js/sc_llm_x402.ts" lines="120-134" /> (with an exact bigint formatter,{" "}
+                  Ours: <SrcRef path="bunny_js/src/llm_routes.ts" lines="121-134" /> (with an exact bigint formatter,{" "}
                   <SrcRef path="scw_js/x402_server.ts" lines="290-298" />, instead of the float division above).
                 </p>
               </Foldable>
@@ -875,7 +875,7 @@ export default function Page() {
                 Keep the identity in a key that is not on your server: whoever owns it can repoint the URL.
               </p>
               <p className={caption}>
-                Ours: <SrcRef path="scw_js/agent_registration.ts" /> builds the file,{" "}
+                Ours: <SrcRef path="bunny_js/src/agent_registration.ts" /> builds the file,{" "}
                 <SrcRef path="eth/scripts/register-agents.ts" /> registers and binds. Our endpoint is agent #97599 on
                 Base.
               </p>
@@ -907,7 +907,7 @@ export default function Page() {
             </div>
             <p>
               <strong>The first real payment.</strong> Point the{" "}
-              <SrcRef path="scw_js/notebooks/sc_llm_x402_buyer.ipynb" label="buyer notebook" /> at your server and run
+              <SrcRef path="bunny_js/notebooks/llm_x402_buyer.ipynb" label="buyer notebook" /> at your server and run
               it top to bottom. It opens a channel, sends a paid message, and prints the settlement — the fastest way to
               see deposit → voucher → verify → settle actually working, and it stays on testnet unless you set{" "}
               <code className={inlineCode}>USE_MAINNET = true</code>.

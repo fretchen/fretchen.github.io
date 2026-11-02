@@ -2,20 +2,23 @@
 
 Serverless functions for AI image generation and LLM services with blockchain integration on Optimism L2.
 
+The x402 **sellers** for LLM chat, web search/fetch and MCP now run as Bunny Edge Scripts in
+[`../bunny_js/`](../bunny_js/) (same domains, same channel tuple — this package's `llmx402cron`
+still claims and settles their channels). What remains here: the **image-generation seller**,
+the **channel cron**, and the **Growth API**.
+
 ## 📖 API Documentation
 
-- **OpenAPI Specs**: [`openapi.genimg.json`](./openapi.genimg.json) / [`openapi.llm.json`](./openapi.llm.json) - Per-service x402 discovery contracts, each served live at `GET /openapi.json` on its own origin
+- **OpenAPI Spec**: [`openapi.genimg.json`](./openapi.genimg.json) - the x402 discovery contract, served live at `GET /openapi.json` on the origin
 - **EIP-8004 Registration**: built per service by [`agent_registration.ts`](./agent_registration.ts), served live at `GET /.well-known/agent-registration.json` on each origin (see [ERC-8004 agent registration](#erc-8004-agent-registration))
 
 ### Quick Links
 
-| Service          | Endpoint          | Description                                            |
-| ---------------- | ----------------- | ------------------------------------------------------ |
-| Image Generation | `genimgx402token` | AI image generation + NFT minting (x402 USDC payment)  |
-| LLM Chat         | `llmx402`         | x402 batch-settlement LLM chat (USDC payment channels) |
-| LLM Claim/Settle | `llmx402cron`     | Claims and settles accumulated LLM channels every 12h  |
-| Growth API       | `growthapi`       | Draft approval API for Growth Agent (wallet auth)      |
-| Web access       | `searchapi`       | Brave search + web fetch (x402)                        |
+| Service          | Endpoint          | Description                                           |
+| ---------------- | ----------------- | ----------------------------------------------------- |
+| Image Generation | `genimgx402token` | AI image generation + NFT minting (x402 USDC payment) |
+| LLM Claim/Settle | `llmx402cron`     | Claims and settles accumulated LLM channels every 12h |
+| Growth API       | `growthapi`       | Draft approval API for Growth Agent (wallet auth)     |
 
 ## Functions
 
@@ -115,43 +118,20 @@ wants an image reads `data[0].url` and never learns an NFT exists.
 **Testnet networks return a placeholder image**, not a generated one — real inference budget is
 never spent on a valueless testnet payment. The x402 verify/settle flow still runs for real.
 
-### `sc_llm_x402.js` / `llm_x402_cron.js` - x402 Batch-Settlement LLM Chat
+### `llm_x402_cron.js` - Channel Claim/Settle Cron
 
-LLM chat paid via x402 batch-settlement USDC payment channels — no bearer token, the payment voucher itself proves wallet control. `llmx402` handles chat requests (deposit/voucher/402 flow); `llmx402cron` claims and settles accumulated channels on a 12h schedule. See [`assistent_plan.md`](../assistent_plan.md) at the repo root for the full design record (deposit/voucher/claim/settle lifecycle, pricing model, gotchas).
+The chat and web sellers (now Bunny Edge Scripts in [`../bunny_js/`](../bunny_js/)) charge per call onto x402 batch-settlement USDC payment channels — no bearer token, the payment voucher itself proves wallet control. They share this package's channel storage and channel tuple, so `llmx402cron` claims and settles their accumulated channels on a 12h schedule, unchanged. See [`assistent_plan.md`](../assistent_plan.md) at the repo root for the full design record (deposit/voucher/claim/settle lifecycle, pricing model, gotchas).
 
 **Fee allowance.** The facilitator charges a flat fee on `claim`/`settle`, same as the `exact` scheme — one standing USDC `approve()` for the facilitator's wallet covers both, so no separate approval is needed for batch-settlement. Because `claim`/`settle` skip `/verify` (see `x402_facilitator/README.md` → _Recipient gating_), there is no built-in early warning the way `exact` gets `remainingSettlements`; `llmx402cron` reads the allowance itself before each claim and logs a warning once it is close to running out.
 
-**`llm/v1` contract.** [`openapi.llm.json`](./openapi.llm.json) declares `x-service-type: "llm/v1"` — the interchangeable-agent contract. It is defined entirely by that document: the request/response body is the **OpenAI chat-completions shape** (`{ model, messages }` in → an OpenAI `chat.completion` object out — `LLMChatRequest`/`LLMChatResponse`), plus the `x-interop-floor` (a compatible agent must advertise ≥1 `accepts[]` entry with USDC on Optimism `eip155:10` or Base `eip155:8453`, scheme `batch-settlement`). Payment stays x402 batch-settlement, so the OpenAI shape is for **body legibility, not drop-in OpenAI-SDK use** — a stock SDK sends `Authorization: Bearer` and can't satisfy the 402. Streaming is not supported. `model` is validated against the advertised id(s) (`mistral-large-latest`; more can be added later).
-
-### `search_api.ts` - Web Access for /assistent (x402)
-
-The assistant's two web tools, sold per call. `search_service.ts` proxies Brave's LLM Context API; `web_fetch_service.ts` retrieves one arbitrary page.
-
-**Endpoint:** GET to `web-agent.fretchen.eu` — named for what it does rather than for `searchapi`, which is only half of it, and carrying the `-agent` suffix that marks the paid sellers. The generated Scaleway hostname still answers; this is the identity the 402 advertises and the one discovery lists.
-
-| Method | Path      | Price       | Atomic units |
-| ------ | --------- | ----------- | ------------ |
-| GET    | `/search` | $0.01 USDC  | `10000`      |
-| GET    | `/fetch`  | $0.001 USDC | `1000`       |
-
-**One way in: everybody pays.** There was an owner-signature path that served for free, justified as what let server-side callers work without a funded wallet. It was removed once that proved to name a consumer that does not exist — `growth-agent` never called this endpoint, the frontend stopped using it when the assistant's tools moved to paid fetch, and the buyer notebook's owner cell was a demonstration. `genimg` and `llmx402` never had such a path. The consequence, accepted deliberately: there is no free path and no testnet, so exercising these routes costs real money — the same trade `genimg` already makes.
-
-**Payment is x402 batch-settlement on the chat's channel.** `createLLMResourceServer` is shared with `sc_llm_x402.ts`, giving both the same receiver, receiver authorizer, token and withdraw delay — the tuple `computeChannelId` hashes. A tool call from `/assistent` therefore bills onto the channel the chat already funded, with no second deposit, and `llmx402cron` claims it unchanged. The exact scheme could not be used at these prices: the facilitator's flat 0.01 USDC per settlement is the entire price of a search.
-
-**Mainnet only** (`eip155:10`, `eip155:8453`), unlike the chat. Testnet USDC is free and both routes spend real money — Brave bills per query, `/fetch` is egress — so a testnet offer would hand out a metered API for nothing.
-
-**Settlement follows success.** Verify → run → settle, so an upstream failure or a refused URL costs the caller nothing. The advertised `maxTimeoutSeconds` is 30 rather than the chat's 120, because a lock orphaned that way sits on the shared channel and would block the user's next chat message.
-
-**The SSRF defence is unchanged by payment.** A payment authorises a fetch, not a fetch of `169.254.169.254`. See the header comment of [`web_fetch_service.ts`](./web_fetch_service.ts).
-
-**Refunds, and the one exercise that tests them.** Cooperative refunds are the seller's job (`llmx402cron`, or `scripts/recover_channels.ts` on demand), and the SDK builds each one entirely from the **stored** channel record — the amount from `balance - chargedCumulativeAmount`, the candidate filter from `balance !== 0`, and the signature from `refundNonce`. All three are caches of chain state, and all three have gone stale in production. `resyncChannelState` re-reads them before every sweep, which is the only thing standing between a working refund and a permanently broken one.
+**Refunds, and the one exercise that tests them.** Cooperative refunds are the cron's job (`llmx402cron`, or `scripts/recover_channels.ts` on demand), and the SDK builds each one entirely from the **stored** channel record — the amount from `balance - chargedCumulativeAmount`, the candidate filter from `balance !== 0`, and the signature from `refundNonce`. All three are caches of chain state, and all three have gone stale in production. `resyncChannelState` re-reads them before every sweep, which is the only thing standing between a working refund and a permanently broken one.
 
 The failure mode that hid for months: a successful refund **deletes** the channel record, and a later deposit with the same voucher signer recreates it with `refundNonce: 0` while the chain has moved on. Every later refund is then signed against a consumed nonce and reverts (`0x164f1afe`) — and because the SDK's refund loop has no per-channel catch, one such channel blocks the whole sweep. 2.08 USDC accumulated behind it.
 
 No unit test can catch that: every test here replaces the chain with a mock that agrees with the local record by construction. The exercise that _would_ catch it needs a real chain, and it must **refund the same channel twice** — a single refund passes and proves nothing, because the nonce only goes stale after the first one. On Base Sepolia (free USDC, and the escrow contract is deployed there):
 
 ```bash
-# 1. buyer: open a channel and spend on it — scw_js/notebooks/sc_llm_x402_buyer.ipynb (USE_BASE, testnet)
+# 1. buyer: open a channel and spend on it — bunny_js/notebooks/llm_x402_buyer.ipynb (USE_BASE, testnet)
 # 2. seller: claim what is owed, then refund the rest
 npx tsx scripts/recover_channels.ts eip155:84532 --apply
 # 3. buyer: run the notebook again — same voucher signer, so the SAME channelId is re-funded
@@ -198,15 +178,15 @@ Set a dedicated provider (e.g. Alchemy) as a Scaleway secret for production:
 
 ### ERC-8004 agent registration
 
-Each x402 origin is a registered ERC-8004 agent on **Base** (Identity Registry `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`, `eip155:8453`). The on-chain `agentURI` is the origin's own `https://<origin>/.well-known/agent-registration.json`, so the endpoint and the identity share a domain.
+Each x402 origin is a registered ERC-8004 agent on **Base** (Identity Registry `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`, `eip155:8453`). The on-chain `agentURI` is the origin's own `https://<origin>/.well-known/agent-registration.json`, so the endpoint and the identity share a domain. The llm and web identities (97599, 97600) keep their origins and files — they are just served by the bunny_js twins now; only the image-gen registration is built here.
 
-| Service    | Origin                               | agentId |
-| ---------- | ------------------------------------ | ------- |
-| Image gen  | `https://imagegen-agent.fretchen.eu` | 97598   |
-| LLM chat   | `https://llm-agent.fretchen.eu`      | 97599   |
-| Web access | `https://web-agent.fretchen.eu`      | 97600   |
+| Service    | Origin                               | agentId | Registration file served by |
+| ---------- | ------------------------------------ | ------- | --------------------------- |
+| Image gen  | `https://imagegen-agent.fretchen.eu` | 97598   | this package                |
+| LLM chat   | `https://llm-agent.fretchen.eu`      | 97599   | `bunny_js`                  |
+| Web access | `https://web-agent.fretchen.eu`      | 97600   | `bunny_js`                  |
 
-- **The file** is built per request by [`agent_registration.ts`](./agent_registration.ts) from the committed `openapi.*.json` (`info.title`, `info.description`, `servers[0].url`), so it cannot drift from the published API document. Beyond the EIP fields it carries the two services the [8004scan Agent Metadata Standard](https://best-practices.8004scan.io/docs/01-agent-metadata-standard.html) recommends: `OASF` (skills and domains from the OASF v0.8.0 taxonomy, pinned in `OASF`; check a new slug exists in agntcy/oasf before adding it) and `agentWallet` (the 402 `payTo` as CAIP-10 on Base and Optimism, from `NFT_WALLET_PUBLIC_KEY`). The ids live in `AGENT_IDS` there; `test/agent_registration.test.ts` pins them to `eth/scripts/deployments/erc8004-agents-base.json`.
+- **The file** is built per request by [`agent_registration.ts`](./agent_registration.ts) from the committed `openapi.genimg.json` (`info.title`, `info.description`, `servers[0].url`), so it cannot drift from the published API document. Beyond the EIP fields it carries the two services the [8004scan Agent Metadata Standard](https://best-practices.8004scan.io/docs/01-agent-metadata-standard.html) recommends: `OASF` (skills and domains from the OASF v0.8.0 taxonomy, pinned in `OASF`; check a new slug exists in agntcy/oasf before adding it) and `agentWallet` (the 402 `payTo` as CAIP-10 on Base and Optimism, from `NFT_WALLET_PUBLIC_KEY`). The ids live in `AGENT_IDS` there; `test/agent_registration.test.ts` pins them to `eth/scripts/deployments/erc8004-agents-base.json`.
 - **Ownership:** the agents are owned by the contract-owner EOA (`0x1af51D…fBB20`), not by a key in the function secrets, so a leaked server secret cannot repoint or transfer an identity. The registry's `agentWallet` is bound to the x402 `payTo` (`NFT_WALLET`), so `getAgentWallet(agentId)` equals the `payTo` in every 402.
 - **Changing it:** registering, clearing or re-binding the wallet is `eth/scripts/register-agents.ts` (usage, rollout and safety are in its JSDoc; dry run by default). Updating an `agentURI` is `setAgentURI` from the owner key.
 - **Check a deployment:**
@@ -221,11 +201,11 @@ Each file must list its `agentId` and `eip155:8453:0x8004A169…` as `agentRegis
 
 ### Bazaar discovery metadata
 
-Every paid route's 402 challenge carries an `extensions.bazaar` block — the [x402 Bazaar discovery extension](https://docs.x402.org/extensions/bazaar): the route's method, an example request, and the request's JSON Schema, so a discovery layer can list and pre-validate the route without a paid probe. The `resource` object additionally carries the optional service metadata (`serviceName`, `tags`, `iconUrl`) facilitators use to enrich search results.
+Every paid route's 402 challenge carries an `extensions.bazaar` block — the [x402 Bazaar discovery extension](https://docs.x402.org/extensions/bazaar): the route's method, an example request, and the request's JSON Schema, so a discovery layer can list and pre-validate the route without a paid probe. The `resource` object additionally carries the optional service metadata (`serviceName`, `tags`, `iconUrl`) facilitators use to enrich search results. (The llm/search twins in `bunny_js` carry their own ported copies of this stack.)
 
 - **Built by** [`bazaar_discovery.ts`](./bazaar_discovery.ts): a thin wrapper over `declareDiscoveryExtension` from `@x402/extensions` (same org as `@x402/core`), with the input schemas derived via `z.toJSONSchema` from the same Zod request schemas the OpenAPI specs are generated from — one source of truth, including the strictness distinction (`z.object` vs `z.looseObject`). `test/bazaar_discovery.test.ts` pins the wire shape and runs each block through the package's own `validateDiscoveryExtension`.
 - **Wired in** `x402_server.ts`: both `createPaymentRequirements` and `createBatchSettlementPaymentRequirements` accept `extensions`, `serviceName`, `tags`, `iconUrl`; the caller-supplied extensions merge with (never clobber) the existing `eip2612GasSponsoring` entry, and the metadata is sanitized onto `resource` by the package's soft-drop rules.
-- **This deployment is metadata-only.** Settlement runs through `facilitator.fretchen.eu`, so the Coinbase Bazaar does not index these routes. Full CDP Bazaar indexing would additionally require: (1) a settled payment through the **CDP Facilitator** with `paymentPayload.extensions.bazaar` and `paymentPayload.resource` set, (2) a CDP-supported `accepts` list — Base/USDC-shaped; the validator rejects `eip155:10` and non-USDC entries, and (3) a re-settlement at least every **30 days**, or the listing is dropped. The llm/search blocks could only ever lead to a listing via an exact-scheme alias route — the CDP Facilitator does not verify the batch-settlement scheme.
+- **This deployment is metadata-only.** Settlement runs through `facilitator.fretchen.eu`, so the Coinbase Bazaar does not index these routes. Full CDP Bazaar indexing would additionally require: (1) a settled payment through the **CDP Facilitator** with `paymentPayload.extensions.bazaar` and `paymentPayload.resource` set, (2) a CDP-supported `accepts` list — Base/USDC-shaped; the validator rejects `eip155:10` and non-USDC entries, and (3) a re-settlement at least every **30 days**, or the listing is dropped.
 - **Check a deployment** (free, no key; the same preflight the CDP Facilitator applies):
 
 ```bash
@@ -236,16 +216,9 @@ curl -X POST https://api.cdp.coinbase.com/platform/v2/x402/validate \
 
 Note: with the default mainnet offer (Optimism + Base), the validator still fails the `eip155:10` accepts entry — passing it fully would mean narrowing the default offer, a payment-flow decision this metadata-only deployment deliberately does not make.
 
-### MCP endpoint
+### 8004scan validation
 
-`mcp_server.ts` (deployed as the `mcp` function, `mcp-agent.fretchen.eu/mcp`) is a **stateless paid MCP endpoint**: JSON-RPC 2.0 over a single POST route, no sessions, no SSE — GET and DELETE answer `405`, which the Streamable HTTP spec allows a session-less server. No MCP SDK server runs inside it: a Scaleway function receives a parsed event, never Node's `req`/`res`, so the SDK's transports cannot attach — and the four messages a stateless server must answer (`initialize`, notifications → 202, `tools/list`, `tools/call`) are dispatched by hand.
-
-- **Tools** (`mcp_tools.ts`) are a **pure translation layer** over the real handlers: `tools/call` becomes an in-process invocation of `search_api.handle` / `sc_llm_x402.handle` with a synthetic event. No payment, pricing, or cost policy lives in the MCP surface — the handlers own all of it, so the MCP tools serve the same challenge config, prices, channels, and cost rules as the REST API and cannot drift from them. (A first version assembled its own challenge config around `@x402/mcp`'s payment wrapper and diverged — offering testnet accepts the search route forbids; the translation design makes that class of bug unconstructible. `@x402/mcp` remains only as the source of the two `_meta` key constants.)
-- **Payment** rides the handlers' native protocol, translated both ways: the client's `_meta["x402/payment"]` becomes the base64 `payment-signature` header (what every REST buyer sends); the handler's own 402 — whose body IS the PaymentRequired JSON (`create402Response`) — becomes the MCP payment-required result (`isError` + `structuredContent`, the official client's extraction form; JSON-RPC error `-32042` client-side); the handler's `Payment-Response` header becomes the settlement receipt in `_meta["x402/payment-response"]`. Clients pay with `@x402/mcp`'s `createx402MCPClient` (register `BatchSettlementEvmScheme` client-side, as the x402 MCP guide shows).
-- **Every cost and security rule is the handler's own**, inherited by construction: no-free-path (the translation layer runs no service code, it can only relay to the handler that enforces payment), mainnet-only search (testnet coins can never buy metered Brave queries), testnet-mocked completions (worthless coins never buy real Mistral spend), usage-derived settlement (the chat's authorize-ceiling/claim-usage split, no proxy needed). `test/mcp_server.test.ts` pins all four through the real handlers.
-- **Input schemas** come from the same Zod modules the OpenAPI specs are generated from — the MCP tools advertise exactly the real API's contract.
-- **Registry**: each agent's registration file declares the shared MCP service with its own `mcpTools` (`agent_registration.ts` → `MCP_SERVICE`); genimg has no MCP tool yet (its mint/no-mint decision is still open).
-- **Local check**: `npm run dev:mcp` serves `handle()` on `127.0.0.1:8086`; point `npx @modelcontextprotocol/inspector` at `http://127.0.0.1:8086/mcp` to exercise the handshake, the tool list, and the unpaid payment demand before any deploy. The buyer notebook `notebooks/mcp_x402_buyer.ipynb` drives the full paid walk — note that on testnet, paid `web_search` is unpayable by design (mainnet-only accepts); `chat_completion` is the testnet walk.
+(The stateless paid MCP endpoint that used to run here moved with its handlers to `bunny_js` — same origin, same tools.)
 
 8004scan is the external validator. Its API shows how it parsed each agent; `errors` and `warnings` should be empty:
 
@@ -261,8 +234,9 @@ Later, if wanted: tell paying clients they can leave feedback for the `agentId` 
 
 ### Stablecoins and pricing (USDC, EURC, EURe)
 
-All three sellers (image, chat, search) take **USDC on every network and EURC and EURe on
-Base / Base Sepolia**. Circle has no EURC and Monerium no EURe on Optimism. USDC, EURC and EURe
+All sellers take **USDC on every network and EURC and EURe on Base / Base Sepolia** — the image
+seller here, and the chat/search twins in `bunny_js`, whose channels this package's cron claims.
+Circle has no EURC and Monerium no EURe on Optimism. USDC, EURC and EURe
 are **three parallel price lists**: every price is set explicitly in each token, and nothing is
 converted between them. EURe has **18 decimals** (USDC and EURC have 6), so its atomic prices
 are twelve orders of magnitude larger than the same nominal price in EURC — `tokensToCost`
@@ -274,17 +248,13 @@ carries the optional `readContract` capability (`toClientEvmSigner(signer, publi
 see `website/hooks/useX402ImageGeneration.ts` and `website/utils/x402PaidFetch.ts`); a bare
 `{ address, signTypedData }` signer yields `permit2_allowance_required` instead.
 
-| What           | USDC               | EURC               | EURe               | Where it is set                                                                        |
-| -------------- | ------------------ | ------------------ | ------------------ | -------------------------------------------------------------------------------------- |
-| Image          | 0.07               | 0.06               | 0.06               | `USDC_PAYMENT_AMOUNT` / `EURC_PAYMENT_AMOUNT` / `EURE_PAYMENT_AMOUNT` (serverless.yml) |
-| Search / fetch | 0.01 / 0.001       | 0.01 / 0.001       | 0.01 / 0.001       | `PRICE_ATOMIC` in `search_schemas.ts`                                                  |
-| Chat           | Mistral's USD card | Mistral's EUR card | Mistral's EUR card | `pricePerMillion` in `llm_service.ts`                                                  |
+| What  | USDC | EURC | EURe | Where it is set                                                                        |
+| ----- | ---- | ---- | ---- | -------------------------------------------------------------------------------------- |
+| Image | 0.07 | 0.06 | 0.06 | `USDC_PAYMENT_AMOUNT` / `EURC_PAYMENT_AMOUNT` / `EURE_PAYMENT_AMOUNT` (serverless.yml) |
 
-The chat price is computed per message from token usage, on the rate card of the currency the
-channel is in: $0.50 / $1.50 per million input/output tokens, or €0.44 / €1.50 (EURC and EURe
-share the EUR card — a euro is a euro). Each card is the provider's own published price in that
-currency. OpenAPI `x-payment-info.price` must be quoted in USD, so it carries the USDC price;
-the EURC and EURe prices are stated in the description.
+The chat and web prices (Mistral's USD/EUR rate cards per million tokens; $0.01/$0.001 per
+search/fetch call) are set in `bunny_js` now — the ported `llm_service.ts` and
+`search_schemas.ts` there carry them unchanged.
 
 - **Preference:** on Base the 402 lists EURe, then EURC, then USDC (`STABLECOIN_PREFERENCE`). A
   stock x402 client pays with the first entry its spend controls allow, and the SDK's built-in
@@ -327,8 +297,7 @@ npm run dev:x402
 # Growth API (port 8083)
 npm run dev:growth
 
-# LLM Chat (x402 batch-settlement)
-npm run dev:llmx402
+# LLM channel cron (x402 batch-settlement claims)
 npm run dev:llmx402cron
 ```
 

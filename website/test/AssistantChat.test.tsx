@@ -204,7 +204,7 @@ import { usePageContext } from "vike-react/usePageContext";
 /** The first wallet with analytics scope — the scope `get_analytics` is gated on. */
 const OWNER_ADDRESS = OWNER_SCOPES.analytics[0];
 
-/** A tool-call turn, as sc_llm_x402 returns it: content: null, finish_reason: "tool_calls". */
+/** A tool-call turn, as the bunny_js llm twin returns it: content: null, finish_reason: "tool_calls". */
 function toolCallResponse(name: string, args: Record<string, unknown>) {
   return {
     choices: [

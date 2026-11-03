@@ -53,7 +53,7 @@ has a buyer calling `/verify`, it is wrong.
 | Role                         | Component                                 | Deployed as        | Key files                                                                                                                                        |
 | ---------------------------- | ----------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Client / buyer**           | `website/` — `/imagegen` and `/assistent` | GitHub Pages       | `hooks/useX402ImageGeneration.ts`, `hooks/useX402Chat.ts` — both use `wrapFetchWithPayment` from `@x402/fetch`                                   |
-| **Resource server / seller** | `scw_js/` — two paid endpoints            | Scaleway Functions | `genimg_x402_token.ts` → `imagegen-agent.fretchen.eu`; `sc_llm_x402.ts` → `llm-agent.fretchen.eu`; shared `x402_server.ts` (`create402Response`) |
+| **Resource server / seller** | `scw_js/` (image) + `bunny_js/` (llm, search, mcp) | Scaleway Function + Bunny Edge Scripts | image: `scw_js/genimg_x402_token.ts` → `imagegen-agent.fretchen.eu`; llm/search/mcp: `bunny_js/src/llm_routes.ts`, `searchapi_routes.ts`, `mcp_routes.ts` → `llm-agent` / `web-agent` / `mcp-agent.fretchen.eu` (shared ported `x402_server.ts`) |
 | **Facilitator**              | `x402_facilitator/`                       | Scaleway Functions | `x402_facilitator.ts` — `/verify`, `/settle`, `/supported` at `facilitator.fretchen.eu`                                                          |
 
 Plus `scw_js/llm_x402_cron.ts` — a 12-hourly cron that claims and settles accumulated
@@ -61,7 +61,7 @@ batch-settlement channels. It is seller-side infrastructure, not a fourth role.
 
 **The trap:** `/imagegen` and `/assistent` are _buyers_. They are the site's own UIs, which makes
 them feel like "the product we sell" — but they spend USDC, they do not collect it. The sellers
-are the `*-agent.fretchen.eu` Scaleway endpoints those pages call. `website/pages/x402/buyers/+Page.tsx`
+are the `*-agent.fretchen.eu` endpoints those pages call (image gen on Scaleway; llm, web and MCP on Bunny Edge Scripts — the `bunny_js` twins). `website/pages/x402/buyers/+Page.tsx`
 states it plainly: the endpoints are _"consumed on the site by"_ the Image Generator and the
 assistant. "Consumed by" identifies the client.
 

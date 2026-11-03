@@ -68,7 +68,7 @@ export interface X402PaymentReceipt {
 export type X402GenerationStatus = "idle" | "awaiting-signature" | "processing" | "topping-up" | "success" | "error";
 
 /**
- * x402 Payment Types for the batch-settlement LLM chat service (sc_llm_x402).
+ * x402 Payment Types for the batch-settlement LLM chat service (the bunny_js llm twin).
  *
  * Unlike the exact scheme above, chat uses batch-settlement payment channels:
  * the first message opens a channel (one on-chain deposit), later messages are
@@ -82,18 +82,18 @@ export interface X402ToolCall {
   function: { name: string; arguments: string };
 }
 
-/** A tool definition offered to the model, OpenAI shape. Mirrors `scw_js/llm_schemas.ts`. */
+/** A tool definition offered to the model, OpenAI shape. Mirrors `bunny_js/src/llm_schemas.ts`. */
 export interface X402Tool {
   type: "function";
   function: { name: string; description?: string; parameters: Record<string, unknown> };
 }
 
 /**
- * A single chat turn, matching the OpenAI `messages[]` contract of sc_llm_x402.ts.
+ * A single chat turn, matching the OpenAI `messages[]` contract of bunny_js/src/llm_routes.ts.
  *
  * `content` is nullable/optional because an assistant turn requesting a tool call has none, and
  * `tool_calls`/`tool_call_id` only appear on those turns and their `role: "tool"` results
- * respectively. See `scw_js/llm_service.ts`'s `LLMMessage` — this is the wire shape it validates.
+ * respectively. See `bunny_js/src/llm_service.ts`'s `LLMMessage` — this is the wire shape it validates.
  */
 export interface X402ChatMessage {
   role: string;
@@ -103,7 +103,7 @@ export interface X402ChatMessage {
 }
 
 /**
- * OpenAI chat.completion response from sc_llm_x402.ts on a settled request. The reply text is
+ * OpenAI chat.completion response from bunny_js/src/llm_routes.ts on a settled request. The reply text is
  * `choices[0].message.content`; `usage` is what the endpoint settled the charge from.
  *
  * `content` is nullable and `tool_calls` present exactly when `finish_reason` is `"tool_calls"`.

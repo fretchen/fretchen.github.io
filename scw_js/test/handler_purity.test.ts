@@ -25,7 +25,7 @@ describe("handler purity", () => {
   it("found the handlers in serverless.yml", () => {
     // Guards against the regex silently matching nothing, which would make the next
     // assertion vacuously pass.
-    expect(handlerSources.length).toBeGreaterThanOrEqual(5);
+    expect(handlerSources.length).toBeGreaterThanOrEqual(3);
   });
 
   it("no deployed handler references fastify", () => {

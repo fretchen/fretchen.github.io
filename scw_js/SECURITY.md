@@ -18,11 +18,10 @@ Serverless functions in `scw_js/`. See [../.github/THREAT_MODEL.md](../.github/T
 
 Unfixed vulnerabilities are tracked privately via GitHub Security Advisories. The table below lists them without attack-vector detail.
 
-| Function                  | Area                                                           | Severity | Status                          |
-| ------------------------- | -------------------------------------------------------------- | -------- | ------------------------------- |
-| `sc_llm` / `llm_service`  | Pre-charge balance gate weaker than the settlement requirement | Medium   | Open — tracked privately        |
-| `genimg_x402_token`       | Resource delivered before payment settlement is confirmed      | Medium   | Open — tracked privately        |
-| S3 bucket `my-imagestore` | Anonymous bucket listing enabled (key-name disclosure)         | Low      | Accepted / deferred — see below |
+| Function                  | Area                                                      | Severity | Status                          |
+| ------------------------- | --------------------------------------------------------- | -------- | ------------------------------- |
+| `genimg_x402_token`       | Resource delivered before payment settlement is confirmed | Medium   | Open — tracked privately        |
+| S3 bucket `my-imagestore` | Anonymous bucket listing enabled (key-name disclosure)    | Low      | Accepted / deferred — see below |
 
 ---
 
@@ -30,13 +29,13 @@ Unfixed vulnerabilities are tracked privately via GitHub Security Advisories. Th
 
 **Finding:** The bucket `my-imagestore` (Scaleway Object Storage, `nl-ams`) allows anonymous `ListBucket`: `GET https://my-imagestore.s3.nl-ams.scw.cloud/?list-type=2` returns 200 and enumerates all object keys, including the private `growth-agent/`, `comments/`, and `terraform/` prefixes. Object _contents_ are correctly protected (verified: `growth-agent/content_queue.json` and `terraform/*.tfstate` return 403 anonymously). Impact is limited to **key-name disclosure** — no secret content is exposed. No GHSA: this is an infrastructure configuration issue, not a vulnerability in shipped code.
 
-**Not a finding — `merkle/trees.json` is public by design.** An earlier draft of this note flagged the merkle tree as a content leak. That was incorrect. Leaf data (`{user, tokenCount, cost, timestamp, …}`) is public by design: settled batches are published on-chain as `LLMv1.processBatch` calldata, and the usage ledger is treated as a transparent, public record. Only the merkle _root_ is a commitment; the leaves are not secrets. The write paths in `llm_service.ts` set `ACL: public-read` deterministically, matching the [README data classification](./README.md).
+**Not a finding — `merkle/trees.json` is public by design.** An earlier draft of this note flagged the merkle tree as a content leak. That was incorrect. Leaf data (`{user, tokenCount, cost, timestamp, …}`) is public by design: settled batches are published on-chain as `LLMv1.processBatch` calldata, and the usage ledger is treated as a transparent, public record. Only the merkle _root_ is a commitment; the leaves are not secrets. The write paths in the `llm_service` port (`bunny_js/src/llm_service.ts`) set `ACL: public-read` deterministically, matching the [README data classification](./README.md).
 
 Consistency note (resolved 2026-07-07): a prior version kept the `leafhistory` read endpoint behind a per-address wallet-signature gate while the same data was public in S3 — a control that provided no real confidentiality (the data is reachable on-chain and via the public object) and muddied the model. Under the chosen transparency posture, that gate was **removed**: `leaf_history` is now an unauthenticated public reader, so there is no confidentiality control to bypass. The pending-leaf early-disclosure (unsettled entries visible before they reach the chain) is an accepted consequence of treating usage data as public. If usage privacy is ever required, the correct fix is architectural (publish only the root on-chain and settle via ZK/commitments, keeping leaves off-chain) — explicitly not chosen here.
 
 **Write paths are correct** — each object's ACL matches its classification:
 
-- Public assets (`images/`, `metadata/`) and `merkle/trees.json` set `ACL: public-read` explicitly per object (`image_service.ts` `uploadToS3`; `llm_service.ts` merkle writes).
+- Public assets (`images/`, `metadata/`) and `merkle/trees.json` set `ACL: public-read` explicitly per object (`image_service.ts` `uploadToS3`; the ported `bunny_js/src/llm_service.ts` merkle writes).
 - Growth-agent state and comment-service writes set no ACL and default to private (`growth_service.ts`, `growth-agent/agent/storage.py`).
 
 **Status: accepted low-severity risk.** The only residual exposure is enumeration of private _key names_ (e.g. growth-agent operational cadence from log filenames). Deferred, not fixed. If closed later, the single infra action is:
@@ -58,5 +57,5 @@ Nothing in the repo relies on anonymous listing (the website fetches direct obje
 - Wallet authentication via signed-message bearer tokens with a bounded freshness window (`auth_utils.ts` — timestamped message, address match, signature verification)
 - EIP-3009 nonce binding enforces recipient/amount on settlement (facilitator + Splitter), so a relayer cannot redirect funds
 - Image metadata URLs validated against an allowlisted host before fetch (`genimg_x402_token.ts`)
-- The MCP endpoint (`mcp_server.ts`, deployed as the `mcp` function at `mcp-agent.fretchen.eu/mcp`) holds no payment, pricing, or cost logic: each `tools/call` relays in-process to the real handlers (`search_api.handle` / `sc_llm_x402.handle`), inheriting their controls by construction — no free path, mainnet-only search, testnet-mocked completions, usage-derived settlement — pinned by `test/mcp_server.test.ts`
+- The paid MCP endpoint's no-logic translation layer (now `bunny_js/src/mcp_tools.ts`, `mcp-agent.fretchen.eu/mcp`) relays each `tools/call` to the real handlers in-process, inheriting their controls by construction — no free path, mainnet-only search, testnet-mocked completions, usage-derived settlement — pinned by `bunny_js/test/mcp.test.ts`
 - Secrets supplied via Scaleway secret env vars, never committed; CORS handled per-function

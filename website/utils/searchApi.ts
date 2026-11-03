@@ -1,5 +1,5 @@
 /**
- * Base URL of the `searchapi` Scaleway function (`scw_js/search_api.ts`), which serves
+ * Base URL of the `searchapi` Bunny Edge Script (`bunny_js/src/searchapi_routes.ts`), which serves
  * `GET /search?q=` in front of Brave's LLM Context API and `GET /fetch?url=` for one arbitrary
  * page.
  *

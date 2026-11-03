@@ -10,8 +10,8 @@ Monorepo for a blockchain-based AI service platform. Each subdirectory is an ind
 | --------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------- |
 | `website/`            | Frontend (Vike SSR + React 19 + Panda CSS)                  | [`README`](website/README.md) · [`AGENTS.md`](website/AGENTS.md) |
 | `eth/`                | Solidity smart contracts (Hardhat, Optimism L2)             | [`README`](eth/README.md) · [`AGENTS.md`](eth/AGENTS.md)         |
-| `scw_js/`             | Serverless backend (Scaleway Functions, AI image gen + LLM) | [`README`](scw_js/README.md)                                     |
-| `bunny_js/`           | Bunny Edge Script twins of the `scw_js` x402 sellers (first: searchapi) | [`README`](bunny_js/README.md)                         |
+| `scw_js/`             | Serverless backend (Scaleway Functions: image gen, channel cron, growth API) | [`README`](scw_js/README.md)                                     |
+| `bunny_js/`           | Bunny Edge Scripts: the x402 llm/search/mcp sellers (plus the scw twins' origin domains) | [`README`](bunny_js/README.md)                         |
 | `x402_facilitator/`   | EIP-3009 USDC payment facilitator (Scaleway Functions)      | [`README`](x402_facilitator/README.md)                           |
 | `comment_service/`    | Blog comment backend (Scaleway Functions)                   | [`README`](comment_service/README.md)                            |
 | `analytics/`          | Serverless pageview counter (Scaleway Functions, S3-backed) | [`README`](analytics/README.md)                                  |
@@ -72,7 +72,7 @@ Single Scaleway Function per package with **path-based routing** (`/verify`, `/s
 Use the **`x402`** skill before writing or reviewing anything that names an x402 role — it carries
 the official vocabulary, this repo's verified role map, and links to the spec. The role map is
 counterintuitive and has been published wrong: `/imagegen` and `/assistent` are **buyers**
-(they spend USDC), the `*-agent.fretchen.eu` Scaleway endpoints they call are the **sellers**.
+(they spend USDC), the `*-agent.fretchen.eu` endpoints they call are the **sellers** (image gen on Scaleway, llm/web/MCP on the bunny_js Edge Scripts).
 
 Two things that silently break payments if you get them wrong, both documented in detail where they belong:
 

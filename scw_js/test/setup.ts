@@ -110,7 +110,6 @@ export const testEnvironment = {
 
   // API tokens
   BFL_API_TOKEN: "test-bfl-token",
-  MISTRAL_API_KEY: "test-mistral-key",
 };
 
 export function setupTestEnvironment(envVars: Record<string, string> = {}) {

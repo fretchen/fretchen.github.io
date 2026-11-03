@@ -52,9 +52,9 @@ rules:
   #   Base and a withdrawDelay mismatch on Base Sepolia all presented identically as escrow that
   #   should have gone home.
   # Cron failed — "Refund sweep failed", "claimAndSettle failed", and "Failed to configure
-  #   batch-settlement resource server", the cron's own copy of the startup check llmx402/searchapi
-  #   have. services.yaml does not reach it: its selector is anchored against `.+llmx402`, which
-  #   never matches `…-llmx402cron`.
+  #   batch-settlement resource server", the cron's own copy of the startup check the bunny_js
+  #   sellers used to share. services.yaml does not reach it: its selector is anchored against
+  #   the genimg/growth functions, which never matches `…-llmx402cron`.
   # Fee allowance low — "Fee allowance nearly exhausted": days of lead time. claim/settle skip
   #   /verify, so this path gets no `remainingSettlements` warning from the facilitator — without
   #   this the approval simply runs out one day. (Was a warning; one rule carries one severity.)

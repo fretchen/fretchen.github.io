@@ -30,20 +30,26 @@ boundary, 2026-10-18 audit, three-script update 2026-10-20).
 
 ## Known Open Issues
 
-| Area                                       | Severity | Status                                                                                                                                      |
-| ------------------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Deploy-key blast radius (×3, one per twin) | Medium   | Bounded — trigger hygiene (push-to-main only) + rotate-on-suspicion; see THREAT_MODEL §2                                                    |
-| Secret-set copies across two platforms     | Medium   | Accepted for the trial — scw_js + up to three script envs carry the S3 pair and authorizer key; every copy must rotate together (see below) |
-| Deployed-runtime SigV4 + DNS verification  | Low      | Pending — local Deno PASS; both failure branches verified fail-closed; see below                                                            |
-| Undici-specific error matching on the edge | Low      | Watch item — unreachable hosts may 500 instead of 400 on bunny's runtime; see below                                                         |
-| `.env` copy drift vs `scw_js/.env`         | Low      | Accepted for the trial — the two secret sets must be rotated/copied together                                                                |
+| Area                                                                                                                   | Severity | Status                                                                                                                                                                                                                                                                                                                    |
+| ---------------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Deploy-key blast radius (×3, one per twin)                                                                             | Medium   | Bounded — trigger hygiene (push-to-main only) + rotate-on-suspicion; see THREAT_MODEL §2                                                                                                                                                                                                                                  |
+| Pre-charge balance gate weaker than the settlement requirement (ported `llm_service`/`llm_schemas`)                    | Medium   | Open — tracked privately (carried over from `scw_js/SECURITY.md` when the twins retired; THREAT_MODEL §5 API4)                                                                                                                                                                                                            |
+| Deliver-before-payment on the chat route (`llm_routes.ts`: the completion is generated before settlement is confirmed) | Medium   | Open — the LLM half of THREAT_MODEL §5 API6's "Deliver-before-payment in the LLM and genimg flows", moved with the llm twin from scw_js/SECURITY.md                                                                                                                                                                       |
+| Secret-set copies across two platforms                                                                                 | Medium   | Four copies until the scw_js deletion deploy lands: the three script envs plus the still-deployed scw_js llm/search/mcp functions (entries already removed from their `serverless.yml`). Every copy rotates together; after the deploy, console-revoke-check `BRAVE_API_KEY`/`MISTRAL_API_KEY` on the service (see below) |
+| Deployed-runtime SigV4 + DNS verification                                                                              | Low      | Pending — local Deno PASS; both failure branches verified fail-closed; see below                                                                                                                                                                                                                                          |
+| Undici-specific error matching on the edge                                                                             | Low      | Watch item — unreachable hosts may 500 instead of 400 on bunny's runtime; see below                                                                                                                                                                                                                                       |
+| `.env` copy drift vs `scw_js/.env`                                                                                     | Low      | Accepted — the S3 pair and receiver-authorizer key overlap with scw_js's still-deployed cron until its own rotation; keep the two `.env` files in sync when either rotates                                                                                                                                                |
 
-**Secret-copy rotation coupling (2026-10-20, three-script update).** The channel-store S3
-credential pair and the receiver-authorizer private key exist in `scw_js`'s Scaleway secrets
-and in each twin's script env — searchapi, llm, and mcp all charge the same S3 channel
-store. A rotation that touches any one copy must touch all of them in the same change, or
-the twins and Scaleway diverge on what "the same channel tuple" means. `BRAVE_API_KEY`
-couples searchapi + mcp; `MISTRAL_API_KEY` couples llm + mcp. No buyer key or owner key
+**Secret-copy rotation coupling (2026-10-20, three-script update; amended at the production
+switch).** The channel-store S3 credential pair and the receiver-authorizer private key exist
+in the still-deployed `scw_js` functions' Scaleway secrets and in each twin's script env —
+searchapi, llm, and mcp all charge the same S3 channel store. A rotation that touches any one
+copy must touch all of them in the same change, or the twins and Scaleway diverge on what
+"the same channel tuple" means. `BRAVE_API_KEY` couples searchapi + mcp; `MISTRAL_API_KEY`
+couples llm + mcp. The scw_js copies of those two disappear with the deletion deploy (the
+functions' `serverless.yml` entries are already removed; verify the console afterwards),
+which drops the S3 pair and authorizer key to the three script envs plus scw_js's own
+cron/genimg functions. No buyer key or owner key
 exists in any script env.
 
 **Deployed-runtime verification (2026-10-18 audit).** `node:crypto` (SigV4) and

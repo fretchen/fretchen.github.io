@@ -11,11 +11,6 @@ provider:
     SCW_SECRET_KEY: ${env:SCW_SECRET_KEY}
     SCW_ACCESS_KEY: ${env:SCW_ACCESS_KEY}
     BFL_API_TOKEN: ${env:BFL_API_TOKEN}
-    # Used by sc_llm_x402.ts (llmx402 function) — see LLM_PROVIDERS in llm_service.ts.
-    MISTRAL_API_KEY: ${env:MISTRAL_API_KEY}
-    # Brave LLM Context API, billed per query — see search_service.ts. Travels in an
-    # X-Subscription-Token header, so it can never be shipped to the browser.
-    BRAVE_API_KEY: ${env:BRAVE_API_KEY}
     NFT_WALLET_PRIVATE_KEY: ${env:NFT_WALLET_PRIVATE_KEY}
     NFT_WALLET_PUBLIC_KEY: ${env:NFT_WALLET_PUBLIC_KEY}
     USDC_PAYMENT_AMOUNT: ${env:USDC_PAYMENT_AMOUNT, "70000"}
@@ -70,12 +65,6 @@ functions:
     httpOption: redirected
     custom_domains:
       - imagegen-agent.fretchen.eu
-  llmx402:
-    handler: dist/sc_llm_x402.handle
-    description: "x402 batch-settlement LLM chat (USDC payment channels)"
-    httpOption: redirected
-    custom_domains:
-      - llm-agent.fretchen.eu
   llmx402cron:
     handler: dist/llm_x402_cron.handle
     description: "Claims and settles accumulated x402 batch-settlement channels every 12h"
@@ -90,19 +79,5 @@ functions:
     handler: dist/growth_api.handle
     description: "Growth Agent API - draft approval with wallet auth"
     httpOption: redirected
-    minScale: 0
-    maxScale: 1
-  searchapi:
-    handler: dist/search_api.handle
-    description: "x402 web access - Brave search and page fetch"
-    httpOption: redirected
-    custom_domains:
-      - web-agent.fretchen.eu
-  mcp:
-    handler: dist/mcp_server.handle
-    description: "Stateless MCP endpoint - paid tools (chat_completion, web_search) via x402 batch-settlement"
-    httpOption: redirected
-    custom_domains:
-      - mcp-agent.fretchen.eu
     minScale: 0
     maxScale: 1

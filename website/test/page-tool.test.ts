@@ -26,7 +26,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/** Mirrors the cap in scw_js/llm_schemas.ts, which the endpoint validates server-side. */
+/** Mirrors the cap in bunny_js/src/llm_schemas.ts, which the endpoint validates server-side. */
 const MAX_TOOLS_BYTES = 8192;
 
 function page(body: string, title = "A Post | fretchen.eu"): string {
@@ -361,7 +361,7 @@ describe("fetchers", () => {
 
 describe("tool budget", () => {
   /**
-   * `sc_llm_x402.ts` validates the cap server-side and answers a clean 400 — which the user
+   * `bunny_js/src/llm_routes.ts` validates the cap server-side and answers a clean 400 — which the user
    * sees only as a chat message that failed. Nothing else in the suite measures the array.
    * `note_findings` is not in the registry but rides along with the web tools, so it counts.
    */

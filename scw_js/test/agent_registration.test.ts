@@ -2,19 +2,18 @@
  * Pins the registration file to the EIP-8004 text ("Agent URI and Agent Registration File").
  * The EIP publishes no JSON Schema, so these assertions are the checkable form of its MUSTs.
  * Registry address: erc-8004-contracts README, Base mainnet Identity Registry.
+ *
+ * The llm (97599) and search (97600) agents keep their on-chain identities and registration
+ * files, but those are served by the bunny_js twins now — this package serves only genimg.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { AGENT_IDS, OASF, REGISTRY, buildAgentRegistration } from "../agent_registration.js";
 import genimgSpec from "../openapi.genimg.json" with { type: "json" };
-import llmSpec from "../openapi.llm.json" with { type: "json" };
-import searchSpec from "../openapi.search.json" with { type: "json" };
 
 const SERVICES = [
   { service: "genimg", spec: genimgSpec, origin: "https://imagegen-agent.fretchen.eu" },
-  { service: "llm", spec: llmSpec, origin: "https://llm-agent.fretchen.eu" },
-  { service: "search", spec: searchSpec, origin: "https://web-agent.fretchen.eu" },
 ] as const;
 
 describe("agent registration file (EIP-8004)", () => {
@@ -34,9 +33,11 @@ describe("agent registration file (EIP-8004)", () => {
     ) as { registry: string; agents: Record<string, { agentId: string }> };
 
     expect(recorded.registry).toBe(REGISTRY.address);
-    expect(
-      Object.fromEntries(Object.entries(recorded.agents).map(([k, v]) => [k, Number(v.agentId)])),
-    ).toEqual(AGENT_IDS);
+    // The deployments file also carries the llm/search agents (served by bunny_js now) —
+    // every id this package publishes must match what the registration script recorded.
+    for (const [service, id] of Object.entries(AGENT_IDS)) {
+      expect(Number(recorded.agents[service].agentId)).toBe(id);
+    }
   });
 
   describe.each(SERVICES)("$service", ({ service, spec, origin }) => {
@@ -80,37 +81,6 @@ describe("agent registration file (EIP-8004)", () => {
   });
 
   /**
-   * 8004scan Agent Metadata Standard → Service Types → MCP: an MCP service carries a
-   * date-formatted protocol version and the tool names. Only the llm and search agents
-   * declare it — the MCP endpoint serves their tools, and genimg has none there (yet).
-   */
-  describe.each(SERVICES)("$service MCP service", ({ service }) => {
-    const mcp = buildAgentRegistration(
-      {
-        info: { title: "t", description: "d" },
-        servers: [{ url: "https://example.com" }],
-        openapi: "3.1.0",
-      } as any,
-      service,
-    ).services.find((s) => s.name === "MCP");
-
-    if (service === "llm" || service === "search") {
-      it("declares the shared MCP endpoint with this agent's tools", () => {
-        expect(mcp).toMatchObject({
-          name: "MCP",
-          endpoint: "https://mcp-agent.fretchen.eu/mcp",
-          version: "2025-06-18",
-          mcpTools: [service === "llm" ? "chat_completion" : "web_search"],
-        });
-      });
-    } else {
-      it("stays absent for a service with no MCP tool", () => {
-        expect(mcp).toBeUndefined();
-      });
-    }
-  });
-
-  /**
    * 8004scan Agent Metadata Standard: an OASF service names the taxonomy repo and a semver
    * version, and carries at least one of skills/domains as `category/.../leaf` slugs.
    */
@@ -145,33 +115,13 @@ describe("agent registration file (EIP-8004)", () => {
           "media_and_entertainment/digital_media",
         ],
       },
-      llm: {
-        skills: [
-          "natural_language_processing/natural_language_generation/dialogue_generation",
-          "natural_language_processing/natural_language_generation/text_completion",
-          "natural_language_processing/information_retrieval_synthesis/question_answering",
-        ],
-        domains: [],
-      },
-      search: {
-        skills: [
-          "natural_language_processing/information_retrieval_synthesis/search",
-          "natural_language_processing/information_retrieval_synthesis/document_passage_retrieval",
-        ],
-        domains: [],
-      },
     });
-  });
-
-  it("omits an empty domains list instead of publishing []", () => {
-    const oasf = buildAgentRegistration(llmSpec, "llm").services.find((s) => s.name === "OASF");
-    expect(oasf).not.toHaveProperty("domains");
   });
 
   describe("agentWallet (x402Support: true SHOULD declare one)", () => {
     const PAY_TO = "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C";
     const wallets = (payTo?: string) =>
-      buildAgentRegistration(searchSpec, "search", payTo).services.filter(
+      buildAgentRegistration(genimgSpec, "genimg", payTo).services.filter(
         (s) => s.name === "agentWallet",
       );
 
@@ -190,12 +140,12 @@ describe("agent registration file (EIP-8004)", () => {
   });
 
   it("claims no registration for a service without an id", () => {
-    const original = AGENT_IDS.llm;
-    AGENT_IDS.llm = null;
+    const original = AGENT_IDS.genimg;
+    AGENT_IDS.genimg = null;
     try {
-      expect(buildAgentRegistration(llmSpec, "llm").registrations).toEqual([]);
+      expect(buildAgentRegistration(genimgSpec, "genimg").registrations).toEqual([]);
     } finally {
-      AGENT_IDS.llm = original;
+      AGENT_IDS.genimg = original;
     }
   });
 

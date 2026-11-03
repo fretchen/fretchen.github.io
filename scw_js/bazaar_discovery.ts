@@ -25,8 +25,6 @@ import {
 } from "@x402/extensions/bazaar";
 import { z } from "zod";
 import { ImageGenerationRequestSchema, ImageGenerationResponseSchema } from "./genimg_schemas.js";
-import { LLMChatRequestSchema, LLMChatResponseSchema } from "./llm_schemas.js";
-import { SearchQuerySchema, FetchQuerySchema, type Route } from "./search_schemas.js";
 
 export interface BazaarDiscoveryInput {
   method: "GET" | "POST";
@@ -97,71 +95,5 @@ export function buildGenimgBazaarExtension(): BazaarExtension {
       x_nft: { status: "minted", token_id: 97598, network: "eip155:8453" },
     },
     outputSchema: z.toJSONSchema(ImageGenerationResponseSchema) as Record<string, unknown>,
-  });
-}
-
-/** POST /llm — chat completion, paid via the batch-settlement channels. */
-export function buildLlmBazaarExtension(): BazaarExtension {
-  return buildBazaarExtension({
-    method: "POST",
-    // `model` is required by LLMChatRequestSchema; `network` is deliberately absent — unlisted
-    // keys are forwarded upstream (FORWARDED_OWN_KEYS in llm_schemas.ts), so an example that
-    // taught agents to send one would train them to ship junk to the model API.
-    inputExample: {
-      model: "mistral-large-latest",
-      messages: [
-        { role: "user", content: "Explain batch-settlement payment channels in one paragraph." },
-      ],
-    },
-    inputSchema: z.toJSONSchema(LLMChatRequestSchema) as Record<string, unknown>,
-    outputExample: {
-      id: "chatcmpl-bazaar-example",
-      object: "chat.completion",
-      created: 1_760_000_000,
-      model: "mistral-large-latest",
-      choices: [
-        {
-          index: 0,
-          message: { role: "assistant", content: "Payment channels escrow a deposit…" },
-          finish_reason: "stop",
-        },
-      ],
-      usage: { prompt_tokens: 24, completion_tokens: 60, total_tokens: 84 },
-    },
-    outputSchema: z.toJSONSchema(LLMChatResponseSchema) as Record<string, unknown>,
-  });
-}
-
-/**
- * GET /search and GET /fetch — one declaration per route, since the block names the method and
- * the query parameters, and the two routes sell different things at different prices.
- *
- * Responses are the provider's shape and deliberately not re-modelled (see
- * `SearchQueryResponse` in openapi.search.json), so the examples stand alone without a schema —
- * the block advertises the example, the OpenAPI spec documents the response.
- */
-export function buildSearchBazaarExtension(route: Route): BazaarExtension {
-  const inputExample =
-    route === "search"
-      ? { q: "ERC-8004 agent registry adoption" }
-      : { url: "https://www.fretchen.eu/" };
-  return buildBazaarExtension({
-    method: "GET",
-    inputExample,
-    inputSchema: z.toJSONSchema(
-      route === "search" ? SearchQuerySchema : FetchQuerySchema,
-    ) as Record<string, unknown>,
-    outputExample:
-      route === "search"
-        ? {
-            results: [
-              {
-                title: "ERC-8004: Trustless Agents",
-                url: "https://eips.ethereum.org/EIPS/eip-8004",
-                content: "…",
-              },
-            ],
-          }
-        : { title: "Fretchen", text: "…" },
   });
 }

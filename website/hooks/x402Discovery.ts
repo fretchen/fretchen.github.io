@@ -20,7 +20,7 @@ export interface AcceptsEntry {
 /**
  * The `llm/v1` interop floor: the scheme, and the set of networks of which an agent must
  * offer at least ONE, for a client here to be able to pay it. Mirrors `x-interop-floor` in
- * `scw_js/openapi.llm.json` — keep the two in sync.
+ * `bunny_js/src/openapi.llm.json` — keep the two in sync.
  *
  * Optimism is listed first because it is this site's default chat network (see
  * CHAT_NETWORKS in AssistantChat.tsx); the floor itself is order-independent, but callers
@@ -86,7 +86,7 @@ export function agentOrigin(agentUrl: string): string {
 
 /**
  * The unpaid probe body every discovery path sends: the OpenAI chat-completions shape of the
- * llm/v1 wire contract (see `scw_js/sc_llm_x402.ts`). `model` is necessarily a placeholder —
+ * llm/v1 wire contract (see `bunny_js/src/llm_routes.ts`). `model` is necessarily a placeholder —
  * discovering what an agent serves is the point of the probe — so a compliant agent must
  * answer with its 402 before validating it.
  *

@@ -1,14 +1,7 @@
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
-  entry: [
-    "genimg_x402_token.ts",
-    "sc_llm_x402.ts",
-    "llm_x402_cron.ts",
-    "growth_api.ts",
-    "search_api.ts",
-    "mcp_server.ts",
-  ],
+  entry: ["genimg_x402_token.ts", "llm_x402_cron.ts", "growth_api.ts"],
   format: "esm",
   platform: "node",
   target: "node22",

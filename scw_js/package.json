@@ -5,9 +5,7 @@
   "main": "index.js",
   "scripts": {
     "generate:openapi:genimg": "tsx scripts/generate-openapi-genimg.ts && prettier --write --log-level warn openapi.genimg.json",
-    "generate:openapi:llm": "tsx scripts/generate-openapi-llm.ts && prettier --write --log-level warn openapi.llm.json",
-    "generate:openapi:search": "tsx scripts/generate-openapi-search.ts && prettier --write --log-level warn openapi.search.json",
-    "generate:openapi": "npm run generate:openapi:genimg && npm run generate:openapi:llm && npm run generate:openapi:search",
+    "generate:openapi": "npm run generate:openapi:genimg",
     "build": "npm run generate:openapi && tsdown",
     "predeploy": "npm run fee-allowances",
     "deploy": "npm run build && npx osls deploy",
@@ -21,11 +19,8 @@
     "format:check": "prettier --check .",
     "check": "tsc --noEmit && npm run lint && npm run format:check && npm run test:coverage",
     "dev:x402": "NODE_ENV=test npx tsx dev_server_genimg.ts",
-    "dev:llmx402": "NODE_ENV=test npx tsx dev_server_llm.ts",
     "dev:llmx402cron": "NODE_ENV=test npx tsx llm_x402_cron.ts",
-    "dev:growth": "NODE_ENV=test npx tsx growth_api.ts",
-    "dev:search": "NODE_ENV=test npx tsx search_api.ts",
-    "dev:mcp": "NODE_ENV=test npx tsx dev_server_mcp.ts"
+    "dev:growth": "NODE_ENV=test npx tsx growth_api.ts"
   },
   "keywords": [],
   "author": "",

@@ -43,7 +43,7 @@ flow back into the threat model and findings documents through a normal PR.
 
 | Surface | Code paths | Play | Authoritative context |
 |---|---|---|---|
-| **Agent layer** (the assistant's tool loop) | `website/tools/`, `website/components/AssistantChat.tsx`, `website/utils/toolLoop.ts`, `scw_js/sc_llm_x402.ts`, `scw_js/llm_schemas.ts` | `plays/agent-security-audit.md`, then `plays/prompt-injection-testing.md` for the injection vectors it surfaces | THREAT_MODEL §5 agent table; `.agents/skills/chat-tools` (the tool contract: confirm gating, caps, withdrawal, owner scoping) |
+| **Agent layer** (the assistant's tool loop) | `website/tools/`, `website/components/AssistantChat.tsx`, `website/utils/toolLoop.ts`, `bunny_js/src/llm_routes.ts`, `bunny_js/src/llm_schemas.ts` | `plays/agent-security-audit.md`, then `plays/prompt-injection-testing.md` for the injection vectors it surfaces | THREAT_MODEL §5 agent table; `.agents/skills/chat-tools` (the tool contract: confirm gating, caps, withdrawal, owner scoping) |
 | **API layer** (Scaleway functions) | `scw_js/`, `x402_facilitator/`, `comment_service/`, `analytics/` and their published `openapi.*.json` | `plays/api-security-review.md` | THREAT_MODEL §4–§5; `scw_js/SECURITY.md`; `.agents/skills/x402` (payment roles — buyers/sellers, the facilitator whitelist) |
 
 ## Workflow

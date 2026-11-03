@@ -2,14 +2,14 @@
  * x402 Batch-Settlement Chat Hook
  *
  * Pays for LLM chat messages via x402 batch-settlement stablecoin payment channels (EURC or USDC)
- * (the `sc_llm_x402.ts` backend). The first message opens a channel (one on-chain
+ * (the `bunny_js` llm twin backend, `llm_routes.ts`). The first message opens a channel (one on-chain
  * deposit, wallet-signed); later messages are off-chain voucher signatures reusing
  * the open channel.
  *
  * Mirrors `useX402ImageGeneration.ts` (exact scheme) structurally, but batch-settlement
  * has no `registerBatchSettlementEvmScheme` helper — the scheme is constructed manually.
  * The client sequence here is the browser port of the verified blueprint in
- * `scw_js/notebooks/sc_llm_x402_buyer.ipynb`.
+ * `bunny_js/notebooks/llm_x402_buyer.ipynb`.
  */
 
 import { useState, useCallback, useEffect, useRef } from "react";
@@ -271,7 +271,7 @@ export function useX402Chat(
 
   /**
    * A `fetch` that pays on **this chat's channel**, for the paid tools `/assistent` offers during
-   * a turn (`scw_js/search_api.ts` sells as the same receiver, so the channel is the same one).
+   * a turn (`bunny_js/src/searchapi_routes.ts` sells as the same receiver, so the channel is the same one).
    *
    * Bound to the network and currency the turn's own send used, not to the caller's preference and
    * not to the rendered `paymentNetwork` (which can still hold a stale mount-time probe): a

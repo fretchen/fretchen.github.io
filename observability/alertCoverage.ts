@@ -48,7 +48,7 @@ export function sourceFiles(packageRoot: string): string[] {
 }
 
 /** Strips string/template literal contents — used so a phrase quoted as sample DATA (not a real
- *  logger/console call) can't be mistaken for one. See scw_js/llm_service.ts's mock chat
+ *  logger/console call) can't be mistaken for one. See the llm_service port in bunny_js/src/llm_service.ts's mock chat
  *  completion, which embeds the literal text "console.log(...)" inside a markdown code fence
  *  string. */
 export function stripStringLiterals(text: string): string {

@@ -148,11 +148,10 @@ export const AGENT_REGISTRATION_PATH = ".well-known/agent-registration.json";
 export const OASF_MANIFEST_PATH = ".well-known/oasf.json";
 
 /**
- * Version of this record (the record's own semver, not the taxonomy's) and the moment it was
- * created, per the OASF Record Guide's required fields. Bump the version when the record's
- * content changes; `created_at` stays the original creation time.
+ * The moment the record was created and its static author/locator fields, per the OASF Record
+ * Guide's required fields. The record's `version` is the spec's own `info.version` — the
+ * record is derived from that spec, so it versions with it.
  */
-const RECORD_VERSION = "1.0.0";
 const RECORD_CREATED_AT = "2026-11-03T20:19:30Z";
 const RECORD_AUTHORS = ["Fretchen"];
 const RECORD_LOCATORS = [
@@ -171,7 +170,7 @@ export function buildOasfRecord(spec: OpenApiSource, service: AgentService) {
   return {
     name: spec.info.title,
     description: spec.info.description,
-    version: RECORD_VERSION,
+    version: spec.info.version,
     schema_version: "0.8.0",
     authors: RECORD_AUTHORS,
     created_at: RECORD_CREATED_AT,
@@ -185,7 +184,7 @@ export function buildOasfRecord(spec: OpenApiSource, service: AgentService) {
 
 /** The parts of a committed `openapi.*.json` this file is derived from. */
 export interface OpenApiSource {
-  info: { title: string; description: string };
+  info: { title: string; description: string; version: string };
   servers: { url: string }[];
   openapi: string;
 }
@@ -196,17 +195,20 @@ export interface OpenApiSource {
  * out rather than publishing a wrong wallet. The registry's on-chain `agentWallet` stays the
  * authoritative value.
  */
+function agentWallets(payTo?: string) {
+  return payTo && /^0x[0-9a-fA-F]{40}$/.test(payTo)
+    ? PAYMENT_CHAINS.map((chainId) => ({
+        name: "agentWallet",
+        endpoint: `eip155:${chainId}:${payTo}`,
+      }))
+    : [];
+}
+
 export function buildAgentRegistration(spec: OpenApiSource, service: AgentService, payTo?: string) {
   const origin = spec.servers[0].url;
   const agentId = AGENT_IDS[service];
   const oasf = OASF[service];
-  const wallets =
-    payTo && /^0x[0-9a-fA-F]{40}$/.test(payTo)
-      ? PAYMENT_CHAINS.map((chainId) => ({
-          name: "agentWallet",
-          endpoint: `eip155:${chainId}:${payTo}`,
-        }))
-      : [];
+  const wallets = agentWallets(payTo);
   return {
     type: "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
     name: spec.info.title,
@@ -259,13 +261,7 @@ export function buildAgentRegistration(spec: OpenApiSource, service: AgentServic
  */
 export function buildMcpOriginRegistration(payTo?: string) {
   const origin = MCP_SERVICE.endpoint.replace(/\/mcp$/, "");
-  const wallets =
-    payTo && /^0x[0-9a-fA-F]{40}$/.test(payTo)
-      ? PAYMENT_CHAINS.map((chainId) => ({
-          name: "agentWallet",
-          endpoint: `eip155:${chainId}:${payTo}`,
-        }))
-      : [];
+  const wallets = agentWallets(payTo);
   const registrations = (["llm", "search"] as const)
     .map((service) => AGENT_IDS[service])
     .filter((id): id is number => id !== null)

@@ -404,10 +404,7 @@ export default function Page() {
               <code className={inlineCode}>USE_MAINNET = false</code>).
             </p>
             <p>
-              <SrcRef
-                path="bunny_js/notebooks/llm_x402_buyer.ipynb"
-                label="→ llm_x402_buyer.ipynb (Deno notebook)"
-              />
+              <SrcRef path="bunny_js/notebooks/llm_x402_buyer.ipynb" label="→ llm_x402_buyer.ipynb (Deno notebook)" />
             </p>
 
             <p>
@@ -907,8 +904,8 @@ export default function Page() {
             </div>
             <p>
               <strong>The first real payment.</strong> Point the{" "}
-              <SrcRef path="bunny_js/notebooks/llm_x402_buyer.ipynb" label="buyer notebook" /> at your server and run
-              it top to bottom. It opens a channel, sends a paid message, and prints the settlement — the fastest way to
+              <SrcRef path="bunny_js/notebooks/llm_x402_buyer.ipynb" label="buyer notebook" /> at your server and run it
+              top to bottom. It opens a channel, sends a paid message, and prints the settlement — the fastest way to
               see deposit → voucher → verify → settle actually working, and it stays on testnet unless you set{" "}
               <code className={inlineCode}>USE_MAINNET = true</code>.
             </p>

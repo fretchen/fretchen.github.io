@@ -5,8 +5,10 @@ Bunny Edge Scripts serving the x402 sellers that outgrew `scw_js`: **searchapi**
 `llm-agent.fretchen.eu` chat seller) and **mcp** (the `mcp-agent.fretchen.eu` stateless
 MCP endpoint), all paid per call/message via x402 batch-settlement. The switch is done:
 these scripts are the authoritative servers behind the three `-agent.fretchen.eu`
-domains, and the Scaleway twins they replaced have been deleted from `scw_js` — only
-its `llmx402cron` remains, claiming the channels these twins charge.
+domains, and the Scaleway twins they replaced are removed from `scw_js`'s
+`serverless.yml` — the plugin deletes the functions themselves on that package's next
+`npm run deploy` (run it before merging to make the docs' "retired" claims literal).
+Only `scw_js`'s `llmx402cron` remains, claiming the channels these twins charge.
 
 ## Architecture
 
@@ -90,7 +92,8 @@ false`; Node builtins stay external and MUST be imported through the `node:` pre
 ## Trial matrix (Task 6 — historical; superseded by the production switch)
 
 The formal switch happened: the three `-agent.fretchen.eu` domains serve these scripts in
-production, and the Scaleway twins were deleted from `scw_js`. The unpaid checks were run
+production, and the Scaleway twins' `serverless.yml` entries are removed from `scw_js` (the
+functions are deleted by its next `npm run deploy`). The unpaid checks were run
 during the trial; the paid/probe rows were overtaken by real production traffic rather than
 closed as one-off exercises, so their results live in the observability logs and on-chain
 settlements, not here.
@@ -108,9 +111,11 @@ settlements, not here.
 ## Status
 
 Ported and production. The three twins serve the llm, web and MCP sellers at their
-`*.fretchen.eu` origins; `scw_js` keeps only `genimgx402token`, `llmx402cron` (which claims
-these twins' channels) and `growthapi`. The original port plan (scaffold, bundle gate, SigV4
-spike, verbatim stack + tests, native routing + tests) is complete.
+`*.fretchen.eu` origins; `scw_js` deploys only `genimgx402token`, `llmx402cron` (which claims
+these twins' channels) and `growthapi` — the old twins' entries are gone from its
+`serverless.yml`, and its next `npm run deploy` deletes the retired functions from Scaleway.
+The original port plan (scaffold, bundle gate, SigV4 spike, verbatim stack + tests, native
+routing + tests) is complete.
 
 ## Deploy paths (both can coexist)
 

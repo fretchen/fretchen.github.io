@@ -54,10 +54,10 @@ interval: 1m
 rules:
   # The branches of the one filter below, in order. Each was its own rule until 2026-10-04.
   #
-# Upstream refusing us — "Could not reach BFL": a metered provider answered 401 (key revoked),
-#   429 (quota) or 5xx (their outage). Breaks a PAID product silently: the request fails, we never
-#   settle, and this line is the only trace. BFL throws, so its text is matched inside the
-#   serialized `err` of whichever handler caught it.
+  # Upstream refusing us — "Could not reach BFL": a metered provider answered 401 (key revoked),
+  #   429 (quota) or 5xx (their outage). Breaks a PAID product silently: the request fails, we never
+  #   settle, and this line is the only trace. BFL throws, so its text is matched inside the
+  #   serialized `err` of whichever handler caught it.
   # Key missing — "API token not found. Please configure the": thrown before any HTTP call, so no
   #   "could not reach" line exists. Covers BFL_API_TOKEN. An unset secret deploys as an EMPTY one,
   #   so a successful-looking deploy can still produce this.

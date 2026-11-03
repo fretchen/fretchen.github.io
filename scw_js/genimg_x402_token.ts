@@ -48,7 +48,7 @@ import {
   AGENT_REGISTRATION_PATH,
   OASF_MANIFEST_PATH,
   buildAgentRegistration,
-  buildOasfManifest,
+  buildOasfRecord,
 } from "./agent_registration.js";
 import { logger } from "./logger.js";
 import { offeredStablecoins, resolvePaidStablecoin, type PriceList } from "./stablecoin_pricing.js";
@@ -371,7 +371,7 @@ async function handle(
     };
   }
 
-  // The machine-readable manifest the registration file's OASF entry points at.
+  // The machine-readable OASF record the registration file's OASF entry points at.
   if (
     (event.httpMethod === "GET" || event.httpMethod === "HEAD") &&
     (event.path ?? "").replace(/^\/+/, "") === OASF_MANIFEST_PATH
@@ -379,7 +379,8 @@ async function handle(
     return {
       statusCode: 200,
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-      body: event.httpMethod === "HEAD" ? "" : JSON.stringify(buildOasfManifest("genimg")),
+      body:
+        event.httpMethod === "HEAD" ? "" : JSON.stringify(buildOasfRecord(openapiSpec, "genimg")),
     };
   }
 

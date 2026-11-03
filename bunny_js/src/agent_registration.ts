@@ -36,29 +36,53 @@ export const AGENT_IDS: Record<AgentService, number | null> = {
 /**
  * OASF v0.8.0 capabilities per service. Every slug is a path that exists under `schema/skills/`
  * or `schema/domains/` in agntcy/oasf at tag v0.8.0; 8004scan warns on unknown slugs, so check
- * the tree there before adding one.
+ * the tree there before adding one. Each entry also carries the taxonomy class `id` the OASF
+ * reference server (schema.oasf.outshift.com/0.8.0) assigns to that slug — composed as
+ * category×10000 + subcategory×100 + leaf for 3-level paths, category×100 + leaf for 2-level
+ * ones — which the OASF record served at `OASF_MANIFEST_PATH` needs (`{name, id}` items per
+ * the OASF Record Guide, docs.agntcy.org/oasf/agent-record-guide).
  */
-export const OASF: Record<AgentService, { skills: string[]; domains: string[] }> = {
+export interface OasfClass {
+  name: string;
+  id: number;
+}
+
+export const OASF: Record<AgentService, { skills: OasfClass[]; domains: OasfClass[] }> = {
   genimg: {
     skills: [
-      "multi_modal/image_processing/text_to_image",
-      "images_computer_vision/image_generation",
-      "images_computer_vision/image_to_image",
+      { name: "multi_modal/image_processing/text_to_image", id: 70102 },
+      { name: "images_computer_vision/image_generation", id: 206 },
+      { name: "images_computer_vision/image_to_image", id: 210 },
     ],
-    domains: ["media_and_entertainment/content_creation", "media_and_entertainment/digital_media"],
+    domains: [
+      { name: "media_and_entertainment/content_creation", id: 1302 },
+      { name: "media_and_entertainment/digital_media", id: 1303 },
+    ],
   },
   llm: {
     skills: [
-      "natural_language_processing/natural_language_generation/dialogue_generation",
-      "natural_language_processing/natural_language_generation/text_completion",
-      "natural_language_processing/information_retrieval_synthesis/question_answering",
+      {
+        name: "natural_language_processing/natural_language_generation/dialogue_generation",
+        id: 10204,
+      },
+      {
+        name: "natural_language_processing/natural_language_generation/text_completion",
+        id: 10201,
+      },
+      {
+        name: "natural_language_processing/information_retrieval_synthesis/question_answering",
+        id: 10302,
+      },
     ],
     domains: [],
   },
   search: {
     skills: [
-      "natural_language_processing/information_retrieval_synthesis/search",
-      "natural_language_processing/information_retrieval_synthesis/document_passage_retrieval",
+      { name: "natural_language_processing/information_retrieval_synthesis/search", id: 10306 },
+      {
+        name: "natural_language_processing/information_retrieval_synthesis/document_passage_retrieval",
+        id: 10305,
+      },
     ],
     domains: [],
   },
@@ -94,7 +118,7 @@ export const TAGS: Record<AgentService, string[]> = {
  */
 export function oasfCategories(service: AgentService): string[] {
   return [
-    ...new Set(OASF[service].domains.concat(OASF[service].skills).map((s) => s.split("/")[0])),
+    ...new Set(OASF[service].domains.concat(OASF[service].skills).map((s) => s.name.split("/")[0])),
   ];
 }
 
@@ -116,25 +140,46 @@ const MCP_TOOLS: Partial<Record<AgentService, string[]>> = {
 export const AGENT_REGISTRATION_PATH = ".well-known/agent-registration.json";
 
 /**
- * The machine-readable OASF manifest this origin serves for its service. The EIP shows the
- * OASF service `endpoint` as a resolvable manifest (`ipfs://{cid}`), not a human page; the
- * taxonomy declaration is published here so agent clients get a dead-end-free endpoint.
+ * The machine-readable OASF artifact each origin serves for its service. The EIP shows the
+ * OASF service `endpoint` as a resolvable artifact (`ipfs://{cid}`), and the CID-addressed
+ * artifact in OASF is the record — so this is a schema-valid OASF record, not a link to the
+ * taxonomy repo's human page.
  */
 export const OASF_MANIFEST_PATH = ".well-known/oasf.json";
 
 /**
- * The standalone OASF manifest served at `OASF_MANIFEST_PATH`. Same taxonomy fields as the
- * registration file's OASF entry, plus `source` pinning the tree the slugs come from — the
- * extra field lives here, not in the registration file, to keep that strictly profile-shaped.
+ * Version of this record (the record's own semver, not the taxonomy's) and the moment it was
+ * created, per the OASF Record Guide's required fields. Bump the version when the record's
+ * content changes; `created_at` stays the original creation time.
  */
-export function buildOasfManifest(service: AgentService) {
+const RECORD_VERSION = "1.0.0";
+const RECORD_CREATED_AT = "2026-11-03T20:19:30Z";
+const RECORD_AUTHORS = ["Fretchen"];
+const RECORD_LOCATORS = [
+  { type: "source_code", url: "https://github.com/fretchen/fretchen.github.io" },
+];
+
+/**
+ * The OASF record served at `OASF_MANIFEST_PATH`, per the OASF Record Guide
+ * (docs.agntcy.org/oasf/agent-record-guide): required name/description/version/schema_version/
+ * authors/created_at/skills, recommended domains and modules, optional locators. skills and
+ * domains carry the `{name, id}` taxonomy items pinned in `OASF`; the registration file's OASF
+ * entry keeps the bare slug strings, the shape the 8004scan profile expects there.
+ */
+export function buildOasfRecord(spec: OpenApiSource, service: AgentService) {
   const oasf = OASF[service];
   return {
-    name: "OASF",
-    version: "0.8.0",
-    source: OASF_SOURCE,
+    name: spec.info.title,
+    description: spec.info.description,
+    version: RECORD_VERSION,
+    schema_version: "0.8.0",
+    authors: RECORD_AUTHORS,
+    created_at: RECORD_CREATED_AT,
     skills: oasf.skills,
-    ...(oasf.domains.length > 0 ? { domains: oasf.domains } : {}),
+    domains: oasf.domains,
+    locators: RECORD_LOCATORS,
+    modules: [] as unknown[],
+    annotations: { taxonomy_tree: OASF_SOURCE },
   };
 }
 
@@ -177,8 +222,8 @@ export function buildAgentRegistration(spec: OpenApiSource, service: AgentServic
         name: "OASF",
         endpoint: `${origin}/${OASF_MANIFEST_PATH}`,
         version: "0.8.0",
-        skills: oasf.skills,
-        ...(oasf.domains.length > 0 ? { domains: oasf.domains } : {}),
+        skills: oasf.skills.map((s) => s.name),
+        ...(oasf.domains.length > 0 ? { domains: oasf.domains.map((s) => s.name) } : {}),
       },
       ...(MCP_TOOLS[service]
         ? [

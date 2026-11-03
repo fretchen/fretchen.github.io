@@ -29,7 +29,7 @@ import {
   AGENT_REGISTRATION_PATH,
   OASF_MANIFEST_PATH,
   buildAgentRegistration,
-  buildOasfManifest,
+  buildOasfRecord,
 } from "./agent_registration.js";
 import { faviconBase64, faviconContentType } from "./favicon.js";
 import openapiSpec from "./openapi.search.json" with { type: "json" };
@@ -357,9 +357,9 @@ export async function handleRequest(request: Request): Promise<Response> {
     );
   }
 
-  // The machine-readable manifest the registration file's OASF entry points at.
+  // The machine-readable OASF record the registration file's OASF entry points at.
   if (isGetOrHead && path === OASF_MANIFEST_PATH) {
-    return new Response(isHead ? null : JSON.stringify(buildOasfManifest("search")), {
+    return new Response(isHead ? null : JSON.stringify(buildOasfRecord(openapiSpec, "search")), {
       status: 200,
       headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
     });

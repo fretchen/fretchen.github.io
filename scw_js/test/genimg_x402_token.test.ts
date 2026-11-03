@@ -533,7 +533,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(head.body).toBe("");
     });
 
-    test("should serve the machine-readable OASF manifest on GET and HEAD /.well-known/oasf.json", async () => {
+    test("should serve the machine-readable OASF record on GET and HEAD /.well-known/oasf.json", async () => {
       const get = await handle(
         { httpMethod: "GET", headers: {}, body: "", path: "/.well-known/oasf.json" },
         {},
@@ -541,11 +541,17 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(get.statusCode).toBe(200);
       expect(get.headers["Content-Type"]).toBe("application/json");
       expect(get.headers["Access-Control-Allow-Origin"]).toBe("*");
-      const manifest = JSON.parse(get.body);
-      expect(manifest.name).toBe("OASF");
-      expect(manifest.version).toBe("0.8.0");
-      expect(manifest.source).toBe("https://github.com/agntcy/oasf/tree/v0.8.0");
-      expect(manifest.skills).toContain("multi_modal/image_processing/text_to_image");
+      const record = JSON.parse(get.body);
+      expect(record.schema_version).toBe("0.8.0");
+      expect(record.created_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+      expect(record.skills).toContainEqual({
+        name: "multi_modal/image_processing/text_to_image",
+        id: 70102,
+      });
+      expect(record.domains).toContainEqual({
+        name: "media_and_entertainment/content_creation",
+        id: 1302,
+      });
 
       const head = await handle(
         { httpMethod: "HEAD", headers: {}, body: "", path: "/.well-known/oasf.json" },

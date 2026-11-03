@@ -54,7 +54,12 @@ import {
   type SdkPaymentRequirements,
 } from "./x402_server.js";
 import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
-import { AGENT_REGISTRATION_PATH, buildAgentRegistration } from "./agent_registration.js";
+import {
+  AGENT_REGISTRATION_PATH,
+  OASF_MANIFEST_PATH,
+  buildAgentRegistration,
+  buildOasfManifest,
+} from "./agent_registration.js";
 import { faviconBase64, faviconContentType } from "./favicon.js";
 import { buildLlmBazaarExtension } from "./bazaar_discovery.js";
 import openapiSpec from "./openapi.llm.json" with { type: "json" };
@@ -119,6 +124,14 @@ export async function handleLLMRequest(request: Request): Promise<Response> {
           ),
       { status: 200, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
     );
+  }
+
+  // The machine-readable manifest the registration file's OASF entry points at.
+  if (isGetOrHead && path === OASF_MANIFEST_PATH) {
+    return new Response(isHead ? null : JSON.stringify(buildOasfManifest("llm")), {
+      status: 200,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
   }
 
   if (method === "GET" && path === "openapi.json") {

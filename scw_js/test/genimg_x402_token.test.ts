@@ -533,6 +533,28 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(head.body).toBe("");
     });
 
+    test("should serve the machine-readable OASF manifest on GET and HEAD /.well-known/oasf.json", async () => {
+      const get = await handle(
+        { httpMethod: "GET", headers: {}, body: "", path: "/.well-known/oasf.json" },
+        {},
+      );
+      expect(get.statusCode).toBe(200);
+      expect(get.headers["Content-Type"]).toBe("application/json");
+      expect(get.headers["Access-Control-Allow-Origin"]).toBe("*");
+      const manifest = JSON.parse(get.body);
+      expect(manifest.name).toBe("OASF");
+      expect(manifest.version).toBe("0.8.0");
+      expect(manifest.source).toBe("https://github.com/agntcy/oasf/tree/v0.8.0");
+      expect(manifest.skills).toContain("multi_modal/image_processing/text_to_image");
+
+      const head = await handle(
+        { httpMethod: "HEAD", headers: {}, body: "", path: "/.well-known/oasf.json" },
+        {},
+      );
+      expect(head.statusCode).toBe(200);
+      expect(head.body).toBe("");
+    });
+
     test("should serve the OpenAPI discovery document on GET /openapi.json", async () => {
       const event = {
         httpMethod: "GET",

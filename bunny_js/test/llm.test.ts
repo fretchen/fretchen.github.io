@@ -303,9 +303,47 @@ describe("sc_llm_x402", () => {
         name: "agentWallet",
         endpoint: `eip155:8453:${VALID_ADDRESS}`,
       });
+      // The AX discovery fields: trust models, agent_type, tags and categories (the OASF
+      // roots), and the OASF entry pointing at this origin's manifest, not the repo page.
+      const file = JSON.parse(res.body);
+      expect(file.supportedTrust).toEqual(["reputation", "crypto-economic"]);
+      expect(file.agent_type).toBe("service");
+      expect(file.tags).toEqual(["llm", "chat", "x402", "base"]);
+      expect(file.categories).toEqual(["natural_language_processing"]);
+      expect(file.services.find((s) => s.name === "OASF").endpoint).toBe(
+        "https://llm-agent.fretchen.eu/.well-known/oasf.json",
+      );
 
       const head = await handle(
         makeEvent({ httpMethod: "HEAD", path: "/.well-known/agent-registration.json" }) as never,
+        {},
+      );
+      expect(head.statusCode).toBe(200);
+      expect(head.body).toBe("");
+    });
+
+    it("serves the machine-readable OASF manifest on GET and HEAD /.well-known/oasf.json", async () => {
+      const res = await handle(
+        makeEvent({ httpMethod: "GET", path: "/.well-known/oasf.json" }) as never,
+        {},
+      );
+      expect(res.statusCode).toBe(200);
+      expect(res.headers["content-type"]).toBe("application/json");
+      expect(res.headers["access-control-allow-origin"]).toBe("*");
+      const manifest = JSON.parse(res.body);
+      expect(manifest).toEqual({
+        name: "OASF",
+        version: "0.8.0",
+        source: "https://github.com/agntcy/oasf/tree/v0.8.0",
+        skills: [
+          "natural_language_processing/natural_language_generation/dialogue_generation",
+          "natural_language_processing/natural_language_generation/text_completion",
+          "natural_language_processing/information_retrieval_synthesis/question_answering",
+        ],
+      });
+
+      const head = await handle(
+        makeEvent({ httpMethod: "HEAD", path: "/.well-known/oasf.json" }) as never,
         {},
       );
       expect(head.statusCode).toBe(200);

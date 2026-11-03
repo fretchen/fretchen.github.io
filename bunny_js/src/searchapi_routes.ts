@@ -25,7 +25,12 @@ import {
 } from "./search_schemas.js";
 import { CORS_HEADERS } from "./utils.js";
 import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
-import { AGENT_REGISTRATION_PATH, buildAgentRegistration } from "./agent_registration.js";
+import {
+  AGENT_REGISTRATION_PATH,
+  OASF_MANIFEST_PATH,
+  buildAgentRegistration,
+  buildOasfManifest,
+} from "./agent_registration.js";
 import { faviconBase64, faviconContentType } from "./favicon.js";
 import openapiSpec from "./openapi.search.json" with { type: "json" };
 import { buildSearchBazaarExtension } from "./bazaar_discovery.js";
@@ -350,6 +355,14 @@ export async function handleRequest(request: Request): Promise<Response> {
           ),
       { status: 200, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
     );
+  }
+
+  // The machine-readable manifest the registration file's OASF entry points at.
+  if (isGetOrHead && path === OASF_MANIFEST_PATH) {
+    return new Response(isHead ? null : JSON.stringify(buildOasfManifest("search")), {
+      status: 200,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    });
   }
 
   if (isGetOrHead && path === "openapi.json") {

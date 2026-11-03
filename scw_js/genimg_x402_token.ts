@@ -44,7 +44,12 @@ import openapiSpec from "./openapi.genimg.json" with { type: "json" };
 import { faviconBase64, faviconContentType } from "./favicon.js";
 import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
 import { buildGenimgBazaarExtension } from "./bazaar_discovery.js";
-import { AGENT_REGISTRATION_PATH, buildAgentRegistration } from "./agent_registration.js";
+import {
+  AGENT_REGISTRATION_PATH,
+  OASF_MANIFEST_PATH,
+  buildAgentRegistration,
+  buildOasfManifest,
+} from "./agent_registration.js";
 import { logger } from "./logger.js";
 import { offeredStablecoins, resolvePaidStablecoin, type PriceList } from "./stablecoin_pricing.js";
 
@@ -363,6 +368,18 @@ async function handle(
           : JSON.stringify(
               buildAgentRegistration(openapiSpec, "genimg", process.env.NFT_WALLET_PUBLIC_KEY),
             ),
+    };
+  }
+
+  // The machine-readable manifest the registration file's OASF entry points at.
+  if (
+    (event.httpMethod === "GET" || event.httpMethod === "HEAD") &&
+    (event.path ?? "").replace(/^\/+/, "") === OASF_MANIFEST_PATH
+  ) {
+    return {
+      statusCode: 200,
+      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      body: event.httpMethod === "HEAD" ? "" : JSON.stringify(buildOasfManifest("genimg")),
     };
   }
 

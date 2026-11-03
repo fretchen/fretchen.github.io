@@ -173,6 +173,47 @@ describe("mcp_routes (stateless paid MCP endpoint)", () => {
       expect(body.error).toContain("POST only");
     });
 
+    // The EIP's optional endpoint-domain proof: 8004scan's verification fetches this file on
+    // the MCP service domain and matches registrations against the on-chain agents — the 404
+    // it got before kept is_endpoint_verified false for both agents.
+    it("serves the ERC-8004 registration file for both relayed agents on GET and HEAD", async () => {
+      const res = await handle(
+        new Request("https://mcp-agent.fretchen.eu/.well-known/agent-registration.json"),
+      );
+      expect(res.status).toBe(200);
+      expect(res.headers.get("content-type")).toBe("application/json");
+      expect(res.headers.get("access-control-allow-origin")).toBe("*");
+      const file = JSON.parse(await res.text()) as {
+        type: string;
+        name: string;
+        registrations: { agentId: number; agentRegistry: string }[];
+        services: { name: string; endpoint: string }[];
+        supportedTrust: string[];
+      };
+      expect(file.type).toBe("https://eips.ethereum.org/EIPS/eip-8004#registration-v1");
+      expect(file.name).toBe("Fretchen MCP Gateway");
+      // One registration per on-chain agent whose tools this origin relays — the domain
+      // proof matches either agent against the Base mainnet registry.
+      expect(file.registrations).toEqual([
+        { agentId: 97599, agentRegistry: "eip155:8453:0x8004A169FB4a3325136EB29fA0ceB6D2e539a432" },
+        { agentId: 97600, agentRegistry: "eip155:8453:0x8004A169FB4a3325136EB29fA0ceB6D2e539a432" },
+      ]);
+      expect(file.services).toContainEqual({
+        name: "MCP",
+        endpoint: "https://mcp-agent.fretchen.eu/mcp",
+        version: "2025-06-18",
+      });
+      expect(file.supportedTrust).toEqual(["reputation", "crypto-economic"]);
+
+      const head = await handle(
+        new Request("https://mcp-agent.fretchen.eu/.well-known/agent-registration.json", {
+          method: "HEAD",
+        }),
+      );
+      expect(head.status).toBe(200);
+      expect(await head.text()).toBe("");
+    });
+
     it("serves discovery HTML at the origin root when the caller accepts HTML", async () => {
       const res = await handle(
         new Request("https://mcp-agent.fretchen.eu/", {

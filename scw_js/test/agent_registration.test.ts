@@ -9,7 +9,18 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { AGENT_IDS, OASF, REGISTRY, buildAgentRegistration } from "../agent_registration.js";
+import {
+  AGENT_IDS,
+  OASF,
+  OASF_MANIFEST_PATH,
+  OASF_SOURCE,
+  REGISTRY,
+  SUPPORTED_TRUST,
+  TAGS,
+  buildAgentRegistration,
+  buildOasfManifest,
+  oasfCategories,
+} from "../agent_registration.js";
 import genimgSpec from "../openapi.genimg.json" with { type: "json" };
 
 const SERVICES = [
@@ -76,7 +87,16 @@ describe("agent registration file (EIP-8004)", () => {
       expect(file.registrations).toEqual([
         { agentId: AGENT_IDS[service], agentRegistry: `eip155:8453:${REGISTRY.address}` },
       ]);
-      expect(file.supportedTrust).toEqual(["reputation"]);
+      // Both trust models: reputation (on-chain feedback) plus the crypto-economic x402
+      // payments that anchor feedback to real transactions.
+      expect(file.supportedTrust).toEqual(["reputation", "crypto-economic"]);
+    });
+
+    it("carries the discovery fields the indexer filters on", () => {
+      expect(file.agent_type).toBe("service");
+      expect(file.tags).toEqual(TAGS[service]);
+      expect(file.categories).toEqual(oasfCategories(service));
+      expect(file.categories.length).toBeGreaterThan(0);
     });
   });
 
@@ -84,12 +104,14 @@ describe("agent registration file (EIP-8004)", () => {
    * 8004scan Agent Metadata Standard: an OASF service names the taxonomy repo and a semver
    * version, and carries at least one of skills/domains as `category/.../leaf` slugs.
    */
-  describe.each(SERVICES)("$service OASF", ({ service, spec }) => {
+  describe.each(SERVICES)("$service OASF", ({ service, spec, origin }) => {
     const oasf = buildAgentRegistration(spec, service).services.find((s) => s.name === "OASF") as
       { endpoint: string; version: string; skills: string[]; domains?: string[] } | undefined;
 
     it("declares an OASF v0.8.0 service with skills from the pinned map", () => {
-      expect(oasf?.endpoint).toBe("https://github.com/agntcy/oasf/");
+      // The endpoint resolves to this origin's machine-readable manifest, not the taxonomy
+      // repo's human page (the EIP shows the OASF endpoint as a resolvable manifest).
+      expect(oasf?.endpoint).toBe(`${origin}/${OASF_MANIFEST_PATH}`);
       expect(oasf?.version).toBe("0.8.0");
       expect(oasf?.skills).toEqual(OASF[service].skills);
       expect(oasf?.skills.length).toBeGreaterThan(0);
@@ -116,6 +138,32 @@ describe("agent registration file (EIP-8004)", () => {
         ],
       },
     });
+  });
+
+  it("serves a machine-readable OASF manifest at the OASF entry's endpoint", () => {
+    const manifest = buildOasfManifest("genimg");
+    expect(manifest).toEqual({
+      name: "OASF",
+      version: "0.8.0",
+      source: OASF_SOURCE,
+      skills: OASF.genimg.skills,
+      domains: OASF.genimg.domains,
+    });
+    // The `source` pins the tree the slugs came from; it lives here, not in the registration
+    // file, whose OASF entry stays strictly profile-shaped.
+    expect(manifest.source).toBe("https://github.com/agntcy/oasf/tree/v0.8.0");
+    expect(OASF_MANIFEST_PATH).toBe(".well-known/oasf.json");
+  });
+
+  it("derives categories from the OASF taxonomy roots and tags from the pinned map", () => {
+    // Roots of domains first, then skills: genimg spans three OASF category families.
+    expect(oasfCategories("genimg")).toEqual([
+      "media_and_entertainment",
+      "multi_modal",
+      "images_computer_vision",
+    ]);
+    expect(TAGS.genimg).toEqual(["image-generation", "text-to-image", "nft", "x402", "base"]);
+    expect(SUPPORTED_TRUST).toEqual(["reputation", "crypto-economic"]);
   });
 
   describe("agentWallet (x402Support: true SHOULD declare one)", () => {

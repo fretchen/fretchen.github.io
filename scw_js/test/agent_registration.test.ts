@@ -145,8 +145,9 @@ describe("agent registration file (EIP-8004)", () => {
     // Required fields per the OASF Record Guide (docs.agntcy.org/oasf/agent-record-guide).
     expect(record.name).toBe(genimgSpec.info.title);
     expect(record.description).toBe(genimgSpec.info.description);
-    // The record versions with the spec it is derived from.
-    expect(record.version).toBe(genimgSpec.info.version);
+    // The record's own version — its document lifecycle, distinct from both the OASF
+    // schema_version and the spec's info.version.
+    expect(record.version).toBe("1.0.0");
     expect(record.schema_version).toBe("0.8.0");
     expect(record.authors.length).toBeGreaterThan(0);
     expect(record.created_at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/);

@@ -148,10 +148,13 @@ export const AGENT_REGISTRATION_PATH = ".well-known/agent-registration.json";
 export const OASF_MANIFEST_PATH = ".well-known/oasf.json";
 
 /**
- * The moment the record was created and its static author/locator fields, per the OASF Record
- * Guide's required fields. The record's `version` is the spec's own `info.version` — the
- * record is derived from that spec, so it versions with it.
+ * The record's own version, its creation time and its static author/locator fields, per the
+ * OASF Record Guide's required fields. Three versions, deliberately distinct: `schema_version`
+ * below is the OASF taxonomy schema; this `version` is the record document itself; the
+ * service's OpenAPI `info.version` is neither — the record changes independently of the spec
+ * (adding an OASF skill bumps this, not the spec), so it must NOT be derived from it.
  */
+const RECORD_VERSION = "1.0.0";
 const RECORD_CREATED_AT = "2026-11-03T20:19:30Z";
 const RECORD_AUTHORS = ["Fretchen"];
 const RECORD_LOCATORS = [
@@ -170,7 +173,7 @@ export function buildOasfRecord(spec: OpenApiSource, service: AgentService) {
   return {
     name: spec.info.title,
     description: spec.info.description,
-    version: spec.info.version,
+    version: RECORD_VERSION,
     schema_version: "0.8.0",
     authors: RECORD_AUTHORS,
     created_at: RECORD_CREATED_AT,
@@ -184,7 +187,7 @@ export function buildOasfRecord(spec: OpenApiSource, service: AgentService) {
 
 /** The parts of a committed `openapi.*.json` this file is derived from. */
 export interface OpenApiSource {
-  info: { title: string; description: string; version: string };
+  info: { title: string; description: string };
   servers: { url: string }[];
   openapi: string;
 }

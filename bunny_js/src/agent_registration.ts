@@ -9,7 +9,10 @@
  * (capability taxonomy), `agentWallet` (offchain copy of the payment wallet, which that
  * standard says an `x402Support: true` agent SHOULD declare) and `MCP` (the stateless paid
  * MCP endpoint, with the per-agent `mcpTools` list). `services` replaced the draft-era
- * `endpoints`; `registrations` is `[]` until the agent has an id.
+ * `endpoints`; `registrations` is `[]` until the agent has an id. The top-level `agent_type`,
+ * `tags` and `categories` are standard-allowed extensions for indexer filtering; the OASF
+ * entry points at the manifest each origin serves at `OASF_MANIFEST_PATH`, not the taxonomy
+ * repo's human page.
  */
 
 export type AgentService = "genimg" | "llm" | "search";
@@ -33,29 +36,53 @@ export const AGENT_IDS: Record<AgentService, number | null> = {
 /**
  * OASF v0.8.0 capabilities per service. Every slug is a path that exists under `schema/skills/`
  * or `schema/domains/` in agntcy/oasf at tag v0.8.0; 8004scan warns on unknown slugs, so check
- * the tree there before adding one.
+ * the tree there before adding one. Each entry also carries the taxonomy class `id` the OASF
+ * reference server (schema.oasf.outshift.com/0.8.0) assigns to that slug — composed as
+ * category×10000 + subcategory×100 + leaf for 3-level paths, category×100 + leaf for 2-level
+ * ones — which the OASF record served at `OASF_MANIFEST_PATH` needs (`{name, id}` items per
+ * the OASF Record Guide, docs.agntcy.org/oasf/agent-record-guide).
  */
-export const OASF: Record<AgentService, { skills: string[]; domains: string[] }> = {
+export interface OasfClass {
+  name: string;
+  id: number;
+}
+
+export const OASF: Record<AgentService, { skills: OasfClass[]; domains: OasfClass[] }> = {
   genimg: {
     skills: [
-      "multi_modal/image_processing/text_to_image",
-      "images_computer_vision/image_generation",
-      "images_computer_vision/image_to_image",
+      { name: "multi_modal/image_processing/text_to_image", id: 70102 },
+      { name: "images_computer_vision/image_generation", id: 206 },
+      { name: "images_computer_vision/image_to_image", id: 210 },
     ],
-    domains: ["media_and_entertainment/content_creation", "media_and_entertainment/digital_media"],
+    domains: [
+      { name: "media_and_entertainment/content_creation", id: 1302 },
+      { name: "media_and_entertainment/digital_media", id: 1303 },
+    ],
   },
   llm: {
     skills: [
-      "natural_language_processing/natural_language_generation/dialogue_generation",
-      "natural_language_processing/natural_language_generation/text_completion",
-      "natural_language_processing/information_retrieval_synthesis/question_answering",
+      {
+        name: "natural_language_processing/natural_language_generation/dialogue_generation",
+        id: 10204,
+      },
+      {
+        name: "natural_language_processing/natural_language_generation/text_completion",
+        id: 10201,
+      },
+      {
+        name: "natural_language_processing/information_retrieval_synthesis/question_answering",
+        id: 10302,
+      },
     ],
     domains: [],
   },
   search: {
     skills: [
-      "natural_language_processing/information_retrieval_synthesis/search",
-      "natural_language_processing/information_retrieval_synthesis/document_passage_retrieval",
+      { name: "natural_language_processing/information_retrieval_synthesis/search", id: 10306 },
+      {
+        name: "natural_language_processing/information_retrieval_synthesis/document_passage_retrieval",
+        id: 10305,
+      },
     ],
     domains: [],
   },
@@ -63,6 +90,37 @@ export const OASF: Record<AgentService, { skills: string[]; domains: string[] }>
 
 /** The mainnets every 402 here quotes; the payTo is the same address on both. */
 const PAYMENT_CHAINS = [8453, 10] as const;
+
+/** The taxonomy tree the OASF slugs are pinned to (checked per slug before adding one). */
+export const OASF_SOURCE = "https://github.com/agntcy/oasf/tree/v0.8.0";
+
+/**
+ * Trust models the agents declare per EIP-8004: reputation (on-chain feedback, which both
+ * agents accept) and crypto-economic — the x402 per-call payments that anchor feedback
+ * signals to real transactions, the EIP's own example of payments enriching trust.
+ */
+export const SUPPORTED_TRUST = ["reputation", "crypto-economic"] as const;
+
+/**
+ * Free-form discovery keywords per the 8004scan Agent Metadata Standard's extension allowance
+ * ("MAY omit these fields or add custom extensions"). The indexer surfaces them as the `tags`
+ * filter on capability queries, so they are short, lowercase, and service-specific.
+ */
+export const TAGS: Record<AgentService, string[]> = {
+  genimg: ["image-generation", "text-to-image", "nft", "x402", "base"],
+  llm: ["llm", "chat", "x402", "base"],
+  search: ["web-search", "web-fetch", "x402", "base"],
+};
+
+/**
+ * The OASF families a service belongs to (the unique first segments of its skills and
+ * domains) — the coarse browse axis next to the fine-grained slugs.
+ */
+export function oasfCategories(service: AgentService): string[] {
+  return [
+    ...new Set(OASF[service].domains.concat(OASF[service].skills).map((s) => s.name.split("/")[0])),
+  ];
+}
 
 /**
  * The stateless paid MCP endpoint (`mcp_server.ts`, served by the `mcp` function at
@@ -81,6 +139,52 @@ const MCP_TOOLS: Partial<Record<AgentService, string[]>> = {
 
 export const AGENT_REGISTRATION_PATH = ".well-known/agent-registration.json";
 
+/**
+ * The machine-readable OASF artifact each origin serves for its service. The EIP shows the
+ * OASF service `endpoint` as a resolvable artifact (`ipfs://{cid}`), and the CID-addressed
+ * artifact in OASF is the record — so this is a schema-valid OASF record, not a link to the
+ * taxonomy repo's human page.
+ */
+export const OASF_MANIFEST_PATH = ".well-known/oasf.json";
+
+/**
+ * The record's own version, its creation time and its static author/locator fields, per the
+ * OASF Record Guide's required fields. Three versions, deliberately distinct: `schema_version`
+ * below is the OASF taxonomy schema; this `version` is the record document itself; the
+ * service's OpenAPI `info.version` is neither — the record changes independently of the spec
+ * (adding an OASF skill bumps this, not the spec), so it must NOT be derived from it.
+ */
+const RECORD_VERSION = "1.0.0";
+const RECORD_CREATED_AT = "2026-11-03T20:19:30Z";
+const RECORD_AUTHORS = ["Fretchen"];
+const RECORD_LOCATORS = [
+  { type: "source_code", url: "https://github.com/fretchen/fretchen.github.io" },
+];
+
+/**
+ * The OASF record served at `OASF_MANIFEST_PATH`, per the OASF Record Guide
+ * (docs.agntcy.org/oasf/agent-record-guide): required name/description/version/schema_version/
+ * authors/created_at/skills, recommended domains and modules, optional locators. skills and
+ * domains carry the `{name, id}` taxonomy items pinned in `OASF`; the registration file's OASF
+ * entry keeps the bare slug strings, the shape the 8004scan profile expects there.
+ */
+export function buildOasfRecord(spec: OpenApiSource, service: AgentService) {
+  const oasf = OASF[service];
+  return {
+    name: spec.info.title,
+    description: spec.info.description,
+    version: RECORD_VERSION,
+    schema_version: "0.8.0",
+    authors: RECORD_AUTHORS,
+    created_at: RECORD_CREATED_AT,
+    skills: oasf.skills,
+    domains: oasf.domains,
+    locators: RECORD_LOCATORS,
+    modules: [] as unknown[],
+    annotations: { taxonomy_tree: OASF_SOURCE },
+  };
+}
+
 /** The parts of a committed `openapi.*.json` this file is derived from. */
 export interface OpenApiSource {
   info: { title: string; description: string };
@@ -94,31 +198,37 @@ export interface OpenApiSource {
  * out rather than publishing a wrong wallet. The registry's on-chain `agentWallet` stays the
  * authoritative value.
  */
+function agentWallets(payTo?: string) {
+  return payTo && /^0x[0-9a-fA-F]{40}$/.test(payTo)
+    ? PAYMENT_CHAINS.map((chainId) => ({
+        name: "agentWallet",
+        endpoint: `eip155:${chainId}:${payTo}`,
+      }))
+    : [];
+}
+
 export function buildAgentRegistration(spec: OpenApiSource, service: AgentService, payTo?: string) {
   const origin = spec.servers[0].url;
   const agentId = AGENT_IDS[service];
   const oasf = OASF[service];
-  const wallets =
-    payTo && /^0x[0-9a-fA-F]{40}$/.test(payTo)
-      ? PAYMENT_CHAINS.map((chainId) => ({
-          name: "agentWallet",
-          endpoint: `eip155:${chainId}:${payTo}`,
-        }))
-      : [];
+  const wallets = agentWallets(payTo);
   return {
     type: "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
     name: spec.info.title,
     description: spec.info.description,
     image: `${origin}/favicon.png`,
+    agent_type: "service",
+    tags: TAGS[service],
+    categories: oasfCategories(service),
     services: [
       { name: "OpenAPI", endpoint: `${origin}/openapi.json`, version: spec.openapi },
       { name: "web", endpoint: "https://www.fretchen.eu" },
       {
         name: "OASF",
-        endpoint: "https://github.com/agntcy/oasf/",
+        endpoint: `${origin}/${OASF_MANIFEST_PATH}`,
         version: "0.8.0",
-        skills: oasf.skills,
-        ...(oasf.domains.length > 0 ? { domains: oasf.domains } : {}),
+        skills: oasf.skills.map((s) => s.name),
+        ...(oasf.domains.length > 0 ? { domains: oasf.domains.map((s) => s.name) } : {}),
       },
       ...(MCP_TOOLS[service]
         ? [
@@ -139,6 +249,43 @@ export function buildAgentRegistration(spec: OpenApiSource, service: AgentServic
       agentId === null
         ? []
         : [{ agentId, agentRegistry: `eip155:${REGISTRY.chainId}:${REGISTRY.address}` }],
-    supportedTrust: ["reputation"],
+    supportedTrust: SUPPORTED_TRUST,
+  };
+}
+
+/**
+ * The registration file served on the MCP origin (`mcp_routes.ts`). That origin holds no
+ * ERC-8004 identity of its own — it relays the llm and search agents' tools — but the EIP's
+ * optional Endpoint Domain Verification works exactly by publishing this file on an
+ * endpoint-domain: a `registrations` entry per on-chain agent served there lets verifiers
+ * (8004scan health checks the MCP service domain) match `agentRegistry` + `agentId` and mark
+ * the endpoint-domain as controlled. A full document, not a bare registrations list, so
+ * parsers fetching it find the required fields.
+ */
+export function buildMcpOriginRegistration(payTo?: string) {
+  const origin = MCP_SERVICE.endpoint.replace(/\/mcp$/, "");
+  const wallets = agentWallets(payTo);
+  const registrations = (["llm", "search"] as const)
+    .map((service) => AGENT_IDS[service])
+    .filter((id): id is number => id !== null)
+    .map((agentId) => ({
+      agentId,
+      agentRegistry: `eip155:${REGISTRY.chainId}:${REGISTRY.address}`,
+    }));
+  return {
+    type: "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
+    name: "Fretchen MCP Gateway",
+    description:
+      "Stateless paid MCP endpoint (Streamable HTTP, JSON-RPC 2.0 over POST) relaying the tools of the Fretchen ERC-8004 agents listed in registrations, per call via x402 batch settlement in USDC.",
+    image: `${origin}/favicon.png`,
+    services: [
+      { name: "MCP", endpoint: MCP_SERVICE.endpoint, version: MCP_SERVICE.version },
+      { name: "web", endpoint: "https://www.fretchen.eu" },
+      ...wallets,
+    ],
+    x402Support: true,
+    active: true,
+    registrations,
+    supportedTrust: SUPPORTED_TRUST,
   };
 }

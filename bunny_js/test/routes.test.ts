@@ -463,6 +463,24 @@ describe("discovery", () => {
     expect(head.body).toBe("");
   });
 
+  test("serves the machine-readable OASF record the registration file points at", async () => {
+    const res = await handle(discoveryRequest("GET", ".well-known/oasf.json"));
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["content-type"]).toBe("application/json");
+    expect(res.headers["access-control-allow-origin"]).toBe("*");
+    const record = JSON.parse(res.body);
+    expect(record.schema_version).toBe("0.8.0");
+    expect(record.created_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(record.skills).toContainEqual({
+      name: "natural_language_processing/information_retrieval_synthesis/search",
+      id: 10306,
+    });
+
+    const head = await handle(discoveryRequest("HEAD", ".well-known/oasf.json"));
+    expect(head.statusCode).toBe(200);
+    expect(head.body).toBe("");
+  });
+
   test("serves the generated spec, unpaid and unauthenticated", async () => {
     const res = await handle(discoveryRequest("GET", "openapi.json"));
 

@@ -9,7 +9,18 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { AGENT_IDS, OASF, REGISTRY, buildAgentRegistration } from "../agent_registration.js";
+import {
+  AGENT_IDS,
+  OASF,
+  OASF_MANIFEST_PATH,
+  OASF_SOURCE,
+  REGISTRY,
+  SUPPORTED_TRUST,
+  TAGS,
+  buildAgentRegistration,
+  buildOasfRecord,
+  oasfCategories,
+} from "../agent_registration.js";
 import genimgSpec from "../openapi.genimg.json" with { type: "json" };
 
 const SERVICES = [
@@ -76,7 +87,16 @@ describe("agent registration file (EIP-8004)", () => {
       expect(file.registrations).toEqual([
         { agentId: AGENT_IDS[service], agentRegistry: `eip155:8453:${REGISTRY.address}` },
       ]);
-      expect(file.supportedTrust).toEqual(["reputation"]);
+      // Both trust models: reputation (on-chain feedback) plus the crypto-economic x402
+      // payments that anchor feedback to real transactions.
+      expect(file.supportedTrust).toEqual(["reputation", "crypto-economic"]);
+    });
+
+    it("carries the discovery fields the indexer filters on", () => {
+      expect(file.agent_type).toBe("service");
+      expect(file.tags).toEqual(TAGS[service]);
+      expect(file.categories).toEqual(oasfCategories(service));
+      expect(file.categories.length).toBeGreaterThan(0);
     });
   });
 
@@ -84,14 +104,16 @@ describe("agent registration file (EIP-8004)", () => {
    * 8004scan Agent Metadata Standard: an OASF service names the taxonomy repo and a semver
    * version, and carries at least one of skills/domains as `category/.../leaf` slugs.
    */
-  describe.each(SERVICES)("$service OASF", ({ service, spec }) => {
+  describe.each(SERVICES)("$service OASF", ({ service, spec, origin }) => {
     const oasf = buildAgentRegistration(spec, service).services.find((s) => s.name === "OASF") as
       { endpoint: string; version: string; skills: string[]; domains?: string[] } | undefined;
 
     it("declares an OASF v0.8.0 service with skills from the pinned map", () => {
-      expect(oasf?.endpoint).toBe("https://github.com/agntcy/oasf/");
+      // The endpoint resolves to this origin's machine-readable OASF record, not the taxonomy
+      // repo's human page (the EIP shows the OASF endpoint as a resolvable artifact).
+      expect(oasf?.endpoint).toBe(`${origin}/${OASF_MANIFEST_PATH}`);
       expect(oasf?.version).toBe("0.8.0");
-      expect(oasf?.skills).toEqual(OASF[service].skills);
+      expect(oasf?.skills).toEqual(OASF[service].skills.map((s) => s.name));
       expect(oasf?.skills.length).toBeGreaterThan(0);
     });
 
@@ -102,20 +124,52 @@ describe("agent registration file (EIP-8004)", () => {
     });
   });
 
-  it("pins the OASF capabilities per service (each slug checked against agntcy/oasf v0.8.0)", () => {
+  it("pins the OASF capabilities per service (slugs and ids checked against agntcy/oasf v0.8.0)", () => {
     expect(OASF).toEqual({
       genimg: {
         skills: [
-          "multi_modal/image_processing/text_to_image",
-          "images_computer_vision/image_generation",
-          "images_computer_vision/image_to_image",
+          { name: "multi_modal/image_processing/text_to_image", id: 70102 },
+          { name: "images_computer_vision/image_generation", id: 206 },
+          { name: "images_computer_vision/image_to_image", id: 210 },
         ],
         domains: [
-          "media_and_entertainment/content_creation",
-          "media_and_entertainment/digital_media",
+          { name: "media_and_entertainment/content_creation", id: 1302 },
+          { name: "media_and_entertainment/digital_media", id: 1303 },
         ],
       },
     });
+  });
+
+  it("serves a schema-valid OASF record at the OASF entry's endpoint", () => {
+    const record = buildOasfRecord(genimgSpec, "genimg");
+    // Required fields per the OASF Record Guide (docs.agntcy.org/oasf/agent-record-guide).
+    expect(record.name).toBe(genimgSpec.info.title);
+    expect(record.description).toBe(genimgSpec.info.description);
+    // The record's own version — its document lifecycle, distinct from both the OASF
+    // schema_version and the spec's info.version.
+    expect(record.version).toBe("1.0.0");
+    expect(record.schema_version).toBe("0.8.0");
+    expect(record.authors.length).toBeGreaterThan(0);
+    expect(record.created_at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/);
+    // skills/domains items are {name, id} pairs with the taxonomy class ids.
+    expect(record.skills).toEqual(OASF.genimg.skills);
+    expect(record.domains).toEqual(OASF.genimg.domains);
+    expect(record.locators).toEqual([
+      { type: "source_code", url: "https://github.com/fretchen/fretchen.github.io" },
+    ]);
+    expect(record.annotations).toEqual({ taxonomy_tree: OASF_SOURCE });
+    expect(OASF_MANIFEST_PATH).toBe(".well-known/oasf.json");
+  });
+
+  it("derives categories from the OASF taxonomy roots and tags from the pinned map", () => {
+    // Roots of domains first, then skills: genimg spans three OASF category families.
+    expect(oasfCategories("genimg")).toEqual([
+      "media_and_entertainment",
+      "multi_modal",
+      "images_computer_vision",
+    ]);
+    expect(TAGS.genimg).toEqual(["image-generation", "text-to-image", "nft", "x402", "base"]);
+    expect(SUPPORTED_TRUST).toEqual(["reputation", "crypto-economic"]);
   });
 
   describe("agentWallet (x402Support: true SHOULD declare one)", () => {

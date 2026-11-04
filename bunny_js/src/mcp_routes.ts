@@ -14,9 +14,16 @@
  * answered in ~300 ms) — the Streamable HTTP spec's GET is the OPTIONAL server-initiated
  * SSE stream, and a stateless server that offers none answers 405, Allow: POST. So
  * GET /mcp is 405 (endpoint exists, use POST), every other GET path stays the honest 404.
- * What is deliberately NOT served: /.well-known/agent-registration.json and
- * /openapi.json — this origin holds no ERC-8004 identity and no REST spec of its own
- * (it relays to the twins that have both), so serving either would fabricate identity.
+ * ONE MORE lesson, from 8004scan's endpoint verification: the health check probes the MCP
+ * service domain for /.well-known/agent-registration.json, and a 404 there kept
+ * is_endpoint_verified false for both agents. The EIP's optional Endpoint Domain Verification
+ * is exactly this file: a registrations list matching the on-chain agents served from this
+ * origin proves domain control, so GET now serves it (a full document built by
+ * buildMcpOriginRegistration, listing both agent ids — not a bare list, so parsers fetching
+ * it find the required fields). This origin still holds no ERC-8004 identity of its own —
+ * the file claims domain control for the two agents it relays, nothing more.
+ * What is deliberately NOT served: /openapi.json — this origin has no REST spec of its own
+ * (it relays to the twins that have both).
  * DELETE stays 405 — session termination is the one thing this stateless server genuinely
  * does not do, per the MCP spec's session-less allowance.
  */
@@ -24,6 +31,7 @@ import { CORS_HEADERS } from "./utils.js";
 import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
 import { faviconBase64, faviconContentType } from "./favicon.js";
 import { MCP_TOOLS } from "./mcp_tools.js";
+import { AGENT_REGISTRATION_PATH, buildMcpOriginRegistration } from "./agent_registration.js";
 
 /** The latest protocol revision this server implements. */
 const DEFAULT_PROTOCOL_VERSION = "2025-06-18";
@@ -205,6 +213,16 @@ export async function handleMCPRequest(request: Request): Promise<Response> {
         status: 200,
         headers: { ...CORS_HEADERS, "Content-Type": faviconContentType },
       });
+    }
+    // The EIP's optional endpoint-domain proof: 8004scan's verification fetches this file on
+    // the MCP service domain and matches registrations against the on-chain agents.
+    if (path === AGENT_REGISTRATION_PATH) {
+      return new Response(
+        isHead
+          ? null
+          : JSON.stringify(buildMcpOriginRegistration(process.env.NFT_WALLET_PUBLIC_KEY)),
+        { status: 200, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } },
+      );
     }
     // The MCP endpoint itself: the spec's GET is the optional server-initiated SSE stream,
     // which this stateless server does not offer — 405 Allow: POST, not 404 (see the header

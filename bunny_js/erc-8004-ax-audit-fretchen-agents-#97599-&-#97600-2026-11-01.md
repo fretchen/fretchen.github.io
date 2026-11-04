@@ -4,18 +4,18 @@
 
 ## Current Scores
 
-| Dimension (weight) | #97599 | #97600 |
-| --- | --- | --- |
-| Engagement (0.30) | 14 | 5 |
-| Service (0.25) | 54 | 54 |
-| Publisher (0.20) | 25 | 25 |
-| Compliance (0.15) | 94 | 94 |
-| Momentum (0.10) | 15 | 15 |
-| **Overall** | **43.64** | **30** |
+| Dimension (weight) | #97599    | #97600 |
+| ------------------ | --------- | ------ |
+| Engagement (0.30)  | 14        | 5      |
+| Service (0.25)     | 54        | 54     |
+| Publisher (0.20)   | 25        | 25     |
+| Compliance (0.15)  | 94        | 94     |
+| Momentum (0.10)    | 15        | 15     |
+| **Overall**        | **43.64** | **30** |
 
 ## Key Finding
 
-Quality score is already **83.49** — but the leaderboard policy caps "early"-evidence agents at a **score-band ceiling of 55**. The score is limited by *evidence of usage*, not service quality. x402 support is registered (`x402_supported: true`, wallet tagged X402) but **is not a scored dimension**; per ERC-8004, payments are orthogonal — x402 only enriches feedback signals once distinct clients actually transact.
+Quality score is already **83.49** — but the leaderboard policy caps "early"-evidence agents at a **score-band ceiling of 55**. The score is limited by _evidence of usage_, not service quality. x402 support is registered (`x402_supported: true`, wallet tagged X402) but **is not a scored dimension**; per ERC-8004, payments are orthogonal — x402 only enriches feedback signals once distinct clients actually transact.
 
 ## AX Gaps (Both Agents)
 

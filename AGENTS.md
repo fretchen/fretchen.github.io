@@ -2,23 +2,31 @@
 
 Repo instructions for coding agents working in this repository.
 
+## Policy: README vs AGENTS.md
+
+READMEs are for humans — quick start, overview, deployment. Each package's `AGENTS.md` holds
+only the rules agents need that the README does not already carry: silent failure modes,
+ordering rules, skill routing. Every package has one; link, don't duplicate. The chain applies
+from the edited file up to this root — the closest file wins on conflict, chat prompts override
+everything.
+
 ## Repository Overview
 
 Monorepo for a blockchain-based AI service platform. Each subdirectory is an independent npm package — there is no root `package.json` or workspace manager.
 
-| Directory             | Purpose                                                     | Further reading                                                  |
-| --------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------- |
-| `website/`            | Frontend (Vike SSR + React 19 + Panda CSS)                  | [`README`](website/README.md) · [`AGENTS.md`](website/AGENTS.md) |
-| `eth/`                | Solidity smart contracts (Hardhat, Optimism L2)             | [`README`](eth/README.md) · [`AGENTS.md`](eth/AGENTS.md)         |
-| `scw_js/`             | Serverless backend (Scaleway Functions: image gen, channel cron, growth API) | [`README`](scw_js/README.md)                                     |
-| `bunny_js/`           | Bunny Edge Scripts: the x402 llm/search/mcp sellers (plus the scw twins' origin domains) | [`README`](bunny_js/README.md)                         |
-| `x402_facilitator/`   | EIP-3009 USDC payment facilitator (Scaleway Functions)      | [`README`](x402_facilitator/README.md)                           |
-| `comment_service/`    | Blog comment backend (Scaleway Functions)                   | [`README`](comment_service/README.md)                            |
-| `analytics/`          | Serverless pageview counter (Scaleway Functions, S3-backed) | [`README`](analytics/README.md)                                  |
-| `growth-agent/`       | AI growth agent cron container (Python, LangGraph)          | [`README`](growth-agent/README.md)                               |
-| `observability/`      | Log CLI + Loki alert rules for all Scaleway functions       | [`README`](observability/README.md)                              |
-| `shared/chain-utils/` | Shared blockchain utility library (Viem peer dep)           | —                                                                |
-| `notebooks/`          | Python Jupyter notebooks for analysis                       | [`README`](notebooks/README.md)                                  |
+| Directory             | Purpose                                                                                  | Further reading                                                                        |
+| --------------------- | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `website/`            | Frontend (Vike SSR + React 19 + Panda CSS) — also the blog                               | [`README`](website/README.md) · [`AGENTS.md`](website/AGENTS.md)                       |
+| `eth/`                | Solidity smart contracts (Hardhat, Optimism L2)                                          | [`README`](eth/README.md) · [`AGENTS.md`](eth/AGENTS.md)                               |
+| `scw_js/`             | Serverless backend (Scaleway Functions: image gen, channel cron, growth API)             | [`README`](scw_js/README.md) · [`AGENTS.md`](scw_js/AGENTS.md)                         |
+| `bunny_js/`           | Bunny Edge Scripts: the x402 llm/search/mcp sellers (plus the scw twins' origin domains) | [`README`](bunny_js/README.md) · [`AGENTS.md`](bunny_js/AGENTS.md)                     |
+| `x402_facilitator/`   | EIP-3009 USDC payment facilitator (Scaleway Functions)                                   | [`README`](x402_facilitator/README.md) · [`AGENTS.md`](x402_facilitator/AGENTS.md)     |
+| `comment_service/`    | Blog comment backend (Scaleway Functions)                                                | [`README`](comment_service/README.md) · [`AGENTS.md`](comment_service/AGENTS.md)       |
+| `analytics/`          | Serverless pageview counter (Scaleway Functions, S3-backed)                              | [`README`](analytics/README.md) · [`AGENTS.md`](analytics/AGENTS.md)                   |
+| `growth-agent/`       | AI growth agent cron container (Python, LangGraph)                                       | [`README`](growth-agent/README.md) · [`AGENTS.md`](growth-agent/AGENTS.md)             |
+| `observability/`      | Log CLI + Loki alert rules for all Scaleway functions                                    | [`README`](observability/README.md) · [`AGENTS.md`](observability/AGENTS.md)           |
+| `shared/chain-utils/` | Shared blockchain utility library (Viem peer dep)                                        | [`README`](shared/chain-utils/README.md) · [`AGENTS.md`](shared/chain-utils/AGENTS.md) |
+| `notebooks/`          | Python Jupyter notebooks for analysis                                                    | [`README`](notebooks/README.md)                                                        |
 
 ## Commands
 
@@ -55,43 +63,24 @@ skills) and emits a graded inline report with a machine-readable gate verdict. T
 vendored in `.agents/skills/code-review/` (MIT; upstream origin and pin are in its SKILL.md) —
 keep it out of `skills-lock.json`, which is only for CLI-managed skills.
 
-## Architecture Patterns
+## x402 payments
 
-### Smart Contracts (`eth/`)
+Applies to `scw_js/`, `x402_facilitator/`, and `bunny_js/`. Use the **`x402`** skill before
+writing or reviewing anything that names an x402 role — it carries the official vocabulary,
+this repo's verified role map, and links to the spec. The role map is counterintuitive and has
+been published wrong: `/imagegen` and `/assistent` (scw_js) are **buyers** (they spend USDC);
+the `*-agent.fretchen.eu` endpoints they call are the **sellers** (image gen on Scaleway,
+llm/web/MCP on the bunny_js Edge Scripts).
 
-All NFT contracts use the **OpenZeppelin UUPS upgradeable proxy pattern** — never deploy implementation contracts directly. Deploy/upgrade scripts use JSON config files with Zod validation and three execution modes: `validateOnly`, `dryRun`, and execute.
-
-Hardhat here uses **Viem, not Ethers** — contract calls return `bigint`.
-
-Repo-specific conventions (the two test categories, the deploy-script export guard, the storage-layout rule) are in [`eth/AGENTS.md`](eth/AGENTS.md).
-
-### Serverless (`scw_js/`, `x402_facilitator/`, `comment_service/`, `analytics/`)
-
-Single Scaleway Function per package with **path-based routing** (`/verify`, `/settle`, `/supported`). Environment variables are split: `env:` in `serverless.yml` for public values, `secret:` configured via the Scaleway Console only.
-
-Use the **`x402`** skill before writing or reviewing anything that names an x402 role — it carries
-the official vocabulary, this repo's verified role map, and links to the spec. The role map is
-counterintuitive and has been published wrong: `/imagegen` and `/assistent` are **buyers**
-(they spend USDC), the `*-agent.fretchen.eu` endpoints they call are the **sellers** (image gen on Scaleway, llm/web/MCP on the bunny_js Edge Scripts).
-
-Two things that silently break payments if you get them wrong, both documented in detail where they belong:
+Three traps, each documented in detail where it belongs:
 
 - **EIP-712 domain names differ by network** (mainnet USDC is `"USD Coin"`, testnet is `"USDC"`). Follow the checklist in [`scw_js/README.md`](scw_js/README.md) → _Adding New Networks_, which carries the verified per-network table.
 - **The x402 recipient whitelist uses OR logic** across a manual list, testnet-only test wallets, and NFT-holder status. See [`x402_facilitator/README.md`](x402_facilitator/README.md) → _Whitelist Architecture_.
-
-**Generated OpenAPI specs must publish the strictness they actually enforce.** `scw_js` and `x402_facilitator` generate their `openapi.*.json` from Zod, and `z.object` renders as `additionalProperties: false` — so a schema that merely _strips_ unknown keys publishes a strictness its handler does not enforce. Use `z.looseObject` for a request the handler forwards or ignores extras on, `z.object` where the body is built field by field (every response, and `genimg`'s request, which really does reject unknown fields). Each package's `test/openapi_*_generation.test.ts` asserts this, because nothing else catches it — and it has shipped wrong: the facilitator's published `PaymentRequest` described a request that could not be paid with, since real payloads carry the very fields it declared forbidden.
-
-### Frontend (`website/`)
-
-**Vike SSR** with file-based routing: pages in `pages/`, renderer in `renderer/`. Client-only components need `{ ssr: false }` in imports.
-
-**Panda CSS** compiles `css({})` at build time, so several ways of writing a style fail _silently_ — the component renders, the tests pass, only the CSS is missing. The rules are in [`website/AGENTS.md`](website/AGENTS.md), enforced by `website/test/styleConventions.test.ts`. The design system itself — colours and their jobs, the button recipe, the scales — is in [`website/README.md`](website/README.md); read it before adding any style.
-
-**Wagmi v2 + TanStack Query** for blockchain state; hooks are auto-generated from `wagmi.config.ts`, not hand-written.
+- **Generated OpenAPI specs must publish the strictness they actually enforce.** `scw_js` and `x402_facilitator` generate their `openapi.*.json` from Zod, and `z.object` renders as `additionalProperties: false` — so a schema that merely _strips_ unknown keys publishes a strictness its handler does not enforce. Use `z.looseObject` for a request the handler forwards or ignores extras on, `z.object` where the body is built field by field (every response, and `genimg`'s request, which really does reject unknown fields). Each package's `test/openapi_*_generation.test.ts` asserts this, because nothing else catches it — and it has shipped wrong: the facilitator's published `PaymentRequest` described a request that could not be paid with, since real payloads carry the very fields it declared forbidden.
 
 ## Security
 
-See [`.github/THREAT_MODEL.md`](.github/THREAT_MODEL.md) for the full asset inventory, blast radius, and trust boundaries, and [`eth/SECURITY.md`](eth/SECURITY.md) for contract-level findings. Use the **`cve-triage`** skill to evaluate open Dependabot alerts against the threat model; the criteria are in [`.github/CVE_TRIAGE.md`](.github/CVE_TRIAGE.md). Use the **`security-review`** skill for periodic deep audits of the agent and API layers — it operationalizes the threat model's review cadence with OWASP secure-agent-playbook procedures, vendored under `.agents/skills/security-review/` (CC-BY-4.0; keep it out of `skills-lock.json`).
+See [`.github/THREAT_MODEL.md`](.github/THREAT_MODEL.md) for the full asset inventory, blast radius, and trust boundaries, and [`eth/SECURITY.md`](eth/SECURITY.md) for contract-level findings. Use the **`cve-triage`** skill to evaluate open Dependabot alerts against the threat model; the criteria are in [`.github/CVE_TRIAGE.md`](.github/CVE_TRIAGE.md). Use the **`security-review`** skill for periodic deep audits of the agent and API layers — it operationalizes the threat model's review cadence with OWASP secure-agent-playbook procedures, vendored under `.agents/skills/security-review/` (CC-BY-4.0; keep it out of `skills-lock.json`). Contract-level rules like the GenImNFTv4 agent whitelist are in [`eth/AGENTS.md`](eth/AGENTS.md).
 
 **Key hierarchy** (highest-value first):
 
@@ -104,30 +93,11 @@ See [`.github/THREAT_MODEL.md`](.github/THREAT_MODEL.md) for the full asset inve
 Rules that apply everywhere:
 
 - Private keys go in the Hardhat keystore (`npx hardhat keystore set SEPOLIA_PRIVATE_KEY`) or a Scaleway secret — never in code, never committed.
-- **CVE-2025-11-26 (GenImNFTv3):** fixed in v4 with an agent whitelist. Any code calling `requestImageUpdate()` must verify `isAuthorizedAgent()`.
 - All serverless responses must include CORS headers (`Access-Control-Allow-Origin: *`).
 
 ## Blog Posts
 
-Posts are `.md`/`.mdx` in `website/blog/`, with frontmatter: `title`, `publishing_date`, `category`, `description`, `tokenID`, and `network` (the CAIP-2 chain the token lives on — omit for the legacy default `eip155:10`; a Base token must declare `eip155:8453`, because both GenImNFT mainnets have independent id sequences and an invalid value fails the build). Interactive posts import their widgets as regular React components from `website/components/blog/` — there is no `.tsx` post format.
-
-Use the **`blog-planner`** skill to plan or write one — it enforces the plan-first rule (no MDX before an approved `website/blog/<slug>.plan.md`) and carries the audience and style conventions. Use **`blog-critic`** to review a draft; it is read-only and outputs a `.todos.md`.
-
-### Prose: no manufactured suspense
-
-State a claim where it arises. Never order sentences so they build to a reveal — the suspense is
-fake, because the sentence already knows what it is withholding. Four constructions are banned:
-
-- **Concede-then-swing** — "X is the benchmark, and it works. But…", "So a good outcome exists.
-  But…". Put the limitation in the same sentence as the claim: "The planner reaches the right
-  fleet, but has to know how fast the fish breed."
-- **Forward promise** — "the two ends of that bracket everything below", "this point is worth
-  detailing further", "more on that later". Say it here or cut it.
-- **Meta-announcement** — "That is enough to state the tragedy", "Now for the interesting part".
-  Delete the sentence; the next one is the content.
-- **Withheld reveal** — "a third possibility, from an odd direction", "That is the point", or a
-  heading with an appended promise ("The circuit, and what it implements"). Name the thing in the
-  sentence that raises it; a heading names its subject and stops.
-
-Test: read each paragraph's first sentence on its own. If it announces that something is coming
-rather than saying something, rewrite it. This applies to figure captions too.
+Posts live in `website/blog/` — the frontmatter rules and the prose conventions are in
+[`website/AGENTS.md`](website/AGENTS.md). Plan with the **`blog-planner`** skill (it enforces
+the plan-first rule: no MDX before an approved `website/blog/<slug>.plan.md`); review a draft
+with the read-only **`blog-critic`**.

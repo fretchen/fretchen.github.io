@@ -93,7 +93,7 @@ See [`.github/THREAT_MODEL.md`](.github/THREAT_MODEL.md) for the full asset inve
 Rules that apply everywhere:
 
 - Private keys go in the Hardhat keystore (`npx hardhat keystore set SEPOLIA_PRIVATE_KEY`) or a Scaleway secret — never in code, never committed.
-- All serverless responses must include CORS headers (`Access-Control-Allow-Origin: *`).
+- All serverless responses must include CORS headers. Public endpoints send `Access-Control-Allow-Origin: *`; `analytics` deliberately restricts to an origin whitelist instead — don't normalize it to `*`.
 
 ## Blog Posts
 

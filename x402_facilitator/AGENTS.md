@@ -18,7 +18,7 @@ are in the root [`AGENTS.md`](../AGENTS.md) → \_x402 payments*.
 
 ## Recipient whitelist (OR logic)
 
-`/verify` accepts a recipient if **any** of: the manual list, a testnet-only test wallet, or
-NFT-holder status. The composition and the reasons are in [`README.md`](./README.md) →
-_Whitelist Architecture_ — read it before touching recipient gating, and keep the
-batch-settlement test-wallet bypass honored on testnets only.
+Recipient gating is **OR logic** across several sources, not a single list. The composition
+and the reasons are in [`README.md`](./README.md) → _Whitelist Architecture_ — read it before
+touching recipient gating, and keep the batch-settlement test-wallet bypass honored on
+testnets only.

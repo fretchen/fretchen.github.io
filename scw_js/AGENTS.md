@@ -20,5 +20,4 @@ OpenAPI strictness rule) are in the root [`AGENTS.md`](../AGENTS.md) → \_x402 
 ## Adding a network
 
 Follow the checklist in [`README.md`](./README.md) → _Adding New Networks_ — it carries the
-verified per-network EIP-712 domain name table (mainnet USDC is `"USD Coin"`, testnet is
-`"USDC"`). Getting this wrong silently breaks payments.
+verified per-network EIP-712 domain name table. Getting this wrong silently breaks payments.

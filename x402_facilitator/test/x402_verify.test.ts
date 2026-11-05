@@ -238,7 +238,9 @@ describe("x402 Verify (real SDK, fake chain)", () => {
 
     const result = await verifyPayment({ ...payload, payload: {} }, requirements);
 
-    expect(result).toMatchObject({ isValid: false, invalidReason: "unexpected_verify_error" });
+    // @x402 2.29 classifies a malformed payload as `invalid_payload` instead of
+    // throwing, so it no longer maps to the catch-all `unexpected_verify_error`.
+    expect(result).toMatchObject({ isValid: false, invalidReason: "invalid_payload" });
   });
 
   test("verifies on every supported network with that network's USDC domain", async () => {

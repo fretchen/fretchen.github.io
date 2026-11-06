@@ -19,8 +19,12 @@ Only `scw_js`'s `llmx402cron` remains, claiming the channels these twins charge.
   the shared seller stack (`x402_server.ts`, channel storage/sync), the services
   (`search_service.ts`, `web_fetch_service.ts` with the SSRF defence), schemas, discovery,
   favicon, `openapi.search.json`. Two deliberate deviations:
-  - `logger.ts` is a pino-shaped console shim — pino is a Node-runtime library; bunny logs go
-    to the dashboard, and the observability `logger.error` alert convention does not apply.
+  - `logger.ts` is a pino-shaped console shim — pino is a Node-runtime library; the lines go to
+    the bunny dashboard AND, since the Cockpit integration, to Scaleway's custom Loki data
+    source: `withLogFlush()` wraps each entry handler, so buffered lines are pushed per
+    request to Cockpit, where one datasource-managed alert rule on `level="error"` pages by
+    email (the `logger.error` convention applies again — see
+    [`observability/bunny-edge-script-observability-kiss-implementation-plan.md`](../observability/bunny-edge-script-observability-kiss-implementation-plan.md)).
   - `utils.ts` ports only the platform-neutral half (CORS/parseJsonBody); the ScwResponse
     envelope helpers are not ported — there is no Scaleway envelope here.
 - `src/runtime-shims.ts` — pins the Node `Buffer`/`process` globals the ported code assumes,
@@ -66,6 +70,8 @@ it is inert without another credential, plain — and plain stays inspectable wh
 | `FACILITATOR_URL`                          | plain (code default ok) | `https://facilitator.fretchen.eu`                                                                                                                                                                               |
 | `LLM_WITHDRAW_DELAY_SECONDS`               | plain (code default ok) | 86400 — must match production                                                                                                                                                                                   |
 | `SEARCH_SERVICE_URL`                       | plain                   | advertised `resource.url` base; the bunny trial URL while trialing, production default otherwise                                                                                                                |
+| `SCW_COCKPIT_PUSH_TOKEN`                  | secret (`--secret`)     | Cockpit push-only token — authenticates the Loki log flush to the observability data source (see the observability README/implementation plan)                                                                |
+| `COCKPIT_LOKI_URL`                        | plain                   | push URL of the custom Cockpit logs data source — public and inert without the token                                                                                                                          |
 
 ## Known limits / decisions
 
@@ -158,8 +164,10 @@ and the `.bunny/script.json` link comes out of the create step. One-time sequenc
    other twins take their id from the create output (or `bunny scripts list`) instead.
 2. Upload the env from `.env` with `bunny scripts env set`, marking the sensitive keys with
    `--secret` (RECEIVER_AUTHORIZER_PRIVATE_KEY, BRAVE_API_KEY, MISTRAL_API_KEY,
-   SCW_ACCESS_KEY, SCW_SECRET_KEY, RPC_URL_*). Skip `TEST_WALLET_PRIVATE_KEY` — buyer-side
-   only, the server must never see it. Verify with `bunny scripts env list`. Per script:
+   SCW_ACCESS_KEY, SCW_SECRET_KEY, RPC_URL_*, SCW_COCKPIT_PUSH_TOKEN). Skip
+   `TEST_WALLET_PRIVATE_KEY` — buyer-side only, the server must never see it. Verify with
+   `bunny scripts env list`. Per script — all three also get the Cockpit observability pair
+   (`SCW_COCKPIT_PUSH_TOKEN` as `--secret`, `COCKPIT_LOKI_URL` plain):
    - **searchapi** — the channel stack + `BRAVE_API_KEY` (web_search/fetch) + `SCW_S3_*`.
    - **llm** — the channel stack + `MISTRAL_API_KEY` (chat_completion) + `SCW_S3_*`.
    - **mcp** — the union: both `BRAVE_API_KEY` and `MISTRAL_API_KEY` (its bundle embeds

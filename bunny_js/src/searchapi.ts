@@ -9,6 +9,7 @@
  */
 import "./runtime-shims.js";
 import * as BunnySDK from "@bunny.net/edgescript-sdk";
+import { withLogFlush } from "./logger.js";
 import { handleRequest } from "./searchapi_routes.js";
 
-BunnySDK.net.http.serve(handleRequest);
+BunnySDK.net.http.serve(withLogFlush("bunny-web-agent", handleRequest));

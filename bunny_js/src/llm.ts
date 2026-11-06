@@ -7,6 +7,7 @@
  */
 import "./runtime-shims.js";
 import * as BunnySDK from "@bunny.net/edgescript-sdk";
+import { withLogFlush } from "./logger.js";
 import { handleLLMRequest } from "./llm_routes.js";
 
-BunnySDK.net.http.serve(handleLLMRequest);
+BunnySDK.net.http.serve(withLogFlush("bunny-llm-agent", handleLLMRequest));

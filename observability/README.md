@@ -4,7 +4,13 @@ Project-wide log access and alerting for every Scaleway function in this repo: `
 `walletreportcron`, `llmx402cron`, `genimgx402token`, `growthapi`, the
 comment service and analytics. It belongs to no single service. Cockpit is scoped to the Scaleway
 _project_, so one token and one set of rules cover all of them. (The llm/search/mcp sellers moved
-to bunny_js — Edge Script logging has no Loki rules here.)
+to bunny_js — they push to a **custom logs data source** in the same Cockpit: the scripts buffer
+their `logger` lines and flush them per request to the Loki push API with a push-only Cockpit
+token; a single **datasource-managed** alert rule on `{level="error"}` pages by email. That rule
+is created by hand in the Cockpit Grafana and is deliberately outside `alerts/*.yaml` and its
+budget test — see [`bunny-edge-script-observability-kiss-implementation-plan.md`](./bunny-edge-script-observability-kiss-implementation-plan.md).
+`scripts/logs.ts` still queries only the default (Scaleway) source; read the bunny data source in
+Grafana → Explore.)
 
 | Path                | What                                                                                                     |
 | ------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -48,7 +54,9 @@ npx tsx scripts/alerts.ts --delete payments
 (`ServicesNeedAttention`) and `payments.yaml` two (`PaymentCronNeedsAttention`,
 `FacilitatorNeedsAttention`). A new failure mode is a new alternative in the matching rule's line
 filter, never a new rule; `test/alerts_budget.test.ts` fails if the count grows. The comment at the
-top of each file explains the budget and what each branch of the filter means.
+top of each file explains the budget and what each branch of the filter means. One rule exists
+outside this mechanism: the hand-created, datasource-managed bunny rule (see the intro) — a
+deliberate fourth billable rule this test cannot see, documented in the implementation plan.
 
 **Push only what is committed.** `--push` refuses a file with uncommitted changes. On 2026-10-04 the
 three-rule consolidation was live from a file that had never been committed, git still held the

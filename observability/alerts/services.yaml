@@ -15,8 +15,9 @@
 # description and the log line say which phrase fired.
 #
 # Covers genimgx402token and growthapi. The claim/refund cron is NOT here; `payments.yaml` owns
-# llmx402cron and the facilitator. The llm/search/mcp sellers moved to bunny_js (Edge Script
-# logging, no Loki rules) — they no longer appear in any selector here.
+# llmx402cron and the facilitator. The llm/search/mcp sellers moved to bunny_js — they no longer
+# appear in any selector here, because their logs now live in the custom bunny-logs data source,
+# which this ruler cannot see (they are covered by `bunny.yaml`, pushed with --url).
 #
 # ── Why now ────────────────────────────────────────────────────────────────────────────────────
 # Because /imagegen is a paid, public route: a BFL outage breaks something a stranger has paid

@@ -1,0 +1,45 @@
+# Loki alerting rule for the bunny_js Edge Script twins (searchapi / llm / mcp) — the x402
+# sellers that left scw_js. Same namespace and doctrine as the other files, but pushed to a
+# DIFFERENT ruler: the twins flush their logs to the custom `bunny-logs` data source, not the
+# default one the Scaleway functions write to, and a ruler rule only ever sees its own data
+# source's logs. The push therefore names that source's ruler URL explicitly:
+#
+#   npx tsx scripts/alerts.ts --push alerts/bunny.yaml \
+#     --url https://db123d37-9094-4e15-badc-706071190ed7.logs.cockpit.fr-par.scw.cloud
+#
+# ── ONE RULE, FOURTH OF FOUR (cost) ─────────────────────────────────────────────────────
+# Same budget doctrine as services.yaml (every active rule is billed ~€0.015/day, checked
+# 2026-10-04). The count was raised from three to four DELIBERATELY: phrases in a rule are
+# free, but no phrase can make a rule on the DEFAULT source see this source's logs — the
+# twins' phrases were removed from services.yaml when they moved for exactly that reason.
+# test/alerts_budget.test.ts pins bunny.yaml at 1 so a fifth rule fails CI, not the bill.
+#
+# ── Why level="error" and no phrase list ────────────────────────────────────────────────
+# The twins push via the Loki push API with `level` as a REAL stream label, so one label match
+# covers every `logger.error` call site (the "ours, and should be alertable" convention) — unlike
+# the Scaleway functions, whose lines arrive JSON-encoded inside an envelope, forcing the bare-
+# phrase style of services.yaml and its `msg=` trap. WHICH case fired is in the line payload:
+# read it with `| json` in Explore. (`service` distinguishes the three twins.)
+#
+# ── Window ──────────────────────────────────────────────────────────────────────────────
+# [1h], like every rule here: the ruler's maximum, and the doctrine that a "resolved"
+# notification means "no new occurrence in the last hour", not "fixed".
+name: bunny
+interval: 1m
+rules:
+  - alert: BunnySellersNeedAttention
+    expr: |
+      sum(count_over_time({service=~"bunny-web-agent|bunny-llm-agent|bunny-mcp-agent", level="error"}[1h])) > 0
+    for: 0m
+    labels:
+      severity: critical
+      area: services
+    annotations:
+      summary: "A bunny Edge Script seller needs attention (searchapi / llm / mcp x402 sellers)"
+      description: >-
+        A logger.error line arrived from one of the bunny twins — by convention that is "ours, and
+        should be alertable" (a caller's fault is logger.warn and does not fire this). Open Explore
+        on the bunny-logs data source with
+        {service=~"bunny-web-agent|bunny-llm-agent|bunny-mcp-agent", level="error"} | json and read
+        the message. A "log flush failed" line means the ingest itself was down; it is
+        console.error'd to the bunny dashboard too.

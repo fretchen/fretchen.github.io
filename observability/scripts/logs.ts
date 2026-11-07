@@ -43,8 +43,10 @@ dotenv.config();
 /** The default source's URL comes from `.env`; `--url <base>` points the same read token at
  *  the custom bunny-logs data source instead. A `--url` that is missing its value (it was the
  *  last argument, or the next token is another flag) falls back to `.env` rather than
- *  silently querying a garbage URL. */
-const urlFlagValue = process.argv[process.argv.indexOf("--url") + 1];
+ *  silently querying a garbage URL — and an ABSENT --url must fall back too (argv[-1 + 1] is
+ *  argv[0], the node binary itself, which crashed every flagless run). */
+const urlArgIndex = process.argv.indexOf("--url");
+const urlFlagValue = urlArgIndex === -1 ? undefined : process.argv[urlArgIndex + 1];
 const URL_BASE =
   urlFlagValue && !urlFlagValue.startsWith("--") ? urlFlagValue : process.env.SCW_COCKPIT_LOGS_URL;
 const TOKEN = process.env.SCW_COCKPIT_LOGS_TOKEN;

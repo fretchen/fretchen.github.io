@@ -84,7 +84,13 @@ export function extractRules(alertsDir: string): Rule[] {
     const chunks = text.split(/\n(?= {2}- alert: )/).slice(1);
     for (const chunk of chunks) {
       const alert = /- alert: (\S+)/.exec(chunk)?.[1];
-      const selector = /resource_name=~?"((?:[^"\\]|\\.)*)"/.exec(chunk)?.[1];
+      // Scaleway functions are selected by resource_name; the bunny Edge Scripts push to the
+      // custom bunny-logs data source and are selected there by their `service` label instead
+      // (alerts/bunny.yaml) — the same coverage doctrine must reach both, so the parser
+      // accepts either. First match wins per chunk, which today is the only selector in it.
+      const selector =
+        /resource_name=~?"((?:[^"\\]|\\.)*)"/.exec(chunk)?.[1] ??
+        /\bservice[=~]?"((?:[^"\\]|\\.)*)"/.exec(chunk)?.[1];
       if (!alert || !selector) {
         continue;
       }

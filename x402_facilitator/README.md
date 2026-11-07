@@ -4,6 +4,14 @@ A production-ready x402 v2 Facilitator for Optimism, enabling EIP-3009 USDC paym
 
 **Production Endpoint:** https://facilitator.fretchen.eu
 
+> **Bunny port (in progress).** The HTTP function's payment core is ported verbatim into
+> `bunny_js/` (its own twin, native `Request`/`Response` routing, its test suite, and a
+> `service="facilitator"` alert branch on the custom Cockpit source) — see
+> [`bunny-port-implementation-plan.md`](./bunny-port-implementation-plan.md). Until the
+> cutover finishes, this Scaleway function remains the live server behind the endpoint above
+> and the authority for everything here; after it, this package keeps only
+> `walletreportcron` (the edge has no cron).
+
 > **Logs.** This function's logs are read with `observability/scripts/logs.ts`, not from the
 > Scaleway console or Grafana:
 >

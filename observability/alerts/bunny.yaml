@@ -1,6 +1,7 @@
-# Loki alerting rule for the bunny_js Edge Script twins (searchapi / llm / mcp) — the x402
-# sellers that left scw_js. Same namespace and doctrine as the other files, but pushed to a
-# DIFFERENT ruler: the twins flush their logs to the custom `bunny-logs` data source, not the
+# Loki alerting rule for the bunny_js Edge Scripts — the x402 seller twins (searchapi / llm /
+# mcp) and, since the facilitator port, the facilitator (service label "facilitator"). Same
+# namespace and doctrine as the other files, but pushed to a DIFFERENT ruler: these scripts
+# flush their logs to the custom `bunny-logs` data source, not the
 # default one the Scaleway functions write to, and a ruler rule only ever sees its own data
 # source's logs. The push therefore names that source's ruler URL explicitly:
 #
@@ -14,12 +15,26 @@
 # twins' phrases were removed from services.yaml when they moved for exactly that reason.
 # test/alerts_budget.test.ts pins bunny.yaml at 1 so a fifth rule fails CI, not the bill.
 #
-# ── Why level="error" and no phrase list ────────────────────────────────────────────────
-# The twins push via the Loki push API with `level` as a REAL stream label, so one label match
-# covers every `logger.error` call site (the "ours, and should be alertable" convention) — unlike
-# the Scaleway functions, whose lines arrive JSON-encoded inside an envelope, forcing the bare-
-# phrase style of services.yaml and its `msg=` trap. WHICH case fired is in the line payload:
-# read it with `| json` in Explore. (`service` distinguishes the three twins.)
+# ── Why level="error" and no phrase list (the twins) — and a phrase list anyway (the
+# facilitator) ────────────────────────────────────────────────────────────────────────────
+# Both push via the Loki push API with `level` as a REAL stream label, so one label match
+# covers every `logger.error` call site (the "ours, and should be alertable" convention) —
+# unlike the Scaleway functions, whose lines arrive JSON-encoded inside an envelope, forcing
+# the bare-phrase style of services.yaml and its `msg=` trap. WHICH case fired is in the line
+# payload: read it with `| json` in Explore. (`service` distinguishes the three twins.)
+#
+# The facilitator gets its own term INSIDE this same rule, with a phrase list after all: its
+# most valuable alertable lines are `logger.warn` BY DESIGN ("a caller's fault is warn"), and
+# `level="error"` alone would silently drop them — "…Settlement failed" with an OUR-fault
+# reason (refund/tx/RPC/fee-allowance), and "…broadcast but unconfirmed" (a broadcast tx whose
+# outcome is unknown — reconcile the logged hash). That phrase is the wording-neutral stem of
+# the two messages the handler emits ("Settlement broadcast but unconfirmed — reconcile on
+# chain" and "Batch-settlement claim/settle broadcast but unconfirmed — …"): scw's rule
+# matched only the former, an inherited gap this fold fixes. While
+# the Scaleway facilitator is still the live one, payments.yaml keeps its copy — that rule
+# is trimmed to walletreportcron-only at the teardown PR (x402_facilitator/
+# bunny-port-implementation-plan.md, Task 6). Every facilitator logger.error message is
+# asserted against this alternation by x402_facilitator/test/alert_coverage.test.ts.
 #
 # ── Window ──────────────────────────────────────────────────────────────────────────────
 # [1h], like every rule here: the ruler's maximum, and the doctrine that a "resolved"
@@ -29,17 +44,26 @@ interval: 1m
 rules:
   - alert: BunnySellersNeedAttention
     expr: |
-      sum(count_over_time({service=~"bunny-web-agent|bunny-llm-agent|bunny-mcp-agent", level="error"}[1h])) > 0
+      sum(count_over_time({service="facilitator"} |~ "Settlement failed.*(_transaction_failed|_rpc_read_failed|refund_[a-z_]*failed|insufficient_fee_allowance)|broadcast but unconfirmed|Settlement threw|Unexpected error in handler|Unexpected error during payment verification|Cannot collect fee|Fee collection failed|Fee transaction reverted" [1h]))
+      + sum(count_over_time({service=~"bunny-web-agent|bunny-llm-agent|bunny-mcp-agent", level="error"}[1h])) > 0
     for: 0m
     labels:
       severity: critical
       area: services
     annotations:
-      summary: "A bunny Edge Script seller needs attention (searchapi / llm / mcp x402 sellers)"
+      summary: "A bunny Edge Script needs attention (x402 sellers or the facilitator)"
       description: >-
-        A logger.error line arrived from one of the bunny twins — by convention that is "ours, and
-        should be alertable" (a caller's fault is logger.warn and does not fire this). Open Explore
-        on the bunny-logs data source with
-        {service=~"bunny-web-agent|bunny-llm-agent|bunny-mcp-agent", level="error"} | json and read
-        the message. A "log flush failed" line means the ingest itself was down; it is
-        console.error'd to the bunny dashboard too.
+        A logger.error line arrived from one of the bunny twins, or an alertable facilitator
+        phrase did — by convention that is "ours, and should be alertable" (a caller's fault
+        is logger.warn). Open Explore on the bunny-logs data source with
+        {service=~"bunny-web-agent|bunny-llm-agent|bunny-mcp-agent", level="error"} | json for
+        the twins, or {service="facilitator"} | json for the facilitator, and read the message.
+        Facilitator phrases: "…Settlement failed" with a refund/transaction/RPC/fee-allowance
+        reason (the decoded revert is in errorMessage), "…broadcast but unconfirmed" (reconcile
+        the logged tx hash on chain), "Settlement threw" / "Unexpected error" (unclassified
+        exception), "Cannot collect fee" / "Fee collection failed" / "Fee transaction reverted"
+        (the settlement landed, the fee did not). Investigate from the repo root:
+        cd observability && npx tsx scripts/logs.ts '{service="facilitator"}' --url
+        https://db123d37-9094-4e15-badc-706071190ed7.logs.cockpit.fr-par.scw.cloud --since 24h.
+        A "log flush failed" line means the ingest itself was down; it is console.error'd to
+        the bunny dashboard too.

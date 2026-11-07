@@ -1,0 +1,231 @@
+/**
+ * Tests for x402 /supported endpoint
+ *
+ * Note: getSupportedCapabilities() creates a fresh read-only facilitator instance
+ * each time, so no singleton caching or resetFacilitator() needed
+ */
+import { describe, test, expect, afterEach } from "vitest";
+import { getSupportedCapabilities } from "../src/x402_supported.js";
+
+describe("x402 /supported endpoint", () => {
+  const originalEnv = process.env.FACILITATOR_WALLET_PRIVATE_KEY;
+
+  afterEach(() => {
+    // Restore original env
+    if (originalEnv) {
+      process.env.FACILITATOR_WALLET_PRIVATE_KEY = originalEnv;
+    } else {
+      delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
+    }
+  });
+
+  test("returns supported capabilities", () => {
+    const capabilities = getSupportedCapabilities();
+
+    expect(capabilities).toBeDefined();
+    expect(capabilities.kinds).toBeDefined();
+    expect(Array.isArray(capabilities.kinds)).toBe(true);
+    expect(capabilities.extensions).toBeDefined();
+    expect(Array.isArray(capabilities.extensions)).toBe(true);
+  });
+
+  test("includes Optimism Mainnet support", () => {
+    const capabilities = getSupportedCapabilities();
+
+    const mainnetSupport = capabilities.kinds.find((k) => k.network === "eip155:10")!;
+
+    expect(mainnetSupport).toBeDefined();
+    expect(mainnetSupport.x402Version).toBe(2);
+    expect(mainnetSupport.scheme).toBe("exact");
+    // x402 v2 getSupported() does NOT include assets in kinds
+    // Assets would need to be added separately by the facilitator
+  });
+
+  test("includes Optimism Sepolia support", () => {
+    const capabilities = getSupportedCapabilities();
+
+    const sepoliaSupport = capabilities.kinds.find((k) => k.network === "eip155:11155420")!;
+
+    expect(sepoliaSupport).toBeDefined();
+    expect(sepoliaSupport.x402Version).toBe(2);
+    expect(sepoliaSupport.scheme).toBe("exact");
+    // x402 v2 getSupported() does NOT include assets in kinds
+  });
+
+  test("includes Base Mainnet support", () => {
+    const capabilities = getSupportedCapabilities();
+
+    const baseSupport = capabilities.kinds.find((k) => k.network === "eip155:8453")!;
+
+    expect(baseSupport).toBeDefined();
+    expect(baseSupport.x402Version).toBe(2);
+    expect(baseSupport.scheme).toBe("exact");
+  });
+
+  test("includes Base Sepolia support", () => {
+    const capabilities = getSupportedCapabilities();
+
+    const baseSepoliaSupport = capabilities.kinds.find((k) => k.network === "eip155:84532")!;
+
+    expect(baseSepoliaSupport).toBeDefined();
+    expect(baseSepoliaSupport.x402Version).toBe(2);
+    expect(baseSepoliaSupport.scheme).toBe("exact");
+  });
+
+  // Note: x402 v2 getSupported() does not include asset details (USDC, USDT, etc.)
+  // Asset information is not provided in the kinds array by the facilitator
+  // If needed, asset details would need to be added separately in the response
+
+  test("reports the real facilitator address when a valid private key is configured", () => {
+    // getSupportedCapabilities always uses the read-only facilitator (never signs
+    // anything), but it must still report the *real* signer address here — newer SDK
+    // clients (e.g. x402HTTPResourceServer.initialize()) reject a zero-address signer.
+    process.env.FACILITATOR_WALLET_PRIVATE_KEY =
+      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+
+    const capabilities = getSupportedCapabilities();
+
+    expect(capabilities.signers).toBeDefined();
+    expect(capabilities.signers["eip155:*"]).toBeDefined();
+    expect(Array.isArray(capabilities.signers["eip155:*"])).toBe(true);
+    // Real address derived from the private key above (well-known Hardhat/Anvil account #0)
+    expect(capabilities.signers["eip155:*"]).toEqual([
+      "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    ]);
+  });
+
+  test("signers shows zero address when private key is not set (read-only mode)", () => {
+    delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
+
+    const capabilities = getSupportedCapabilities();
+
+    // Read-only facilitator uses zero address as signer placeholder
+    expect(capabilities.signers).toBeDefined();
+    expect(capabilities.signers["eip155:*"]).toEqual([
+      "0x0000000000000000000000000000000000000000",
+    ]);
+  });
+
+  test("signers shows zero address when private key is invalid (read-only mode)", () => {
+    process.env.FACILITATOR_WALLET_PRIVATE_KEY = "invalid-key";
+
+    const capabilities = getSupportedCapabilities();
+
+    // Read-only facilitator uses zero address as signer placeholder
+    expect(capabilities.signers).toBeDefined();
+    expect(capabilities.signers["eip155:*"]).toEqual([
+      "0x0000000000000000000000000000000000000000",
+    ]);
+  });
+
+  test("advertises fee extension keys (spec-conformant string[] extensions)", () => {
+    // Ensure a valid private key is set
+    process.env.FACILITATOR_WALLET_PRIVATE_KEY =
+      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+
+    const capabilities = getSupportedCapabilities();
+
+    // `extensions` is a list of extension KEY strings, per the x402 SupportedResponse type.
+    expect(Array.isArray(capabilities.extensions)).toBe(true);
+    expect(capabilities.extensions).toContain("facilitator_fee");
+    expect(capabilities.extensions).toContain("facilitatorFees");
+    // No objects leak into the array.
+    capabilities.extensions.forEach((e) => expect(typeof e).toBe("string"));
+  });
+
+  test("discloses fee detail in the top-level facilitatorFees object (#1016)", () => {
+    process.env.FACILITATOR_WALLET_PRIVATE_KEY =
+      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+
+    const capabilities = getSupportedCapabilities();
+
+    const fees = capabilities.facilitatorFees;
+    expect(fees).toBeDefined();
+    if (!fees) {
+      throw new Error("unreachable");
+    }
+    expect(fees.version).toBe("1");
+    expect(fees.model).toBe("flat");
+    // The fee is charged in whichever token settles — USDC; EURC and EURe on Base.
+    expect(fees.asset).toBe("settled");
+    expect(fees.fee.description).toContain("EURC");
+    expect(fees.fee.description).toContain("EURe");
+    expect(fees.setup.description).toContain("EURe");
+    expect(fees.flatFee).toBe("10000");
+    expect(fees.decimals).toBe(6);
+    // Facilitator address (fee recipient / approval spender) lives here now, not in `extensions`.
+    expect(fees.recipient).toBeDefined();
+    expect(fees.recipient).not.toBeNull();
+    expect(fees.setup.spender).toBe(fees.recipient);
+    expect(fees.fee.collection).toBe("post_settlement_transferFrom");
+    expect(fees.networks).toContain("eip155:10");
+    expect(fees.networks).toContain("eip155:8453");
+    expect(fees.networks).toContain("eip155:11155420");
+    expect(fees.networks).toContain("eip155:84532");
+  });
+
+  test("keeps the recommended approval small relative to the fee", () => {
+    process.env.FACILITATOR_WALLET_PRIVATE_KEY =
+      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+
+    const fees = getSupportedCapabilities().facilitatorFees!;
+    const settlementsCovered = BigInt(fees.setup.recommended_amount) / BigInt(fees.flatFee);
+
+    // The approval spender is the same hot key that signs every settlement, so this
+    // figure IS the per-merchant blast radius of a key compromise. Bounded rather than
+    // pinned to an exact value: the security property is "stays small", not "is 1 USDC".
+    expect(settlementsCovered).toBeLessThanOrEqual(100n);
+    // The same bound per token, in each token's own units — EURe's 18 decimals included.
+    for (const asset of fees.assets) {
+      expect(BigInt(asset.recommended_amount) / BigInt(asset.flatFee)).toBeLessThanOrEqual(100n);
+    }
+  });
+
+  test("lists each fee token with its exact atomic fee — EURe in 18 decimals", () => {
+    process.env.FACILITATOR_WALLET_PRIVATE_KEY =
+      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+
+    const { assets } = getSupportedCapabilities().facilitatorFees!;
+    const on = (network: string) => assets.filter((a) => a.network === network);
+
+    expect(on("eip155:8453").map((a) => a.symbol)).toEqual(["USDC", "EURC", "EURe"]);
+    expect(on("eip155:10").map((a) => a.symbol)).toEqual(["USDC"]);
+    expect(on("eip155:8453").find((a) => a.symbol === "EURe")).toEqual({
+      network: "eip155:8453",
+      asset: "0xbf6e2966A9C3D99C9E4D069E04f7Bdb9C8aa762C",
+      symbol: "EURe",
+      decimals: 18,
+      flatFee: "10000000000000000", // 0.01 EURe
+      recommended_amount: "1000000000000000000", // 1 EURe
+    });
+    expect(on("eip155:8453").find((a) => a.symbol === "USDC")).toMatchObject({
+      flatFee: "10000",
+      recommended_amount: "1000000",
+    });
+  });
+
+  test("advertises EIP-2612 gas sponsoring, so EURe buyers need no separate approve()", () => {
+    delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
+    expect(getSupportedCapabilities().extensions).toContain("eip2612GasSponsoring");
+  });
+
+  test("omits fee extension keys and disclosure when private key is missing", () => {
+    delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
+    const capabilities = getSupportedCapabilities();
+
+    expect(capabilities.extensions).not.toContain("facilitator_fee");
+    expect(capabilities.extensions).not.toContain("facilitatorFees");
+    expect(capabilities.facilitatorFees).toBeUndefined();
+  });
+
+  test("always includes onward links, independent of fee configuration", () => {
+    // Unlike facilitatorFees, links must not depend on a configured key: an agent that
+    // discovers /supported in read-only mode still needs somewhere to go.
+    delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
+    const capabilities = getSupportedCapabilities();
+
+    expect(capabilities.links.documentation).toMatch(/^https:\/\//);
+    expect(capabilities.links.source).toMatch(/^https:\/\//);
+    expect(capabilities.links.openapi).toMatch(/^https:\/\//);
+  });
+});

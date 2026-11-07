@@ -2,7 +2,7 @@
 
 **Goal:** Move the facilitator's HTTP endpoints (`/verify`, `/settle`, `/supported`, `/openapi.json`) from the Scaleway Function to a fourth Bunny Edge Script behind `facilitator.fretchen.eu`, keeping `walletreportcron` on Scaleway.
 
-**Approach:** Verbatim port, the twins' playbook: the payment core moves into `bunny_js/src/` wholesale (same file names, one diff to review), the routing is rewritten natively against web-standard `Request`/`Response` (`src/facilitator_routes.ts`, mirroring `llm_routes.ts`), and **no Scaleway concept survives at the edge** — no envelope, no pino, no alias. `x402_facilitator/` stays untouched and live until PR 2 (its `walletreportcron` needs only two small fee helpers). Trial-hostname deploy → paid probe matrix → DNS flip → teardown PR.
+**Approach:** Verbatim port, the twins' playbook: the payment core moves into `bunny_js/src/facilitator/` wholesale (the package's own subfolder — `src/` is otherwise the twins'; same file names, one diff to review), the routing is rewritten natively against web-standard `Request`/`Response` (`src/facilitator/facilitator_routes.ts`, mirroring `llm_routes.ts`), and **no Scaleway concept survives at the edge** — no envelope, no pino, no alias. The entry is `src/facilitator.ts`, flat like the other three; the facilitator's tests live under `bunny_js/test/facilitator/`. `x402_facilitator/` stays untouched and live until PR 2 (its `walletreportcron` needs only two small fee helpers). Trial-hostname deploy → paid probe matrix → DNS flip → teardown PR.
 
 **Constraints (from the repo's instructions — none may drift):**
 
@@ -31,8 +31,8 @@
 
 **Files:**
 
-- Create (ported verbatim, same names): `bunny_js/src/{x402_verify,x402_settle,x402_fee,x402_whitelist,x402_supported,x402_schemas,revert_selectors,facilitator_instance,chain_utils}.ts` and `bunny_js/src/openapi.facilitator.json`
-- Create (new code): `bunny_js/src/facilitator_routes.ts` (native `Request`/`Response` port of `x402_facilitator.ts`'s routing, CORS, root redirect, and the `handlePaymentRequest` envelope logic — written once against web standards, like `llm_routes.ts`), `bunny_js/src/facilitator.ts` (entry)
+- Create (ported verbatim, same names): `bunny_js/src/facilitator/{x402_verify,x402_settle,x402_fee,x402_whitelist,x402_supported,x402_schemas,revert_selectors,facilitator_instance,chain_utils}.ts` and `bunny_js/src/facilitator/openapi.facilitator.json`
+- Create (new code): `bunny_js/src/facilitator/facilitator_routes.ts` (native `Request`/`Response` port of `x402_facilitator.ts`'s routing, CORS, root redirect, and the `handlePaymentRequest` envelope logic — written once against web standards, like `llm_routes.ts`), `bunny_js/src/facilitator.ts` (entry)
 - Modify: `bunny_js/package.json` (deps: `viem`, `zod`, `@x402/core`, `@x402/evm` — same versions as `x402_facilitator`; `build:facilitator`; dev script), `bunny_js/tsdown.config.ts` (nothing facilitator-specific — no alias), `bunny_js/tsconfig.json` (nothing cross-package)
 - NOT touched at all in PR 1: `x402_facilitator/**` — the Scaleway function stays live until the cutover; its trim is Task 6.
 
@@ -52,7 +52,7 @@
 
 **Files:**
 
-- Create (ported, same names): the core's test files into `bunny_js/test/` — `x402_verify`, `x402_settle`, `x402_settle_real_sdk`, `x402_permit2_real_sdk`, `x402_fee`, `x402_whitelist`, `chain_utils`, `eip712_reference`, `revert_selectors`, `facilitator_instance`, `openapi_generation` + `test/helpers/` — import paths adjusted to `bunny_js/src/`, `FEE_RETRY_DELAY_MS`-style env kept.
+- Create (ported, same names): the core's test files into `bunny_js/test/facilitator/` (the facilitator's tests live in their own subfolder, mirroring the src layout) — `x402_verify`, `x402_settle`, `x402_settle_real_sdk`, `x402_permit2_real_sdk`, `x402_fee`, `x402_whitelist`, `chain_utils`, `eip712_reference`, `revert_selectors`, `facilitator_instance`, `openapi_generation` + their helpers under `test/facilitator/helpers/` and the live-RPC suite under `test/facilitator/integration/` — import paths adjusted to `bunny_js/src/facilitator/`, `FEE_RETRY_DELAY_MS`-style env kept.
 - Create (new): `bunny_js/test/facilitator_routes.test.ts` — the native routing/CORS/envelope behavior that `x402_facilitator.test.ts` + `x402_batch_route.test.ts` asserted through the Scaleway envelope, re-pointed at `Request`/`Response`.
 - Create (new): `bunny_js/test/facilitator_alert_coverage.test.ts` — the twins have no alert_coverage test (level=error covers by construction), but the facilitator's phrase-gated warn lines break that argument: this test reuses `observability/alertCoverage.ts` (builtins-only, importable by relative path) to assert every alertable phrase in the ported files is matched by `bunny.yaml`'s alternation.
 - NOT ported: the `x402_splitter_*.test.js` files (they assert scw's dist-splitting, which does not exist at the edge).

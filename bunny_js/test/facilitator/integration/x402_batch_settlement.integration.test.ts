@@ -16,9 +16,9 @@
  * Network-dependent, so it lives in the integration suite: `npm run test:integration`.
  */
 import { describe, test, expect, beforeEach, afterEach } from "vitest";
-import { verifyPayment } from "../../src/x402_verify.js";
-import { resetFacilitator } from "../../src/facilitator_instance.js";
-import { getChainConfig } from "../../src/chain_utils.js";
+import { verifyPayment } from "../../../src/facilitator/x402_verify.js";
+import { resetFacilitator } from "../../../src/facilitator/facilitator_instance.js";
+import { getChainConfig } from "../../../src/facilitator/chain_utils.js";
 import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
 import {
   BatchSettlementEvmScheme,

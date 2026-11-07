@@ -11,9 +11,9 @@
  * hermetic unit suite. Run with `npm run test:integration`, not `npm test`.
  */
 import { describe, test, expect, beforeEach, afterEach } from "vitest";
-import { verifyPayment } from "../../src/x402_verify.js";
-import { resetFacilitator } from "../../src/facilitator_instance.js";
-import { getChainConfig } from "../../src/chain_utils.js";
+import { verifyPayment } from "../../../src/facilitator/x402_verify.js";
+import { resetFacilitator } from "../../../src/facilitator/facilitator_instance.js";
+import { getChainConfig } from "../../../src/facilitator/chain_utils.js";
 import { EURC_ADDRESSES, findStablecoin } from "@fretchen/chain-utils";
 import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
 import { ExactEvmScheme } from "@x402/evm/exact/client";

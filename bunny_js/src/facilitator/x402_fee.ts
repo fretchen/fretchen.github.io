@@ -23,7 +23,7 @@ import {
   type Hex,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { logger } from "./logger";
+import { logger } from "../logger";
 import { loadPrivateKey } from "@fretchen/chain-utils";
 import { findFeeToken, getChainConfig, getRpcUrl } from "./chain_utils";
 

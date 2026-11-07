@@ -11,6 +11,6 @@
 import "./runtime-shims.js";
 import * as BunnySDK from "@bunny.net/edgescript-sdk";
 import { withLogFlush } from "./logger.js";
-import { handleFacilitatorRequest } from "./facilitator_routes.js";
+import { handleFacilitatorRequest } from "./facilitator/facilitator_routes.js";
 
 BunnySDK.net.http.serve(withLogFlush("facilitator", handleFacilitatorRequest));

@@ -8,7 +8,7 @@
  * How settlePayment acts on each route (gate, settle, charge) is in x402_settle.test.ts.
  */
 import { describe, it, expect } from "vitest";
-import { classifyBatchSettlement, type BatchRoute } from "../src/x402_settle.js";
+import { classifyBatchSettlement, type BatchRoute } from "../../src/facilitator/x402_settle.js";
 import {
   claim,
   claimCommand,

@@ -36,16 +36,17 @@ until its DNS flip the Scaleway facilitator remains the live one at `facilitator
     envelope helpers are not ported — there is no Scaleway envelope here.
 - `src/runtime-shims.ts` — pins the Node `Buffer`/`process` globals the ported code assumes,
   imported FIRST by the entry so they exist before any ported module's top-level code runs.
-- `src/facilitator*.ts` + `src/x402_*.ts` + `src/{facilitator_instance,chain_utils,revert_selectors}.ts`
-  and `src/openapi.facilitator.json` — the facilitator's payment core, ported **verbatim** from
-  `x402_facilitator/` (that package keeps its own copy alive for its Scaleway function until
-  the teardown PR; only `walletreportcron` stays on Scaleway long-term, because the edge has
-  no cron). The routing is new code: `src/facilitator_routes.ts` mirrors the Scaleway
-  handler's routing/CORS/envelope semantics line by line against web-standard
-  `Request`/`Response`; everything else is untouched payment behavior, including its test
-  suite (`test/x402_*.test.ts`, `test/facilitator_routes.test.ts`, and
-  `test/facilitator_alert_coverage.test.ts`, which pins the ported log phrases to
-  `observability/alerts/bunny.yaml`'s facilitator branch — the twins need no such test).
+- `src/facilitator/` — the facilitator's own corner of the tree (`src/` is otherwise the
+  twins'): the payment core ported **verbatim** from `x402_facilitator/` (that package keeps
+  its own copy alive for its Scaleway function until the teardown PR; only `walletreportcron`
+  stays on Scaleway long-term, because the edge has no cron) plus one new file — the routing.
+  `src/facilitator/facilitator_routes.ts` mirrors the Scaleway handler's routing/CORS/envelope
+  semantics line by line against web-standard `Request`/`Response`; everything else is
+  untouched payment behavior, including its test suite (`test/facilitator/` — the ported
+  core tests, `facilitator_routes.test.ts` for the native routing, and
+  `facilitator_alert_coverage.test.ts`, which pins the ported log phrases to
+  `observability/alerts/bunny.yaml`'s facilitator branch; the twins need no such test).
+  The entry is `src/facilitator.ts`, flat like the other three.
 
 ## Commands
 

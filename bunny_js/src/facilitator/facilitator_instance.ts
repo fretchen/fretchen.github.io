@@ -15,7 +15,7 @@ import { x402Facilitator } from "@x402/core/facilitator";
 import { toFacilitatorEvmSigner } from "@x402/evm";
 import { ExactEvmScheme } from "@x402/evm/exact/facilitator";
 import { BatchSettlementEvmScheme } from "@x402/evm/batch-settlement/facilitator";
-import { logger } from "./logger";
+import { logger } from "../logger";
 import { evaluateFeeGate, getFacilitatorAddress, loadFacilitatorAccount } from "./x402_fee";
 import {
   getChainConfig,

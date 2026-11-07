@@ -17,7 +17,7 @@ import {
 } from "./x402_schemas";
 import type { z } from "zod";
 import openapiSpec from "./openapi.facilitator.json" with { type: "json" };
-import { logger } from "./logger";
+import { logger } from "../logger";
 
 /** Inferred from the published schema rather than hand-written beside it. `looseObject` keeps
  *  the index signatures, so the payload still satisfies verifyPayment/settlePayment's

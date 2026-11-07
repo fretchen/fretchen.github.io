@@ -1,5 +1,5 @@
 /**
- * Generates `src/openapi.facilitator.json` from the Zod schemas in `src/x402_schemas.ts`.
+ * Generates `src/facilitator/openapi.facilitator.json` from the Zod schemas in `src/facilitator/x402_schemas.ts`.
  *
  * Run via `npm run generate:openapi` (also runs automatically as part of `npm run
  * build`/`predeploy`). `test/openapi_generation.test.ts` re-runs this same logic and
@@ -21,10 +21,10 @@ import {
   VerifyResponseSchema,
   SettleResponseSchema,
   SupportedResponseSchema,
-} from "../src/x402_schemas";
+} from "../src/facilitator/x402_schemas";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const OUTPUT_PATH = join(__dirname, "..", "src", "openapi.facilitator.json");
+const OUTPUT_PATH = join(__dirname, "..", "src", "facilitator", "openapi.facilitator.json");
 
 /**
  * zod's `toJSONSchema` stamps a top-level `$schema` key (correct for a standalone JSON

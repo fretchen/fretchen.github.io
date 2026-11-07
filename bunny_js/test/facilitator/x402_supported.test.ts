@@ -5,7 +5,7 @@
  * each time, so no singleton caching or resetFacilitator() needed
  */
 import { describe, test, expect, afterEach } from "vitest";
-import { getSupportedCapabilities } from "../src/x402_supported.js";
+import { getSupportedCapabilities } from "../../src/facilitator/x402_supported.js";
 
 describe("x402 /supported endpoint", () => {
   const originalEnv = process.env.FACILITATOR_WALLET_PRIVATE_KEY;

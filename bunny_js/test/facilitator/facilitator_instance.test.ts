@@ -90,8 +90,8 @@ vi.mock("viem/accounts", () => ({
 // Mock fee module — only what the hook's tests steer. Partial on purpose: loadFacilitatorAccount
 // stays real and runs against the viem/accounts mock above, so a missing key still throws as in
 // production and the signer is built exactly the way the facilitator builds it.
-vi.mock("../src/x402_fee.js", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../src/x402_fee.js")>()),
+vi.mock("../../src/facilitator/x402_fee.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/facilitator/x402_fee.js")>()),
   evaluateFeeGate: vi.fn(),
   getFacilitatorAddress: vi.fn(),
 }));
@@ -101,8 +101,8 @@ import {
   createReadOnlyFacilitator,
   resetFacilitator,
   getFacilitator,
-} from "../src/facilitator_instance.js";
-import { evaluateFeeGate, getFacilitatorAddress } from "../src/x402_fee.js";
+} from "../../src/facilitator/facilitator_instance.js";
+import { evaluateFeeGate, getFacilitatorAddress } from "../../src/facilitator/x402_fee.js";
 
 // ═══════════════════════════════════════════════════════════════
 // Tests

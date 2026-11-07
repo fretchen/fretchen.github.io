@@ -7,7 +7,7 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: true,
-    include: ["test/integration/**/*.test.{js,ts}"],
+    include: ["test/facilitator/integration/**/*.test.{js,ts}"],
     testTimeout: 30000, // live RPC calls can be slow
   },
 });

@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
-import { handleFacilitatorRequest, handleSupportedRequest } from "../src/facilitator_routes.js";
-import type { verifyPayment as verifyPaymentType } from "../src/x402_verify.js";
-import type { settlePayment as settlePaymentType } from "../src/x402_settle.js";
+import {
+  handleFacilitatorRequest,
+  handleSupportedRequest,
+} from "../../src/facilitator/facilitator_routes.js";
+import type { verifyPayment as verifyPaymentType } from "../../src/facilitator/x402_verify.js";
+import type { settlePayment as settlePaymentType } from "../../src/facilitator/x402_settle.js";
 
 // Native port of x402_facilitator/test/x402_facilitator.test.ts — the same cases, asserted
 // against web-standard Request/Response instead of the Scaleway event envelope. Two envelope
@@ -9,15 +12,15 @@ import type { settlePayment as settlePaymentType } from "../src/x402_settle.js";
 // text), and rawUrl-based routing (there is one URL here, and routing uses its pathname).
 
 // Mock the dependencies — the payment core's behavior is tested in its own ported suite.
-vi.mock("../src/x402_verify.js", () => ({
+vi.mock("../../src/facilitator/x402_verify.js", () => ({
   verifyPayment: vi.fn(),
 }));
 
-vi.mock("../src/x402_settle.js", () => ({
+vi.mock("../../src/facilitator/x402_settle.js", () => ({
   settlePayment: vi.fn(),
 }));
 
-vi.mock("../src/x402_supported.js", () => ({
+vi.mock("../../src/facilitator/x402_supported.js", () => ({
   getSupportedCapabilities: vi.fn(() => ({
     x402Version: 2,
     kinds: ["exact"],
@@ -41,8 +44,8 @@ describe("facilitator routes (verify + settle)", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    const verifyModule = await import("../src/x402_verify.js");
-    const settleModule = await import("../src/x402_settle.js");
+    const verifyModule = await import("../../src/facilitator/x402_verify.js");
+    const settleModule = await import("../../src/facilitator/x402_settle.js");
     verifyPayment = verifyModule.verifyPayment as Mock<typeof verifyPaymentType>;
     settlePayment = settleModule.settlePayment as Mock<typeof settlePaymentType>;
   });

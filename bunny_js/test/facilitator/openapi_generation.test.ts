@@ -5,8 +5,8 @@
  * interfaces it replaced.
  */
 import { describe, it, expect } from "vitest";
-import { generateOpenApiSpec } from "../scripts/generate-openapi";
-import committedSpec from "../src/openapi.facilitator.json" with { type: "json" };
+import { generateOpenApiSpec } from "../../scripts/generate-openapi";
+import committedSpec from "../../src/facilitator/openapi.facilitator.json" with { type: "json" };
 
 describe("openapi.json generation", () => {
   it("matches what the current Zod schemas would generate", () => {

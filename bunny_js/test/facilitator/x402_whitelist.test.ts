@@ -2,7 +2,7 @@
  * Tests for the batch-settlement test-wallet bypass (x402_whitelist.ts)
  */
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { isTestWalletBypassed } from "../src/x402_whitelist.js";
+import { isTestWalletBypassed } from "../../src/facilitator/x402_whitelist.js";
 
 const MAINNET = "eip155:10"; // Optimism mainnet
 const OP_SEPOLIA = "eip155:11155420";

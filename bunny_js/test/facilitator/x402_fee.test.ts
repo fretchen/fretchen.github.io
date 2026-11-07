@@ -8,7 +8,7 @@ import {
   evaluateFeeGate,
   feeAmountFor,
   wasRejectedBeforeBroadcast,
-} from "../src/x402_fee.js";
+} from "../../src/facilitator/x402_fee.js";
 import type { createPublicClient, getContract } from "viem";
 
 // Test mocks only implement the subset of the viem client/contract surface that

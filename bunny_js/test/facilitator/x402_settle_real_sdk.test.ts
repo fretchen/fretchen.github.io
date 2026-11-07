@@ -14,11 +14,11 @@ vi.mock("viem", async (importOriginal) => {
   return fakeViem(await importOriginal<typeof import("viem")>());
 });
 
-import { settlePayment } from "../src/x402_settle.js";
-import { resetFacilitator } from "../src/facilitator_instance.js";
-import { FEE_SEND_ATTEMPTS, getFacilitatorAddress } from "../src/x402_fee.js";
+import { settlePayment } from "../../src/facilitator/x402_settle.js";
+import { resetFacilitator } from "../../src/facilitator/facilitator_instance.js";
+import { FEE_SEND_ATTEMPTS, getFacilitatorAddress } from "../../src/facilitator/x402_fee.js";
 import { nonceManager } from "viem";
-import { SettleResponseSchema } from "../src/x402_schemas.js";
+import { SettleResponseSchema } from "../../src/facilitator/x402_schemas.js";
 import { chain } from "./helpers/fakeChain";
 import { signExactPayment, SELLER } from "./helpers/signPayment";
 

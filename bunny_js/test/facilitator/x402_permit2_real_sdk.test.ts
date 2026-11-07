@@ -18,11 +18,11 @@ vi.mock("viem", async (importOriginal) => {
 });
 
 import { PERMIT2_ADDRESS, x402ExactPermit2ProxyAddress } from "@x402/evm";
-import { settlePayment } from "../src/x402_settle.js";
-import { verifyPayment } from "../src/x402_verify.js";
-import { resetFacilitator } from "../src/facilitator_instance.js";
-import { getFacilitatorAddress } from "../src/x402_fee.js";
-import { SettleResponseSchema } from "../src/x402_schemas.js";
+import { settlePayment } from "../../src/facilitator/x402_settle.js";
+import { verifyPayment } from "../../src/facilitator/x402_verify.js";
+import { resetFacilitator } from "../../src/facilitator/facilitator_instance.js";
+import { getFacilitatorAddress } from "../../src/facilitator/x402_fee.js";
+import { SettleResponseSchema } from "../../src/facilitator/x402_schemas.js";
 import { EURE_ADDRESSES } from "@fretchen/chain-utils";
 import { chain } from "./helpers/fakeChain";
 import { signPermit2Payment, EURE_DOMAIN, SELLER } from "./helpers/signPayment";

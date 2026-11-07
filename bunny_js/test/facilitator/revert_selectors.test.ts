@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { toFunctionSelector } from "viem";
-import { BATCH_SETTLEMENT_REVERT_SELECTORS, annotateDecodedRevert } from "../src/revert_selectors";
+import {
+  BATCH_SETTLEMENT_REVERT_SELECTORS,
+  annotateDecodedRevert,
+} from "../../src/facilitator/revert_selectors";
 
 /** The complete error list of contracts/evm/src/x402BatchSettlement.sol, independently of the
  *  module under test: the test recomputes every selector from the name, so a typo in either

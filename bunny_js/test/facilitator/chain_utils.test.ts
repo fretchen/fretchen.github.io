@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getFeeTokens, findFeeToken } from "../src/chain_utils.js";
+import { getFeeTokens, findFeeToken } from "../../src/facilitator/chain_utils.js";
 import { EURE_ADDRESSES } from "@fretchen/chain-utils";
 
 const BASE = "eip155:8453";

@@ -18,9 +18,9 @@ import { describe, test, expect, beforeEach, afterEach } from "vitest";
 import { createPublicClient, http, parseSignature, type Address, type Hex } from "viem";
 import { baseSepolia } from "viem/chains";
 import { PERMIT2_ADDRESS } from "@x402/evm";
-import { verifyPayment } from "../../src/x402_verify.js";
-import { resetFacilitator } from "../../src/facilitator_instance.js";
-import { getRpcUrl } from "../../src/chain_utils.js";
+import { verifyPayment } from "../../../src/facilitator/x402_verify.js";
+import { resetFacilitator } from "../../../src/facilitator/facilitator_instance.js";
+import { getRpcUrl } from "../../../src/facilitator/chain_utils.js";
 import { signPermit2Payment } from "../helpers/signPayment";
 
 const NETWORK = "eip155:84532";

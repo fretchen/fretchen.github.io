@@ -9,11 +9,11 @@
  * settle() and the fee module are stubbed and the assertions are about the calls made.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { settlePayment } from "../src/x402_settle.js";
-import * as facilitatorInstance from "../src/facilitator_instance.js";
-import type { getFacilitator } from "../src/facilitator_instance.js";
-import * as verifyModule from "../src/x402_verify.js";
-import * as feeModule from "../src/x402_fee.js";
+import { settlePayment } from "../../src/facilitator/x402_settle.js";
+import * as facilitatorInstance from "../../src/facilitator/facilitator_instance.js";
+import type { getFacilitator } from "../../src/facilitator/facilitator_instance.js";
+import * as verifyModule from "../../src/facilitator/x402_verify.js";
+import * as feeModule from "../../src/facilitator/x402_fee.js";
 import {
   claim,
   claimCommand,

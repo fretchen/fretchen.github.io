@@ -5,7 +5,11 @@ import { fileURLToPath } from "node:url";
 // Builtins-only parser, imported by relative path exactly like scw_js's and
 // x402_facilitator's copies of this test — no node_modules of this package are needed, so the
 // CI job that runs these tests does not need observability/ installed. See its header.
-import { extractRules, rulesForFunctions, isCovered } from "../../observability/alertCoverage.js";
+import {
+  extractRules,
+  rulesForFunctions,
+  isCovered,
+} from "../../../observability/alertCoverage.js";
 
 /**
  * The twins have NO alert_coverage test on purpose: their lines carry `level` as a real Loki
@@ -27,8 +31,8 @@ import { extractRules, rulesForFunctions, isCovered } from "../../observability/
  */
 
 const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
-const SRC_DIR = path.join(TEST_DIR, "..", "src");
-const ALERTS_DIR = path.join(TEST_DIR, "../../observability/alerts");
+const SRC_DIR = path.join(TEST_DIR, "..", "..", "src", "facilitator");
+const ALERTS_DIR = path.join(TEST_DIR, "../../../observability/alerts");
 
 /** The facilitator's surface in this package — payment core + routing + instance. */
 const FACILITATOR_FILES = [

@@ -14,7 +14,7 @@
 import { randomBytes } from "node:crypto";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { ExactEvmScheme } from "@x402/evm/exact/client";
-import { getChainConfig } from "../../src/chain_utils";
+import { getChainConfig } from "../../../src/facilitator/chain_utils";
 import { EURE_ADDRESSES } from "@fretchen/chain-utils";
 
 type Address = `0x${string}`;

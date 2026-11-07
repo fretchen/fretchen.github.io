@@ -4,7 +4,7 @@
  */
 
 import { getFacilitator } from "./facilitator_instance";
-import { logger } from "./logger";
+import { logger } from "../logger";
 
 export interface VerifyResult {
   isValid: boolean;

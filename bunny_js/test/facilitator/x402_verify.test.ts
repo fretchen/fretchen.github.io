@@ -16,9 +16,9 @@ vi.mock("viem", async (importOriginal) => {
   return fakeViem(await importOriginal<typeof import("viem")>());
 });
 
-import { verifyPayment } from "../src/x402_verify.js";
-import { resetFacilitator } from "../src/facilitator_instance.js";
-import { getFacilitatorAddress } from "../src/x402_fee.js";
+import { verifyPayment } from "../../src/facilitator/x402_verify.js";
+import { resetFacilitator } from "../../src/facilitator/facilitator_instance.js";
+import { getFacilitatorAddress } from "../../src/facilitator/x402_fee.js";
 import { chain } from "./helpers/fakeChain";
 import { signExactPayment, SELLER } from "./helpers/signPayment";
 

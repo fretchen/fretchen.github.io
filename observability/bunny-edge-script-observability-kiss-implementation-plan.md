@@ -27,69 +27,40 @@ No phone push, no webhooks, no self-hosted components, no third-party log vendor
 
 **Auth, verified 2026-11-06 by curl probe against the live endpoint:** `X-Token: <token>` → **204**, and (contrary to the old assumption in this plan) `Authorization: Bearer <token>` → **204** as well; no auth → 401. Both work — the implementation uses Scaleway's documented `X-Token`. Bonus finding: the observability **read-only logs token** (`SCW_COCKPIT_LOGS_TOKEN`) queries the custom source's `query_range` fine (the rules token 403s on queries — its scope is exactly rules, as documented), so extending `scripts/logs.ts` to the bunny source later is trivial. A probe info line from setup sits in the source (harmless).
 
-## 2. Code changes (~25 lines, plus one unit test) — IMPLEMENTED
+## 2. Code changes — IMPLEMENTED (post-review fixes included)
 
-Implemented in `bunny_js/src/logger.ts` (buffer, awaited `flushLogs`, monotonic ns counter, `withLogFlush`), wired into all three entries (`searchapi.ts` / `llm.ts` / `mcp.ts` with `bunny-web-agent` / `bunny-llm-agent` / `bunny-mcp-agent`), covered by `bunny_js/test/logger.test.ts` (8 tests). `npm run check` green (tsc, eslint, prettier, 266 tests).
+Implemented in `bunny_js/src/logger.ts` (buffer, awaited `flushLogs`, monotonic ns counter, `withLogFlush`), wired into all three entries (`searchapi.ts` / `llm.ts` / `mcp.ts` with `bunny-web-agent` / `bunny-llm-agent` / `bunny-mcp-agent`), covered by `bunny_js/test/logger.test.ts` (11 tests, including the review's regression guards). `npm run check` green. The authoritative code is the shipped `logger.ts` — the earlier sketch below is kept only for the design rationale; three of its details were corrected in review:
 
-**`logger.ts`** — keep the pino-shaped API and the console shim (dashboard debugging stays free); add a buffer and an awaited, Loki-shaped flush:
+- **Auth:** both `X-Token` and `Authorization: Bearer` are accepted by Cockpit (probed: 204/204; only no-auth gets 401) — the implementation uses the documented `X-Token`.
+- **The flush is AWAITED when non-empty** (no `waitUntil` in Bunny's SDK), and the fetch carries **`signal: AbortSignal.timeout(1500)`** — without a bound, the await couples every logged request's latency to ingest health.
+- **`debug` is console-only, never buffered** — the llm twins log `{ prompt }` at debug, scw's pino gate (`LOG_LEVEL ?? "info"`) suppressed those lines pre-move, and shipping them would be a new egress of user content, not parity.
 
 ```ts
+// sketch — see src/logger.ts for the shipped version
 const lines: { level: string; event: object }[] = [];
-let nsCounter = 0; // monotonic: two errors in the same ms must not collide
+let nsCounter = 0; // two errors in the same ms must not collide
 
-// in info/warn/error: push { level, event: { message, ...fields } } into lines
-// (plus the existing console output)
+// info/warn/error buffer { level, event: { message, ...fields } }; debug does NOT
+// (user content stays dashboard-only). Console output keeps its old shape.
 
 export async function flushLogs(): Promise<void> {
   const batch = lines.splice(0);
-  if (!batch.length) return; // common path: zero latency, no subrequest
-  // one stream per level; labels stay low-cardinality
-  const byLevel = new Map<string, [string, string][]>();
-  for (const { level, event } of batch) {
-    const vals = byLevel.get(level) ?? [];
-    // Loki wants nanosecond STRINGS: string-concat, never Date.now() * 1e6
-    // (that float exceeds Number.MAX_SAFE_INTEGER). The counter guards Loki's
-    // "duplicate timestamp for series" rejection for same-millisecond lines
-    // in one batch — a collision loses the WHOLE push, not one line.
-    vals.push([`${Date.now()}${String(++nsCounter).padStart(6, "0")}`, JSON.stringify(event)]);
-    byLevel.set(level, vals);
-  }
+  if (!batch.length || !url || !token) return; // happy path: zero latency, no subrequest
+  // group one Loki stream per level; ns suffix keeps same-ms lines strictly
+  // increasing (a duplicate timestamp loses the WHOLE push)
   try {
-    // Cockpit does NOT use Authorization: Bearer — the token goes in X-Token
-    // (or X-Scope-OrgID for Promtail-style agents). Bearer = 401.
-    const res = await fetch(process.env.COCKPIT_LOKI_URL ?? "", {
+    const res = await fetch(url, {
       method: "POST",
-      headers: {
-        "X-Token": process.env.SCW_COCKPIT_PUSH_TOKEN ?? "",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        streams: [...byLevel].map(([level, values]) => ({
-          stream: { service: SERVICE_LABEL, level },
-          values,
-        })),
-      }),
+      signal: AbortSignal.timeout(1500), // awaited => must be bounded
+      headers: { "X-Token": token, "Content-Type": "application/json" },
+      body: JSON.stringify({ streams: [...byLevel].map(...) }),
     });
-    if (!res.ok) {
-      console.error(
-        JSON.stringify({ level: "error", msg: "log flush failed", status: res.status }),
-      );
-    }
+    if (!res.ok) console.error(...); // visible in the bunny dashboard
   } catch (err) {
-    // swallowed: an ingest outage must never fail the user's request — but it is
-    // console.error'd so it stays visible in the bunny dashboard
-    console.error(JSON.stringify({ level: "error", msg: "log flush failed", err: String(err) }));
+    console.error(...); // never breaks the response
   }
 }
 ```
-
-Key points, deliberately:
-
-- **`await` on the non-empty path.** There is no `waitUntil` in Bunny's edge SDK — the isolate's guaranteed lifetime ends when the handler returns, so a fire-and-forget fetch is closer to fire-and-always-lost than "occasional". The buffer is non-empty almost only on errors, so the await costs ~nothing on the common path and zero when the buffer is empty.
-- **`X-Token`, not `Authorization: Bearer`** — Scaleway's Cockpit endpoints take the token in the `X-Token` header (their own Grafana integration does the same); a Bearer header gets a 401 and the experiment looks broken for the wrong reason.
-- **`process.env`, not `Deno.env.get`** — the runtime shims pin `process` and every entry imports them first; bare globals are not guaranteed (bunny Deno 1.x).
-- **Monotonic nanosecond suffix** — two same-millisecond lines in one batch would trigger Loki's `duplicate timestamp for series` rejection, which drops the whole push.
-- **Per-script `service` label** (via the `SERVICE_LABEL` constant set from the entry: `bunny-web-agent` / `bunny-llm-agent` / `bunny-mcp-agent`) — low-cardinality, distinguishes the twins in queries; `level` is the only other label.
 
 **Entry files (`searchapi.ts`, `llm.ts`, `mcp.ts`) — not the route files.** There is no single `routes.ts`: three handler files with ten-plus early `return` paths each (OPTIONS, discovery, 402, 404). Editing returns per file is unmaintainable and misses paths. Instead, one decorator, applied once per entry:
 
@@ -136,7 +107,8 @@ bunny scripts env set COCKPIT_LOKI_URL <https://<id>.logs.cockpit.fr-par.scw.clo
 ## 4. Verification
 
 - [x] curl probe against the live push URL: `X-Token` → 204 (`Authorization: Bearer` also 204 — both accepted; no auth → 401). A probe line sits in the data source as `level="info"`.
-- [x] Unit-tested (`test/logger.test.ts`): one batched `{streams}` push with `X-Token` auth; one stream per level with labels `{service, level}` only; same-millisecond lines get strictly increasing 19-digit ns timestamps; empty buffer sends no fetch; rejected fetch and non-2xx pushes never throw and surface via `console.error`; `withLogFlush` flushes on early returns AND handler throws.
+- [x] Unit-tested (`test/logger.test.ts`, 11 tests): one batched `{streams}` push with `X-Token` auth; one stream per level with labels `{service, level}` only; same-millisecond lines get strictly increasing 19-digit ns timestamps; empty buffer sends no fetch; **debug never reaches the buffer (privacy regression guard)**; **the fetch init carries an AbortSignal (timeout regression guard)**; rejected, non-2xx and aborted pushes never throw and surface via `console.error`; `withLogFlush` flushes on early returns AND handler throws.
+- [x] **Review fixes (2026-11-07)**: `AbortSignal.timeout(1500)` bounds the awaited flush; `debug` lines stopped buffering (prompt egress closed); `alerts.ts` refuses `--push alerts/bunny.yaml` without `--url` (silent wrong-ruler push closed). Remaining post-merge findings-flow actions: THREAT_MODEL token row + `bunny_js/SECURITY.md` line for the push-only Cockpit token.
 - [x] **Rule fired end-to-end at setup (2026-11-06):** one `level="error"` probe line was pushed through the exact ingest path the scripts will use (X-Token → 204), confirmed stored via `query_range` `{service="bunny-web-agent", level="error"}`, the mounted rule matched it (1m interval, `[1h]`, `for: 0m`), and **the alert-manager email arrived** — the full chain is proven, per the doctrine that a rule that has never fired is not known to work. Expect one "resolved" email roughly an hour later when the probe ages out of the window; the probe lines themselves age out with the free 7-day retention. No test trigger to remove — there was no temporary route, only the probe line.
 - [ ] **Ship the flush code: merge `observ` → `main` → `deploy-bunny-js.yml` publishes all three twins (it triggers on push to `main` touching `bunny_js/**`; PRs only run CI).** Env is already set on the scripts, the rule is live — no config changes ride along with the deploy. The manual three-deploy in the README (`npm run deploy` + llm/mcp by script id) is the out-of-band laptop path and NOT needed here: a laptop deploy publishes the same new code minutes earlier, but the next merge to main would republish anyway (last deployment wins), and deploying unmerged state from a branch is the exact divergence that doctrine avoids. After the Action's deploys, the first real `logger.error` from a paid request flows the probe's path from inside the isolate.
 - [ ] Confirm `{level="error"}` is empty on a normal traffic day (the probe ages out within the hour).

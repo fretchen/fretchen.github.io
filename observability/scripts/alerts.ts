@@ -95,8 +95,31 @@ function assertCommitted(file: string): void {
   }
 }
 
+/**
+ * Rules whose group must NOT land on the default ruler — they live on a custom data source's own
+ * ruler (a ruler rule only ever sees its own data source's logs). Pushing one with the default
+ * URL succeeds silently, bills ~€0.015/day and matches nothing, so this refuses instead.
+ * Value: the custom source's API base, for the error message.
+ */
+const CUSTOM_RULER_FILES: Record<string, string> = {
+  "alerts/bunny.yaml": "https://db123d37-9094-4e15-badc-706071190ed7.logs.cockpit.fr-par.scw.cloud",
+};
+
+function assertRulerUrl(file: string): void {
+  const customBase = CUSTOM_RULER_FILES[file];
+  if (customBase && !flag("url")) {
+    console.error(
+      `refusing to push ${file} to the default ruler: its rules evaluate the custom bunny-logs ` +
+        `data source, which that ruler cannot see — the group would be billed daily and match ` +
+        `nothing. Add:\n  --url ${customBase}`,
+    );
+    process.exit(1);
+  }
+}
+
 async function push(file: string): Promise<void> {
   assertCommitted(file);
+  assertRulerUrl(file);
   const yaml = readFileSync(file, "utf8");
   await ruler(`/${NAMESPACE}`, {
     method: "POST",

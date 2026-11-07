@@ -99,6 +99,54 @@ describe("flushLogs", () => {
     }
   });
 
+  test("debug lines are console-only — they never reach the Cockpit buffer", async () => {
+    // The llm twins log { prompt } at debug; scw's pino gate (LOG_LEVEL ?? "info")
+    // suppressed those lines pre-move, so shipping them would be a new egress of
+    // user content, not parity. Regression guard: debug alone must not even fetch.
+    logger.debug({ prompt: "user's private chat message" }, "Generating answer for prompt");
+    await flushLogs();
+    expect(mockFetch).not.toHaveBeenCalled();
+
+    // And mixed with a buffered level, debug stays out of the payload.
+    logger.debug({ prompt: "another one" }, "Generating answer for prompt");
+    logger.info("settlement bookkeeping");
+    await flushLogs();
+    const { body } = singlePushBody();
+    expect(body.streams).toHaveLength(1);
+    expect(body.streams[0].stream.level).toBe("info");
+    expect(body.streams[0].values).toHaveLength(1);
+    expect(JSON.stringify(body.streams[0].values)).not.toContain("prompt");
+  });
+
+  test("the flush fetch is bounded by an abort signal (timeout regression guard)", async () => {
+    // The flush is awaited (no waitUntil at the edge), so without a timeout a
+    // brownout Cockpit stalls every logged request. The fetch init must carry
+    // an AbortSignal — AbortSignal.timeout(1500) in the implementation.
+    logger.error({ err: "x" }, "Request handler error");
+    await flushLogs();
+    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  test("a timed-out (aborted) fetch never throws out of flushLogs, and surfaces in the console", async () => {
+    mockFetch.mockRejectedValue(new Error("This operation was aborted"));
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    logger.error({ err: "x" }, "Request handler error");
+    let failureLine: unknown;
+    try {
+      await expect(flushLogs()).resolves.toBeUndefined();
+      const failure = consoleError.mock.calls
+        .map((c) => c[0])
+        .find((l) => /log flush failed/.test(String(l)));
+      expect(failure).toBeDefined();
+      failureLine = failure;
+    } finally {
+      consoleError.mockRestore();
+    }
+    expect(JSON.parse(failureLine as string)).toMatchObject({ msg: "log flush failed" });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
   test("empty buffer sends no fetch at all (the happy-path request stays free)", async () => {
     logger.error("seen");
     await flushLogs();

@@ -40,9 +40,13 @@ function emit(level: string, arg: unknown, maybeMsg?: string): void {
   } else {
     console.log(line);
   }
-  // The same fields go to the Cockpit flush, under the message key the alert/query side
-  // expects; everything beyond `message` rides in the line payload (queryable via `| json`).
-  lines.push({ level, event: { message: msg, ...obj } });
+  // debug stays console-only — never buffered: the llm twins log { prompt } at
+  // debug, and user content must not egress to Cockpit. On scw the pino gate
+  // (LOG_LEVEL ?? "info") suppressed these lines; buffering them here would be
+  // a NEW egress, not parity with the pre-move setup.
+  if (level !== "debug") {
+    lines.push({ level, event: { message: msg, ...obj } });
+  }
 }
 
 /**
@@ -69,6 +73,11 @@ export async function flushLogs(): Promise<void> {
   try {
     const res = await fetch(url, {
       method: "POST",
+      // A slow/brownout Cockpit must not stall every logged request: the flush is
+      // awaited precisely because the runtime has no waitUntil, and this timeout
+      // is what keeps that await from becoming a latency coupling to ingest
+      // health. An abort lands in the catch below like any other failure.
+      signal: AbortSignal.timeout(1500),
       // Labels stay {service, level} only — high-cardinality labels are the classic Loki trap.
       headers: { "X-Token": token, "Content-Type": "application/json" },
       body: JSON.stringify({

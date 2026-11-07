@@ -1,0 +1,593 @@
+/**
+ * Tests for facilitator_instance onAfterVerify hook (fee model)
+ *
+ * The hook implements the fee access control logic:
+ * - Recipients with sufficient USDC allowance pass (fee collected at settle)
+ * - Recipients without sufficient allowance are rejected
+ * - When fees are disabled (fee=0), all recipients pass
+ *
+ * We test the hook by capturing the callback registered via facilitator.onAfterVerify()
+ * and calling it directly with different input combinations.
+ */
+
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+// ═══════════════════════════════════════════════════════════════
+// Capture the onAfterVerify callback from the facilitator instance
+// ═══════════════════════════════════════════════════════════════
+
+type HookArgs = {
+  paymentPayload: {
+    accepted?: { network?: string; scheme?: string; payTo?: string };
+    payload?: {
+      authorization?: { to?: string };
+      permit2Authorization?: { witness?: { to?: string }; from?: string };
+    };
+  };
+  requirements?: { network?: string; scheme?: string; payTo?: string; asset?: string };
+  result: Record<string, unknown>;
+};
+
+const OP_SEPOLIA_USDC = "0x5fd84259d66Cd46123540766Be93DFE6D43130D7";
+const BASE_EURC = "0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42";
+
+type RegisterCall = { network: unknown; scheme: { scheme?: string } };
+
+// Use vi.hoisted() to ensure the holders are available before mocks run
+const { hookHolder, registerCalls } = vi.hoisted(() => ({
+  hookHolder: {
+    current: null as ((args: HookArgs) => Promise<void>) | null,
+  },
+  registerCalls: [] as RegisterCall[],
+}));
+
+// Mock x402 libraries — capture the onAfterVerify callback and every register() call
+vi.mock("@x402/core/facilitator", () => ({
+  // Use a regular function (not arrow) so it works as a constructor with `new`
+  x402Facilitator: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
+    this.register = vi.fn((network: unknown, scheme: { scheme?: string }) => {
+      registerCalls.push({ network, scheme });
+    });
+    this.onAfterVerify = vi.fn((cb: (args: HookArgs) => Promise<void>) => {
+      hookHolder.current = cb;
+    });
+  }),
+}));
+
+vi.mock("@x402/evm", () => ({
+  toFacilitatorEvmSigner: vi.fn(() => ({})),
+}));
+
+// Tag the mocked scheme instances so register() assertions can tell them apart.
+// Use regular functions (not arrows) so they work as constructors with `new`.
+vi.mock("@x402/evm/exact/facilitator", () => ({
+  ExactEvmScheme: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
+    this.scheme = "exact";
+  }),
+}));
+
+vi.mock("@x402/evm/batch-settlement/facilitator", () => ({
+  BatchSettlementEvmScheme: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
+    this.scheme = "batch-settlement";
+  }),
+}));
+
+vi.mock("viem", async () => {
+  const actual = await vi.importActual("viem");
+  return {
+    ...actual,
+    createPublicClient: vi.fn(() => ({})),
+    createWalletClient: vi.fn(() => ({})),
+  };
+});
+
+vi.mock("viem/accounts", () => ({
+  privateKeyToAccount: vi.fn(() => ({
+    address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  })),
+}));
+
+// Mock fee module — only what the hook's tests steer. Partial on purpose: loadFacilitatorAccount
+// stays real and runs against the viem/accounts mock above, so a missing key still throws as in
+// production and the signer is built exactly the way the facilitator builds it.
+vi.mock("../../src/facilitator/x402_fee.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/facilitator/x402_fee.js")>()),
+  evaluateFeeGate: vi.fn(),
+  getFacilitatorAddress: vi.fn(),
+}));
+
+import {
+  createFacilitator,
+  createReadOnlyFacilitator,
+  resetFacilitator,
+  getFacilitator,
+} from "../../src/facilitator/facilitator_instance.js";
+import { evaluateFeeGate, getFacilitatorAddress } from "../../src/facilitator/x402_fee.js";
+
+// ═══════════════════════════════════════════════════════════════
+// Tests
+// ═══════════════════════════════════════════════════════════════
+
+describe("facilitator_instance onAfterVerify hook (fee model)", () => {
+  const originalEnv = { ...process.env };
+
+  beforeEach(() => {
+    process.env.FACILITATOR_WALLET_PRIVATE_KEY =
+      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+
+    vi.clearAllMocks();
+    hookHolder.current = null;
+    registerCalls.length = 0;
+    resetFacilitator();
+
+    // Default: a fee is owed and the recipient's allowance covers it.
+    vi.mocked(evaluateFeeGate).mockResolvedValue({ kind: "charge" as const });
+    vi.mocked(getFacilitatorAddress).mockReturnValue("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+
+    // Create facilitator — this registers the schemes + the onAfterVerify hook
+    createFacilitator();
+  });
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  /**
+   * Helper: create mock hook arguments simulating a valid EIP-3009 exact payment.
+   * The SDK enforces `authorization.to === requirements.payTo` before this hook runs,
+   * so the helper keeps both fields equal to `recipient`. The hook itself now reads
+   * `requirements.payTo` (not the client payload), so `requirements` must be populated.
+   */
+  function hookArgs(recipient: string, network: string, asset = OP_SEPOLIA_USDC): HookArgs {
+    return {
+      paymentPayload: {
+        accepted: { network, scheme: "exact" },
+        payload: { authorization: { to: recipient } },
+      },
+      requirements: { network, scheme: "exact", payTo: recipient, asset },
+      result: {
+        isValid: true,
+        payer: "0xSomePayer000000000000000000000000000000",
+      },
+    };
+  }
+
+  /**
+   * Helper: create mock hook arguments simulating a Permit2 exact payment. Same
+   * scheme ("exact") as EIP-3009, but the payload carries `permit2Authorization`
+   * (recipient at witness.to) instead of `authorization` — the shape EURe pays with.
+   */
+  function permit2HookArgs(recipient: string, network: string, asset: string): HookArgs {
+    return {
+      paymentPayload: {
+        accepted: { network, scheme: "exact" },
+        payload: {
+          permit2Authorization: {
+            witness: { to: recipient },
+            from: "0xSomePayer000000000000000000000000000000",
+          },
+        },
+      },
+      requirements: { network, scheme: "exact", payTo: recipient, asset },
+      result: {
+        isValid: true,
+        payer: "0xSomePayer000000000000000000000000000000",
+      },
+    };
+  }
+
+  it("registers onAfterVerify hook during facilitator creation", () => {
+    expect(hookHolder.current).not.toBeNull();
+    expect(typeof hookHolder.current).toBe("function");
+  });
+
+  it("registers exact on every supported network, but batch-settlement only where the contract is deployed", () => {
+    // getSupportedNetworks() => OP, OP Sepolia, Base, Base Sepolia (4 networks — USDC
+    // exists everywhere, so `exact` is registered for all of them).
+    const exact = registerCalls.filter((c) => c.scheme?.scheme === "exact");
+    const batch = registerCalls.filter((c) => c.scheme?.scheme === "batch-settlement");
+    expect(exact).toHaveLength(4);
+
+    // REGRESSION GUARD: batch-settlement must be registered ONLY on networks where
+    // the canonical BATCH_SETTLEMENT_ADDRESS contract is actually deployed —
+    // Optimism mainnet, Base mainnet, Base Sepolia. Optimism Sepolia has no
+    // deployment; registering it there would advertise support via /supported for
+    // a network where any deposit/claim/settle fails on-chain.
+    const batchNetworks = batch.map((c) => c.network).sort();
+    expect(batchNetworks).toEqual(["eip155:10", "eip155:8453", "eip155:84532"].sort());
+    expect(batchNetworks).not.toContain("eip155:11155420");
+  });
+
+  it("read-only facilitator also excludes Optimism Sepolia from batch-settlement registration", () => {
+    // Same regression guard as above, but for createReadOnlyFacilitator() — a
+    // separate registration loop (used when no private key is configured / for
+    // /supported-only mode) that must apply the same deployment-scoped gating.
+    registerCalls.length = 0;
+    createReadOnlyFacilitator();
+
+    const exact = registerCalls.filter((c) => c.scheme?.scheme === "exact");
+    const batch = registerCalls.filter((c) => c.scheme?.scheme === "batch-settlement");
+    expect(exact).toHaveLength(4);
+
+    const batchNetworks = batch.map((c) => c.network).sort();
+    expect(batchNetworks).toEqual(["eip155:10", "eip155:8453", "eip155:84532"].sort());
+    expect(batchNetworks).not.toContain("eip155:11155420");
+  });
+
+  it("skips fee gating for batch-settlement payments (fee-free channels)", async () => {
+    // A fee is owed for `exact`, but batch-settlement must bypass the
+    // exact-scheme fee model entirely — and must NOT be rejected for lacking an
+    // exact-style authorization.to recipient.
+    const args: HookArgs = {
+      paymentPayload: {
+        accepted: {
+          network: "eip155:11155420",
+          scheme: "batch-settlement",
+          payTo: "0x1111111111111111111111111111111111111111",
+        },
+      },
+      requirements: {
+        network: "eip155:11155420",
+        scheme: "batch-settlement",
+        payTo: "0x1111111111111111111111111111111111111111",
+      },
+      result: { isValid: true },
+    };
+
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(true);
+    expect(args.result.feeRequired).toBe(false);
+    expect(evaluateFeeGate).not.toHaveBeenCalled();
+  });
+
+  // ───────────────────────────────────────────────────────────
+  // Batch-settlement deposit/voucher/refund: always open, always fee-free
+  // ───────────────────────────────────────────────────────────
+  //
+  // These payload types reach this hook (claim/settle skip verify() entirely — see
+  // x402_settle.ts). They are not "usage" — deposit funds a channel, refund unwinds
+  // it, voucher is an off-chain signature check — so FEE_MODEL_PLAN.md Phase 3 leaves
+  // them completely ungated: no whitelist, no allowance check, no fee. The old
+  // whitelist gate is retired (x402_whitelist.ts) with nothing replacing it here;
+  // claim/settle's allowance gate lives in x402_settle.ts instead.
+
+  it("is fee-free and gate-free for batch-settlement even with no payTo at all", async () => {
+    const args: HookArgs = {
+      paymentPayload: {
+        accepted: { network: "eip155:84532", scheme: "batch-settlement" },
+      },
+      requirements: { network: "eip155:84532", scheme: "batch-settlement" },
+      result: { isValid: true },
+    };
+
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(true);
+    expect(args.result.feeRequired).toBe(false);
+    expect(evaluateFeeGate).not.toHaveBeenCalled();
+  });
+
+  it("is fee-free and gate-free for batch-settlement regardless of recipient", async () => {
+    const args: HookArgs = {
+      paymentPayload: {
+        accepted: {
+          network: "eip155:84532",
+          scheme: "batch-settlement",
+          payTo: "0x2222222222222222222222222222222222222222",
+        },
+      },
+      requirements: {
+        network: "eip155:84532",
+        scheme: "batch-settlement",
+        payTo: "0x2222222222222222222222222222222222222222",
+      },
+      result: { isValid: true },
+    };
+
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(true);
+    expect(args.result.feeRequired).toBe(false);
+    expect(evaluateFeeGate).not.toHaveBeenCalled();
+  });
+
+  it("does not apply batch-settlement's free pass to the exact scheme", async () => {
+    // exact-scheme recipients are still gated by the fee-allowance model.
+    vi.mocked(evaluateFeeGate).mockResolvedValue({
+      kind: "charge" as const,
+      remainingSettlements: 10,
+    });
+
+    const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(true);
+    expect(evaluateFeeGate).toHaveBeenCalledWith(
+      "0x1111111111111111111111111111111111111111",
+      "eip155:11155420",
+      OP_SEPOLIA_USDC,
+    );
+  });
+
+  it("skips processing when verification already failed", async () => {
+    const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
+    args.result.isValid = false;
+    args.result.invalidReason = "invalid_signature";
+
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(false);
+    expect(args.result.invalidReason).toBe("invalid_signature");
+    expect(evaluateFeeGate).not.toHaveBeenCalled();
+  });
+
+  // ───────────────────────────────────────────────────────────
+  // Path 1: Fees disabled
+  // ───────────────────────────────────────────────────────────
+
+  it("allows all recipients when fees are disabled", async () => {
+    vi.mocked(evaluateFeeGate).mockResolvedValue({ kind: "no_fee" as const });
+
+    const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(true);
+    expect(args.result.feeRequired).toBe(false);
+  });
+
+  // ───────────────────────────────────────────────────────────
+  // Path 2: Sufficient fee allowance
+  // ───────────────────────────────────────────────────────────
+
+  it("allows recipient with sufficient fee allowance", async () => {
+    vi.mocked(evaluateFeeGate).mockResolvedValue({
+      kind: "charge" as const,
+      remainingSettlements: 10,
+    });
+
+    const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(true);
+    expect(args.result.feeRequired).toBe(true);
+    expect(args.result.recipient).toBe("0x1111111111111111111111111111111111111111");
+    expect(evaluateFeeGate).toHaveBeenCalledWith(
+      "0x1111111111111111111111111111111111111111",
+      "eip155:11155420",
+      OP_SEPOLIA_USDC,
+    );
+  });
+
+  // ───────────────────────────────────────────────────────────
+  // Path 3: Insufficient fee allowance
+  // ───────────────────────────────────────────────────────────
+
+  it("rejects recipient without sufficient fee allowance", async () => {
+    vi.mocked(evaluateFeeGate).mockResolvedValue({
+      kind: "reject" as const,
+      reason: "insufficient_fee_allowance" as const,
+    });
+
+    const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(false);
+    expect(args.result.invalidReason).toBe("insufficient_fee_allowance");
+  });
+
+  it("proceeds when the allowance is unreadable, without capping collection", async () => {
+    // Unreadable allowance still charges — evaluateFeeGate reports no settlement count.
+    vi.mocked(evaluateFeeGate).mockResolvedValue({ kind: "charge" as const });
+
+    const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
+    await hookHolder.current!(args);
+
+    // Fail open: a reading we could not take must not reject a valid payment.
+    expect(args.result.isValid).toBe(true);
+    expect(args.result.feeRequired).toBe(true);
+    // Never surface 0 for an unreadable allowance — that reads as "exhausted".
+    expect(args.result.remainingSettlements).toBeUndefined();
+  });
+
+  it("surfaces remaining settlements so sellers see their approval running down", async () => {
+    vi.mocked(evaluateFeeGate).mockResolvedValue({
+      kind: "charge" as const,
+      remainingSettlements: 10,
+    });
+
+    const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
+    await hookHolder.current!(args);
+
+    expect(args.result.remainingSettlements).toBe(10);
+  });
+
+  // ───────────────────────────────────────────────────────────
+  // Edge cases
+  // ───────────────────────────────────────────────────────────
+
+  it("rejects when the gate reports the facilitator address is not configured", async () => {
+    // The address check itself lives in evaluateFeeGate (see x402_fee.test.ts); this
+    // asserts the hook maps that rejection onto the verify result.
+    vi.mocked(evaluateFeeGate).mockResolvedValue({
+      kind: "reject" as const,
+      reason: "facilitator_not_configured" as const,
+    });
+
+    const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(false);
+    expect(args.result.invalidReason).toBe("facilitator_not_configured");
+  });
+
+  it("gates the fee on requirements.asset, the token the settlement moves", async () => {
+    vi.mocked(evaluateFeeGate).mockResolvedValue({ kind: "charge" as const });
+
+    const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:8453", BASE_EURC);
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(true);
+    expect(evaluateFeeGate).toHaveBeenCalledWith(
+      "0x1111111111111111111111111111111111111111",
+      "eip155:8453",
+      BASE_EURC,
+    );
+  });
+
+  it("rejects when asset is missing from requirements", async () => {
+    const args = hookArgs("0x1111111111111111111111111111111111111111", "eip155:11155420");
+    delete args.requirements!.asset;
+
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(false);
+    expect(args.result.invalidReason).toBe("invalid_payload");
+    expect(evaluateFeeGate).not.toHaveBeenCalled();
+  });
+
+  it("rejects when network is missing from requirements", async () => {
+    const args: HookArgs = {
+      paymentPayload: {
+        accepted: { scheme: "exact" },
+        payload: {
+          authorization: { to: "0x1111111111111111111111111111111111111111" },
+        },
+      },
+      requirements: { scheme: "exact", payTo: "0x1111111111111111111111111111111111111111" },
+      result: { isValid: true },
+    };
+
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(false);
+    expect(args.result.invalidReason).toBe("invalid_payload");
+  });
+
+  it("rejects when recipient is missing from requirements", async () => {
+    const args: HookArgs = {
+      paymentPayload: {
+        accepted: { network: "eip155:11155420", scheme: "exact" },
+        payload: { authorization: {} },
+      },
+      requirements: { network: "eip155:11155420", scheme: "exact" },
+      result: { isValid: true },
+    };
+
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(false);
+    expect(args.result.invalidReason).toBe("invalid_payload");
+  });
+
+  // ───────────────────────────────────────────────────────────
+  // Permit2 (EURe) — same fee gate as EIP-3009
+  // ───────────────────────────────────────────────────────────
+
+  it("gates a Permit2 exact payload on requirements, like an EIP-3009 one", async () => {
+    vi.mocked(evaluateFeeGate).mockResolvedValue({
+      kind: "charge" as const,
+      remainingSettlements: 100,
+    });
+    const recipient = "0x1111111111111111111111111111111111111111";
+    const baseEure = "0xbf6e2966A9C3D99C9E4D069E04f7Bdb9C8aa762C";
+
+    const args = permit2HookArgs(recipient, "eip155:8453", baseEure);
+    await hookHolder.current!(args);
+
+    expect(args.result.isValid).toBe(true);
+    expect(evaluateFeeGate).toHaveBeenCalledWith(recipient, "eip155:8453", baseEure);
+    expect(args.result.feeRequired).toBe(true);
+    expect(args.result.remainingSettlements).toBe(100);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// Private key validation & error paths
+// ═══════════════════════════════════════════════════════════════
+
+describe("createFacilitator — private key validation", () => {
+  const originalEnv = { ...process.env };
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+    resetFacilitator();
+  });
+
+  it("throws when private key is missing and requirePrivateKey=true", () => {
+    delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
+
+    expect(() => createFacilitator(true)).toThrow("not configured");
+  });
+
+  it("returns read-only facilitator when private key is missing and requirePrivateKey=false", () => {
+    delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
+
+    const facilitator = createFacilitator(false);
+    expect(facilitator).toBeDefined();
+    // Read-only facilitator was created (no throw)
+  });
+
+  it("throws when private key has invalid length and requirePrivateKey=true", () => {
+    process.env.FACILITATOR_WALLET_PRIVATE_KEY = "0xdeadbeef"; // too short
+
+    expect(() => createFacilitator(true)).toThrow("must be 64 hex characters");
+  });
+
+  it("returns read-only facilitator when private key has invalid length and requirePrivateKey=false", () => {
+    process.env.FACILITATOR_WALLET_PRIVATE_KEY = "0xdeadbeef";
+
+    const facilitator = createFacilitator(false);
+    expect(facilitator).toBeDefined();
+    // Falls back to read-only (no throw)
+  });
+
+  it("normalizes private key without 0x prefix", () => {
+    // Valid 64-char hex without 0x prefix
+    process.env.FACILITATOR_WALLET_PRIVATE_KEY =
+      "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+
+    const facilitator = createFacilitator(true);
+    expect(facilitator).toBeDefined();
+  });
+
+  it("trims whitespace from private key", () => {
+    process.env.FACILITATOR_WALLET_PRIVATE_KEY =
+      "  0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80  ";
+
+    const facilitator = createFacilitator(true);
+    expect(facilitator).toBeDefined();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// Singleton pattern
+// ═══════════════════════════════════════════════════════════════
+
+describe("getFacilitator — singleton", () => {
+  const originalEnv = { ...process.env };
+
+  beforeEach(() => {
+    process.env.FACILITATOR_WALLET_PRIVATE_KEY =
+      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+    resetFacilitator();
+  });
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+    resetFacilitator();
+  });
+
+  it("returns the same instance on subsequent calls", () => {
+    const first = getFacilitator();
+    const second = getFacilitator();
+    expect(first).toBe(second);
+  });
+
+  it("creates new instance after resetFacilitator", () => {
+    const first = getFacilitator();
+    resetFacilitator();
+    const second = getFacilitator();
+    expect(first).not.toBe(second);
+  });
+});

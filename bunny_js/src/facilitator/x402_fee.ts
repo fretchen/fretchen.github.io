@@ -1,0 +1,619 @@
+/**
+ * x402 Facilitator Fee Module
+ *
+ * Handles post-settlement fee collection via ERC-20 transferFrom.
+ * The fee is charged in the token the payment settled in — USDC, or EURC on Base — so the
+ * merchant must have approved the facilitator's wallet to spend THAT token on their behalf
+ * (standard ERC-20 approve flow, one approval per token).
+ *
+ * Fee flow:
+ * 1. Settlement executes: transferWithAuthorization(client → merchant)
+ * 2. Fee collected after: transferFrom(merchant → facilitator, feeAmount)
+ */
+
+import {
+  createPublicClient,
+  createWalletClient,
+  http,
+  getContract,
+  nonceManager,
+  WaitForTransactionReceiptTimeoutError,
+  type Address,
+  type Abi,
+  type Hex,
+} from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { logger } from "../logger";
+import { loadPrivateKey } from "@fretchen/chain-utils";
+import { findFeeToken, getChainConfig, getRpcUrl } from "./chain_utils";
+
+// ═══════════════════════════════════════════════════════════════
+// Types
+// ═══════════════════════════════════════════════════════════════
+
+export interface FeeResult {
+  success: boolean;
+  txHash?: string;
+  error?: string;
+}
+
+export interface AllowanceInfo {
+  /**
+   * Undefined when the allowance could not be read.
+   *
+   * Never conflate "unreadable" with `0n`: a caller that caps a transfer at the
+   * allowance would silently stop collecting entirely during a transient RPC failure.
+   */
+  allowance?: bigint;
+  /**
+   * Undefined when the allowance could not be read ("unknown" status). Never
+   * report 0 here for an unreadable allowance — it reads as "approval exhausted"
+   * and pushes sellers to re-approve unnecessarily.
+   */
+  remainingSettlements?: number;
+  /**
+   * "ok"           — allowance covers at least one fee
+   * "insufficient" — read succeeded, allowance is genuinely too low (fail closed)
+   * "unknown"      — could not be read; callers proceed rather than block a payment
+   */
+  status: "ok" | "insufficient" | "unknown";
+}
+
+/**
+ * Whether this settlement owes a fee, and whether the recipient can pay it.
+ *
+ * - `no_fee`  — fees are disabled. Settle normally and attach NO fee receipt: the
+ *               `fee` / `extensions.facilitatorFees` fields are documented (see
+ *               `x402_schemas.ts`) as present only when a fee is configured.
+ * - `charge`  — a fee is owed; settle, then collect it.
+ * - `reject`  — do not settle at all.
+ */
+export type FeeGateDecision =
+  | { kind: "no_fee" }
+  | { kind: "charge"; remainingSettlements?: number }
+  | {
+      /**
+       * Only the reason travels. The allowance detail behind it is logged here for
+       * operators, and `/supported` → `facilitatorFees` already publishes the address to
+       * approve and the amount required — callers need nothing more from this type.
+       */
+      kind: "reject";
+      reason: "insufficient_fee_allowance" | "facilitator_not_configured" | "unsupported_fee_asset";
+    };
+
+// ═══════════════════════════════════════════════════════════════
+// ERC-20 ABI (minimal subset for fee operations)
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * The fee pull's ERC-20 surface. The two OZ v5 `error` entries are load-bearing for
+ * diagnostics: without them viem cannot decode a reverting `transferFrom` (the 2026-10-11
+ * EURe incident logged a bare `0xe450d38c` and "Unable to decode signature"), and the
+ * insufficient_merchant_balance / insufficient_fee_allowance mapping in collectFee's catch —
+ * which reads the decoded name out of the error message — never fires.
+ */
+export const ERC20_FEE_ABI = [
+  {
+    name: "allowance",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "spender", type: "address" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    name: "transferFrom",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "from", type: "address" },
+      { name: "to", type: "address" },
+      { name: "value", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  // OpenZeppelin v5's transferFrom errors (EURe, and every OZ v5 token, reverts with these
+  // rather than the old require strings). Decode-only entries: viem matches them by selector.
+  {
+    name: "ERC20InsufficientBalance",
+    type: "error",
+    inputs: [
+      { name: "sender", type: "address" },
+      { name: "balance", type: "uint256" },
+      { name: "needed", type: "uint256" },
+    ],
+  },
+  {
+    name: "ERC20InsufficientAllowance",
+    type: "error",
+    inputs: [
+      { name: "spender", type: "address" },
+      { name: "allowance", type: "uint256" },
+      { name: "needed", type: "uint256" },
+    ],
+  },
+] as const satisfies Abi;
+
+// ═══════════════════════════════════════════════════════════════
+// Fee Configuration
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Default fee: 10000 = 0.01 of the settled token, written in 6-decimal units.
+ *
+ * The fee is NOMINAL: 0.01 of whichever token settles. USDC and EURC have 6 decimals, so this is
+ * also their atomic amount — but EURe has 18, where 10000 atomic units would be 10⁻¹⁴ EUR. Every
+ * place that charges, checks or reports the fee must therefore use `feeAmountFor(decimals)`,
+ * never this number directly.
+ */
+const DEFAULT_FEE_AMOUNT = 10000n;
+
+/** The decimals `FACILITATOR_FEE_AMOUNT` / `DEFAULT_FEE_AMOUNT` are written in. */
+const FEE_BASE_DECIMALS = 6;
+
+/**
+ * Cap on how long fee collection may wait for its receipt.
+ *
+ * The settle handler has a 60s budget (serverless.yml) and has already spent part of it
+ * confirming the settlement transaction before fee collection starts. Fee collection
+ * must never be able to consume the rest: if the handler dies here, the buyer gets no
+ * receipt for a payment that already landed on-chain. A settled payment's receipt is
+ * worth far more than a 0.01 USDC fee.
+ */
+const FEE_RECEIPT_TIMEOUT_MS = 10_000;
+
+/**
+ * How many times the fee transfer is sent when a node refuses it before broadcast.
+ *
+ * Right after a settlement the facilitator sends a second transaction from the same wallet, and
+ * on a load-balanced RPC that second send can meet a node that has not caught up yet: it once
+ * reused the settlement's nonce ("replacement transaction underpriced") and once simulated against
+ * a balance that did not include the payment just received ("transfer amount exceeds balance").
+ * Both were refused before broadcast, and both would have gone through two seconds later.
+ */
+export const FEE_SEND_ATTEMPTS = 3;
+
+/** Pause between fee send attempts. `FEE_RETRY_DELAY_MS` overrides it (the tests set 0). */
+function feeRetryDelayMs(): number {
+  const raw = process.env.FEE_RETRY_DELAY_MS;
+  const parsed = raw === undefined || raw === "" ? NaN : Number(raw);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 2_000;
+}
+
+/**
+ * The nominal fee from environment or default, in 6-decimal units (10000 = 0.01).
+ * To charge it, scale it to the settled token with `feeAmountFor`.
+ */
+export function getFeeAmount(): bigint {
+  const envFee = process.env.FACILITATOR_FEE_AMOUNT;
+  if (envFee) {
+    try {
+      const parsed = BigInt(envFee);
+      if (parsed < 0n) {
+        logger.warn({ envFee }, "Invalid FACILITATOR_FEE_AMOUNT (negative), using default");
+        return DEFAULT_FEE_AMOUNT;
+      }
+      return parsed;
+    } catch {
+      logger.warn(
+        { envFee },
+        "Invalid FACILITATOR_FEE_AMOUNT (not a valid integer), using default",
+      );
+      return DEFAULT_FEE_AMOUNT;
+    }
+  }
+  return DEFAULT_FEE_AMOUNT;
+}
+
+/** The nominal fee in atomic units of a token with `decimals` decimals (0.01 → 10¹⁶ for 18). */
+export function feeAmountFor(decimals: number): bigint {
+  const base = getFeeAmount();
+  return decimals >= FEE_BASE_DECIMALS
+    ? base * 10n ** BigInt(decimals - FEE_BASE_DECIMALS)
+    : base / 10n ** BigInt(FEE_BASE_DECIMALS - decimals);
+}
+
+/** The nominal fee in `token`'s atomic units on `network`, or null for a token we do not know. */
+export function feeAmountForToken(network: string, token: string): bigint | null {
+  const feeToken = findFeeToken(network, token);
+  return feeToken ? feeAmountFor(feeToken.decimals) : null;
+}
+
+/**
+ * The facilitator's signing account. Every transaction this package sends must be signed by an
+ * account from here — the settlement signer (`facilitator_instance.ts`) and the fee pull alike.
+ *
+ * It carries viem's `nonceManager`, a module singleton keyed by address and chain, which remembers
+ * the last nonce this process used and never hands out one below it. Without it, the fee pull asked
+ * the RPC for the pending nonce on its own, right after the settlement, and a node that had not yet
+ * seen the settlement answered with its nonce: the fee pulls of 2026-09-28 reused the settlements'
+ * nonces 54 and 55 and were refused. The manager only coordinates senders that share it, which is
+ * why nothing should call `privateKeyToAccount` for this key directly.
+ */
+export function loadFacilitatorAccount() {
+  return privateKeyToAccount(loadPrivateKey("FACILITATOR_WALLET_PRIVATE_KEY"), { nonceManager });
+}
+
+/**
+ * Get the facilitator wallet address (fee recipient).
+ * Derived from the same private key used for settlements.
+ */
+export function getFacilitatorAddress(): Address | null {
+  try {
+    return privateKeyToAccount(loadPrivateKey("FACILITATOR_WALLET_PRIVATE_KEY")).address;
+  } catch {
+    return null;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Allowance Check
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Check how much of `token` the merchant has approved for the facilitator.
+ * Used at verify time to give early feedback if fee cannot be collected.
+ */
+export async function checkMerchantAllowance(
+  merchantAddress: Address,
+  network: string,
+  token: Address,
+): Promise<AllowanceInfo> {
+  const facilitatorAddress = getFacilitatorAddress();
+  if (!facilitatorAddress) {
+    logger.warn("Cannot check allowance: facilitator address not configured");
+    return { allowance: 0n, remainingSettlements: 0, status: "insufficient" };
+  }
+
+  const feeAmount = feeAmountForToken(network, token);
+  if (feeAmount === null) {
+    // Not a token this facilitator charges in. evaluateFeeGate refuses these before asking;
+    // answer "insufficient" rather than guess at a fee in unknown units.
+    logger.warn({ network, token }, "Cannot check allowance: not a known stablecoin");
+    return { allowance: 0n, remainingSettlements: 0, status: "insufficient" };
+  }
+  if (feeAmount === 0n) {
+    // No fee configured — nothing to collect, nothing to approve
+    return { remainingSettlements: Infinity, status: "ok" };
+  }
+
+  try {
+    const config = getChainConfig(network);
+    const publicClient = createPublicClient({
+      chain: config.chain,
+      transport: http(getRpcUrl(network)),
+    });
+
+    const feeToken = getContract({
+      address: token,
+      abi: ERC20_FEE_ABI,
+      client: publicClient,
+    });
+
+    const allowance = await feeToken.read.allowance([merchantAddress, facilitatorAddress]);
+
+    const remainingSettlements = feeAmount > 0n ? Number(allowance / feeAmount) : Infinity;
+    const status = allowance >= feeAmount ? "ok" : "insufficient";
+
+    logger.debug(
+      {
+        merchant: merchantAddress,
+        facilitator: facilitatorAddress,
+        allowance: allowance.toString(),
+        feeAmount: feeAmount.toString(),
+        remainingSettlements,
+        status,
+        network,
+        token,
+      },
+      "Merchant allowance check",
+    );
+
+    return { allowance, remainingSettlements, status };
+  } catch (error) {
+    // Fail open on RPC/read errors — don't block otherwise-valid payments over a
+    // reading we could not take. `warn`, not `error`: proceeding is the policy here,
+    // not a malfunction.
+    //
+    // `allowance` is deliberately left undefined rather than 0n. Reporting 0n would be
+    // a lie that reads as "no allowance", and any caller capping a transfer at it would
+    // silently stop collecting during a transient RPC blip.
+    logger.warn(
+      { err: error, merchant: merchantAddress, network },
+      "Could not read merchant allowance — proceeding without it",
+    );
+    return { status: "unknown" };
+  }
+}
+
+/**
+ * The single fee gate both schemes run before settling.
+ *
+ * `exact` calls this from the `onAfterVerify` hook (`facilitator_instance.ts`);
+ * `batch-settlement` calls it for `claim`/`settle` payloads (`x402_settle.ts`), which
+ * skip verify() entirely and so never reach that hook. Sharing it is the point: these
+ * were previously two hand-written implementations, and the batch-settlement copy had
+ * silently omitted the fee-disabled and facilitator-not-configured checks.
+ *
+ * Fails closed only on an allowance that genuinely read too low. An *unreadable*
+ * allowance proceeds — the payment is worth more than the fee.
+ *
+ * `token` is the token the settlement moves, and so the one the fee is charged in. It must
+ * be a stablecoin from the registry on `network` (USDC, EURC, EURe): a flat fee in a token this
+ * facilitator does not know is meaningless, so any other token is refused rather than relayed.
+ */
+export async function evaluateFeeGate(
+  recipient: Address,
+  network: string,
+  token: Address,
+): Promise<FeeGateDecision> {
+  const feeAmount = getFeeAmount();
+  if (feeAmount === 0n) {
+    return { kind: "no_fee" };
+  }
+
+  const stablecoin = findFeeToken(network, token);
+  if (!stablecoin) {
+    logger.warn(
+      { recipient, network, token },
+      "Fee asset is not a known stablecoin on this network",
+    );
+    return { kind: "reject", reason: "unsupported_fee_asset" };
+  }
+
+  const facilitatorAddress = getFacilitatorAddress();
+  if (!facilitatorAddress) {
+    logger.warn(
+      { recipient, network },
+      "Cannot check fee allowance: facilitator address not configured",
+    );
+    return { kind: "reject", reason: "facilitator_not_configured" };
+  }
+
+  const allowanceInfo = await checkMerchantAllowance(recipient, network, token);
+
+  if (allowanceInfo.status === "insufficient") {
+    logger.warn(
+      {
+        recipient,
+        network,
+        allowance: allowanceInfo.allowance?.toString(),
+        feeAmount: feeAmountFor(stablecoin.decimals).toString(),
+        facilitatorAddress,
+        token,
+      },
+      `Insufficient fee allowance — merchant must approve ${stablecoin.symbol} for facilitator`,
+    );
+    return { kind: "reject", reason: "insufficient_fee_allowance" };
+  }
+
+  if (allowanceInfo.status === "unknown") {
+    // Proceed by policy, not by accident: the payment is worth more than the fee.
+    logger.warn(
+      { recipient, network },
+      "Fee allowance unreadable — proceeding, fee collection attempted anyway",
+    );
+  } else {
+    logger.info(
+      { recipient, network, remainingSettlements: allowanceInfo.remainingSettlements },
+      "Recipient approved via fee allowance",
+    );
+  }
+
+  return { kind: "charge", remainingSettlements: allowanceInfo.remainingSettlements };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Fee Collection
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Whether a failed send never left the node — and so can be sent again without any risk of paying
+ * the fee twice.
+ *
+ * - "replacement transaction underpriced" / "nonce too low": the node refused the transaction, and
+ *   the nonce it carried belongs to a transaction that is already pending or mined.
+ * - "execution reverted": thrown by `writeContract` itself, which only happens in the simulation
+ *   before signing. A transaction that is mined and reverts comes back as a receipt, not a throw.
+ *
+ * Everything else — a transport error, an unknown RPC failure — may have happened after the node
+ * accepted the transaction, so it is not retried.
+ */
+export function wasRejectedBeforeBroadcast(error: unknown): boolean {
+  const text = String((error as { message?: unknown })?.message ?? error).toLowerCase();
+  return (
+    text.includes("replacement transaction underpriced") ||
+    text.includes("nonce too low") ||
+    text.includes("execution reverted")
+  );
+}
+
+/**
+ * A fee-pull revert no retry can fix: the merchant's token balance or the facilitator's
+ * allowance will not change between attempts — the 2026-10-11 EURe incident burned two retry
+ * cycles on a deterministic ERC20InsufficientBalance before failing. Detected by the decoded
+ * OZ v5 error name, which the fee ABI carries (see ERC20_FEE_ABI): before those entries
+ * existed, viem logged a bare selector and this could never match.
+ */
+export function isDeterministicFeeRevert(error: unknown): boolean {
+  const text = String((error as { message?: unknown })?.message ?? error).toLowerCase();
+  return text.includes("erc20insufficientbalance") || text.includes("erc20insufficientallowance");
+}
+
+/**
+ * Send the fee transfer, again after a short pause if a node refused it before broadcast. Returns
+ * the hash of the one send the node accepted; rethrows the last error otherwise. A deterministic
+ * balance/allowance revert is rethrown immediately — see isDeterministicFeeRevert.
+ */
+async function sendFeeTransfer(
+  send: () => Promise<Hex>,
+  context: { merchant: Address; network: string },
+): Promise<Hex> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await send();
+    } catch (error) {
+      if (
+        isDeterministicFeeRevert(error) ||
+        attempt >= FEE_SEND_ATTEMPTS ||
+        !wasRejectedBeforeBroadcast(error)
+      ) {
+        throw error;
+      }
+      // warn, not error: a refused send that is about to be retried is not yet a failure, and
+      // logger.error is reserved for what should page (test/alert_coverage.test.ts).
+      logger.warn(
+        {
+          ...context,
+          attempt,
+          reason: String((error as { shortMessage?: unknown })?.shortMessage ?? error).slice(
+            0,
+            200,
+          ),
+        },
+        "Fee transfer refused before broadcast — retrying",
+      );
+      await new Promise((resolve) => setTimeout(resolve, feeRetryDelayMs()));
+    }
+  }
+}
+
+/**
+ * Collect fee from merchant via ERC-20 transferFrom.
+ * Called AFTER successful settlement only.
+ *
+ * @param merchantAddress - The merchant who received payment (fee source)
+ * @param network - The CAIP-2 network identifier
+ * @param token - The settled token; the fee is charged in it. Already vetted by evaluateFeeGate.
+ * @returns FeeResult with success status and optional tx hash
+ */
+export async function collectFee(
+  merchantAddress: Address,
+  network: string,
+  token: Address,
+): Promise<FeeResult> {
+  const feeAmount = feeAmountForToken(network, token);
+  if (feeAmount === null) {
+    // evaluateFeeGate vets the token before settlement, so this is unreachable in practice —
+    // `warn`, not `error`, so it does not need an alert rule for something that cannot happen.
+    logger.warn({ network, token }, "Cannot collect fee: not a known stablecoin");
+    return { success: false, error: "unsupported_fee_asset" };
+  }
+
+  // No fee configured — skip silently
+  if (feeAmount === 0n) {
+    logger.debug("Fee amount is 0, skipping fee collection");
+    return { success: true };
+  }
+
+  let account;
+  try {
+    account = loadFacilitatorAccount();
+  } catch {
+    logger.error("Cannot collect fee: FACILITATOR_WALLET_PRIVATE_KEY not configured or invalid");
+    return { success: false, error: "facilitator_not_configured" };
+  }
+
+  try {
+    const config = getChainConfig(network);
+
+    const publicClient = createPublicClient({
+      chain: config.chain,
+      transport: http(getRpcUrl(network)),
+    });
+
+    const walletClient = createWalletClient({
+      account,
+      chain: config.chain,
+      transport: http(getRpcUrl(network)),
+    });
+
+    const feeToken = getContract({
+      address: token,
+      abi: ERC20_FEE_ABI,
+      client: { public: publicClient, wallet: walletClient },
+    });
+
+    logger.info(
+      {
+        merchant: merchantAddress,
+        facilitator: account.address,
+        feeAmount: feeAmount.toString(),
+        network,
+        token,
+      },
+      "Collecting fee via transferFrom",
+    );
+
+    const txHash = await sendFeeTransfer(
+      () => feeToken.write.transferFrom([merchantAddress, account.address, feeAmount]),
+      { merchant: merchantAddress, network },
+    );
+
+    // Wait for confirmation — bounded, so a slow fee tx can never eat the settle
+    // handler's remaining timeout budget and cost the buyer their receipt.
+    let receipt;
+    try {
+      receipt = await publicClient.waitForTransactionReceipt({
+        hash: txHash,
+        timeout: FEE_RECEIPT_TIMEOUT_MS,
+      });
+    } catch (error) {
+      if (error instanceof WaitForTransactionReceiptTimeoutError) {
+        // The tx is still in flight and may well succeed. Reporting it as failed would
+        // be wrong, and retrying against a fee that actually landed would double-charge
+        // the merchant. Return the hash so it can be reconciled later.
+        logger.warn(
+          {
+            txHash,
+            merchant: merchantAddress,
+            network,
+            timeoutMs: FEE_RECEIPT_TIMEOUT_MS,
+          },
+          "Fee tx not confirmed within budget — returning settlement receipt, fee outcome unknown",
+        );
+        return { success: false, txHash, error: "fee_collection_pending" };
+      }
+      throw error; // any other wait failure keeps existing outer-catch handling
+    }
+
+    if (receipt.status === "success") {
+      logger.info(
+        {
+          txHash,
+          merchant: merchantAddress,
+          feeAmount: feeAmount.toString(),
+          network,
+        },
+        "Fee collected successfully",
+      );
+      return { success: true, txHash };
+    } else {
+      logger.error(
+        { txHash, receipt, merchant: merchantAddress, network },
+        "Fee transaction reverted",
+      );
+      return { success: false, txHash, error: "fee_transaction_reverted" };
+    }
+  } catch (error) {
+    const err = error as Error;
+    logger.error({ err, merchant: merchantAddress, network }, "Fee collection failed");
+
+    let errorReason = "fee_collection_failed";
+    if (
+      err.message?.includes("insufficient allowance") ||
+      err.message?.includes("ERC20InsufficientAllowance")
+    ) {
+      errorReason = "insufficient_fee_allowance";
+    } else if (
+      err.message?.includes("insufficient balance") ||
+      err.message?.includes("ERC20InsufficientBalance")
+    ) {
+      errorReason = "insufficient_merchant_balance";
+    }
+
+    return { success: false, error: errorReason };
+  }
+}

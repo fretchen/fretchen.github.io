@@ -28,12 +28,25 @@
  *   npx tsx scripts/logs.ts facilitator --since 36h --grep "Settlement failed"
  *   npx tsx scripts/logs.ts searchapi --since 6h --grep "handler error|Could not reach"   # regex
  *   npx tsx scripts/logs.ts '{resource_name="…"}' --raw        # full LogQL, unformatted output
+ *
+ *   The bunny Edge Scripts (the scw twins + the facilitator) do not write to the default
+ *   source — they flush to the custom `bunny-logs` data source, where their lines are plain
+ *   JSON objects carrying a `service` label:
+ *   npx tsx scripts/logs.ts '{service="facilitator"}' --url \
+ *     https://db123d37-9094-4e15-badc-706071190ed7.logs.cockpit.fr-par.scw.cloud --since 24h
+ *   (The read token's scope covers the custom source's query_range — verified 2026-11-06.)
  */
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const URL_BASE = process.env.SCW_COCKPIT_LOGS_URL;
+/** The default source's URL comes from `.env`; `--url <base>` points the same read token at
+ *  the custom bunny-logs data source instead. A `--url` that is missing its value (it was the
+ *  last argument, or the next token is another flag) falls back to `.env` rather than
+ *  silently querying a garbage URL. */
+const urlFlagValue = process.argv[process.argv.indexOf("--url") + 1];
+const URL_BASE =
+  urlFlagValue && !urlFlagValue.startsWith("--") ? urlFlagValue : process.env.SCW_COCKPIT_LOGS_URL;
 const TOKEN = process.env.SCW_COCKPIT_LOGS_TOKEN;
 
 if (!URL_BASE || !TOKEN) {

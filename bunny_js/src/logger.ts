@@ -29,10 +29,22 @@ function nsTimestamp(): string {
   return `${Date.now()}${String(++nsCounter).padStart(6, "0")}`;
 }
 
+/**
+ * pino serializes Error values (the `err` key) into message + stack; JSON.stringify does not
+ * (it yields `{}`). The ported core logs caught exceptions as `{ err: Error }` and pino parity
+ * matters both for debugging and for `| json` reads in Grafana — without this, a swallowed
+ * exception logs as `"err":{}` and its cause is invisible.
+ */
+function stringifyLine(value: unknown): string {
+  return JSON.stringify(value, (_key, v) =>
+    v instanceof Error ? { name: v.name, message: v.message, stack: v.stack } : v,
+  );
+}
+
 function emit(level: string, arg: unknown, maybeMsg?: string): void {
   const [obj, msg] = typeof arg === "string" ? [{}, arg] : [(arg as object) ?? {}, maybeMsg ?? ""];
   // pino prints `level then message then context`; JSON-lines keeps the same fields.
-  const line = JSON.stringify({ level, time: Date.now(), msg, ...obj });
+  const line = stringifyLine({ level, time: Date.now(), msg, ...obj });
   if (level === "error") {
     console.error(line);
   } else if (level === "warn") {
@@ -67,7 +79,7 @@ export async function flushLogs(): Promise<void> {
   const byLevel = new Map<string, [string, string][]>();
   for (const { level, event } of batch) {
     const vals = byLevel.get(level) ?? [];
-    vals.push([nsTimestamp(), JSON.stringify(event)]);
+    vals.push([nsTimestamp(), stringifyLine(event)]);
     byLevel.set(level, vals);
   }
   try {
@@ -116,9 +128,23 @@ export function withLogFlush(
   };
 }
 
+/**
+ * pino-parity for the ported core: it gates debug logging behind this (pino's Gating API),
+ * e.g. `if (logger.isLevelEnabled("debug"))`. The same env gate as scw's pino instance:
+ * LOG_LEVEL (default info) lets debug be turned on in the dashboard without a deploy.
+ */
+const LEVEL_ORDER = { debug: 10, info: 20, warn: 30, error: 40 } as const;
+function configuredLevel(): keyof typeof LEVEL_ORDER {
+  const raw = (process.env.LOG_LEVEL ?? "info").toLowerCase();
+  return raw in LEVEL_ORDER ? (raw as keyof typeof LEVEL_ORDER) : "info";
+}
+
 export const logger = {
   info: (arg: unknown, msg?: string) => emit("info", arg, msg),
   warn: (arg: unknown, msg?: string) => emit("warn", arg, msg),
   error: (arg: unknown, msg?: string) => emit("error", arg, msg),
   debug: (arg: unknown, msg?: string) => emit("debug", arg, msg),
+  isLevelEnabled: (level: string): boolean =>
+    LEVEL_ORDER[configuredLevel()] <=
+    (LEVEL_ORDER[level as keyof typeof LEVEL_ORDER] ?? LEVEL_ORDER.info),
 };

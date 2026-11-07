@@ -10,6 +10,13 @@ domains, and the Scaleway twins they replaced are removed from `scw_js`'s
 `npm run deploy` (run it before merging to make the docs' "retired" claims literal).
 Only `scw_js`'s `llmx402cron` remains, claiming the channels these twins charge.
 
+The fourth script is the **facilitator** (`facilitator.ts`, `service="facilitator"`) — the x402
+payment facilitator (`/verify`, `/settle`, `/supported`, `/openapi.json`) ported verbatim from
+`x402_facilitator/` (payment core + its test suite) with Scaleway's envelope exchanged for
+native `Request`/`Response` routing in `src/facilitator_routes.ts`. Its cutover plan is
+[`x402_facilitator/bunny-port-implementation-plan.md`](../x402_facilitator/bunny-port-implementation-plan.md):
+until its DNS flip the Scaleway facilitator remains the live one at `facilitator.fretchen.eu`.
+
 ## Architecture
 
 - `src/routes.ts` — the **only new code**: the routing layer, natively against web-standard
@@ -29,17 +36,32 @@ Only `scw_js`'s `llmx402cron` remains, claiming the channels these twins charge.
     envelope helpers are not ported — there is no Scaleway envelope here.
 - `src/runtime-shims.ts` — pins the Node `Buffer`/`process` globals the ported code assumes,
   imported FIRST by the entry so they exist before any ported module's top-level code runs.
+- `src/facilitator/` — the facilitator's own corner of the tree (`src/` is otherwise the
+  twins'): the payment core ported **verbatim** from `x402_facilitator/` (that package keeps
+  its own copy alive for its Scaleway function until the teardown PR; only `walletreportcron`
+  stays on Scaleway long-term, because the edge has no cron) plus one new file — the routing.
+  `src/facilitator/facilitator_routes.ts` mirrors the Scaleway handler's routing/CORS/envelope
+  semantics line by line against web-standard `Request`/`Response`; everything else is
+  untouched payment behavior, including its test suite (`test/facilitator/` — the ported
+  core tests, `facilitator_routes.test.ts` for the native routing, and
+  `facilitator_alert_coverage.test.ts`, which pins the ported log phrases to
+  `observability/alerts/bunny.yaml`'s facilitator branch; the twins need no such test).
+  The entry is `src/facilitator.ts`, flat like the other three.
 
 ## Commands
 
 - `npm run build` — tsdown bundle to a **single** `dist/searchapi.js` (bunny deploys one file).
-- `npm run dev:searchapi` / `dev:llm` / `dev:mcp` — local serve of one twin via Deno on
+- `npm run dev:searchapi` / `dev:llm` / `dev:mcp` / `dev:facilitator` — local serve of one
+  twin via Deno on
   127.0.0.1 (from source, no build needed; `--sloppy-imports` covers the shared packages'
   extensionless tsc output, and `--env-file=.env` is baked in — a missing `.env` only warns).
   The paid path needs `NFT_WALLET_PUBLIC_KEY` + `RECEIVER_AUTHORIZER_PRIVATE_KEY` in `.env`;
   extra args go after `--` (`npm run dev:mcp -- --port 8081`-style), because npm eats
   unknown flags like `--env-file` itself.
-- `npm test` — vitest (165 tests: 108 ported + the translated routes suite (incl. cache-control)).
+- `npm test` — vitest (521 tests: the twins' ported suite + routes, the facilitator's ported
+  payment suite (`test/x402_*.test.ts`) + native routes + its alert-phrase guard;
+  `npm run test:integration` runs the live-RPC cases under `test/integration/`, inherited
+  from the facilitator package).
 - `npm run check` — typecheck + lint + format + tests.
 - `npm run deploy` — build, then `bunny scripts deploy dist/searchapi.js` (needs the bunny CLI,
   installed and logged in).
@@ -73,6 +95,17 @@ it is inert without another credential, plain — and plain stays inspectable wh
 | `SCW_COCKPIT_PUSH_TOKEN`                   | secret (`--secret`)     | Cockpit push-only token — authenticates the Loki log flush to the observability data source (see the observability README/implementation plan)                                                                  |
 | `COCKPIT_LOKI_URL`                         | plain                   | push URL of the custom Cockpit logs data source — public and inert without the token                                                                                                                            |
 
+**Facilitator script — its own env set** (`bunny scripts env set` against its script id; the
+values mirror `x402_facilitator/serverless.yml`):
+
+| Variable                                      | bunny kind          | Use                                                                                                       |
+| --------------------------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------- |
+| `FACILITATOR_FEE_AMOUNT`                      | plain               | fee in the token's smallest unit (`10000` = 0.01 USDC/EURC)                                               |
+| `BATCH_SETTLEMENT_TEST_WALLETS`               | plain               | testnet-only allowance-check bypass list (public, testnet-fenced in code)                                 |
+| `FACILITATOR_WALLET_PRIVATE_KEY`              | secret (`--secret`) | the facilitator hot wallet — signs settles and pulls fees; write-once on bunny's side                     |
+| `RPC_URL_EIP155_*`                            | secret (`--secret`) | the four network RPC URLs — real values embed API keys; unset falls back to rate-limited public endpoints |
+| `SCW_COCKPIT_PUSH_TOKEN` / `COCKPIT_LOKI_URL` | as above            | the logger pair, same as the twins                                                                        |
+
 ## Known limits / decisions
 
 - **Single-file bundle, 1 MB limit.** tsdown emits one `dist/searchapi.js` with `codeSplitting:
@@ -93,7 +126,12 @@ false`; Node builtins stay external and MUST be imported through the `node:` pre
   sync) + 1 upstream + facilitator calls. Well within the cap, but `getFacilitatorFeeConfig`
   style fetch storms would not be.
 - **No cron at the edge** — `llmx402cron` stays on Scaleway and claims the channels this twin
-  charges, unchanged, because the channel storage is the same bucket.
+  charges, unchanged, because the channel storage is the same bucket. For the same reason the
+  facilitator's `walletreportcron` (weekly wallet-report email) stays on Scaleway too — the
+  edge has no scheduler, and the report additionally rides Scaleway Transactional Email.
+- **Facilitator bundle ≈ 573 KB minified** (`dist/facilitator.js`, single file, deps inlined —
+  viem + the @x402 SDK are the bulk), well under the 1 MB script limit. Its imports are
+  `node:buffer`/`node:process` only, same as the twins.
 
 ## Trial matrix (Task 6 — historical; superseded by the production switch)
 
@@ -123,6 +161,11 @@ these twins' channels) and `growthapi` — the old twins' entries are gone from 
 The original port plan (scaffold, bundle gate, SigV4 spike, verbatim stack + tests, native
 routing + tests) is complete.
 
+The facilitator twin is ported and green but **not yet live**: `facilitator.fretchen.eu` still
+serves the Scaleway function until the port plan's operational cutover (trial-hostname probes
+→ DNS flip), after which `x402_facilitator/` trims down to `walletreportcron` in the teardown
+PR.
+
 ## Deploy paths (both can coexist)
 
 Bunny publishes whichever deployment happened **last**, so a manual CLI deploy and the
@@ -143,6 +186,8 @@ next push to `main` overwrites it back to the committed state.
    - `BUNNYJS_SCRIPT_ID` / `BUNNYJS_DEPLOY_KEY` — the searchapi script
    - `BUNNYLLM_SCRIPT_ID` / `BUNNYLLM_DEPLOY_KEY` — the llm script
    - `BUNNYMCP_SCRIPT_ID` / `BUNNYMCP_DEPLOY_KEY` — the mcp script
+   - `BUNNYFACILITATOR_SCRIPT_ID` / `BUNNYFACILITATOR_DEPLOY_KEY` — the facilitator script
+     (same pattern; serves `facilitator.fretchen.eu` after its DNS flip — see the port plan)
 
    (Per-script deploy keys are deliberately chosen over the account-wide API key a
    CLI-in-CI variant would need — narrower blast radius. A step whose secrets are missing

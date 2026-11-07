@@ -4,9 +4,11 @@
   "description": "Bunny Edge Script twins of the scw_js x402 sellers. First port: searchapi (web-agent).",
   "type": "module",
   "scripts": {
-    "build": "npm run build:searchapi && npm run build:llm && npm run build:mcp",
+    "build": "npm run build:searchapi && npm run build:llm && npm run build:mcp && npm run build:facilitator",
     "test": "NODE_ENV=test vitest run",
     "test:watch": "NODE_ENV=test vitest",
+    "test:integration": "NODE_ENV=test vitest run --config vitest.integration.config.js",
+    "generate:openapi": "tsx scripts/generate-openapi.ts && prettier --write src/openapi.facilitator.json",
     "test:coverage": "NODE_ENV=test vitest run --coverage",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -18,9 +20,11 @@
     "build:searchapi": "tsdown src/searchapi.ts",
     "build:llm": "tsdown src/llm.ts",
     "build:mcp": "tsdown src/mcp.ts",
+    "build:facilitator": "tsdown src/facilitator.ts",
     "dev:searchapi": "deno run -A --sloppy-imports --env-file=.env src/searchapi.ts",
     "dev:llm": "deno run -A --sloppy-imports --env-file=.env src/llm.ts",
-    "dev:mcp": "deno run -A --sloppy-imports --env-file=.env src/mcp.ts"
+    "dev:mcp": "deno run -A --sloppy-imports --env-file=.env src/mcp.ts",
+    "dev:facilitator": "deno run -A --sloppy-imports --env-file=.env src/facilitator.ts"
   },
   "keywords": [
     "bunny.net",
@@ -37,6 +41,7 @@
     "eslint": "^10.0.0",
     "prettier": "^3.6.2",
     "tsdown": "^0.23.1",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.58.2",
     "vitest": "^4.1.11"
@@ -45,8 +50,8 @@
     "@bunny.net/edgescript-sdk": "^0.11.2",
     "@fretchen/chain-utils": "file:../shared/chain-utils",
     "@fretchen/s3-utils": "file:../shared/s3-utils",
-    "@x402/core": "^2.23.0",
-    "@x402/evm": "^2.23.0",
+    "@x402/core": "^2.29.0",
+    "@x402/evm": "^2.29.0",
     "@x402/extensions": "~2.28.0",
     "viem": "2.57.4",
     "zod": "^4.5.4"

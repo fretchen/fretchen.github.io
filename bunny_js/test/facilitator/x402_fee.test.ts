@@ -1,0 +1,788 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  ERC20_FEE_ABI,
+  getFeeAmount,
+  getFacilitatorAddress,
+  checkMerchantAllowance,
+  collectFee,
+  evaluateFeeGate,
+  feeAmountFor,
+  wasRejectedBeforeBroadcast,
+} from "../../src/facilitator/x402_fee.js";
+import type { createPublicClient, getContract } from "viem";
+
+// Test mocks only implement the subset of the viem client/contract surface that
+// x402_fee.ts actually calls — cast through `unknown` rather than satisfying the
+// full (much larger) viem return types.
+function mockContract(shape: Record<string, unknown>) {
+  return shape as unknown as ReturnType<typeof getContract>;
+}
+function mockPublicClient(shape: Record<string, unknown>) {
+  return shape as unknown as ReturnType<typeof createPublicClient>;
+}
+
+// Mock viem
+vi.mock("viem", async () => {
+  const actual = await vi.importActual("viem");
+  return {
+    ...actual,
+    createPublicClient: vi.fn(() => ({
+      waitForTransactionReceipt: vi.fn(async ({ hash }) => ({
+        status: "success",
+        transactionHash: hash,
+      })),
+    })),
+    createWalletClient: vi.fn(() => ({})),
+    getContract: vi.fn(),
+  };
+});
+
+// Mock viem/accounts
+vi.mock("viem/accounts", () => ({
+  privateKeyToAccount: vi.fn((key) => {
+    if (key === "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80") {
+      return { address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" };
+    }
+    return { address: "0x1234567890123456789012345678901234567890" };
+  }),
+}));
+
+// The fee is charged in the settled token, so every fee call names one.
+const OP_SEPOLIA_USDC = "0x5fd84259d66Cd46123540766Be93DFE6D43130D7";
+const BASE_EURC = "0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42";
+// Monerium EURe has 18 decimals, so the same nominal fee is 10¹⁶ atomic units, not 10000.
+const BASE_EURE = "0xbf6e2966A9C3D99C9E4D069E04f7Bdb9C8aa762C";
+const EURE_FEE = 10_000_000_000_000_000n; // 0.01 EURe
+
+describe("x402_fee", () => {
+  const originalEnv = { ...process.env };
+  const VALID_PRIVATE_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+
+  beforeEach(() => {
+    process.env.FACILITATOR_WALLET_PRIVATE_KEY = VALID_PRIVATE_KEY;
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // getFeeAmount
+  // ═══════════════════════════════════════════════════════════
+
+  describe("getFeeAmount", () => {
+    it("returns default fee (10000) when env not set", () => {
+      delete process.env.FACILITATOR_FEE_AMOUNT;
+      expect(getFeeAmount()).toBe(10000n);
+    });
+
+    it("returns custom fee from env", () => {
+      process.env.FACILITATOR_FEE_AMOUNT = "50000";
+      expect(getFeeAmount()).toBe(50000n);
+    });
+
+    it("returns 0 when fee is explicitly set to 0 (fees disabled)", () => {
+      process.env.FACILITATOR_FEE_AMOUNT = "0";
+      expect(getFeeAmount()).toBe(0n);
+    });
+
+    it("returns default for negative values", () => {
+      process.env.FACILITATOR_FEE_AMOUNT = "-100";
+      expect(getFeeAmount()).toBe(10000n);
+    });
+
+    it("supports large fee amounts", () => {
+      process.env.FACILITATOR_FEE_AMOUNT = "1000000"; // 1 USDC
+      expect(getFeeAmount()).toBe(1000000n);
+    });
+
+    it("returns default for non-integer strings (e.g. text)", () => {
+      process.env.FACILITATOR_FEE_AMOUNT = "hello";
+      expect(getFeeAmount()).toBe(10000n);
+    });
+
+    it("returns default for decimal values", () => {
+      process.env.FACILITATOR_FEE_AMOUNT = "1.5";
+      expect(getFeeAmount()).toBe(10000n);
+    });
+
+    it("returns default for whitespace-only value", () => {
+      process.env.FACILITATOR_FEE_AMOUNT = "  ";
+      // BigInt trims whitespace → 0n (fees disabled), which is safe
+      expect(getFeeAmount()).toBe(0n);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // getFacilitatorAddress
+  // ═══════════════════════════════════════════════════════════
+
+  describe("getFacilitatorAddress", () => {
+    it("returns address derived from private key", () => {
+      const address = getFacilitatorAddress();
+      expect(address).toBe("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+    });
+
+    it("returns null when private key is not set", () => {
+      delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
+      expect(getFacilitatorAddress()).toBeNull();
+    });
+
+    it("returns null for invalid (too short) private key", () => {
+      process.env.FACILITATOR_WALLET_PRIVATE_KEY = "0xinvalid";
+      expect(getFacilitatorAddress()).toBeNull();
+    });
+
+    it("handles private key without 0x prefix", () => {
+      process.env.FACILITATOR_WALLET_PRIVATE_KEY =
+        "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+      const address = getFacilitatorAddress();
+      expect(address).toBeTruthy();
+    });
+
+    it("handles private key with whitespace", () => {
+      process.env.FACILITATOR_WALLET_PRIVATE_KEY = `  ${VALID_PRIVATE_KEY}  `;
+      const address = getFacilitatorAddress();
+      expect(address).toBe("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // checkMerchantAllowance
+  // ═══════════════════════════════════════════════════════════
+
+  describe("feeAmountFor — the nominal fee in each token's own units", () => {
+    it("is 10000 for a 6-decimal token and 10¹⁶ for an 18-decimal one", () => {
+      expect(feeAmountFor(6)).toBe(10000n);
+      expect(feeAmountFor(18)).toBe(EURE_FEE);
+    });
+
+    it("scales a configured fee the same way", () => {
+      process.env.FACILITATOR_FEE_AMOUNT = "50000"; // 0.05
+      expect(feeAmountFor(18)).toBe(50_000_000_000_000_000n);
+    });
+
+    it("stays zero when fees are disabled", () => {
+      process.env.FACILITATOR_FEE_AMOUNT = "0";
+      expect(feeAmountFor(18)).toBe(0n);
+    });
+  });
+
+  describe("checkMerchantAllowance", () => {
+    const merchant = "0x209693Bc6afc0C5328bA36FaF03C514EF312287C";
+
+    it("counts EURe settlements against the 18-decimal fee", async () => {
+      const { getContract } = await import("viem");
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          read: { allowance: vi.fn().mockResolvedValue(10n ** 18n) }, // 1 EURe
+        }),
+      );
+
+      const result = await checkMerchantAllowance(merchant, "eip155:8453", BASE_EURE);
+
+      // 1 EURe / 0.01 EURe — with an unscaled 10000 fee this would read as 10¹⁴ settlements.
+      expect(result.remainingSettlements).toBe(100);
+      expect(result.status).toBe("ok");
+    });
+
+    it("returns status=ok when allowance exceeds fee", async () => {
+      const { getContract } = await import("viem");
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          read: {
+            allowance: vi.fn().mockResolvedValue(100000n), // 0.10 USDC
+          },
+        }),
+      );
+
+      const result = await checkMerchantAllowance(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
+
+      expect(result.status).toBe("ok");
+      expect(result.allowance).toBe(100000n);
+      expect(result.remainingSettlements).toBe(10); // 100000 / 10000
+    });
+
+    it("returns status=insufficient when allowance is zero", async () => {
+      const { getContract } = await import("viem");
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          read: {
+            allowance: vi.fn().mockResolvedValue(0n),
+          },
+        }),
+      );
+
+      const result = await checkMerchantAllowance(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
+
+      expect(result.status).toBe("insufficient");
+      expect(result.allowance).toBe(0n);
+      expect(result.remainingSettlements).toBe(0);
+    });
+
+    it("returns status=insufficient when allowance is less than fee", async () => {
+      const { getContract } = await import("viem");
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          read: {
+            allowance: vi.fn().mockResolvedValue(5000n), // Half the fee
+          },
+        }),
+      );
+
+      const result = await checkMerchantAllowance(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
+
+      expect(result.status).toBe("insufficient");
+      expect(result.allowance).toBe(5000n);
+    });
+
+    it("returns status=ok when fee is 0 (fees disabled)", async () => {
+      process.env.FACILITATOR_FEE_AMOUNT = "0";
+
+      const result = await checkMerchantAllowance(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
+
+      expect(result.status).toBe("ok");
+      expect(result.remainingSettlements).toBe(Infinity);
+    });
+
+    it("returns insufficient when facilitator address not configured", async () => {
+      delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
+
+      const result = await checkMerchantAllowance(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
+
+      expect(result.status).toBe("insufficient");
+      expect(result.allowance).toBe(0n);
+    });
+
+    it("reports an RPC error as unknown, with the allowance left undefined", async () => {
+      const { getContract } = await import("viem");
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          read: {
+            allowance: vi.fn().mockRejectedValue(new Error("RPC timeout")),
+          },
+        }),
+      );
+
+      const result = await checkMerchantAllowance(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
+
+      // "unknown", not "insufficient": verify must not reject a valid payment over a
+      // reading we could not take.
+      expect(result.status).toBe("unknown");
+      // Deliberately NOT 0n — a caller capping a transfer at the allowance would
+      // otherwise halt collection entirely during a transient RPC failure.
+      expect(result.allowance).toBeUndefined();
+    });
+
+    it("correctly calculates remaining settlements", async () => {
+      const { getContract } = await import("viem");
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          read: {
+            allowance: vi.fn().mockResolvedValue(35000n), // 3.5 fees
+          },
+        }),
+      );
+
+      const result = await checkMerchantAllowance(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
+
+      expect(result.status).toBe("ok");
+      expect(result.remainingSettlements).toBe(3); // Floor(35000 / 10000)
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // collectFee
+  // ═══════════════════════════════════════════════════════════
+
+  describe("collectFee", () => {
+    const merchant = "0x209693Bc6afc0C5328bA36FaF03C514EF312287C";
+
+    it("pulls 0.01 EURe as 10¹⁶ atomic units", async () => {
+      const txHash = "0xfee1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab";
+      const { getContract, createPublicClient } = await import("viem");
+      vi.mocked(createPublicClient).mockReturnValue(
+        mockPublicClient({
+          waitForTransactionReceipt: vi.fn(async () => ({
+            status: "success",
+            transactionHash: txHash,
+          })),
+        }),
+      );
+      const transferFrom = vi.fn().mockResolvedValue(txHash);
+      vi.mocked(getContract).mockReturnValue(mockContract({ write: { transferFrom } }));
+
+      const result = await collectFee(merchant, "eip155:8453", BASE_EURE);
+
+      expect(result.success).toBe(true);
+      expect(transferFrom).toHaveBeenCalledWith([
+        merchant,
+        "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        EURE_FEE,
+      ]);
+    });
+
+    it("refuses a token that is not a fee token", async () => {
+      const result = await collectFee(
+        merchant,
+        "eip155:8453",
+        "0x0000000000000000000000000000000000000001",
+      );
+
+      expect(result).toEqual({ success: false, error: "unsupported_fee_asset" });
+    });
+
+    it("skips fee collection when fee is 0", async () => {
+      process.env.FACILITATOR_FEE_AMOUNT = "0";
+
+      const result = await collectFee(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
+
+      expect(result.success).toBe(true);
+      expect(result.txHash).toBeUndefined();
+    });
+
+    it("returns error when private key not configured", async () => {
+      delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
+
+      const result = await collectFee(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("facilitator_not_configured");
+    });
+
+    it("collects fee successfully via transferFrom", async () => {
+      const mockTxHash = "0xfee1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab";
+      const { getContract, createPublicClient } = await import("viem");
+
+      vi.mocked(createPublicClient).mockReturnValue(
+        mockPublicClient({
+          waitForTransactionReceipt: vi.fn(async () => ({
+            status: "success",
+            transactionHash: mockTxHash,
+          })),
+        }),
+      );
+
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          write: {
+            transferFrom: vi.fn().mockResolvedValue(mockTxHash),
+          },
+        }),
+      );
+
+      const result = await collectFee(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
+
+      expect(result.success).toBe(true);
+      expect(result.txHash).toBe(mockTxHash);
+    });
+
+    it("returns error on reverted transaction", async () => {
+      const mockTxHash = "0xfail234567890abcdef1234567890abcdef1234567890abcdef1234567890ab";
+      const { getContract, createPublicClient } = await import("viem");
+
+      vi.mocked(createPublicClient).mockReturnValue(
+        mockPublicClient({
+          waitForTransactionReceipt: vi.fn(async () => ({
+            status: "reverted",
+            transactionHash: mockTxHash,
+          })),
+        }),
+      );
+
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          write: {
+            transferFrom: vi.fn().mockResolvedValue(mockTxHash),
+          },
+        }),
+      );
+
+      const result = await collectFee(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
+
+      expect(result.success).toBe(false);
+      expect(result.txHash).toBe(mockTxHash);
+      expect(result.error).toBe("fee_transaction_reverted");
+    });
+
+    it("returns fee_collection_pending when the receipt wait times out", async () => {
+      const mockTxHash = "0xpend234567890abcdef1234567890abcdef1234567890abcdef1234567890ab";
+      const { getContract, createPublicClient, WaitForTransactionReceiptTimeoutError } =
+        await import("viem");
+
+      vi.mocked(createPublicClient).mockReturnValue(
+        mockPublicClient({
+          waitForTransactionReceipt: vi
+            .fn()
+            .mockRejectedValue(new WaitForTransactionReceiptTimeoutError({ hash: mockTxHash })),
+        }),
+      );
+
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          write: {
+            transferFrom: vi.fn().mockResolvedValue(mockTxHash),
+          },
+        }),
+      );
+
+      const result = await collectFee(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
+
+      // Not "failed": the tx is still in flight and the hash must survive for
+      // later reconciliation, otherwise a retry could double-charge the merchant.
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("fee_collection_pending");
+      expect(result.txHash).toBe(mockTxHash);
+    });
+
+    it("bounds the receipt wait with a timeout", async () => {
+      const mockTxHash = "0xbound34567890abcdef1234567890abcdef1234567890abcdef1234567890ab";
+      const { getContract, createPublicClient } = await import("viem");
+
+      const waitForTransactionReceipt = vi.fn(async () => ({
+        status: "success",
+        transactionHash: mockTxHash,
+      }));
+
+      vi.mocked(createPublicClient).mockReturnValue(
+        mockPublicClient({ waitForTransactionReceipt }),
+      );
+
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          write: {
+            transferFrom: vi.fn().mockResolvedValue(mockTxHash),
+          },
+        }),
+      );
+
+      await collectFee(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
+
+      // Regression guard: an unbounded wait can outlive the settle handler's 60s
+      // budget and cost the buyer their receipt for an already-settled payment.
+      expect(waitForTransactionReceipt).toHaveBeenCalledWith(
+        expect.objectContaining({ hash: mockTxHash, timeout: expect.any(Number) }),
+      );
+    });
+
+    it("treats non-timeout receipt wait errors as fee_collection_failed", async () => {
+      const mockTxHash = "0xrpcer34567890abcdef1234567890abcdef1234567890abcdef1234567890ab";
+      const { getContract, createPublicClient } = await import("viem");
+
+      vi.mocked(createPublicClient).mockReturnValue(
+        mockPublicClient({
+          waitForTransactionReceipt: vi.fn().mockRejectedValue(new Error("RPC connection lost")),
+        }),
+      );
+
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          write: {
+            transferFrom: vi.fn().mockResolvedValue(mockTxHash),
+          },
+        }),
+      );
+
+      const result = await collectFee(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("fee_collection_failed");
+    });
+
+    it("returns insufficient_fee_allowance error", async () => {
+      const { getContract } = await import("viem");
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          write: {
+            transferFrom: vi.fn().mockRejectedValue(new Error("ERC20InsufficientAllowance")),
+          },
+        }),
+      );
+
+      const result = await collectFee(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("insufficient_fee_allowance");
+    });
+
+    it("returns insufficient_merchant_balance error", async () => {
+      const { getContract } = await import("viem");
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          write: {
+            transferFrom: vi.fn().mockRejectedValue(new Error("ERC20InsufficientBalance")),
+          },
+        }),
+      );
+
+      const result = await collectFee(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("insufficient_merchant_balance");
+    });
+
+    it("does not retry a decoded insufficient-balance revert — the merchant cannot fund it in 2s", async () => {
+      // The 2026-10-11 EURe incident: a deterministic ERC20InsufficientBalance revert was
+      // re-sent twice before giving up. A retry cannot change the merchant's balance, so the
+      // transfer must be attempted exactly once.
+      process.env.FEE_RETRY_DELAY_MS = "0";
+      const { getContract } = await import("viem");
+      const transferFrom = vi.fn().mockRejectedValue(
+        // The shape viem produces once the fee ABI decodes the OZ v5 error (Task 1).
+        new Error(
+          'The contract function "transferFrom" reverted with reason: ERC20InsufficientBalance(0x209…287C, 5000000000000000, 10000000000000000)',
+        ),
+      );
+      vi.mocked(getContract).mockReturnValue(mockContract({ write: { transferFrom } }));
+
+      const result = await collectFee(merchant, "eip155:8453", BASE_EURE);
+
+      expect(result).toMatchObject({ success: false, error: "insufficient_merchant_balance" });
+      expect(transferFrom).toHaveBeenCalledTimes(1);
+    });
+
+    it("still retries a nonce race the full attempt budget", async () => {
+      // The retry exists for exactly this class (the 2025-09-28 nonce reuse): a node refused
+      // the send before broadcast, the next attempt can succeed. Must not be broken by the
+      // deterministic-revert classification.
+      process.env.FEE_RETRY_DELAY_MS = "0";
+      const mockTxHash = "0xfee1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab";
+      const { getContract, createPublicClient } = await import("viem");
+      vi.mocked(createPublicClient).mockReturnValue(
+        mockPublicClient({
+          waitForTransactionReceipt: vi.fn(async () => ({
+            status: "success",
+            transactionHash: mockTxHash,
+          })),
+        }),
+      );
+      const transferFrom = vi
+        .fn()
+        .mockRejectedValueOnce(new Error("nonce too low"))
+        .mockRejectedValueOnce(new Error("replacement transaction underpriced"))
+        .mockResolvedValue(mockTxHash);
+      vi.mocked(getContract).mockReturnValue(mockContract({ write: { transferFrom } }));
+
+      const result = await collectFee(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
+
+      expect(result.success).toBe(true);
+      expect(transferFrom).toHaveBeenCalledTimes(3);
+    });
+
+    it("returns generic error for unknown failures", async () => {
+      const { getContract } = await import("viem");
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          write: {
+            transferFrom: vi.fn().mockRejectedValue(new Error("Network error")),
+          },
+        }),
+      );
+
+      const result = await collectFee(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("fee_collection_failed");
+    });
+
+    it("charges the fee in the token it is given", async () => {
+      const { getContract, createPublicClient } = await import("viem");
+      vi.mocked(createPublicClient).mockReturnValue(
+        mockPublicClient({
+          waitForTransactionReceipt: vi.fn(async () => ({ status: "success" })),
+        }),
+      );
+      const transferFrom = vi.fn().mockResolvedValue("0xfee");
+      vi.mocked(getContract).mockReturnValue(mockContract({ write: { transferFrom } }));
+
+      const result = await collectFee(merchant, "eip155:8453", BASE_EURC);
+
+      expect(result.success).toBe(true);
+      expect(vi.mocked(getContract).mock.calls[0][0].address).toBe(BASE_EURC);
+      expect(transferFrom).toHaveBeenCalledWith([merchant, expect.any(String), 10000n]);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // evaluateFeeGate — the single gate both schemes run before settling
+  //
+  // `exact` reaches it via facilitator_instance.ts's onAfterVerify hook;
+  // `batch-settlement` claim/settle reaches it directly from x402_settle.ts. These
+  // were two hand-written implementations until the batch-settlement copy was found
+  // to be missing the fee-disabled and facilitator-not-configured checks below.
+  // ═══════════════════════════════════════════════════════════
+
+  describe("evaluateFeeGate", () => {
+    const merchant = "0x209693Bc6afc0C5328bA36FaF03C514EF312287C";
+
+    function mockAllowance(value: bigint) {
+      return import("viem").then(({ getContract }) => {
+        vi.mocked(getContract).mockReturnValue(
+          mockContract({ read: { allowance: vi.fn().mockResolvedValue(value) } }),
+        );
+      });
+    }
+
+    it("returns no_fee when fees are disabled, without reading any allowance", async () => {
+      process.env.FACILITATOR_FEE_AMOUNT = "0";
+      const { getContract } = await import("viem");
+
+      const gate = await evaluateFeeGate(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
+
+      expect(gate.kind).toBe("no_fee");
+      // Nothing to collect means nothing to check — no RPC round-trip.
+      expect(getContract).not.toHaveBeenCalled();
+    });
+
+    it("rejects with facilitator_not_configured when no facilitator key is set", async () => {
+      delete process.env.FACILITATOR_WALLET_PRIVATE_KEY;
+
+      const gate = await evaluateFeeGate(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
+
+      expect(gate).toEqual({ kind: "reject", reason: "facilitator_not_configured" });
+    });
+
+    it("rejects with insufficient_fee_allowance when the allowance is too low", async () => {
+      await mockAllowance(5000n);
+
+      const gate = await evaluateFeeGate(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
+
+      // Only the reason travels — the allowance detail behind it is logged, not returned.
+      expect(gate).toEqual({ kind: "reject", reason: "insufficient_fee_allowance" });
+    });
+
+    it("charges, and reports remaining settlements, when the allowance covers the fee", async () => {
+      await mockAllowance(100000n);
+
+      const gate = await evaluateFeeGate(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
+
+      expect(gate).toEqual({ kind: "charge", remainingSettlements: 10 });
+    });
+
+    it("charges without a settlement count when the allowance is unreadable", async () => {
+      const { getContract } = await import("viem");
+      vi.mocked(getContract).mockReturnValue(
+        mockContract({
+          read: { allowance: vi.fn().mockRejectedValue(new Error("RPC down")) },
+        }),
+      );
+
+      const gate = await evaluateFeeGate(merchant, "eip155:11155420", OP_SEPOLIA_USDC);
+
+      // Fails OPEN: a reading we could not take must not block a valid payment, and
+      // remainingSettlements stays undefined rather than being reported as 0.
+      expect(gate).toEqual({ kind: "charge", remainingSettlements: undefined });
+    });
+
+    it("gates EURC on Base against the EURC allowance", async () => {
+      await mockAllowance(100000n);
+      const { getContract } = await import("viem");
+
+      const gate = await evaluateFeeGate(merchant, "eip155:8453", BASE_EURC);
+
+      expect(gate).toEqual({ kind: "charge", remainingSettlements: 10 });
+      expect(vi.mocked(getContract).mock.calls[0][0].address).toBe(BASE_EURC);
+    });
+
+    it("rejects with unsupported_fee_asset for a token that is not USDC or EURC", async () => {
+      const { getContract } = await import("viem");
+
+      const gate = await evaluateFeeGate(
+        merchant,
+        "eip155:8453",
+        "0x0000000000000000000000000000000000000001",
+      );
+
+      expect(gate).toEqual({ kind: "reject", reason: "unsupported_fee_asset" });
+      expect(getContract).not.toHaveBeenCalled();
+    });
+
+    it("rejects EURC on a network where it is not the registered EURC", async () => {
+      // Base's EURC address means nothing on Optimism, which has no EURC.
+      const gate = await evaluateFeeGate(merchant, "eip155:10", BASE_EURC);
+
+      expect(gate).toEqual({ kind: "reject", reason: "unsupported_fee_asset" });
+    });
+
+    it("does not vet the token when fees are disabled", async () => {
+      process.env.FACILITATOR_FEE_AMOUNT = "0";
+
+      const gate = await evaluateFeeGate(
+        merchant,
+        "eip155:8453",
+        "0x0000000000000000000000000000000000000001",
+      );
+
+      expect(gate.kind).toBe("no_fee");
+    });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+// wasRejectedBeforeBroadcast — which failed fee sends may be sent again
+// ═══════════════════════════════════════════════════════════
+
+describe("wasRejectedBeforeBroadcast", () => {
+  it.each([
+    ["replacement transaction underpriced", "a node refused a reused nonce"],
+    ["nonce too low", "the nonce is already mined"],
+    ["execution reverted: ERC20: transfer amount exceeds balance", "the simulation reverted"],
+  ])("retries %s (%s)", (message) => {
+    expect(wasRejectedBeforeBroadcast(new Error(message))).toBe(true);
+  });
+
+  it.each([
+    ["fetch failed", "transport error — the node may have taken the tx"],
+    ["Timed out while waiting for transaction", "receipt timeout — broadcast, outcome unknown"],
+  ])("never retries %s (%s)", (message) => {
+    expect(wasRejectedBeforeBroadcast(new Error(message))).toBe(false);
+  });
+});
+
+describe("ERC20_FEE_ABI — the OZ v5 errors decode the incident's fee revert", () => {
+  // The 2026-10-11 incident: the EURe fee pull reverted with selector 0xe450d38c, and viem
+  // logged "Unable to decode signature" because the fee ABI carried no error definitions —
+  // so the insufficient_merchant_balance mapping in collectFee's catch never fired and the
+  // alert carried a bare selector. These tests pin the fix at both ends: the selector belongs
+  // to OZ v5's ERC20InsufficientBalance (self-verified against the production selector, not
+  // assumed), and the ABI now decodes it into a named, argued error.
+  const MERCHANT = "0x209693Bc6afc0C5328bA36FaF03C514EF312287C";
+  const word = (value: bigint | string) =>
+    (typeof value === "bigint" ? value.toString(16) : value.replace(/^0x/, "")).padStart(64, "0");
+
+  it("self-verifies the OZ v5 signature against the production selector", async () => {
+    const { toFunctionSelector } = await import("viem");
+    expect(toFunctionSelector("ERC20InsufficientBalance(address,uint256,uint256)")).toBe(
+      "0xe450d38c",
+    );
+  });
+
+  it("decodes the incident's revert data to a named, argued error", async () => {
+    const { decodeErrorResult } = await import("viem");
+    // The incident's shape: sender = the seller, balance below one fee, needed = one 0.01 EURe
+    // fee in 18-decimal units.
+    const data =
+      "0xe450d38c" + word(MERCHANT) + word(5_000_000_000_000_000n) + word(10_000_000_000_000_000n);
+
+    const decoded = decodeErrorResult({ abi: ERC20_FEE_ABI, data: data as `0x${string}` });
+
+    expect(decoded.errorName).toBe("ERC20InsufficientBalance");
+    // viem returns error args positionally.
+    expect(decoded.args).toEqual([MERCHANT, 5_000_000_000_000_000n, 10_000_000_000_000_000n]);
+  });
+
+  it("decodes the allowance twin the same way", async () => {
+    const { toFunctionSelector, decodeErrorResult } = await import("viem");
+    const data =
+      toFunctionSelector("ERC20InsufficientAllowance(address,uint256,uint256)") +
+      word(MERCHANT) +
+      word(0n) +
+      word(10n ** 18n);
+
+    const decoded = decodeErrorResult({ abi: ERC20_FEE_ABI, data: data as `0x${string}` });
+
+    expect(decoded.errorName).toBe("ERC20InsufficientAllowance");
+    expect(decoded.args).toEqual([MERCHANT, 0n, 10n ** 18n]);
+  });
+});

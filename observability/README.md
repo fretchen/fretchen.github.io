@@ -6,17 +6,21 @@ comment service and analytics. It belongs to no single service. Cockpit is scope
 _project_, so one token and one set of rules cover all of them. (The llm/search/mcp sellers moved
 to bunny_js — they flush per request to a **custom logs data source** (`bunny-logs`) in the same
 Cockpit via the Loki push API with a push-only Cockpit token, and their one rule
-(`BunnySellersNeedAttention`, on `level="error"`) lives in `alerts/bunny.yaml`, pushed to that
+(`BunnySellersNeedAttention`) lives in `alerts/bunny.yaml`, pushed to that
 data source's own ruler with `--url` — a ruler rule only sees its own source, so the
-default-source rules cannot cover them. Read the bunny data source in Grafana → Explore;
-`scripts/logs.ts` still queries only the default (Scaleway) source.)
+default-source rules cannot cover them. The facilitator is porting there too
+([`x402_facilitator/bunny-port-implementation-plan.md`](../x402_facilitator/bunny-port-implementation-plan.md)):
+the bunny rule already carries its `service="facilitator"` branch, but until the cutover
+finishes the Scaleway facilitator stays live and `payments.yaml`'s `FacilitatorNeedsAttention`
+keeps watching it — the two cannot double-fire, they rule over different data sources. Read the
+bunny data source with `scripts/logs.ts --url <custom-source-base>`, or in Grafana → Explore.)
 
-| Path                | What                                                                                                                                                                           |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `alerts/*.yaml`     | Loki ruler rules. `payments.yaml`: facilitator + claim/refund cron; `services.yaml`: the scw_js services. `bunny.yaml`: the bunny twins, on the custom data source's own ruler |
-| `scripts/logs.ts`   | Read any function's logs from the terminal                                                                                                                                     |
-| `scripts/alerts.ts` | List / push / delete rule groups (namespace `fretchen`)                                                                                                                        |
-| `alertCoverage.ts`  | Parser behind `scw_js/` and `x402_facilitator/`'s `test/alert_coverage.test.ts`                                                                                                |
+| Path                | What                                                                                                                                                                                             |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `alerts/*.yaml`     | Loki ruler rules. `payments.yaml`: facilitator + claim/refund cron; `services.yaml`: the scw_js services. `bunny.yaml`: the bunny twins + the facilitator, on the custom data source's own ruler |
+| `scripts/logs.ts`   | Read any function's logs from the terminal — the default source by name fragment, the bunny-logs custom source by service label with `--url`                                                     |
+| `scripts/alerts.ts` | List / push / delete rule groups (namespace `fretchen`)                                                                                                                                          |
+| `alertCoverage.ts`  | Parser behind `scw_js/` and `x402_facilitator/`'s `test/alert_coverage.test.ts`                                                                                                                  |
 
 Setup: `npm install`, then create `.env` as described under [Credentials](#credentials).
 

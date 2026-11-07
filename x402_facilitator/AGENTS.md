@@ -4,6 +4,12 @@ EIP-3009 USDC payment facilitator (Scaleway Functions, path-based routing: `/ver
 `/settle`, `/supported`). See [`README.md`](./README.md) for the payment schemes, recipient
 gating, the fee pull, verification checks, error codes and local test endpoints.
 
+**Bunny port:** the HTTP function's core is ported verbatim into `bunny_js/` and will serve
+`facilitator.fretchen.eu` after the cutover ([`bunny-port-implementation-plan.md`](./bunny-port-implementation-plan.md));
+this package then keeps `walletreportcron` only. Edit the payment core here while the
+Scaleway function is live, and port the change to `bunny_js/src/` in the same sitting (or
+pick the change up in the teardown diff) — the two copies must not drift.
+
 ## Serverless conventions
 
 Public env values go in `env:` in `serverless.yml`; secrets are configured in the Scaleway

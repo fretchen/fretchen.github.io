@@ -7,6 +7,7 @@
  */
 import "./runtime-shims.js";
 import * as BunnySDK from "@bunny.net/edgescript-sdk";
+import { withLogFlush } from "./logger.js";
 import { handleMCPRequest } from "./mcp_routes.js";
 
-BunnySDK.net.http.serve(handleMCPRequest);
+BunnySDK.net.http.serve(withLogFlush("bunny-mcp-agent", handleMCPRequest));

@@ -16,6 +16,10 @@ import { fileURLToPath } from "node:url";
 const RULE_BUDGET: Record<string, number> = {
   "services.yaml": 1, // ServicesNeedAttention
   "payments.yaml": 2, // PaymentCronNeedsAttention, FacilitatorNeedsAttention
+  // Fourth of four, raised from three DELIBERATELY (2026-11-06): the bunny twins' logs live in
+  // the custom bunny-logs data source, which no phrase in the rules above can see — so their
+  // coverage is necessarily its own (pushed) rule, not another line filter.
+  "bunny.yaml": 1, // BunnySellersNeedAttention
 };
 
 const read = (file: string) =>

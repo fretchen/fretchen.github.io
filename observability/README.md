@@ -4,14 +4,19 @@ Project-wide log access and alerting for every Scaleway function in this repo: `
 `walletreportcron`, `llmx402cron`, `genimgx402token`, `growthapi`, the
 comment service and analytics. It belongs to no single service. Cockpit is scoped to the Scaleway
 _project_, so one token and one set of rules cover all of them. (The llm/search/mcp sellers moved
-to bunny_js — Edge Script logging has no Loki rules here.)
+to bunny_js — they flush per request to a **custom logs data source** (`bunny-logs`) in the same
+Cockpit via the Loki push API with a push-only Cockpit token, and their one rule
+(`BunnySellersNeedAttention`, on `level="error"`) lives in `alerts/bunny.yaml`, pushed to that
+data source's own ruler with `--url` — a ruler rule only sees its own source, so the
+default-source rules cannot cover them. Read the bunny data source in Grafana → Explore;
+`scripts/logs.ts` still queries only the default (Scaleway) source.)
 
-| Path                | What                                                                                                     |
-| ------------------- | -------------------------------------------------------------------------------------------------------- |
-| `alerts/*.yaml`     | Loki ruler rules. `payments.yaml`: facilitator + claim/refund cron; `services.yaml`: the scw_js services |
-| `scripts/logs.ts`   | Read any function's logs from the terminal                                                               |
-| `scripts/alerts.ts` | List / push / delete rule groups (namespace `fretchen`)                                                  |
-| `alertCoverage.ts`  | Parser behind `scw_js/` and `x402_facilitator/`'s `test/alert_coverage.test.ts`                          |
+| Path                | What                                                                                                                                                                           |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `alerts/*.yaml`     | Loki ruler rules. `payments.yaml`: facilitator + claim/refund cron; `services.yaml`: the scw_js services. `bunny.yaml`: the bunny twins, on the custom data source's own ruler |
+| `scripts/logs.ts`   | Read any function's logs from the terminal                                                                                                                                     |
+| `scripts/alerts.ts` | List / push / delete rule groups (namespace `fretchen`)                                                                                                                        |
+| `alertCoverage.ts`  | Parser behind `scw_js/` and `x402_facilitator/`'s `test/alert_coverage.test.ts`                                                                                                |
 
 Setup: `npm install`, then create `.env` as described under [Credentials](#credentials).
 
@@ -40,13 +45,17 @@ watch for it directly.
 npx tsx scripts/alerts.ts                                # list the rule groups currently on the ruler
 npx tsx scripts/alerts.ts --push                         # push alerts/payments.yaml
 npx tsx scripts/alerts.ts --push alerts/services.yaml
+npx tsx scripts/alerts.ts --push alerts/bunny.yaml --url https://db123d37-9094-4e15-badc-706071190ed7.logs.cockpit.fr-par.scw.cloud
 npx tsx scripts/alerts.ts --delete payments
 ```
 
-**Three rules in total, on purpose: Scaleway bills each active alert rule** (€0.015/day, checked
+**Four rules in total, on purpose: Scaleway bills each active alert rule** (€0.015/day, checked
 2026-10-04), while the phrases a rule matches are free. `services.yaml` holds one rule
 (`ServicesNeedAttention`) and `payments.yaml` two (`PaymentCronNeedsAttention`,
-`FacilitatorNeedsAttention`). A new failure mode is a new alternative in the matching rule's line
+`FacilitatorNeedsAttention`) on the default logs source; `bunny.yaml` holds the fourth
+(`BunnySellersNeedAttention`) on the custom bunny-logs data source's own ruler — the count was
+raised from three deliberately, because no phrase in a default-source rule can see that source's
+logs. A new failure mode is a new alternative in the matching rule's line
 filter, never a new rule; `test/alerts_budget.test.ts` fails if the count grows. The comment at the
 top of each file explains the budget and what each branch of the filter means.
 

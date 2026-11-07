@@ -16,9 +16,15 @@
  *   npx tsx scripts/alerts.ts                  # list the rule groups on the ruler
  *   npx tsx scripts/alerts.ts --push           # upload alerts/payments.yaml
  *   npx tsx scripts/alerts.ts --push alerts/services.yaml
+ *   npx tsx scripts/alerts.ts --push alerts/bunny.yaml --url https://<id>.logs.cockpit.fr-par.scw.cloud
  *   npx tsx scripts/alerts.ts --delete payments
  *
  * `--push` refuses a file with uncommitted changes (see assertCommitted): commit, then push.
+ *
+ * `--url <base>` targets another data source's ruler. The default is the Scaleway functions'
+ * logs source; alerts/bunny.yaml lives on the custom bunny-logs data source, which that ruler
+ * cannot see — a ruler rule only ever evaluates its own data source's logs, so it must be
+ * pushed at its own URL (same token, same namespace).
  *
  * Push is never wired into deploy. Alerting config that changes as a side effect of shipping code
  * is its own kind of surprise — and a rule silently removed by a deploy is indistinguishable from
@@ -30,7 +36,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const URL_BASE = process.env.SCW_COCKPIT_LOGS_URL;
+const URL_BASE = flag("url") ?? process.env.SCW_COCKPIT_LOGS_URL;
 const TOKEN = process.env.SCW_COCKPIT_RULES_TOKEN;
 
 if (!URL_BASE || !TOKEN) {
@@ -89,8 +95,31 @@ function assertCommitted(file: string): void {
   }
 }
 
+/**
+ * Rules whose group must NOT land on the default ruler — they live on a custom data source's own
+ * ruler (a ruler rule only ever sees its own data source's logs). Pushing one with the default
+ * URL succeeds silently, bills ~€0.015/day and matches nothing, so this refuses instead.
+ * Value: the custom source's API base, for the error message.
+ */
+const CUSTOM_RULER_FILES: Record<string, string> = {
+  "alerts/bunny.yaml": "https://db123d37-9094-4e15-badc-706071190ed7.logs.cockpit.fr-par.scw.cloud",
+};
+
+function assertRulerUrl(file: string): void {
+  const customBase = CUSTOM_RULER_FILES[file];
+  if (customBase && !flag("url")) {
+    console.error(
+      `refusing to push ${file} to the default ruler: its rules evaluate the custom bunny-logs ` +
+        `data source, which that ruler cannot see — the group would be billed daily and match ` +
+        `nothing. Add:\n  --url ${customBase}`,
+    );
+    process.exit(1);
+  }
+}
+
 async function push(file: string): Promise<void> {
   assertCommitted(file);
+  assertRulerUrl(file);
   const yaml = readFileSync(file, "utf8");
   await ruler(`/${NAMESPACE}`, {
     method: "POST",

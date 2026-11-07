@@ -24,12 +24,17 @@ import { logger } from "../logger";
  *  `Record<string, unknown>` parameters. */
 type PaymentRequestBody = z.infer<typeof PaymentRequestSchema>;
 
-/** Common headers for all responses — identical to the Scaleway handler's CORS_HEADERS. */
+/** Common headers for all responses — identical to the Scaleway handler's CORS_HEADERS.
+ *  `Cache-Control: no-store` is the twins' parity addition: the edge serves through a real
+ *  CDN pull zone, and no verification or settlement response may ever come from cache (the
+ *  platform normalizes it to `no-cache`, which with no validators still forces an origin hit
+ *  on every request). */
 const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Content-Type",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Content-Type": "application/json",
+  "Cache-Control": "no-store",
 };
 
 /** Human-facing documentation for the facilitator — the root path redirects browsers here. */
@@ -40,6 +45,51 @@ const jsonResponse = (status: number, body: unknown): Response =>
     status,
     headers: CORS_HEADERS,
   });
+
+/**
+ * Cap for POST bodies — the same edge deviation as mcp_routes.ts: the Scaleway function
+ * leaned on the platform's request-size cap, the edge imposes no comparable one, so the
+ * twin encodes its own. Verify/settle payloads are a few KB even for large batch claims;
+ * 1 MB is generous headroom while still bounding an attacker's per-request isolate cost.
+ */
+const MAX_BODY_BYTES = 1_000_000;
+
+/**
+ * Reads the POST body up to MAX_BODY_BYTES and refuses beyond it, so an oversized body is
+ * rejected without ever being fully buffered. The Content-Length check refuses a declared
+ * oversize up front; the stream read catches a chunked body that lies about or omits it.
+ */
+export async function readCappedBody(request: Request): Promise<string | "too-large"> {
+  const declared = Number(request.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
+    return "too-large";
+  }
+  if (!request.body) {
+    return "";
+  }
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    total += value.byteLength;
+    if (total > MAX_BODY_BYTES) {
+      await reader.cancel();
+      return "too-large";
+    }
+    chunks.push(value);
+  }
+  const body = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(body);
+}
 
 /**
  * Unified handler for the /verify and /settle endpoints (the Scaleway handler's
@@ -57,11 +107,20 @@ async function handlePaymentRequest(req: Request, isSettle: boolean): Promise<Re
     return jsonResponse(405, { error: "Method not allowed. Use POST." });
   }
 
+  // The body is read under the 1 MB cap BEFORE buffering anything beyond it (the edge has
+  // no platform request-size cap — see readCappedBody). Oversized is the caller's fault:
+  // warn, not error — the alert-coverage convention is that logger.error means "ours".
+  const raw = await readCappedBody(req);
+  if (raw === "too-large") {
+    logger.warn({ maxBodyBytes: MAX_BODY_BYTES }, "Refused oversized request body");
+    return jsonResponse(413, { error: "Request body too large" });
+  }
+
   // Malformed JSON is the caller's fault, not ours — warn, not error: the alert-coverage
   // convention is that logger.error means "ours, and should page".
   let rawBody: unknown;
   try {
-    rawBody = JSON.parse(await req.text());
+    rawBody = JSON.parse(raw);
   } catch (error) {
     logger.warn({ err: error }, "Failed to parse request body");
     return jsonResponse(400, { error: "Invalid JSON in request body" });

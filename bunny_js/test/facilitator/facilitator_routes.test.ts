@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vite
 import {
   handleFacilitatorRequest,
   handleSupportedRequest,
+  readCappedBody,
 } from "../../src/facilitator/facilitator_routes.js";
 import type { verifyPayment as verifyPaymentType } from "../../src/facilitator/x402_verify.js";
 import type { settlePayment as settlePaymentType } from "../../src/facilitator/x402_settle.js";
@@ -483,6 +484,56 @@ describe("facilitator routes (verify + settle)", () => {
       const body = await res.json();
       expect(body.x402Version).toBe(2);
       expect(body.networks).toContain("eip155:10");
+    });
+  });
+
+  describe("request hardening (edge deviations the scw function never needed)", () => {
+    it("refuses a declared oversize up front, without reading a byte of the body", async () => {
+      const req = {
+        headers: new Headers({ "content-length": String(1_000_000 + 1) }),
+        // Accessing the body must fail the test: the declared check is what refuses.
+        get body(): ReadableStream<Uint8Array> {
+          throw new Error("the body must not be read when Content-Length already refuses");
+        },
+      } as unknown as Request;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      await expect(readCappedBody(req)).resolves.toBe("too-large");
+    });
+
+    it("refuses a streamed POST body over the 1 MB cap with 413, CORS intact, before any settlement work", async () => {
+      // No Content-Length, so the per-chunk accounting is what trips the cap — an attacker
+      // cannot bypass the guard by lying about (or omitting) the declared size.
+      const chunk = new TextEncoder().encode("x".repeat(64 * 1024));
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          for (let i = 0; i < 17; i++) {
+            // 17 x 64 KB = 1,088,000 bytes — past the 1,000,000-byte cap mid-stream.
+            controller.enqueue(chunk);
+          }
+          controller.close();
+        },
+      });
+      const res = await handleFacilitatorRequest(
+        new Request(`${BASE}/settle`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: stream,
+          // undici requires it for a streamed body; the edge runtime does not send one.
+          duplex: "half",
+        } as RequestInit),
+      );
+      expect(res.status).toBe(413);
+      expect(res.headers.get("access-control-allow-origin")).toBe("*");
+      expect(settlePayment).not.toHaveBeenCalled();
+    });
+
+    it("sends Cache-Control: no-store on every response — the CDN must never replay one", async () => {
+      // The twins' parity guard: the edge serves through a real CDN pull zone, and a served-
+      // from-cache verification or settlement response is a replayed payment event.
+      const res = await handleFacilitatorRequest(request("GET", "/supported"));
+      expect(res.headers.get("cache-control")).toBe("no-store");
+      const preflight = await handleFacilitatorRequest(request("OPTIONS", "/settle"));
+      expect(preflight.headers.get("cache-control")).toBe("no-store");
     });
   });
 

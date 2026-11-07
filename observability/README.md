@@ -11,12 +11,12 @@ data source's own ruler with `--url` — a ruler rule only sees its own source, 
 default-source rules cannot cover them. Read the bunny data source in Grafana → Explore;
 `scripts/logs.ts` still queries only the default (Scaleway) source.)
 
-| Path                | What                                                                                                     |
-| ------------------- | -------------------------------------------------------------------------------------------------------- |
+| Path                | What                                                                                                                                                                           |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `alerts/*.yaml`     | Loki ruler rules. `payments.yaml`: facilitator + claim/refund cron; `services.yaml`: the scw_js services. `bunny.yaml`: the bunny twins, on the custom data source's own ruler |
-| `scripts/logs.ts`   | Read any function's logs from the terminal                                                               |
-| `scripts/alerts.ts` | List / push / delete rule groups (namespace `fretchen`)                                                  |
-| `alertCoverage.ts`  | Parser behind `scw_js/` and `x402_facilitator/`'s `test/alert_coverage.test.ts`                          |
+| `scripts/logs.ts`   | Read any function's logs from the terminal                                                                                                                                     |
+| `scripts/alerts.ts` | List / push / delete rule groups (namespace `fretchen`)                                                                                                                        |
+| `alertCoverage.ts`  | Parser behind `scw_js/` and `x402_facilitator/`'s `test/alert_coverage.test.ts`                                                                                                |
 
 Setup: `npm install`, then create `.env` as described under [Credentials](#credentials).
 

@@ -2,7 +2,7 @@
 
 **Architecture:** script logs → Scaleway Cockpit (custom Loki data source, `fr-par`) → datasource-managed alert rule → Scaleway Alert manager → email.
 Logs from the remaining Scaleway functions (cron, growthapi, facilitator later) land in the same Cockpit **natively and free** — one Grafana for the whole stack.
-No phone push, no webhooks, no self-hosted components, no third-party log vendor. **No uptime/heartbeat layer** — there is none today either (the repo's only "health check" is growth-agent's own `/health` route; nothing ever probes the twins from outside), and log-based alerting alone is the accepted scope. The known blind spot this leaves — "the whole pipeline is dead" produces *no* error lines, so no alert — is accepted for now (see trade-offs).
+No phone push, no webhooks, no self-hosted components, no third-party log vendor. **No uptime/heartbeat layer** — there is none today either (the repo's only "health check" is growth-agent's own `/health` route; nothing ever probes the twins from outside), and log-based alerting alone is the accepted scope. The known blind spot this leaves — "the whole pipeline is dead" produces _no_ error lines, so no alert — is accepted for now (see trade-offs).
 
 **Why Cockpit over Better Stack:** EU jurisdiction (French company, no CLOUD Act ambiguity); unified view with the Scaleway half of the stack; retention 7 days free vs. Better Stack's 3; ingestion is metered but rounds to ~€0 at this volume (custom-data ingestion is billed per GB; pushing your own data is not free-tier, just negligible here).
 
@@ -71,7 +71,9 @@ export async function flushLogs(): Promise<void> {
       }),
     });
     if (!res.ok) {
-      console.error(JSON.stringify({ level: "error", msg: "log flush failed", status: res.status }));
+      console.error(
+        JSON.stringify({ level: "error", msg: "log flush failed", status: res.status }),
+      );
     }
   } catch (err) {
     // swallowed: an ingest outage must never fail the user's request — but it is
@@ -117,10 +119,10 @@ Both values are in `bunny_js/.env` for local dev (token linespacing fixed: `KEY 
 
 **Nothing goes into the GitHub deploy Action.** `deploy-bunny-js.yml` ships code only — each script's env is deliberately bunny-side ("a repo leak must not be a secrets leak"), so the deploy (Action or manual CLI) picks the pair up automatically; carrying the token as a repo/CI secret would weaken that design.
 
-| Variable                   | bunny kind   | Why                                                        |
-| -------------------------- | ------------ | ---------------------------------------------------------- |
-| `SCW_COCKPIT_PUSH_TOKEN`   | `--secret`   | authenticates the Loki push (`push_logs` scope)            |
-| `COCKPIT_LOKI_URL`         | plain        | public host, inert without the token                       |
+| Variable                 | bunny kind | Why                                             |
+| ------------------------ | ---------- | ----------------------------------------------- |
+| `SCW_COCKPIT_PUSH_TOKEN` | `--secret` | authenticates the Loki push (`push_logs` scope) |
+| `COCKPIT_LOKI_URL`       | plain      | public host, inert without the token            |
 
 **Per script — all three.** `bunny scripts env set` acts on the directory-linked script (searchapi) only; llm and mcp need their values set against their own script ids explicitly. The GitHub Action ships code, not env — a script without its env vars silently logs only to the dashboard.
 

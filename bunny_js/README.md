@@ -70,8 +70,8 @@ it is inert without another credential, plain — and plain stays inspectable wh
 | `FACILITATOR_URL`                          | plain (code default ok) | `https://facilitator.fretchen.eu`                                                                                                                                                                               |
 | `LLM_WITHDRAW_DELAY_SECONDS`               | plain (code default ok) | 86400 — must match production                                                                                                                                                                                   |
 | `SEARCH_SERVICE_URL`                       | plain                   | advertised `resource.url` base; the bunny trial URL while trialing, production default otherwise                                                                                                                |
-| `SCW_COCKPIT_PUSH_TOKEN`                  | secret (`--secret`)     | Cockpit push-only token — authenticates the Loki log flush to the observability data source (see the observability README/implementation plan)                                                                |
-| `COCKPIT_LOKI_URL`                        | plain                   | push URL of the custom Cockpit logs data source — public and inert without the token                                                                                                                          |
+| `SCW_COCKPIT_PUSH_TOKEN`                   | secret (`--secret`)     | Cockpit push-only token — authenticates the Loki log flush to the observability data source (see the observability README/implementation plan)                                                                  |
+| `COCKPIT_LOKI_URL`                         | plain                   | push URL of the custom Cockpit logs data source — public and inert without the token                                                                                                                            |
 
 ## Known limits / decisions
 

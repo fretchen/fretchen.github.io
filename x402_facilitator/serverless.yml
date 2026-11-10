@@ -11,14 +11,10 @@ provider:
   env:
     NODE_ENV: production
     LOG_LEVEL: info
-    # Fee amount in USDC smallest unit (6 decimals): 10000 = 0.01 USDC
+    # Fee amount in USDC smallest unit (6 decimals): 10000 = 0.01 USDC. Read by the weekly
+    # report's nominal-fee arithmetic (wallet_report_fee.ts); the facilitator itself now
+    # carries its own copy on the bunny script.
     FACILITATOR_FEE_AMOUNT: "10000"
-    # batch-settlement claim/settle (the "usage" payload types — see x402_whitelist.ts)
-    # charge the same flat fee as exact, gated by the same USDC allowance check. This is
-    # a testnet-only convenience bypass: a listed address skips the allowance check on
-    # testnets, fenced behind isTestnet() so a testnet entry can never bypass real funds.
-    # deposit/voucher/refund are always open and fee-free; no env var gates them.
-    BATCH_SETTLEMENT_TEST_WALLETS: ${env:BATCH_SETTLEMENT_TEST_WALLETS, ''}
     # Weekly wallet report (walletreportcron): warn when native gas balance drops below
     # this many ETH. Public value — the actual send is gated on the TEM secrets below.
     LOW_GAS_THRESHOLD_ETH: ${env:LOW_GAS_THRESHOLD_ETH, '0.005'}
@@ -56,19 +52,9 @@ package:
     - "!dist/**/*.map"
 
 functions:
-  # Single function with path-based routing
-  # Handles /verify, /settle, and /supported endpoints
-  facilitator:
-    handler: dist/x402_facilitator.handle
-    description: x402 v2 payment facilitator with path-based routing
-    # Memory and timeout for the combined function
-    memoryLimit: 512
-    timeout: 60s
-    # Custom domain for x402 standard compliance
-    custom_domains:
-      - facilitator.fretchen.eu
-
   # Weekly (Mondays 08:00 UTC) email report of wallet balances + 7-day USDC activity.
+  # The HTTP facilitator that used to live here moved to bunny_js (facilitator.fretchen.eu
+  # is served by the fretchen-facilitator Edge Script); this package deploys the cron only.
   walletreportcron:
     handler: dist/wallet_report_cron.handle
     description: "Weekly facilitator wallet balance + USDC activity email"

@@ -76,45 +76,32 @@ rules:
         Investigate: cd observability && npx tsx scripts/logs.ts llmx402cron --since 24h --grep "still hold escrow|failed|Failed to configure|allowance"
         Stuck escrow: cd scw_js && npx tsx scripts/recover_channels.ts eip155:10   (dry run; --apply to recover)
 
-  # The facilitator and its weekly wallet-report cron. Branches, each its own rule (or part of one)
-  # until 2026-10-04:
-  #
-  # Settlement needs attention — `(<reason>).*Settlement failed`: only the settle failures that are
-  #   OUR problem; a caller's bad signature or empty allowance must not page. This used to be two
-  #   filters (`|= "Settlement failed" |~ "<reasons>"`), which cannot be ORed with the other
-  #   branches, so it is one regex now. pino writes the merging object (errorReason) BEFORE msg, so
-  #   the reason precedes "Settlement failed" on the line. `refund_[a-z_]*failed` matches the family
-  #   (it once listed refund_simulation_failed alone and missed refund_transaction_failed);
-  #   `_transaction_failed|_rpc_read_failed` covers both schemes' on-chain-execution reasons, which
-  #   the SDK RETURNS rather than throws — our hot wallet out of gas surfaces exactly this way.
-  #   withdraw_delay_mismatch stays out: a buyer can cause it, and the cron's "still hold escrow"
-  #   catches the version that costs anyone money.
-  # Settlement pending — "Settlement broadcast but unconfirmed": broadcast, outcome unknown, a tx
-  #   hash to reconcile. The old rule listed settlement_pending among its reasons, but this line's
-  #   msg is not "Settlement failed", so its `|= "Settlement failed"` prefilter dropped it — that
-  #   branch could never fire. Matched by its own msg now.
-  # Facilitator broken — "Settlement threw", "Unexpected error …", a missing wallet key/address
-  #   (every settlement fails until fixed), or the wallet report unable to send ("Email report
-  #   failed", "Email API returned"): a report that never sends looks identical, from the inbox, to
-  #   a week with nothing to report.
-  # Fee collection failed — "Fee collection failed", "Fee transaction reverted": the settlement
-  #   succeeded, our flat fee did not follow. Not retried (see collectAndReportFee); a run of these
-  #   is revenue left on the table. (Was a warning; one rule carries one severity.)
+  # The facilitator's weekly wallet-report cron ONLY — the HTTP facilitator (settlement, fee
+  # collection, unhandled-error branches) moved to bunny_js: its `logger.error` lines flush to
+  # the custom bunny-logs source with a real `level` label, covered by BunnySellersNeedAttention
+  # (alerts/bunny.yaml, service="facilitator"). What stays here is the report's own failure
+  # surface, on the DEFAULT source the cron logs to:
+  #   Email report failed / Email API returned — the report could not send. From the inbox,
+  #     where the report's output lands, that is indistinguishable from a week with nothing to
+  #     report, so it must page.
+  #   Not configured — FACILITATOR_WALLET_PRIVATE_KEY unset: the report cannot even derive the
+  #     wallet address, and every future run fails the same way until the secret returns.
+  #     ("Failed to build wallet report for network" needs no phrase: that error is folded
+  #     into the email body itself — x402_facilitator/test/alert_coverage.test.ts EXEMPT.)
   - alert: FacilitatorNeedsAttention
     expr: |
-      sum(count_over_time({resource_name=~".+(facilitator|walletreportcron)"} |~ "(refund_[a-z_]*failed|insufficient_fee_allowance|_transaction_failed|_rpc_read_failed).*Settlement failed|Settlement broadcast but unconfirmed|Settlement threw|Unexpected error in handler|Unexpected error during payment verification|FACILITATOR_WALLET_PRIVATE_KEY not configured|facilitator address not configured|Email report failed|Email API returned|Fee collection failed|Fee transaction reverted" [1h])) > 0
+      sum(count_over_time({resource_name=~".+walletreportcron"} |~ "Email report failed|Email API returned|not configured" [1h])) > 0
     for: 0m
     labels:
       severity: critical
       area: payments
     annotations:
-      summary: "The facilitator needs attention (settlement, unhandled error, wallet report, or fee collection)"
+      summary: "The facilitator wallet report needs attention (could not send, or wallet unset)"
       description: >-
-        "… Settlement failed" with a refund/transaction/RPC/fee-allowance reason: a settlement failed
-        for a reason that is ours; the decoded revert is in errorMessage. "Settlement broadcast but
-        unconfirmed": reconcile the logged tx hash on chain. "Settlement threw" / "Unexpected
-        error" / "not configured": an unclassified exception or a missing wallet key/address.
-        "Email report failed" / "Email API returned": the weekly wallet report did not send. "Fee
-        collection failed" / "Fee transaction reverted": settled, but our fee was not collected.
-        Investigate: cd observability && npx tsx scripts/logs.ts facilitator --since 2h --grep "Settlement|Unexpected error|not configured|Fee"
-        For the report cron: npx tsx scripts/logs.ts walletreportcron --since 8d
+        "Email report failed" / "Email API returned": the weekly wallet report did not send —
+        from the inbox that is indistinguishable from a quiet week, so the TEM config or email
+        endpoint must be fixed. "not configured": FACILITATOR_WALLET_PRIVATE_KEY is unset, so
+        the report cannot derive the wallet address; every run will fail until it is set. The
+        facilitator itself (verify/settle/fee) now logs to the custom bunny-logs source and is
+        alertable via BunnySellersNeedAttention (alerts/bunny.yaml).
+        Investigate: cd observability && npx tsx scripts/logs.ts walletreportcron --since 8d

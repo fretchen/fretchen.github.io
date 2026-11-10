@@ -37,9 +37,28 @@ import {
   type Abi,
 } from "viem";
 import { logger } from "./logger";
-import { feeAmountFor, getFacilitatorAddress } from "./x402_fee";
+import { feeAmountFor, getFacilitatorAddress } from "./wallet_report_fee";
 import { getChainConfig, getFeeTokens, getRpcUrl } from "./chain_utils";
-import type { ScalewayEvent, ScalewayResponse } from "./x402_facilitator";
+
+// The Scaleway Functions envelope types, inlined from the retired x402_facilitator.ts at the
+// facilitator's move to bunny_js — this package stays a Scaleway Function, so the envelope
+// stays with it. The HTTP facilitator has no envelope: bunny_js answers web Requests.
+/** Scaleway Functions event object */
+interface ScalewayEvent {
+  httpMethod: string;
+  path?: string;
+  rawUrl?: string;
+  body?: string | Record<string, unknown>;
+  headers?: Record<string, string>;
+  queryStringParameters?: Record<string, string>;
+}
+
+/** Scaleway Functions response object */
+interface ScalewayResponse {
+  statusCode: number;
+  headers: Record<string, string>;
+  body: string;
+}
 
 // Mainnets only — the two networks where real fees accrue and gas actually matters.
 const REPORT_NETWORKS = ["eip155:10", "eip155:8453"] as const;
@@ -51,7 +70,7 @@ const DEFAULT_LOW_GAS_THRESHOLD_ETH = "0.005";
 // Revisit if REPORT_NETWORKS ever gains a network with a different block time.
 const LOOKBACK_BLOCKS = 302_400n;
 
-// Minimal ERC-20 read ABI (balanceOf) — mirrors the shape used in x402_fee.ts.
+// Minimal ERC-20 read ABI (balanceOf) — just the one function this report needs.
 const ERC20_BALANCE_ABI = [
   {
     name: "balanceOf",

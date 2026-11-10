@@ -3,8 +3,9 @@
 The facilitator's four scheme notebooks — replicated from
 [`x402_facilitator/notebooks/`](../../../x402_facilitator/notebooks/README.md) (the
 authoritative per-scheme flow descriptions live there) — exercising the bunny twin
-end-to-end over HTTP. Together they are the exact Task 5 probe matrix of the port plan
-([`bunny-port-implementation-plan.md`](../../../x402_facilitator/bunny-port-implementation-plan.md)):
+end-to-end over HTTP. The batch-settlement notebooks were the port's Task 5 probe matrix
+(the plan itself is preserved in git history as
+`x402_facilitator/bunny-port-implementation-plan.md`):
 
 | Notebook                              | Kernel  | Tests what (short form)                                                                          |
 | ------------------------------------- | ------- | ------------------------------------------------------------------------------------------------ |

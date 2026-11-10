@@ -1,14 +1,27 @@
 # x402_facilitator — agent rules
 
-EIP-3009 USDC payment facilitator (Scaleway Functions, path-based routing: `/verify`,
-`/settle`, `/supported`). See [`README.md`](./README.md) for the payment schemes, recipient
-gating, the fee pull, verification checks, error codes and local test endpoints.
+Weekly facilitator wallet report (`walletreportcron`, Scaleway Functions, Mondays 08:00 UTC).
+See [`README.md`](./README.md) for what it reports, the TEM/secret setup, and the commands.
+The x402 payment facilitator itself (verify/settle/supported) lives in
+[`bunny_js/src/facilitator/`](../bunny_js/src/facilitator/) and serves
+`facilitator.fretchen.eu` — its docs moved with it
+([`bunny_js/README.md`](../bunny_js/README.md) → _Facilitator_ sections); this package's old
+HTTP code and endpoint docs are retired (git history — including the move's plan,
+`bunny-port-implementation-plan.md`).
 
-**Bunny port:** the HTTP function's core is ported verbatim into `bunny_js/` and will serve
-`facilitator.fretchen.eu` after the cutover ([`bunny-port-implementation-plan.md`](./bunny-port-implementation-plan.md));
-this package then keeps `walletreportcron` only. Edit the payment core here while the
-Scaleway function is live, and port the change to `bunny_js/src/` in the same sitting (or
-pick the change up in the teardown diff) — the two copies must not drift.
+Two ways to break this package silently, both with a named guard:
+
+1. **A `logger.error` line with no alert phrase** — `logger.error` means "ours, and should
+   page", and the pages come from `FacilitatorNeedsAttention` in
+   `observability/alerts/payments.yaml`. `test/alert_coverage.test.ts` fails if a call site
+   is added without a matching phrase or an EXEMPT entry with a reason. Do not use bare
+   `console.*`.
+2. **Untyped JS creeping back** — `test/no_stray_js.test.ts` fails on any `.js` outside the
+   two config files.
+
+When a change touches the fee model in `wallet_report_fee.ts`, port it to
+`bunny_js/src/facilitator/x402_fee.ts` in the same sitting — that copy charges real fees;
+this one only reports on them.
 
 ## Serverless conventions
 
@@ -17,14 +30,5 @@ Console only. All responses include CORS headers.
 
 ## x402 role
 
-This package sits between the scw*js **buyers** and the sellers — aside from the fee pull
-right after settlement it never moves funds. Use the **`x402`** skill before anything that
-names a role; the shared payment traps (EIP-712 domain names, the OpenAPI strictness rule)
-are in the root [`AGENTS.md`](../AGENTS.md) → \_x402 payments*.
-
-## Recipient whitelist (OR logic)
-
-Recipient gating is **OR logic** across several sources, not a single list. The composition
-and the reasons are in [`README.md`](./README.md) → _Whitelist Architecture_ — read it before
-touching recipient gating, and keep the batch-settlement test-wallet bypass honored on
-testnets only.
+This package is payment-**adjacent** only: it reads balances and emails a report; it never
+moves funds. Use the **`x402`** skill before anything that names a role.

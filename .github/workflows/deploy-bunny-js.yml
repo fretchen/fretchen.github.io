@@ -99,11 +99,10 @@ jobs:
       - name: Deploy facilitator script to Bunny Edge Scripting
         uses: BunnyWay/actions/deploy-script@931a74b9c45ea9f9f01435fbbf1649830e67d3b3 # 2026-10-12 main; a mutable ref here is code-exec with the deploy keys — bump deliberately
         with:
-          # The facilitator twin (payment core ported from x402_facilitator/). Publishing does
-          # NOT make it live: facilitator.fretchen.eu keeps serving the Scaleway function
-          # until the DNS flip (x402_facilitator/bunny-port-implementation-plan.md). Same
-          # rule as the other steps: set both secrets in GitHub before merging, or this step
-          # fails (and does not block the twins' deploys above).
+          # The facilitator twin (payment core ported from x402_facilitator/). Live: the DNS
+          # flip happened, facilitator.fretchen.eu serves this script, and the retired Scaleway
+          # function is deleted. Same rule as the other steps: set both secrets in GitHub
+          # before merging, or this step fails (and does not block the twins' deploys above).
           script_id: ${{ secrets.BUNNYFACILITATOR_SCRIPT_ID }}
           deploy_key: ${{ secrets.BUNNYFACILITATOR_DEPLOY_KEY }}
           file: "bunny_js/dist/facilitator.js"

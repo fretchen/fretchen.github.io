@@ -19,8 +19,8 @@ Monorepo for a blockchain-based AI service platform. Each subdirectory is an ind
 | `website/`            | Frontend (Vike SSR + React 19 + Panda CSS) — also the blog                               | [`README`](website/README.md) · [`AGENTS.md`](website/AGENTS.md)                       |
 | `eth/`                | Solidity smart contracts (Hardhat, Optimism L2)                                          | [`README`](eth/README.md) · [`AGENTS.md`](eth/AGENTS.md)                               |
 | `scw_js/`             | Serverless backend (Scaleway Functions: image gen, channel cron, growth API)             | [`README`](scw_js/README.md) · [`AGENTS.md`](scw_js/AGENTS.md)                         |
-| `bunny_js/`           | Bunny Edge Scripts: the x402 llm/search/mcp sellers (plus the scw twins' origin domains) | [`README`](bunny_js/README.md) · [`AGENTS.md`](bunny_js/AGENTS.md)                     |
-| `x402_facilitator/`   | EIP-3009 USDC payment facilitator (Scaleway Functions)                                   | [`README`](x402_facilitator/README.md) · [`AGENTS.md`](x402_facilitator/AGENTS.md)     |
+| `bunny_js/`           | Bunny Edge Scripts: the x402 llm/search/mcp **sellers** — plus the facilitator (`facilitator.fretchen.eu`)                                              | [`README`](bunny_js/README.md) · [`AGENTS.md`](bunny_js/AGENTS.md)                     |
+| `x402_facilitator/`   | Weekly facilitator wallet report (Scaleway Functions) — the EIP-3009 facilitator itself moved to `bunny_js/src/facilitator/`  | [`README`](x402_facilitator/README.md) · [`AGENTS.md`](x402_facilitator/AGENTS.md)     |
 | `comment_service/`    | Blog comment backend (Scaleway Functions)                                                | [`README`](comment_service/README.md) · [`AGENTS.md`](comment_service/AGENTS.md)       |
 | `analytics/`          | Serverless pageview counter (Scaleway Functions, S3-backed)                              | [`README`](analytics/README.md) · [`AGENTS.md`](analytics/AGENTS.md)                   |
 | `growth-agent/`       | AI growth agent cron container (Python, LangGraph)                                       | [`README`](growth-agent/README.md) · [`AGENTS.md`](growth-agent/AGENTS.md)             |
@@ -75,7 +75,7 @@ llm/web/MCP on the bunny_js Edge Scripts).
 Three traps, each documented in detail where it belongs:
 
 - **EIP-712 domain names differ by network** (mainnet USDC is `"USD Coin"`, testnet is `"USDC"`). Follow the checklist in [`scw_js/README.md`](scw_js/README.md) → _Adding New Networks_, which carries the verified per-network table.
-- **The x402 recipient whitelist uses OR logic** across a manual list, testnet-only test wallets, and NFT-holder status. See [`x402_facilitator/README.md`](x402_facilitator/README.md) → _Whitelist Architecture_.
+- **The x402 recipient "whitelist" is really an allowance gate**: both schemes require the recipient to have `approve()`d the facilitator's wallet for the fee **in the settled token**; the only bypass is `BATCH_SETTLEMENT_TEST_WALLETS`, honored on testnets only (the old manual allowlist and NFT-holder branch are retired). See [`bunny_js/README.md`](bunny_js/README.md) → _Facilitator: recipient gating_.
 - **Generated OpenAPI specs must publish the strictness they actually enforce.** `scw_js` and `x402_facilitator` generate their `openapi.*.json` from Zod, and `z.object` renders as `additionalProperties: false` — so a schema that merely _strips_ unknown keys publishes a strictness its handler does not enforce. Use `z.looseObject` for a request the handler forwards or ignores extras on, `z.object` where the body is built field by field (every response, and `genimg`'s request, which really does reject unknown fields). Each package's `test/openapi_*_generation.test.ts` asserts this, because nothing else catches it — and it has shipped wrong: the facilitator's published `PaymentRequest` described a request that could not be paid with, since real payloads carry the very fields it declared forbidden.
 
 ## Security
@@ -87,7 +87,7 @@ See [`.github/THREAT_MODEL.md`](.github/THREAT_MODEL.md) for the full asset inve
 - `CONTRACT_OWNER_PRIVATE_KEY` (Hardhat keystore) — dedicated EOA `0x1af51D…fBB20`, controls every upgradeable contract and owns the three ERC-8004 agent identities (Base). Never use it for anything else.
 - `SEPOLIA_PRIVATE_KEY` (Hardhat keystore) — deployment/script signing key `0x073f26…`. Does NOT own contracts.
 - Agent wallet `0xAAEBC1…` — backend-only, whitelisted on GenImNFTv4 via `authorizeAgentWallet()`.
-- Facilitator wallet — stored as a Scaleway secret, receives USDC fees only.
+- Facilitator wallet — stored as a `--secret` on the bunny facilitator script (and, until the teardown deploy deletes the retired Scaleway function, a lingered copy as its Scaleway secret); receives fees in the settled tokens (USDC; EURC/EURe on Base). Its pull semantics: `bunny_js/README.md` → _Facilitator: the fee pull_.
 - Receiver-authorizer key (`RECEIVER_AUTHORIZER_PRIVATE_KEY`, scw_js Scaleway secret) — signs batch-settlement channel-config and refund authorizations for the `/assistent` sellers; never sends transactions. Compromise means revenue denial (early refunds, stalled claims), not fund redirection.
 
 Rules that apply everywhere:

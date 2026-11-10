@@ -1,18 +1,17 @@
 # observability
 
-Project-wide log access and alerting for every Scaleway function in this repo: `facilitator`,
+Project-wide log access and alerting for every Scaleway function in this repo:
 `walletreportcron`, `llmx402cron`, `genimgx402token`, `growthapi`, the
 comment service and analytics. It belongs to no single service. Cockpit is scoped to the Scaleway
-_project_, so one token and one set of rules cover all of them. (The llm/search/mcp sellers moved
-to bunny_js — they flush per request to a **custom logs data source** (`bunny-logs`) in the same
-Cockpit via the Loki push API with a push-only Cockpit token, and their one rule
-(`BunnySellersNeedAttention`) lives in `alerts/bunny.yaml`, pushed to that
-data source's own ruler with `--url` — a ruler rule only sees its own source, so the
-default-source rules cannot cover them. The facilitator is porting there too
-([`x402_facilitator/bunny-port-implementation-plan.md`](../x402_facilitator/bunny-port-implementation-plan.md)):
-the bunny rule already carries its `service="facilitator"` branch, but until the cutover
-finishes the Scaleway facilitator stays live and `payments.yaml`'s `FacilitatorNeedsAttention`
-keeps watching it — the two cannot double-fire, they rule over different data sources. Read the
+_project_, so one token and one set of rules cover all of them. (The llm/search/mcp sellers
+and the facilitator moved to bunny_js — they flush per request to a **custom logs data source**
+(`bunny-logs`) in the same Cockpit via the Loki push API with a push-only Cockpit token, and
+their one rule (`BunnySellersNeedAttention`, `service=` "bunny-*-agent" + "facilitator") lives
+in `alerts/bunny.yaml`, pushed to that data source's own ruler with `--url` — a ruler rule only
+sees its own source, so the default-source rules cannot cover them. The cutover is done:
+`payments.yaml`'s `FacilitatorNeedsAttention` now watches **walletreportcron only** (the report's
+send failures — its settlement/fee phrases moved with the facilitator to the level-label rule),
+so the two cannot double-fire, they rule over different data sources. Read the
 bunny data source with `scripts/logs.ts --url <custom-source-base>`, or in Grafana → Explore.)
 
 | Path                | What                                                                                                                                                                                             |

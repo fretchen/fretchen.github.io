@@ -9,8 +9,8 @@ wired together by x402 USDC payments.
 | `website/`            | The site + blog (Vike SSR, React 19, Panda CSS)         |
 | `eth/`                | NFT and payment contracts (Hardhat, UUPS proxies)       |
 | `scw_js/`             | Scaleway Functions: image gen, channel cron, growth API |
-| `bunny_js/`           | Bunny Edge Scripts: the x402 llm/search/mcp sellers     |
-| `x402_facilitator/`   | EIP-3009 USDC payment facilitator                       |
+| `bunny_js/`           | Bunny Edge Scripts: the x402 sellers — llm/search/mcp — plus the facilitator |
+| `x402_facilitator/`   | Weekly facilitator wallet report (facilitator itself moved to `bunny_js`)      |
 | `comment_service/`    | Blog comments                                           |
 | `analytics/`          | Pageview counter (S3-backed)                            |
 | `growth-agent/`       | AI growth agent (Python, LangGraph)                     |

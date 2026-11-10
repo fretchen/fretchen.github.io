@@ -4,9 +4,9 @@
  * Contains only the functions used by x402_facilitator.
  * Full ABI available in: eth/abi/contracts/EIP3009SplitterV1.ts
  *
- * Used by:
- * - x402_facilitator/x402_splitter_settle.js: executeSplit
- * - x402_facilitator/x402_splitter_verify.js: isAuthorizationUsed, facilitatorWallet, fixedFee
+ * Used by: nothing in-tree anymore — the retired buyer-pays splitter's JS lived in
+ * x402_facilitator/ (git history, removed with the facilitator's move to bunny_js). The ABI
+ * stays for decoding the (still on-chain, still readable) splitter interactions of past txs.
  */
 
 export const EIP3009SplitterV1ABI = [

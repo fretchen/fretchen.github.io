@@ -6,9 +6,9 @@
  *
  * Used by:
  * - scw_js/genimg_bfl.js: ownerOf, requestImageUpdate, mintPrice, isImageUpdated
- * - scw_js/genimg_x402_token.js: safeMint, safeTransferFrom, mintPrice
+ * - scw_js/genimg_x402_token.ts: safeMint, safeTransferFrom, mintPrice
  * - scw_js/readhandler_v2.js: ownerOf, requestImageUpdate, mintPrice, isImageUpdated
- * - x402_facilitator/x402_whitelist.js: isAuthorizedAgent
+ * - eth/test/GenImNFTv4_Functional.ts: isAuthorizedAgent (agent-wallet gating on-chain)
  * - website/components/PublicNFTList.tsx: getAllPublicTokens
  * - website/components/MyNFTList.tsx: balanceOf, tokenOfOwnerByIndex
  * - website/components/NFTCard.tsx: setTokenListed, isTokenListed, burn

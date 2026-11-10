@@ -54,7 +54,7 @@ has a buyer calling `/verify`, it is wrong.
 | ---------------------------- | ----------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Client / buyer**           | `website/` — `/imagegen` and `/assistent` | GitHub Pages       | `hooks/useX402ImageGeneration.ts`, `hooks/useX402Chat.ts` — both use `wrapFetchWithPayment` from `@x402/fetch`                                   |
 | **Resource server / seller** | `scw_js/` (image) + `bunny_js/` (llm, search, mcp) | Scaleway Function + Bunny Edge Scripts | image: `scw_js/genimg_x402_token.ts` → `imagegen-agent.fretchen.eu`; llm/search/mcp: `bunny_js/src/llm_routes.ts`, `searchapi_routes.ts`, `mcp_routes.ts` → `llm-agent` / `web-agent` / `mcp-agent.fretchen.eu` (shared ported `x402_server.ts`) |
-| **Facilitator**              | `x402_facilitator/`                       | Scaleway Functions | `x402_facilitator.ts` — `/verify`, `/settle`, `/supported` at `facilitator.fretchen.eu`                                                          |
+| **Facilitator**              | `bunny_js/src/facilitator/`              | Bunny Edge Script (`fretchen-facilitator`, `service="facilitator"`) | `facilitator_routes.ts` — `/verify`, `/settle`, `/supported` at `facilitator.fretchen.eu` (moved from the retired Scaleway function; the weekly wallet-report cron in `x402_facilitator/` is all that remains there) |
 
 Plus `scw_js/llm_x402_cron.ts` — a 12-hourly cron that claims and settles accumulated
 batch-settlement channels. It is seller-side infrastructure, not a fourth role.
@@ -80,9 +80,11 @@ fallback (see `genimg_x402_token.ts`).
 
 - **EIP-712 domain names differ by network.** Mainnet USDC is `"USD Coin"`, testnet is `"USDC"`.
   The verified per-network table is in `scw_js/README.md` → _Adding New Networks_. Never guess one.
-- **The batch-settlement recipient whitelist is OR logic** across a manual list, testnet-only test
-  wallets, and NFT-holder status — and it checks `payTo`, the recipient, not the payer. See
-  `x402_facilitator/README.md` → _Whitelist Architecture_.
+- **The batch-settlement recipient gate is an allowance check**: the recipient (`payTo`, not the
+  payer) must have `approve()`d the facilitator's wallet for the fee in the settled token; the
+  only bypass is `BATCH_SETTLEMENT_TEST_WALLETS`, honored on testnets only (the old manual
+  allowlist + NFT-holder branch are retired). See `bunny_js/README.md` → _Facilitator: recipient
+  gating_.
 - **The facilitator collects a fee** via `transferFrom(merchant, facilitator, fee)`, in the token
   the payment settled in — so the merchant needs one `approve()` **per token** it takes (USDC, and
   EURC on Base). Amounts live only in `website/pages/x402/sellers/`.
@@ -99,8 +101,9 @@ fallback (see `genimg_x402_token.ts`).
   `findSettlementToken`, default currency EURe with EURC and USDC one toggle away; its
   spend-control cap is per-token, `10^decimals`) all read it. `getStablecoins()` remains
   USDC+EURC only — nothing should read it for EURe. See `scw_js/README.md` → _Stablecoins
-  and pricing_ and _Known EURe Domain Names_, and `x402_facilitator/README.md` → _EURe via
-  Permit2_.
+  and pricing_ and _Known EURe Domain Names_; the EURe-via-Permit2 implementation lives in
+  `bunny_js/src/facilitator/` (end-to-end walkthrough:
+  `bunny_js/notebooks/facilitator/x402_exact_permit2.ipynb`).
 
 ## Writing about x402 on the site
 

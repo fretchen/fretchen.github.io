@@ -4,8 +4,8 @@
  * Canonical shape verified against:
  * - @x402/evm SDK: src/exact/client/eip3009.ts (signEIP3009Authorization — domain/types/message)
  *   and src/exact/facilitator/eip3009-utils.ts (parsedSig.v ?? parsedSig.yParity — v handling)
- * - x402_facilitator/x402_splitter_verify.js (server-side verifyTypedData call, same repo)
- * - x402_facilitator/test/eip712_reference.test.js (EIP-712 hash vectors)
+ * - bunny_js/src/facilitator/x402_verify.ts (server-side verifyTypedData call, same repo)
+ * - x402_facilitator/test/eip712_reference.test.ts (EIP-712 hash vectors)
  *
  * Used by any caller that signs or verifies a `transferWithAuthorization` payload directly
  * (USDC, EURC, or any other EIP-3009 token) — e.g. SupportV2.donateToken, EIP3009SplitterV1.

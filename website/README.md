@@ -5,8 +5,8 @@ The public site at [fretchen.eu](https://www.fretchen.eu). Two halves that share
 AI tools that settle on Optimism and Base. No accounts, no subscriptions: you connect a wallet
 and pay cents per image or per message.
 
-Static-rendered and deployed to GitHub Pages; the paid endpoints live in `scw_js/` and
-`x402_facilitator/`.
+Static-rendered and deployed to GitHub Pages; the paid endpoints live in `bunny_js/` (the
+x402 sellers + facilitator) and `scw_js/` / `x402_facilitator/` (the remaining crons).
 
 ## Stack
 

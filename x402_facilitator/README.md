@@ -10,7 +10,7 @@ bunny_js — it now serves `facilitator.fretchen.eu` as the `fretchen-facilitato
 | Routing + API reference                                   | `../bunny_js/src/facilitator/facilitator_routes.ts` + `openapi.facilitator.json` |
 | Recipient gating (the "whitelist architecture"), fee pull | [`../bunny_js/README.md`](../bunny_js/README.md) → _Facilitator_ sections        |
 | Payment-scheme walkthroughs (notebooks)                   | [`../bunny_js/notebooks/facilitator/`](../bunny_js/notebooks/facilitator/)       |
-| The move's decisions + cutover checklist                  | [`bunny-port-implementation-plan.md`](./bunny-port-implementation-plan.md)       |
+| The move's decisions + cutover checklist                  | git history (the removed `bunny-port-implementation-plan.md`)                    |
 | The old HTTP API/endpoint docs                            | git history (this file before the teardown)                                      |
 
 ## What `walletreportcron` does

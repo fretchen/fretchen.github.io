@@ -1,8 +1,8 @@
 # bunny_js — agent rules
 
 Bunny Edge Scripts: the x402 llm/search/mcp **sellers** plus the ported **facilitator**
-(the payment core's verbatim twin from `x402_facilitator/`, waiting on its cutover —
-see [`x402_facilitator/bunny-port-implementation-plan.md`](../x402_facilitator/bunny-port-implementation-plan.md)).
+(the payment core's verbatim twin from `x402_facilitator/` — cutover done, the retired
+Scaleway function deleted; the move's plan is preserved in git history).
 See [`README.md`](./README.md) for the architecture, commands, environment/secrets, known
 limits and deploy paths, and [`SECURITY.md`](./SECURITY.md) for the security posture.
 

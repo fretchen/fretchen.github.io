@@ -14,10 +14,10 @@ The fourth script is the **facilitator** (`facilitator.ts`, `service="facilitato
 payment facilitator (`/verify`, `/settle`, `/supported`, `/openapi.json`) ported verbatim from
 `x402_facilitator/` (payment core + its test suite) with Scaleway's envelope exchanged for
 native `Request`/`Response` routing in `src/facilitator_routes.ts`. The cutover happened —
-`facilitator.fretchen.eu` serves this script (the retire-carries-over plan lives on at
-[`x402_facilitator/bunny-port-implementation-plan.md`](../x402_facilitator/bunny-port-implementation-plan.md);
-that package keeps only `walletreportcron` now, the facilitator's weekly wallet-report cron —
-the edge has no cron).
+`facilitator.fretchen.eu` serves this script, and the retired Scaleway function is deleted
+(the move's decisions + cutover checklist are preserved in git history as
+`x402_facilitator/bunny-port-implementation-plan.md`); that package keeps only `walletreportcron`
+now, the facilitator's weekly wallet-report cron — the edge has no cron).
 
 ### Facilitator: recipient gating (the "whitelist architecture")
 

@@ -14,19 +14,19 @@ everything.
 
 Monorepo for a blockchain-based AI service platform. Each subdirectory is an independent npm package — there is no root `package.json` or workspace manager.
 
-| Directory             | Purpose                                                                                  | Further reading                                                                        |
-| --------------------- | ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `website/`            | Frontend (Vike SSR + React 19 + Panda CSS) — also the blog                               | [`README`](website/README.md) · [`AGENTS.md`](website/AGENTS.md)                       |
-| `eth/`                | Solidity smart contracts (Hardhat, Optimism L2)                                          | [`README`](eth/README.md) · [`AGENTS.md`](eth/AGENTS.md)                               |
-| `scw_js/`             | Serverless backend (Scaleway Functions: image gen, channel cron, growth API)             | [`README`](scw_js/README.md) · [`AGENTS.md`](scw_js/AGENTS.md)                         |
-| `bunny_js/`           | Bunny Edge Scripts: the x402 llm/search/mcp **sellers** — plus the facilitator (`facilitator.fretchen.eu`)                                              | [`README`](bunny_js/README.md) · [`AGENTS.md`](bunny_js/AGENTS.md)                     |
-| `x402_facilitator/`   | Weekly facilitator wallet report (Scaleway Functions) — the EIP-3009 facilitator itself moved to `bunny_js/src/facilitator/`  | [`README`](x402_facilitator/README.md) · [`AGENTS.md`](x402_facilitator/AGENTS.md)     |
-| `comment_service/`    | Blog comment backend (Scaleway Functions)                                                | [`README`](comment_service/README.md) · [`AGENTS.md`](comment_service/AGENTS.md)       |
-| `analytics/`          | Serverless pageview counter (Scaleway Functions, S3-backed)                              | [`README`](analytics/README.md) · [`AGENTS.md`](analytics/AGENTS.md)                   |
-| `growth-agent/`       | AI growth agent cron container (Python, LangGraph)                                       | [`README`](growth-agent/README.md) · [`AGENTS.md`](growth-agent/AGENTS.md)             |
-| `observability/`      | Log CLI + Loki alert rules for all Scaleway functions                                    | [`README`](observability/README.md) · [`AGENTS.md`](observability/AGENTS.md)           |
-| `shared/chain-utils/` | Shared blockchain utility library (Viem peer dep)                                        | [`README`](shared/chain-utils/README.md) · [`AGENTS.md`](shared/chain-utils/AGENTS.md) |
-| `notebooks/`          | Python Jupyter notebooks for analysis                                                    | [`README`](notebooks/README.md)                                                        |
+| Directory             | Purpose                                                                                                                      | Further reading                                                                        |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `website/`            | Frontend (Vike SSR + React 19 + Panda CSS) — also the blog                                                                   | [`README`](website/README.md) · [`AGENTS.md`](website/AGENTS.md)                       |
+| `eth/`                | Solidity smart contracts (Hardhat, Optimism L2)                                                                              | [`README`](eth/README.md) · [`AGENTS.md`](eth/AGENTS.md)                               |
+| `scw_js/`             | Serverless backend (Scaleway Functions: image gen, channel cron, growth API)                                                 | [`README`](scw_js/README.md) · [`AGENTS.md`](scw_js/AGENTS.md)                         |
+| `bunny_js/`           | Bunny Edge Scripts: the x402 llm/search/mcp **sellers** — plus the facilitator (`facilitator.fretchen.eu`)                   | [`README`](bunny_js/README.md) · [`AGENTS.md`](bunny_js/AGENTS.md)                     |
+| `x402_facilitator/`   | Weekly facilitator wallet report (Scaleway Functions) — the EIP-3009 facilitator itself moved to `bunny_js/src/facilitator/` | [`README`](x402_facilitator/README.md) · [`AGENTS.md`](x402_facilitator/AGENTS.md)     |
+| `comment_service/`    | Blog comment backend (Scaleway Functions)                                                                                    | [`README`](comment_service/README.md) · [`AGENTS.md`](comment_service/AGENTS.md)       |
+| `analytics/`          | Serverless pageview counter (Scaleway Functions, S3-backed)                                                                  | [`README`](analytics/README.md) · [`AGENTS.md`](analytics/AGENTS.md)                   |
+| `growth-agent/`       | AI growth agent cron container (Python, LangGraph)                                                                           | [`README`](growth-agent/README.md) · [`AGENTS.md`](growth-agent/AGENTS.md)             |
+| `observability/`      | Log CLI + Loki alert rules for all Scaleway functions                                                                        | [`README`](observability/README.md) · [`AGENTS.md`](observability/AGENTS.md)           |
+| `shared/chain-utils/` | Shared blockchain utility library (Viem peer dep)                                                                            | [`README`](shared/chain-utils/README.md) · [`AGENTS.md`](shared/chain-utils/AGENTS.md) |
+| `notebooks/`          | Python Jupyter notebooks for analysis                                                                                        | [`README`](notebooks/README.md)                                                        |
 
 ## Commands
 
@@ -87,7 +87,7 @@ See [`.github/THREAT_MODEL.md`](.github/THREAT_MODEL.md) for the full asset inve
 - `CONTRACT_OWNER_PRIVATE_KEY` (Hardhat keystore) — dedicated EOA `0x1af51D…fBB20`, controls every upgradeable contract and owns the three ERC-8004 agent identities (Base). Never use it for anything else.
 - `SEPOLIA_PRIVATE_KEY` (Hardhat keystore) — deployment/script signing key `0x073f26…`. Does NOT own contracts.
 - Agent wallet `0xAAEBC1…` — backend-only, whitelisted on GenImNFTv4 via `authorizeAgentWallet()`.
-- Facilitator wallet — stored as a `--secret` on the bunny facilitator script (and, until the teardown deploy deletes the retired Scaleway function, a lingered copy as its Scaleway secret); receives fees in the settled tokens (USDC; EURC/EURe on Base). Its pull semantics: `bunny_js/README.md` → _Facilitator: the fee pull_.
+- Facilitator wallet — stored as a `--secret` on the bunny facilitator script (the retired Scaleway facilitator function and its secret copy are deleted; `walletreportcron` still carries the key, only to derive the wallet address for the weekly report — a public-address env would remove that copy); receives fees in the settled tokens (USDC; EURC/EURe on Base). Its pull semantics: `bunny_js/README.md` → _Facilitator: the fee pull_.
 - Receiver-authorizer key (`RECEIVER_AUTHORIZER_PRIVATE_KEY`, scw_js Scaleway secret) — signs batch-settlement channel-config and refund authorizations for the `/assistent` sellers; never sends transactions. Compromise means revenue denial (early refunds, stalled claims), not fund redirection.
 
 Rules that apply everywhere:

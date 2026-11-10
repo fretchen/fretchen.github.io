@@ -6,8 +6,8 @@ The x402 payment facilitator itself (verify/settle/supported) lives in
 [`bunny_js/src/facilitator/`](../bunny_js/src/facilitator/) and serves
 `facilitator.fretchen.eu` — its docs moved with it
 ([`bunny_js/README.md`](../bunny_js/README.md) → _Facilitator_ sections); this package's old
-HTTP code and endpoint docs are retired (git history,
-[`bunny-port-implementation-plan.md`](./bunny-port-implementation-plan.md)).
+HTTP code and endpoint docs are retired (git history — including the move's plan,
+`bunny-port-implementation-plan.md`).
 
 Two ways to break this package silently, both with a named guard:
 

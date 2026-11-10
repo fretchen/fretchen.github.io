@@ -61,5 +61,8 @@
   },
   "overrides": {
     "@humanfs/node": "0.16.8"
+  },
+  "allowScripts": {
+    "argon2@0.30.3": true
   }
 }

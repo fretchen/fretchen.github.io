@@ -48,9 +48,11 @@ const EXEMPT: Record<string, string> = {
     "so it already reaches an inbox without a Loki rule",
 };
 
-// Only rules whose selector names this package's two deployed functions — a rule scoped to
-// llmx402cron or searchapi says nothing about whether the facilitator itself is covered.
-const FACILITATOR_FUNCTIONS = ["facilitator", "walletreportcron"];
+// Only rules whose selector names this package's ONE deployed function — the HTTP facilitator
+// moved to bunny_js, where BunnySellersNeedAttention (level="error") covers its call sites
+// (this rule union deliberately does not: a rule scoped to the facilitator's old Scaleway
+// function names nothing this package still deploys).
+const FACILITATOR_FUNCTIONS = ["walletreportcron"];
 
 const messages = extractLoggerErrorMessages(PACKAGE_ROOT);
 const rules = extractRules(ALERTS_DIR);
@@ -59,8 +61,9 @@ const facilitatorRules = rulesForFunctions(rules, FACILITATOR_FUNCTIONS);
 describe("facilitator alert coverage", () => {
   it("found a realistic number of logger.error call sites", () => {
     // A floor, not an exact count — guards against the extractor silently matching nothing,
-    // which would make every other test in this file vacuously pass.
-    expect(messages.length).toBeGreaterThanOrEqual(8);
+    // which would make every other test in this file vacuously pass. Four sites now; the
+    // package shrank to the wallet-report cron when the facilitator moved to bunny_js.
+    expect(messages.length).toBeGreaterThanOrEqual(4);
   });
 
   // A sanity check that the parser found anything, not a rule count: the rules are deliberately

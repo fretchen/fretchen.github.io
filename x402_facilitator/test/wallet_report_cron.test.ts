@@ -18,8 +18,8 @@ const {
 
 // The real fee arithmetic (feeAmountFor) and token registry (getFeeTokens): the per-token
 // decimals they carry are what these tests are about.
-vi.mock("../x402_fee", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../x402_fee")>()),
+vi.mock("../wallet_report_fee", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../wallet_report_fee")>()),
   getFacilitatorAddress: mockGetFacilitatorAddress,
 }));
 

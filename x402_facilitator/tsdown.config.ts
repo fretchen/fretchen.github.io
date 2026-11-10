@@ -1,10 +1,10 @@
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
-  // x402_splitter_facilitator.js is deliberately absent: the buyer-pays splitter is
-  // retired (see README → Fee model history). No function in serverless.yml routes to it,
-  // but `package: dist/**` means anything built here still ships in the deploy archive.
-  entry: ["x402_facilitator.ts", "wallet_report_cron.ts"],
+  // Only the wallet-report cron: the HTTP facilitator moved to bunny_js, and the buyer-pays
+  // splitter JS was retired with it. `package: dist/**` means anything built here ships in
+  // the deploy archive, so the entry list must stay this short.
+  entry: ["wallet_report_cron.ts"],
   format: "esm",
   platform: "node",
   target: "node22",

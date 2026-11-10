@@ -13,9 +13,48 @@ Only `scw_js`'s `llmx402cron` remains, claiming the channels these twins charge.
 The fourth script is the **facilitator** (`facilitator.ts`, `service="facilitator"`) — the x402
 payment facilitator (`/verify`, `/settle`, `/supported`, `/openapi.json`) ported verbatim from
 `x402_facilitator/` (payment core + its test suite) with Scaleway's envelope exchanged for
-native `Request`/`Response` routing in `src/facilitator_routes.ts`. Its cutover plan is
-[`x402_facilitator/bunny-port-implementation-plan.md`](../x402_facilitator/bunny-port-implementation-plan.md):
-until its DNS flip the Scaleway facilitator remains the live one at `facilitator.fretchen.eu`.
+native `Request`/`Response` routing in `src/facilitator_routes.ts`. The cutover happened —
+`facilitator.fretchen.eu` serves this script (the retire-carries-over plan lives on at
+[`x402_facilitator/bunny-port-implementation-plan.md`](../x402_facilitator/bunny-port-implementation-plan.md);
+that package keeps only `walletreportcron` now, the facilitator's weekly wallet-report cron —
+the edge has no cron).
+
+### Facilitator: recipient gating (the "whitelist architecture")
+
+There is no recipient whitelist. Both schemes gate recipients the same way: an allowance the
+recipient has `approve()`d for the facilitator's wallet, **in the token the payment settles
+in** — USDC on any network, EURC and EURe on Base. The fee is charged in that same token
+(0.01 USDC, 0.01 EURC or 0.01 EURe), so a seller paid in several approves each. EURe has 18
+decimals, so its 0.01 is `10000000000000000` atomic units, not the `10000` of USDC/EURC — and
+an EURe approval of `1000000` covers no fee at all. Any other token is refused with
+`unsupported_fee_asset`. For `exact` the token is `requirements.asset`; for batch-settlement
+it is the channel's token (`payload.token` for `settle`, the claims' channel token for
+`claim`, `channelConfig.token` for a claim-carrying refund), and a batch mixing tokens is
+refused. `checkMerchantAllowance()` (`src/facilitator/x402_fee.ts`) reads that allowance; an
+under-approved recipient is rejected with `insufficient_fee_allowance` rather than settled
+for free. `BATCH_SETTLEMENT_TEST_WALLETS` (`src/facilitator/x402_whitelist.ts`) is the one
+remaining carve-out: a listed address skips the allowance check, but only on testnets (the
+old manual allowlist and NFT-holder branch are retired — `claim`/`settle` moved onto the
+allowance check in FEE_MODEL_PLAN.md Phase 3).
+
+### Facilitator: the fee pull right after the settlement
+
+The fee is a second transaction from the facilitator wallet, sent within a second of the
+settlement. On a load-balanced RPC that second send can reach a node that has not caught up:
+fee pulls have reused the settlement's nonce (`replacement transaction underpriced`) and
+simulated against a balance that did not yet include the payment. Two measures, both in
+`src/facilitator/x402_fee.ts`:
+
+- Every transaction is signed by an account from `loadFacilitatorAccount()`, which carries
+  viem's shared `nonceManager`, so the fee pull never takes a nonce below the settlement's.
+  Build no signer for this key any other way.
+- A fee send that the node refused before broadcast (underpriced, nonce too low, or a
+  reverted simulation) is sent again, up to `FEE_SEND_ATTEMPTS` times, 2 s apart
+  (`FEE_RETRY_DELAY_MS`). Nothing that may have been broadcast is ever resent; a receipt
+  timeout stays `fee_collection_pending`.
+
+If a settlement ever hangs as `settlement_pending` on a healthy RPC after a deploy, suspect a
+dropped transaction the nonce manager has already counted: a restart of the isolate clears it.
 
 ## Architecture
 

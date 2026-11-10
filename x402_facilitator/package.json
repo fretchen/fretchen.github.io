@@ -1,18 +1,16 @@
 {
   "name": "x402-facilitator",
   "version": "1.0.0",
-  "description": "x402 v2 Payment Facilitator for Optimism and Base",
+  "description": "Weekly facilitator wallet report (cron). The x402 v2 payment facilitator itself moved to bunny_js/src/facilitator/.",
   "type": "module",
-  "main": "dist/x402_facilitator.js",
+  "main": "dist/wallet_report_cron.js",
   "scripts": {
-    "generate:openapi": "tsx scripts/generate-openapi.ts && prettier --write --log-level warn openapi.json",
-    "build": "npm run generate:openapi && tsdown",
+    "build": "tsdown",
     "predev": "npm run build",
-    "dev": "NODE_ENV=test node dist/x402_facilitator.js",
+    "dev": "NODE_ENV=test node dist/wallet_report_cron.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:integration": "vitest run --config vitest.integration.config.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{ts,js,json,md}\"",
@@ -22,7 +20,7 @@
     "deploy": "npm run build && serverless deploy",
     "deploy:prod": "npm run build && serverless deploy --stage production",
     "info": "serverless info",
-    "logs": "serverless logs -f facilitator",
+    "logs": "serverless logs -f walletreportcron",
     "remove": "serverless remove"
   },
   "keywords": [
@@ -36,12 +34,9 @@
   "license": "MIT",
   "dependencies": {
     "@fretchen/chain-utils": "file:../shared/chain-utils",
-    "@x402/core": "^2.29.0",
-    "@x402/evm": "^2.29.0",
     "dotenv": "^16.0.0",
     "pino": "^9.0.0",
-    "viem": "^2.57.4",
-    "zod": "^4.6.6"
+    "viem": "^2.57.4"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",

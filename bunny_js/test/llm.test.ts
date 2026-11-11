@@ -140,6 +140,19 @@ vi.mock("../src/x402_server.js", async () => {
       const trimmedFraction = fraction.replace(/0+$/, "");
       return trimmedFraction ? `${whole}.${trimmedFraction}` : whole.toString();
     },
+    // Real semantics, EURe-first as the production preference orders it: every token priced
+    // in its own units, so the page can never quote fewer tokens than the challenge.
+    formatParallelPrices: (price: { EURe: string; EURC: string; USDC: string }) => {
+      const fmt = (atomic: string, decimals: bigint, symbol: "EURe" | "EURC" | "USDC") =>
+        `${symbol === "USDC" ? "$" : "€"}${(() => {
+          const a = BigInt(atomic);
+          const div = 10n ** decimals;
+          const whole = a / div;
+          const frac = (a % div).toString().padStart(Number(decimals), "0").replace(/0+$/, "");
+          return frac ? `${whole}.${frac}` : whole.toString();
+        })()} in ${symbol}`;
+      return `${fmt(price.EURe, 18n, "EURe")}, ${fmt(price.EURC, 6n, "EURC")}, ${fmt(price.USDC, 6n, "USDC")}`;
+    },
   };
 });
 

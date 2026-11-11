@@ -666,7 +666,11 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
         expect(response.body).toContain(".well-known/agent-registration.json");
         expect(response.body).toContain(".well-known/oasf.json");
         // The page price is the spec's x-payment-info value, not a hand-restated one.
-        expect(response.body).toContain("POST /imagegen — $0.07 per image");
+        // Generated per-token prices (EURe first, each token's own units) — nominal EUR
+        // and USD prices differ here, which is exactly why the page must quote both.
+        expect(response.body).toContain(
+          "POST /imagegen — €0.06 in EURe, €0.06 in EURC, $0.07 in USDC per image",
+        );
         expect(response.body).toContain(
           "curl -X POST 'https://imagegen-agent.fretchen.eu/imagegen'",
         );

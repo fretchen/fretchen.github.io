@@ -82,6 +82,19 @@ vi.mock("../src/x402_server.js", async () => {
       const trimmedFraction = fraction.replace(/0+$/, "");
       return trimmedFraction ? `${whole}.${trimmedFraction}` : whole.toString();
     },
+    // Real semantics, EURe-first as the production preference orders it: every token priced
+    // in its own units, so the page can never quote fewer tokens than the challenge.
+    formatParallelPrices: (price: { EURe: string; EURC: string; USDC: string }) => {
+      const fmt = (atomic: string, decimals: bigint, symbol: "EURe" | "EURC" | "USDC") =>
+        `${symbol === "USDC" ? "$" : "€"}${(() => {
+          const a = BigInt(atomic);
+          const div = 10n ** decimals;
+          const whole = a / div;
+          const frac = (a % div).toString().padStart(Number(decimals), "0").replace(/0+$/, "");
+          return frac ? `${whole}.${frac}` : whole.toString();
+        })()} in ${symbol}`;
+      return `${fmt(price.EURe, 18n, "EURe")}, ${fmt(price.EURC, 6n, "EURC")}, ${fmt(price.USDC, 6n, "USDC")}`;
+    },
     // Real semantics for the pure helpers — the tests below pin the entry they produce.
     createExactAlternative: exactAlternativeEntry,
     withExactAlternative: (challenge: { accepts: unknown[] }, payTo: string) => ({
@@ -594,9 +607,15 @@ describe("discovery", () => {
       expect(res.body).toContain(".well-known/agent-registration.json");
       expect(res.body).toContain(".well-known/oasf.json");
       expect(res.body).toContain("https://mcp-agent.fretchen.eu/mcp");
-      // Prices restated on the page must be the spec's x-payment-info values.
-      expect(res.body).toContain("GET /search — $0.01 per call");
-      expect(res.body).toContain("GET /fetch — $0.001 per call");
+      // Prices on the page are generated from PRICE_ATOMIC — every accepted token in its
+      // own units, EURe first as the seller's preference orders it — plus the flat exact
+      // alternative; never a single-token restatement.
+      expect(res.body).toContain(
+        "GET /search — channel call: €0.01 in EURe, €0.01 in EURC, $0.01 in USDC; or exact: $0.01 flat (USDC, Base mainnet)",
+      );
+      expect(res.body).toContain(
+        "GET /fetch — channel call: €0.001 in EURe, €0.001 in EURC, $0.001 in USDC; or exact: $0.01 flat (USDC, Base mainnet)",
+      );
       expect(res.body).toContain("curl 'https://web-agent.fretchen.eu/search?q=erc-8004'");
       expect(res.body).toContain("402");
       expect(mockCreateBatchSettlementPaymentRequirements).not.toHaveBeenCalled();

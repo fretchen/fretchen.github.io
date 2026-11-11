@@ -50,6 +50,7 @@ import {
   createResourceServer,
   extractPaymentPayload,
   createSettlementHeaders,
+  formatParallelPrices,
   getBatchSettlementNetworks,
   LLM_MAX_TIMEOUT_SECONDS,
   formatUsdcAtomicAsDecimalUsd,
@@ -108,9 +109,9 @@ const ROOT_PAGE = buildRootPage({
     },
   ],
   price: [
-    `POST / — metered by real token usage, at most $${formatUsdcAtomicAsDecimalUsd(MAX_PRICE_ATOMIC.USDC)} per request`,
+    `POST / — metered per request, ceiling ${formatParallelPrices(MAX_PRICE_ATOMIC)}; or exact: $${formatUsdcAtomicAsDecimalUsd(EXACT_ALTERNATIVE_AMOUNT_ATOMIC)} flat (USDC, Base mainnet)`,
   ],
-  payment: `x402 (HTTP 402): no account, no API key. An unpaid request answers 402 with the machine-readable Payment-Required challenge — two schemes are listed: batch-settlement channels first (metered by real token usage under a per-request ceiling), and an exact alternative at the end for clients without channel wiring — one EIP-3009 signature per call, flat $${formatUsdcAtomicAsDecimalUsd(EXACT_ALTERNATIVE_AMOUNT_ATOMIC)} in USDC on Base mainnet. Retry the same request with the payment attached.`,
+  payment: `x402 (HTTP 402): no account, no API key. The 402 lists both schemes — batch-settlement channels first (the preferred way to pay: metered by real token usage under the ceiling) and an exact alternative at the end (one EIP-3009 signature per call, unmetered, for clients without channel wiring). Pay in USDC (Base or Optimism) or EURC/EURe (Base); the challenge carries every token's per-network terms. Retry the same request with the payment attached.`,
   tryIt: `curl -X POST '${openapiSpec.servers[0].url}/' -H 'Content-Type: application/json' -d '{"model":"${advertisedModelIds()[0]}","messages":[{"role":"user","content":"ping"}]}'\n# → HTTP 402 + Payment-Required header: the terms. No wallet needed for this first look.\n# Testnet note: on Base Sepolia the payment settles and the completion is a mocked answer — a free end-to-end test.`,
   errors:
     "402 = unpaid or invalid payment (challenge in the Payment-Required header); 400 = invalid request (OpenAI-shaped error body); 404 = unknown model. Response schemas: openapi.json.",

@@ -231,6 +231,10 @@ describe("mcp_routes (stateless paid MCP endpoint)", () => {
         // the free first look: initialize and tools/list respond unpaid.
         expect(body).toContain("https://llm-agent.fretchen.eu/");
         expect(body).toContain("https://web-agent.fretchen.eu/");
+        // /fetch is REST-only (no MCP tool) — the page must still name the seller's
+        // most-called route and where it lives, or an MCP-only agent never finds it.
+        expect(body).toContain("GET /fetch");
+        expect(body).toContain("single-page fetch");
         expect(body).toContain(".well-known/agent-registration.json");
         expect(body).toContain("https://mcp-agent.fretchen.eu/mcp");
         expect(body).toContain("tools/list");

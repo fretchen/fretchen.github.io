@@ -46,6 +46,7 @@ import {
   createResourceServer,
   createSettlementHeaders,
   extractPaymentPayload,
+  formatParallelPrices,
   formatUsdcAtomicAsDecimalUsd,
   releaseLock,
   withExactAlternative,
@@ -108,16 +109,11 @@ const ROOT_PAGE = buildRootPage({
       label: "stateless MCP endpoint — same tools as JSON-RPC 2.0 over POST (web_search)",
     },
   ],
-  price: ROUTES.map((route) => {
-    const info = (
-      openapiSpec.paths as Record<
-        string,
-        Record<string, { "x-payment-info"?: { price: { amount: string } } }>
-      >
-    )[`/${route}`].get["x-payment-info"];
-    return `GET /${route} — $${info?.price.amount ?? "?"} per call`;
-  }),
-  payment: `x402 (HTTP 402): no account, no API key. An unpaid request answers 402 with the machine-readable Payment-Required challenge — two schemes are listed: batch-settlement channels first (the preferred way to pay), and an exact alternative at the end for clients without channel wiring — one EIP-3009 signature per call, flat $${formatUsdcAtomicAsDecimalUsd(EXACT_ALTERNATIVE_AMOUNT_ATOMIC)} in USDC on Base mainnet. Retry the same request with the payment attached.`,
+  price: ROUTES.map(
+    (route) =>
+      `GET /${route} — channel call: ${formatParallelPrices(PRICE_ATOMIC[route])}; or exact: $${formatUsdcAtomicAsDecimalUsd(EXACT_ALTERNATIVE_AMOUNT_ATOMIC)} flat (USDC, Base mainnet)`,
+  ),
+  payment: `x402 (HTTP 402): no account, no API key. The 402 lists both schemes — batch-settlement channels first (the preferred way to pay) and an exact alternative at the end (one EIP-3009 signature per call, for clients without channel wiring). Pay in USDC (Base or Optimism) or EURC/EURe (Base); the challenge carries every token's per-network terms. Retry the same request with the payment attached.`,
   tryIt: `curl '${SERVICE_URL}/search?q=erc-8004'\n# → HTTP 402 + Payment-Required header: the terms. No wallet needed for this first look.`,
   errors:
     "402 = unpaid (challenge in the Payment-Required header); 404 = no such route; everything else is standard HTTP. Response schemas: openapi.json.",

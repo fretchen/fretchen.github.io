@@ -54,19 +54,23 @@ const ROOT_PAGE = buildRootPage({
     },
     {
       href: "https://web-agent.fretchen.eu/",
-      label: "web_search — the web seller's page, spec and terms",
+      label:
+        "the web seller — home of the web_search tool; it also serves GET /fetch (single-page fetch, one URL's clean machine-readable content), a REST route priced on its page",
     },
     {
       href: `https://mcp-agent.fretchen.eu/${AGENT_REGISTRATION_PATH}`,
       label: "this origin's registration document (domain control proof for both agents)",
     },
   ],
-  price: MCP_TOOLS.map(
-    (tool) =>
-      `${tool.name} — priced at the seller it relays to; the unpaid call's tool result carries the exact 402 terms`,
-  ),
+  price: [
+    ...MCP_TOOLS.map(
+      (tool) =>
+        `${tool.name} — priced at the seller it relays to; the unpaid call's tool result carries the exact 402 terms`,
+    ),
+    "GET /fetch — single-page fetch, the web seller's most-called route: REST only (no MCP tool — call the web seller directly), priced on its page",
+  ],
   payment:
-    "per tool, via x402 at the relaying seller: no account, no API key. initialize and tools/list are free; an unpaid tools/call returns the 402 demands as structuredContent in an isError tool result — retry with the payment attached.",
+    "per tool, via x402 at the relaying seller: no account, no API key. Each seller's 402 lists both schemes — batch-settlement channels first (USDC, or EURC/EURe on Base) and an exact alternative (one signature per call, flat in USDC on Base mainnet); the challenge carries every token's terms. initialize and tools/list are free; an unpaid tools/call returns the 402 demands as structuredContent in an isError tool result — retry with the payment attached.",
   tryIt: `curl -X POST '${MCP_SERVICE.endpoint}' -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'\n# → the tools and their input schemas, free (as is initialize). tools/call carries the x402 payment.`,
   errors:
     "JSON-RPC errors: -32601 unknown method (a stateless server: initialize, tools/list, tools/call only), -32602 unknown tool. GET /mcp is 405 Allow: POST (the optional GET stream is not offered). Unpaid tools/call is NOT an error — it is a tools result with isError and the 402 demands in structuredContent.",

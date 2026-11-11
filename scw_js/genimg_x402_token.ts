@@ -33,8 +33,9 @@ import {
   createResourceServer,
   createPaymentRequirements,
   create402Response,
-  extractPaymentPayload,
   createSettlementHeaders,
+  extractPaymentPayload,
+  formatParallelPrices,
   type SdkPaymentPayload,
   type SdkPaymentRequirements,
 } from "./x402_server.js";
@@ -88,16 +89,9 @@ const ROOT_PAGE = buildRootPage({
     },
   ],
   price: [
-    ((): string => {
-      // Generated from the committed spec, not restated — the page and the 402 share it.
-      const info = (
-        openapiSpec.paths as Record<
-          string,
-          Record<string, { "x-payment-info"?: { price: { amount: string } } }>
-        >
-      )["/"].post["x-payment-info"];
-      return `POST /imagegen — $${info?.price.amount ?? "?"} per image (USDC, EURC or EURe; each token's price is set in its own units)`;
-    })(),
+    // Generated from the committed price list — every accepted token in its own units,
+    // EURe first as the seller's preference orders it; never a single-token restatement.
+    `POST /imagegen — ${formatParallelPrices(PRICE_ATOMIC)} per image`,
   ],
   payment:
     "x402 (HTTP 402), exact scheme — one signature moves the money per call: no account, no API key, no approve() needed. An unpaid request answers 402 with the machine-readable Payment-Required challenge — exact terms (network, token, amount) are in the challenge, then retry the same request with the payment attached.",

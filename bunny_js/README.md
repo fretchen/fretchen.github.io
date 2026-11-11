@@ -75,6 +75,13 @@ dropped transaction the nonce manager has already counted: a restart of the isol
     envelope helpers are not ported — there is no Scaleway envelope here.
 - `src/runtime-shims.ts` — pins the Node `Buffer`/`process` globals the ported code assumes,
   imported FIRST by the entry so they exist before any ported module's top-level code runs.
+- **Agent root page** — every origin serves a root page at `GET /`, unconditionally (agents
+  send `Accept: */*`, so a text/html gate hid the page from its reader). Built by
+  [`src/discovery.ts`](./src/discovery.ts)'s `buildRootPage` from what the seller already
+  serves — spec title/description, `x-payment-info` prices, the well-known contracts, the
+  no-wallet curl that returns the honest 402 — with the `<link rel="icon">` x402scan parses
+  kept as the first head element. Nothing on the page is hand-restated. The genimg origin
+  serves the same page scheme from `scw_js` (its `discovery.ts` twin).
 - `src/facilitator/` — the facilitator's own corner of the tree (`src/` is otherwise the
   twins'): the payment core ported **verbatim** from `x402_facilitator/` (that package keeps
   its own copy alive for its Scaleway function until the teardown PR; only `walletreportcron`

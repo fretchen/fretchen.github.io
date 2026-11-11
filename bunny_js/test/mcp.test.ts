@@ -148,7 +148,7 @@ describe("mcp_routes (stateless paid MCP endpoint)", () => {
     /**
      * The DECIDED deviation from the scw original: GET answers like a normal origin
      * instead of a blanket 405 — 404 with the honest stateless notice for paths with no
-     * content, 200 discovery HTML at the root when the caller accepts HTML, and DELETE
+     * content, 200 agent-facing root page at the root (unconditional), and DELETE
      * keeps 405 (session termination is genuinely not a thing here, per the MCP spec).
      */
     /**
@@ -214,16 +214,28 @@ describe("mcp_routes (stateless paid MCP endpoint)", () => {
       expect(await head.text()).toBe("");
     });
 
-    it("serves discovery HTML at the origin root when the caller accepts HTML", async () => {
-      const res = await handle(
-        new Request("https://mcp-agent.fretchen.eu/", {
-          method: "GET",
-          headers: { Accept: "text/html" },
-        }),
-      );
-      expect(res.status).toBe(200);
-      expect(res.headers.get("content-type")).toContain("text/html");
-      expect(await res.text()).toContain('rel="icon"');
+    /** The root page is the agent-facing gateway README, served unconditionally — agents
+     *  send "Accept: star-slash" too. x402scan still gets its <link rel="icon"> first. */
+    it("serves the agent-facing gateway page at the origin root regardless of the Accept header", async () => {
+      for (const headers of [undefined, { Accept: "*/*" }, { Accept: "text/html" }]) {
+        const res = await handle(
+          new Request("https://mcp-agent.fretchen.eu/", { method: "GET", headers }),
+        );
+        expect(res.status).toBe(200);
+        expect(res.headers.get("content-type")).toContain("text/html");
+        const body = await res.text();
+        // x402scan parses <link rel="icon"> from this document — it must stay first.
+        expect(body.indexOf('rel="icon"')).toBeLessThan(body.indexOf("<title>"));
+        expect(body).toContain("Fretchen MCP Gateway");
+        // The gateway points at the two sellers, its domain-proof registration doc, and
+        // the free first look: initialize and tools/list respond unpaid.
+        expect(body).toContain("https://llm-agent.fretchen.eu/");
+        expect(body).toContain("https://web-agent.fretchen.eu/");
+        expect(body).toContain(".well-known/agent-registration.json");
+        expect(body).toContain("https://mcp-agent.fretchen.eu/mcp");
+        expect(body).toContain("tools/list");
+        expect(body).toContain("402");
+      }
     });
 
     it("answers DELETE with 405 Allow: POST — no sessions to terminate", async () => {

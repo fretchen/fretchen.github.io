@@ -11,6 +11,7 @@ the **channel cron**, and the **Growth API**.
 
 - **OpenAPI Spec**: [`openapi.genimg.json`](./openapi.genimg.json) - the x402 discovery contract, served live at `GET /openapi.json` on the origin
 - **EIP-8004 Registration**: built per service by [`agent_registration.ts`](./agent_registration.ts), served live at `GET /.well-known/agent-registration.json` on each origin (see [ERC-8004 agent registration](#erc-8004-agent-registration))
+- **Agent root page**: served unconditionally at `GET /` on each origin — generated from the committed spec by [`discovery.ts`](./discovery.ts)'s `buildRootPage` (title, prices from `x-payment-info`, contracts, the no-wallet curl returning the honest 402; the `<link rel="icon">` x402scan parses stays first). Nothing on the page is hand-restated.
 
 ### Quick Links
 

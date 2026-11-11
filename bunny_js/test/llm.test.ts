@@ -262,8 +262,8 @@ describe("sc_llm_x402", () => {
       expect(res.headers["access-control-expose-headers"]).toContain("Payment-Response");
     });
 
-    it("returns 400 for a non-POST method", async () => {
-      const res = await handle(makeEvent({ httpMethod: "GET" }) as never, {});
+    it("returns 400 for a non-POST, non-GET method", async () => {
+      const res = await handle(makeEvent({ httpMethod: "PUT" }) as never, {});
       expect(res.statusCode).toBe(400);
     });
 
@@ -392,31 +392,35 @@ describe("sc_llm_x402", () => {
       expect(res.body).toBe("");
     });
 
-    // x402scan fetches the origin root and parses <link rel="icon"> before probing any
-    // favicon path. An HTML-accepting GET on "/" must return that discovery HTML.
-    it("serves favicon-discovery HTML on GET / when the client accepts HTML", async () => {
-      const res = await handle(
-        makeEvent({
-          httpMethod: "GET",
-          path: "/",
-          headers: { accept: "text/html,application/xhtml+xml" },
-        }) as never,
-        {},
-      );
-      expect(res.statusCode).toBe(200);
-      expect(res.headers["content-type"]).toContain("text/html");
-      expect(res.body).toContain('rel="icon"');
-      expect(res.body).toContain("/favicon.png");
-    });
-
-    // An x402 payment client GETs / without an HTML Accept header — it must fall through
-    // to the normal "only POST" rejection, not receive HTML.
-    it("does NOT serve HTML on GET / without an HTML Accept header", async () => {
-      const res = await handle(
-        makeEvent({ httpMethod: "GET", path: "/", headers: {} }) as never,
-        {},
-      );
-      expect(res.statusCode).toBe(400);
+    // The root page is the agent-facing README, served unconditionally — agents send
+    // Accept: */* too, so gating on text/html hid the whole page from the reader it is
+    // for. x402scan still gets its <link rel="icon"> first; the page asserts favicon
+    // link, contracts, price, curl and errors below.
+    it("serves the agent-facing root page on GET / regardless of the Accept header", async () => {
+      for (const accept of [undefined, "*/*", "text/html"]) {
+        const res = await handle(
+          makeEvent({
+            httpMethod: "GET",
+            path: "/",
+            ...(accept ? { headers: { accept } } : {}),
+          }) as never,
+          {},
+        );
+        expect(res.statusCode).toBe(200);
+        expect(res.headers["content-type"]).toContain("text/html");
+        // x402scan parses <link rel="icon"> from this document — it must stay first.
+        expect(res.body.indexOf('rel="icon"')).toBeLessThan(res.body.indexOf("<title>"));
+        expect(res.body).toContain("/favicon.png");
+        // The page title is the spec's — pinned here so a title change updates the test.
+        expect(res.body).toContain("Fretchen LLM Inference");
+        expect(res.body).toContain("/openapi.json");
+        expect(res.body).toContain("agent-registration.json");
+        expect(res.body).toContain("/.well-known/oasf.json");
+        expect(res.body).toContain("https://mcp-agent.fretchen.eu/mcp");
+        expect(res.body).toContain("POST /");
+        expect(res.body).toContain("curl -X POST");
+        expect(res.body).toContain("402");
+      }
     });
 
     // Regression guard: x-payment-info.price.max must track the real, live price
@@ -581,7 +585,7 @@ describe("sc_llm_x402", () => {
               }),
             }),
           }),
-          serviceName: "Fretchen AI Assistant",
+          serviceName: "Fretchen LLM Inference",
           tags: ["llm", "chat", "x402"],
           iconUrl: "https://llm-agent.fretchen.eu/favicon.png",
         }),

@@ -24,9 +24,10 @@ import {
   type Route,
 } from "./search_schemas.js";
 import { CORS_HEADERS } from "./utils.js";
-import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
+import { buildRootPage } from "./discovery.js";
 import {
   AGENT_REGISTRATION_PATH,
+  MCP_SERVICE,
   OASF_MANIFEST_PATH,
   buildAgentRegistration,
   buildOasfRecord,
@@ -65,12 +66,57 @@ const MAINNET_NETWORKS = ["eip155:10", "eip155:8453"];
 const MAX_TIMEOUT_SECONDS = 30;
 
 /**
- * Base for the advertised `resource.url` — the production custom domain by default, so the
- * twin's published terms match the Scaleway original; set SEARCH_SERVICE_URL to the
- * bunny-provided URL when deploying the trial so the advertised origin names where the
- * trial is actually served.
+ * BASE URL for the advertised `resource.url`, derived from the committed spec — the same
+ * pattern as the llm twin, and the published terms themselves. There is deliberately no env
+ * override anymore: `SEARCH_SERVICE_URL` was a trial-period mechanism (advertise where the
+ * trial was actually served) and its leftover value kept advertising the `*.bunny.run` origin
+ * in production, which indexers then could not attribute to web-agent.fretchen.eu. The
+ * resource url is the payment scope, not the serving origin — it keeps naming the production
+ * identity wherever the script is served from.
  */
-const SERVICE_URL = process.env.SEARCH_SERVICE_URL ?? "https://web-agent.fretchen.eu";
+const SERVICE_URL = openapiSpec.servers[0].url;
+
+/**
+ * The agent-facing root page, generated from the same constants/files that serve the twin:
+ * title/summary from the committed spec, prices from its `x-payment-info` per route, links to
+ * the well-known contracts. Nothing is hand-restated — see discovery.ts.
+ */
+const ROOT_PAGE = buildRootPage({
+  title: openapiSpec.info.title,
+  summary: openapiSpec.info.description,
+  endpoints: [
+    {
+      href: `${SERVICE_URL}/openapi.json`,
+      label: "OpenAPI 3.1 spec — request/response schemas and payment terms",
+    },
+    {
+      href: `${SERVICE_URL}/${AGENT_REGISTRATION_PATH}`,
+      label: "ERC-8004 registration (identity, services, wallet)",
+    },
+    {
+      href: `${SERVICE_URL}/${OASF_MANIFEST_PATH}`,
+      label: "OASF capability record (skills, domains)",
+    },
+    {
+      href: MCP_SERVICE.endpoint,
+      label: "stateless MCP endpoint — same tools as JSON-RPC 2.0 over POST (web_search)",
+    },
+  ],
+  price: ROUTES.map((route) => {
+    const info = (
+      openapiSpec.paths as Record<
+        string,
+        Record<string, { "x-payment-info"?: { price: { amount: string } } }>
+      >
+    )[`/${route}`].get["x-payment-info"];
+    return `GET /${route} — $${info?.price.amount ?? "?"} per call`;
+  }),
+  payment:
+    "x402 (HTTP 402): no account, no API key. An unpaid request answers 402 with the machine-readable Payment-Required challenge — exact terms (scheme batch-settlement, network, token, amount) are in the challenge, then retry the same request with the payment attached.",
+  tryIt: `curl '${SERVICE_URL}/search?q=erc-8004'\n# → HTTP 402 + Payment-Required header: the terms. No wallet needed for this first look.`,
+  errors:
+    "402 = unpaid (challenge in the Payment-Required header); 404 = no such route; everything else is standard HTTP. Response schemas: openapi.json.",
+});
 
 /** The favicon as raw bytes — web Response bodies are bytes, not Scaleway base64 strings. */
 const FAVICON_BYTES = Uint8Array.from(atob(faviconBase64), (c) => c.charCodeAt(0));
@@ -312,7 +358,7 @@ async function challenge(route: Route, receiverAddress: `0x${string}`): Promise<
     // One bazaar block per route: the block names the method and the query parameters, and the
     // two routes sell different things at different prices. (Copied.)
     extensions: buildSearchBazaarExtension(route),
-    serviceName: "Fretchen Web Access",
+    serviceName: "Fretchen Web Retrieval",
     tags: ["search", "web", "x402"],
     iconUrl: `${openapiSpec.servers[0].url}/favicon.png`,
   });
@@ -331,7 +377,7 @@ export async function handleRequest(request: Request): Promise<Response> {
   }
 
   // Web Request headers are lowercase; every consumer in the ported stack
-  // (extractPaymentPayload, wantsHtml) matches case-insensitively.
+  // (extractPaymentPayload) matches case-insensitively.
   const headers = Object.fromEntries(request.headers) as Record<string, string>;
   const method = request.method;
   const url = new URL(request.url);
@@ -382,8 +428,9 @@ export async function handleRequest(request: Request): Promise<Response> {
     });
   }
 
-  if (isGetOrHead && path === "" && wantsHtml(headers)) {
-    return new Response(isHead ? null : FAVICON_DISCOVERY_HTML, {
+  if (isGetOrHead && path === "") {
+    // Unconditional on purpose: the reader is an agent, and agents send Accept: */* too.
+    return new Response(isHead ? null : ROOT_PAGE, {
       status: 200,
       headers: { ...CORS_HEADERS, "Content-Type": "text/html; charset=utf-8" },
     });

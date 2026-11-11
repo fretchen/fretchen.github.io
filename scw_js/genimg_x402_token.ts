@@ -42,7 +42,7 @@ import { validatePaymentNetwork, getExpectedNetworks } from "./getChain.js";
 import type { ScwEvent } from "./types.js";
 import openapiSpec from "./openapi.genimg.json" with { type: "json" };
 import { faviconBase64, faviconContentType } from "./favicon.js";
-import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
+import { buildRootPage } from "./discovery.js";
 import { buildGenimgBazaarExtension } from "./bazaar_discovery.js";
 import {
   AGENT_REGISTRATION_PATH,
@@ -64,6 +64,47 @@ const PRICE_ATOMIC: PriceList = {
   EURe: process.env.EURE_PAYMENT_AMOUNT ?? "60000000000000000",
 };
 const GAS_BUFFER = parseEther("0.00001");
+
+/**
+ * The agent-facing root page, generated from the same constants/files that serve the
+ * handler: title/summary from the committed spec, the price from its `x-payment-info`,
+ * links to the well-known contracts. Nothing is hand-restated — see discovery.ts.
+ */
+const ROOT_PAGE = buildRootPage({
+  title: openapiSpec.info.title,
+  summary: openapiSpec.info.description,
+  endpoints: [
+    {
+      href: `${openapiSpec.servers[0].url}/openapi.json`,
+      label: "OpenAPI 3.1 spec — request/response schemas and payment terms",
+    },
+    {
+      href: `${openapiSpec.servers[0].url}/${AGENT_REGISTRATION_PATH}`,
+      label: "ERC-8004 registration (identity, services, wallet)",
+    },
+    {
+      href: `${openapiSpec.servers[0].url}/${OASF_MANIFEST_PATH}`,
+      label: "OASF capability record (skills, domains)",
+    },
+  ],
+  price: [
+    ((): string => {
+      // Generated from the committed spec, not restated — the page and the 402 share it.
+      const info = (
+        openapiSpec.paths as Record<
+          string,
+          Record<string, { "x-payment-info"?: { price: { amount: string } } }>
+        >
+      )["/"].post["x-payment-info"];
+      return `POST /imagegen — $${info?.price.amount ?? "?"} per image (USDC, EURC or EURe; each token's price is set in its own units)`;
+    })(),
+  ],
+  payment:
+    "x402 (HTTP 402), exact scheme — one signature moves the money per call: no account, no API key, no approve() needed. An unpaid request answers 402 with the machine-readable Payment-Required challenge — exact terms (network, token, amount) are in the challenge, then retry the same request with the payment attached.",
+  tryIt: `curl -X POST '${openapiSpec.servers[0].url}/imagegen' -H 'Content-Type: application/json' -d '{"prompt":"a lighthouse at dusk"}'\n# → HTTP 402 + Payment-Required header: the terms. No wallet needed for this first look.`,
+  errors:
+    "402 = unpaid (challenge in the Payment-Required header); 400 = invalid request (OpenAI-shaped error body); 500 = server configuration error. Response schemas: openapi.json.",
+});
 
 // keccak256("Transfer(address,address,uint256)") — used to extract tokenId from mint tx logs
 const TRANSFER_EVENT_HASH = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
@@ -397,9 +438,8 @@ async function handle(
   // Instead we cover the two paths that DO reach the function and that x402scan
   // (@agentcash/discovery) actually uses to resolve an icon:
   //   1. The origin root: scrapeFavicon fetches it and parses <link rel="icon"> first,
-  //      before probing any COMMON_FAVICON_PATHS. So a GET on "/" that asks for HTML
-  //      (a scraper, never an x402 payment client — those POST JSON) gets a minimal
-  //      HTML page pointing at /favicon.png.
+  //      before probing any COMMON_FAVICON_PATHS. The root now serves the agent-facing
+  //      README page unconditionally — the favicon link stays its first head element.
   //   2. /favicon.png: one of scrapeFavicon's COMMON_FAVICON_PATHS fallbacks, and unlike
   //      /favicon.ico it is not swallowed by the gateway.
   const normalizedPath = (event.path ?? "").replace(/^\/+/, "");
@@ -415,12 +455,13 @@ async function handle(
     };
   }
 
-  if (isGetOrHead && normalizedPath === "" && wantsHtml(event.headers)) {
+  if (isGetOrHead && normalizedPath === "") {
+    // Unconditional on purpose: the reader is an agent, and agents send Accept: */* too.
     const isHead = event.httpMethod === "HEAD";
     return {
       statusCode: 200,
       headers: { ...CORS_HEADERS, "Content-Type": "text/html; charset=utf-8" },
-      body: isHead ? "" : FAVICON_DISCOVERY_HTML,
+      body: isHead ? "" : ROOT_PAGE,
     };
   }
 

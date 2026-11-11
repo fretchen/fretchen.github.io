@@ -53,9 +53,10 @@ import {
   type SdkPaymentPayload,
   type SdkPaymentRequirements,
 } from "./x402_server.js";
-import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
+import { buildRootPage } from "./discovery.js";
 import {
   AGENT_REGISTRATION_PATH,
+  MCP_SERVICE,
   OASF_MANIFEST_PATH,
   buildAgentRegistration,
   buildOasfRecord,
@@ -72,6 +73,44 @@ export const LLM_COMPLETION_BOUND_SECONDS = 40;
 
 /** The favicon as raw bytes — web Response bodies are bytes, not Scaleway base64 strings. */
 const FAVICON_BYTES = Uint8Array.from(atob(faviconBase64), (c) => c.charCodeAt(0));
+
+/**
+ * The agent-facing root page, generated from the same constants/files that serve the twin:
+ * title/summary from the committed spec, the price ceiling from the live MAX_PRICE_ATOMIC
+ * constant (the static spec's x-payment-info max is a documentation baseline that is
+ * overridden at serve time — the page must show the real one), links to the well-known
+ * contracts. Nothing is hand-restated — see discovery.ts.
+ */
+const ROOT_PAGE = buildRootPage({
+  title: openapiSpec.info.title,
+  summary: openapiSpec.info.description,
+  endpoints: [
+    {
+      href: `${openapiSpec.servers[0].url}/openapi.json`,
+      label: "OpenAPI 3.1 spec — request/response schemas and payment terms",
+    },
+    {
+      href: `${openapiSpec.servers[0].url}/${AGENT_REGISTRATION_PATH}`,
+      label: "ERC-8004 registration (identity, services, wallet)",
+    },
+    {
+      href: `${openapiSpec.servers[0].url}/${OASF_MANIFEST_PATH}`,
+      label: "OASF capability record (skills, domains)",
+    },
+    {
+      href: MCP_SERVICE.endpoint,
+      label: "stateless MCP endpoint — same tools as JSON-RPC 2.0 over POST (chat_completion)",
+    },
+  ],
+  price: [
+    `POST / — metered by real token usage, at most $${formatUsdcAtomicAsDecimalUsd(MAX_PRICE_ATOMIC.USDC)} per request`,
+  ],
+  payment:
+    "x402 (HTTP 402): no account, no API key. An unpaid request answers 402 with the machine-readable Payment-Required challenge — exact terms (scheme batch-settlement, network, token, ceiling) are in the challenge, then retry the same request with the payment attached.",
+  tryIt: `curl -X POST '${openapiSpec.servers[0].url}/' -H 'Content-Type: application/json' -d '{"model":"${advertisedModelIds()[0]}","messages":[{"role":"user","content":"ping"}]}'\n# → HTTP 402 + Payment-Required header: the terms. No wallet needed for this first look.\n# Testnet note: on Base Sepolia the payment settles and the completion is a mocked answer — a free end-to-end test.`,
+  errors:
+    "402 = unpaid or invalid payment (challenge in the Payment-Required header); 400 = invalid request (OpenAI-shaped error body); 404 = unknown model. Response schemas: openapi.json.",
+});
 
 function jsonError(statusCode: number, error: string): Response {
   return new Response(JSON.stringify({ error }), { status: statusCode, headers: CORS_HEADERS });
@@ -158,8 +197,9 @@ export async function handleLLMRequest(request: Request): Promise<Response> {
     });
   }
 
-  if (isGetOrHead && path === "" && wantsHtml(headers)) {
-    return new Response(isHead ? null : FAVICON_DISCOVERY_HTML, {
+  if (isGetOrHead && path === "") {
+    // Unconditional on purpose: the reader is an agent, and agents send Accept: */* too.
+    return new Response(isHead ? null : ROOT_PAGE, {
       status: 200,
       headers: { ...CORS_HEADERS, "Content-Type": "text/html; charset=utf-8" },
     });
@@ -205,7 +245,7 @@ export async function handleLLMRequest(request: Request): Promise<Response> {
       networks: getBatchSettlementNetworks(),
       maxTimeoutSeconds: LLM_MAX_TIMEOUT_SECONDS,
       extensions: buildLlmBazaarExtension(),
-      serviceName: "Fretchen AI Assistant",
+      serviceName: "Fretchen LLM Inference",
       tags: ["llm", "chat", "x402"],
       iconUrl: `${openapiSpec.servers[0].url}/favicon.png`,
     });

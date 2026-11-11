@@ -637,38 +637,41 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       expect(response.body).toBe("");
     });
 
-    // x402scan fetches the origin root and parses <link rel="icon"> before probing any
-    // favicon path. An HTML-accepting GET on "/" must return that discovery HTML.
-    test("should serve favicon-discovery HTML on GET / when the client accepts HTML", async () => {
-      const event = {
-        httpMethod: "GET",
-        headers: { accept: "text/html,application/xhtml+xml" },
-        body: "",
-        path: "/",
-      };
+    // The root page is the agent-facing README, served unconditionally — agents send
+    // Accept: */* too, so gating on text/html hid the page from the reader it is for.
+    // x402scan still gets its <link rel="icon"> first.
+    test("should serve the agent-facing root page on GET / regardless of the Accept header", async () => {
+      const headerCases: Record<string, string>[] = [
+        {},
+        { accept: "*/*" },
+        { accept: "text/html,application/xhtml+xml" },
+      ];
+      for (const headers of headerCases) {
+        const event = {
+          httpMethod: "GET",
+          headers,
+          body: "",
+          path: "/",
+        };
 
-      const response = await handle(event, {});
+        const response = await handle(event, {});
 
-      expect(response.statusCode).toBe(200);
-      expect(response.headers["Content-Type"]).toContain("text/html");
-      expect(response.body).toContain('rel="icon"');
-      expect(response.body).toContain("/favicon.png");
-    });
-
-    // An x402 payment client GETs / without an HTML Accept header — it must NOT get HTML,
-    // it must fall through to the normal "only POST" rejection.
-    test("should NOT serve HTML on GET / without an HTML Accept header", async () => {
-      const event = {
-        httpMethod: "GET",
-        headers: {},
-        body: "",
-        path: "/",
-      };
-
-      const response = await handle(event, {});
-
-      expect(response.statusCode).toBe(400);
-      expect(JSON.parse(response.body).error).toContain("Only POST");
+        expect(response.statusCode).toBe(200);
+        expect(response.headers["Content-Type"]).toContain("text/html");
+        // x402scan parses <link rel="icon"> from this document — it must stay first.
+        expect(response.body.indexOf('rel="icon"')).toBeLessThan(response.body.indexOf("<title>"));
+        expect(response.body).toContain("/favicon.png");
+        expect(response.body).toContain("Fretchen AI Image Generation Service");
+        expect(response.body).toContain("/openapi.json");
+        expect(response.body).toContain(".well-known/agent-registration.json");
+        expect(response.body).toContain(".well-known/oasf.json");
+        // The page price is the spec's x-payment-info value, not a hand-restated one.
+        expect(response.body).toContain("POST /imagegen — $0.07 per image");
+        expect(response.body).toContain(
+          "curl -X POST 'https://imagegen-agent.fretchen.eu/imagegen'",
+        );
+        expect(response.body).toContain("402");
+      }
     });
 
     test("should reject invalid JSON body", async () => {

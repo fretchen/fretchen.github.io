@@ -28,10 +28,49 @@
  * does not do, per the MCP spec's session-less allowance.
  */
 import { CORS_HEADERS } from "./utils.js";
-import { FAVICON_DISCOVERY_HTML, wantsHtml } from "./discovery.js";
+import { buildRootPage } from "./discovery.js";
 import { faviconBase64, faviconContentType } from "./favicon.js";
 import { MCP_TOOLS } from "./mcp_tools.js";
-import { AGENT_REGISTRATION_PATH, buildMcpOriginRegistration } from "./agent_registration.js";
+import {
+  AGENT_REGISTRATION_PATH,
+  MCP_SERVICE,
+  buildMcpOriginRegistration,
+} from "./agent_registration.js";
+
+/**
+ * The agent-facing gateway page. This origin relays to the twin sellers and holds no spec
+ * of its own, so the page is hand-composed (no spec to generate from): it points at the
+ * two service origins — the single sources of truth for their schemas, prices and 402
+ * terms — plus this origin's own registration document and the MCP protocol curls. See
+ * discovery.ts for the generated-not-restated rule.
+ */
+const ROOT_PAGE = buildRootPage({
+  title: "Fretchen MCP Gateway — pay-per-call tools for agents",
+  summary: `A stateless MCP endpoint (Streamable HTTP, JSON-RPC 2.0 over POST) relaying ${MCP_TOOLS.length} paid tools. No sessions, no server-initiated streams: initialize and tools/list are free; tools/call relays to the seller, whose x402 terms apply — an unpaid call comes back as a tool result with isError, the payment demands in structuredContent.`,
+  endpoints: [
+    {
+      href: "https://llm-agent.fretchen.eu/",
+      label: "chat_completion — the LLM seller's page, spec and terms",
+    },
+    {
+      href: "https://web-agent.fretchen.eu/",
+      label: "web_search — the web seller's page, spec and terms",
+    },
+    {
+      href: `https://mcp-agent.fretchen.eu/${AGENT_REGISTRATION_PATH}`,
+      label: "this origin's registration document (domain control proof for both agents)",
+    },
+  ],
+  price: MCP_TOOLS.map(
+    (tool) =>
+      `${tool.name} — priced at the seller it relays to; the unpaid call's tool result carries the exact 402 terms`,
+  ),
+  payment:
+    "per tool, via x402 at the relaying seller: no account, no API key. initialize and tools/list are free; an unpaid tools/call returns the 402 demands as structuredContent in an isError tool result — retry with the payment attached.",
+  tryIt: `curl -X POST '${MCP_SERVICE.endpoint}' -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'\n# → the tools and their input schemas, free (as is initialize). tools/call carries the x402 payment.`,
+  errors:
+    "JSON-RPC errors: -32601 unknown method (a stateless server: initialize, tools/list, tools/call only), -32602 unknown tool. GET /mcp is 405 Allow: POST (the optional GET stream is not offered). Unpaid tools/call is NOT an error — it is a tools result with isError and the 402 demands in structuredContent.",
+});
 
 /** The latest protocol revision this server implements. */
 const DEFAULT_PROTOCOL_VERSION = "2025-06-18";
@@ -201,8 +240,9 @@ export async function handleMCPRequest(request: Request): Promise<Response> {
   // of the scw original's blanket 405.
   if (method === "GET" || method === "HEAD") {
     const isHead = method === "HEAD";
-    if (path === "" && wantsHtml(Object.fromEntries(request.headers))) {
-      return new Response(isHead ? null : FAVICON_DISCOVERY_HTML, {
+    if (path === "") {
+      // Unconditional on purpose: the reader is an agent, and agents send Accept: */* too.
+      return new Response(isHead ? null : ROOT_PAGE, {
         status: 200,
         headers: { ...CORS_HEADERS, "Content-Type": "text/html; charset=utf-8" },
       });

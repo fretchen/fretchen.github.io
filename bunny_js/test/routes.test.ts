@@ -522,20 +522,32 @@ describe("discovery", () => {
     expect(await res.text()).toBe("");
   });
 
-  test("serves the discovery HTML at the root when the caller accepts HTML", async () => {
-    const res = await handle(discoveryRequest("GET", "", { Accept: "text/html" }));
+  /** The root page is the agent-facing README, served unconditionally — agents send
+   *  "Accept: star-slash" too, so gating on text/html hid the whole page from the reader
+   *  it is for. x402scan still gets its <link rel="icon"> first. */
+  test("serves the agent-facing root page at the origin root, regardless of the Accept header", async () => {
+    const headerCases: Record<string, string>[] = [{}, { Accept: "*/*" }, { Accept: "text/html" }];
+    for (const headers of headerCases) {
+      const res = await handle(discoveryRequest("GET", "", headers));
 
-    expect(res.statusCode).toBe(200);
-    expect(res.headers["content-type"]).toContain("text/html");
-    expect(res.body).toContain('rel="icon"');
-  });
-
-  /** Only when HTML is asked for. A bare root request is not a browser or a crawler looking for an
-   *  icon, and answering HTML to it would hide the fact that the root serves no API. */
-  test("does not serve HTML at the root without an HTML Accept header", async () => {
-    const res = await handle(discoveryRequest("GET", ""));
-
-    expect(res.statusCode).toBe(404);
+      expect(res.statusCode).toBe(200);
+      expect(res.headers["content-type"]).toContain("text/html");
+      // x402scan parses <link rel="icon"> from this document — it must stay first.
+      expect(res.body.indexOf('rel="icon"')).toBeLessThan(res.body.indexOf("<title>"));
+      expect(res.body).toContain("/favicon.png");
+      // The page title is the spec's — pinned so a title change updates this test.
+      expect(res.body).toContain("Fretchen Web Retrieval");
+      expect(res.body).toContain("/openapi.json");
+      expect(res.body).toContain(".well-known/agent-registration.json");
+      expect(res.body).toContain(".well-known/oasf.json");
+      expect(res.body).toContain("https://mcp-agent.fretchen.eu/mcp");
+      // Prices restated on the page must be the spec's x-payment-info values.
+      expect(res.body).toContain("GET /search — $0.01 per call");
+      expect(res.body).toContain("GET /fetch — $0.001 per call");
+      expect(res.body).toContain("curl 'https://web-agent.fretchen.eu/search?q=erc-8004'");
+      expect(res.body).toContain("402");
+      expect(mockCreateBatchSettlementPaymentRequirements).not.toHaveBeenCalled();
+    }
   });
 
   /** Discovery must not open a hole in the route check: an unknown path is still 404, and still
@@ -588,7 +600,9 @@ describe("the 402 challenge", () => {
     const res = await handle(makeRequest("GET", "search", { auth: null, query: { q: "x402" } }));
 
     const { resource } = JSON.parse(res.body) as { resource: { url: string } };
-    expect(resource.url).toMatch(/\/search$/);
+    // The full production origin from the committed spec — never a serving origin (a leftover
+    // trial env once advertised the *.bunny.run URL here, which indexers could not attribute).
+    expect(resource.url).toBe("https://web-agent.fretchen.eu/search");
   });
 
   /** One bazaar block per route (docs.x402.org/extensions/bazaar): the block names the method
@@ -615,7 +629,7 @@ describe("the 402 challenge", () => {
     expect(fetchOpts.extensions.bazaar.info.input.method).toBe("GET");
     expect(Object.keys(fetchOpts.extensions.bazaar.info.input.queryParams)).toEqual(["url"]);
     for (const opts of [searchOpts, fetchOpts]) {
-      expect(opts.serviceName).toBe("Fretchen Web Access");
+      expect(opts.serviceName).toBe("Fretchen Web Retrieval");
       expect(opts.tags).toEqual(["search", "web", "x402"]);
       expect(opts.iconUrl).toBe("https://web-agent.fretchen.eu/favicon.png");
     }

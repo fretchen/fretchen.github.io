@@ -37,12 +37,18 @@ import openapiSpec from "./openapi.search.json" with { type: "json" };
 import { buildSearchBazaarExtension } from "./bazaar_discovery.js";
 import { toResponse } from "./response.js";
 import {
+  EXACT_ALTERNATIVE_AMOUNT_ATOMIC,
+  EXACT_ALTERNATIVE_NETWORK,
   create402Response,
   createBatchSettlementPaymentRequirements,
+  createExactAlternative,
   createLLMResourceServer,
+  createResourceServer,
   createSettlementHeaders,
   extractPaymentPayload,
+  formatUsdcAtomicAsDecimalUsd,
   releaseLock,
+  withExactAlternative,
   type SdkPaymentPayload,
   type SdkPaymentRequirements,
 } from "./x402_server.js";
@@ -111,8 +117,7 @@ const ROOT_PAGE = buildRootPage({
     )[`/${route}`].get["x-payment-info"];
     return `GET /${route} — $${info?.price.amount ?? "?"} per call`;
   }),
-  payment:
-    "x402 (HTTP 402): no account, no API key. An unpaid request answers 402 with the machine-readable Payment-Required challenge — exact terms (scheme batch-settlement, network, token, amount) are in the challenge, then retry the same request with the payment attached.",
+  payment: `x402 (HTTP 402): no account, no API key. An unpaid request answers 402 with the machine-readable Payment-Required challenge — two schemes are listed: batch-settlement channels first (the preferred way to pay), and an exact alternative at the end for clients without channel wiring — one EIP-3009 signature per call, flat $${formatUsdcAtomicAsDecimalUsd(EXACT_ALTERNATIVE_AMOUNT_ATOMIC)} in USDC on Base mainnet. Retry the same request with the payment attached.`,
   tryIt: `curl '${SERVICE_URL}/search?q=erc-8004'\n# → HTTP 402 + Payment-Required header: the terms. No wallet needed for this first look.`,
   errors:
     "402 = unpaid (challenge in the Payment-Required header); 404 = no such route; everything else is standard HTTP. Response schemas: openapi.json.",
@@ -191,14 +196,130 @@ function acceptedNetwork(payload: Record<string, unknown>): string | null {
   return typeof network === "string" ? network : null;
 }
 
+/** The scheme the payer built their payload against, or null if they named none. */
+function acceptedScheme(payload: Record<string, unknown>): string | null {
+  const accepted = payload["accepted"] as Record<string, unknown> | undefined;
+  const scheme = accepted?.["scheme"];
+  return typeof scheme === "string" ? scheme : null;
+}
+
 /**
  * Serve one route against a payment: verify, run, and settle **only if the run succeeded**.
+ * The batch-settlement path below is the original; payments carrying the exact alternative
+ * (the last accepts entry of the 402, see x402_server.ts) take their own, channel-free flow.
  *
  * Settle-after-success is what makes an upstream failure free for the caller. It leaves a
  * verify without a matching settle, which holds the channel lock for MAX_TIMEOUT_SECONDS —
  * the reason that constant is 30 and not 120. (Copied from scw_js/search_api.ts.)
  */
 async function servePaid(
+  route: Route,
+  args: Args,
+  payload: Record<string, unknown>,
+  receiverAddress: `0x${string}`,
+): Promise<Response> {
+  if (acceptedScheme(payload) === "exact") {
+    return serveExact(route, args, payload, receiverAddress);
+  }
+  return serveBatchSettlement(route, args, payload, receiverAddress);
+}
+
+/**
+ * The exact alternative's paid flow: one EIP-3009 signature per call, Base mainnet USDC,
+ * flat EXACT_ALTERNATIVE_AMOUNT_ATOMIC (see x402_server.ts for why the price is what it is).
+ * Deliberately resembles the batch flow (verify → run → settle-on-success → Payment-Response)
+ * while touching NONE of the channel machinery: no enhancePaymentRequirements, no channel
+ * lock, no releaseLock — there is no state for any of it to act on.
+ */
+async function serveExact(
+  route: Route,
+  args: Args,
+  payload: Record<string, unknown>,
+  receiverAddress: `0x${string}`,
+): Promise<Response> {
+  // The exact entry was offered on exactly one network/token; anything else is the caller
+  // paying against terms we never issued.
+  const network = acceptedNetwork(payload);
+  const paidAsset = (payload["accepted"] as Record<string, unknown> | undefined)?.["asset"];
+  const exactRequirements = createExactAlternative(receiverAddress);
+  if (network !== EXACT_ALTERNATIVE_NETWORK || paidAsset !== exactRequirements.asset) {
+    return jsonResponse(402, {
+      error: `Unsupported exact payment terms. This endpoint's exact scheme accepts ${
+        EXACT_ALTERNATIVE_NETWORK
+      } and ${exactRequirements.asset} only`,
+    });
+  }
+
+  const resourceServer = createResourceServer();
+
+  let verification: {
+    isValid: boolean;
+    invalidReason?: string;
+    invalidMessage?: string;
+    payer?: string;
+  };
+  try {
+    verification = await resourceServer.verifyPayment(
+      payload as SdkPaymentPayload,
+      exactRequirements,
+    );
+  } catch (err) {
+    logger.error({ err }, "Payment verification error");
+    return jsonResponse(402, { error: `Payment verification failed: ${(err as Error).message}` });
+  }
+
+  if (!verification.isValid) {
+    logger.warn(
+      { reason: verification.invalidReason, message: verification.invalidMessage },
+      "Payment verification failed",
+    );
+    // A plain 402, not the batch path's corrective re-challenge: exact has no channel state
+    // to resync — the client retries with a fresh signature against the challenge it has.
+    return jsonResponse(402, {
+      error: `Payment verification failed: ${verification.invalidReason ?? "unknown"}`,
+      ...(verification.payer ? { payer: verification.payer } : {}),
+    });
+  }
+
+  let data: unknown;
+  try {
+    data = await run(args);
+  } catch (err) {
+    // Nothing settled and nothing to release — exact holds no locks.
+    logger.warn({ err, route }, "Run failed after exact verify");
+    return errorResponseFor(err);
+  }
+
+  let settlement: Record<string, unknown> & { success: boolean; errorReason?: string };
+  try {
+    settlement = await resourceServer.settlePayment(
+      payload as SdkPaymentPayload,
+      exactRequirements,
+    );
+  } catch (err) {
+    logger.error({ err }, "Settlement error");
+    return jsonResponse(402, { error: `Settlement failed: ${(err as Error).message}` });
+  }
+
+  if (!settlement.success) {
+    logger.error({ settlement }, "Settlement failed");
+    return jsonResponse(402, {
+      error: `Settlement failed: ${settlement.errorReason ?? "unknown"}`,
+    });
+  }
+
+  logger.info(
+    { route, network, scheme: "exact", amount: exactRequirements.amount },
+    "Served and settled",
+  );
+  return new Response(JSON.stringify(data), {
+    status: 200,
+    headers: { ...CORS_HEADERS, ...createSettlementHeaders(settlement) },
+  });
+}
+
+/** The original batch-settlement flow (channels, vouchers, shared locks with the chat). */
+async function serveBatchSettlement(
   route: Route,
   args: Args,
   payload: Record<string, unknown>,
@@ -362,7 +483,10 @@ async function challenge(route: Route, receiverAddress: `0x${string}`): Promise<
     tags: ["search", "web", "x402"],
     iconUrl: `${openapiSpec.servers[0].url}/favicon.png`,
   });
-  return toResponse(create402Response(paymentRequirements));
+  // Append the exact alternative AFTER the batch entries — order is the contract (see
+  // withExactAlternative): channel buyers keep their preferred entries, channel-less
+  // clients fall through to the exact one.
+  return toResponse(create402Response(withExactAlternative(paymentRequirements, receiverAddress)));
 }
 
 function isHexAddress(addr: unknown): addr is `0x${string}` {

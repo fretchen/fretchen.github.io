@@ -8,6 +8,9 @@ const {
   mockCreateLLMResourceServer,
   mockCreateBatchSettlementPaymentRequirements,
   mockCreate402Response,
+  mockCreateResourceServer,
+  mockExactVerifyPayment,
+  mockExactSettlePayment,
   mockExtractPaymentPayload,
   mockCreateSettlementHeaders,
   mockGetBatchSettlementNetworks,
@@ -63,6 +66,10 @@ const {
     mockCreateLLMResourceServer: vi.fn(),
     mockCreateBatchSettlementPaymentRequirements: vi.fn(),
     mockCreate402Response: vi.fn(),
+    // The exact alternative's server (createResourceServer — no channels, no scheme object).
+    mockCreateResourceServer: vi.fn(),
+    mockExactVerifyPayment: vi.fn(),
+    mockExactSettlePayment: vi.fn(),
     mockExtractPaymentPayload: vi.fn(),
     mockCreateSettlementHeaders: vi.fn(),
     mockGetBatchSettlementNetworks: vi.fn(),
@@ -89,28 +96,52 @@ vi.mock("../src/llm_service.js", () => ({
   advertisedModelIds: () => ["mistral-large-latest"],
 }));
 
-vi.mock("../src/x402_server.js", () => ({
-  createLLMResourceServer: mockCreateLLMResourceServer,
-  createBatchSettlementPaymentRequirements: mockCreateBatchSettlementPaymentRequirements,
-  create402Response: mockCreate402Response,
-  extractPaymentPayload: mockExtractPaymentPayload,
-  createSettlementHeaders: mockCreateSettlementHeaders,
-  getBatchSettlementNetworks: mockGetBatchSettlementNetworks,
-  releaseLock: mockReleaseLock,
-  // Real value (the scw-verbatim advertised maxTimeoutSeconds / lock TTL), imported by
-  // llm_routes.ts — see the constant's twin of this comment there.
-  LLM_MAX_TIMEOUT_SECONDS: 120,
-  // Real implementation (pure bigint math, no side effects) — keep in sync with
-  // x402_server.ts's actual formatUsdcAtomicAsDecimalUsd.
-  formatUsdcAtomicAsDecimalUsd: (atomicAmount: string) => {
-    const atomic = BigInt(atomicAmount);
-    const divisor = 1_000_000n;
-    const whole = atomic / divisor;
-    const fraction = (atomic % divisor).toString().padStart(6, "0");
-    const trimmedFraction = fraction.replace(/0+$/, "");
-    return trimmedFraction ? `${whole}.${trimmedFraction}` : whole.toString();
-  },
-}));
+vi.mock("../src/x402_server.js", async () => {
+  // The real registry — which asset is offered where is part of what these tests check, so
+  // the exact-alternative helpers mirror the real implementation against it.
+  const { USDC_ADDRESSES } = await import("@fretchen/chain-utils");
+  const exactAlternativeEntry = (payTo: string) => ({
+    scheme: "exact",
+    network: "eip155:8453",
+    amount: "10000",
+    asset: USDC_ADDRESSES["eip155:8453"],
+    payTo,
+    maxTimeoutSeconds: 60,
+    extra: { name: "USD Coin", version: "2" },
+  });
+  return {
+    createLLMResourceServer: mockCreateLLMResourceServer,
+    createBatchSettlementPaymentRequirements: mockCreateBatchSettlementPaymentRequirements,
+    create402Response: mockCreate402Response,
+    extractPaymentPayload: mockExtractPaymentPayload,
+    createSettlementHeaders: mockCreateSettlementHeaders,
+    getBatchSettlementNetworks: mockGetBatchSettlementNetworks,
+    releaseLock: mockReleaseLock,
+    // Real values, as the routes import them.
+    EXACT_ALTERNATIVE_NETWORK: "eip155:8453",
+    EXACT_ALTERNATIVE_AMOUNT_ATOMIC: "10000",
+    // Real semantics for the pure helpers — the tests below pin the entry they produce.
+    createExactAlternative: exactAlternativeEntry,
+    withExactAlternative: (challenge: { accepts: unknown[] }, payTo: string) => ({
+      ...challenge,
+      accepts: [...(challenge.accepts ?? []), exactAlternativeEntry(payTo)],
+    }),
+    createResourceServer: mockCreateResourceServer,
+    // Real value (the scw-verbatim advertised maxTimeoutSeconds / lock TTL), imported by
+    // llm_routes.ts — see the constant's twin of this comment there.
+    LLM_MAX_TIMEOUT_SECONDS: 120,
+    // Real implementation (pure bigint math, no side effects) — keep in sync with
+    // x402_server.ts's actual formatUsdcAtomicAsDecimalUsd.
+    formatUsdcAtomicAsDecimalUsd: (atomicAmount: string) => {
+      const atomic = BigInt(atomicAmount);
+      const divisor = 1_000_000n;
+      const whole = atomic / divisor;
+      const fraction = (atomic % divisor).toString().padStart(6, "0");
+      const trimmedFraction = fraction.replace(/0+$/, "");
+      return trimmedFraction ? `${whole}.${trimmedFraction}` : whole.toString();
+    },
+  };
+});
 
 // The real stablecoin registry — which asset a seller prices is the thing under test here.
 vi.mock("@fretchen/chain-utils", async (importOriginal) => ({
@@ -239,6 +270,18 @@ describe("sc_llm_x402", () => {
       success: true,
       transaction: "",
       network: "eip155:84532",
+    });
+    // The exact alternative's server: same shapes, its own mocks, so the two schemes' call
+    // paths can be asserted apart.
+    mockCreateResourceServer.mockImplementation(() => ({
+      verifyPayment: mockExactVerifyPayment,
+      settlePayment: mockExactSettlePayment,
+    }));
+    mockExactVerifyPayment.mockResolvedValue({ isValid: true, payer: "0xpayer" });
+    mockExactSettlePayment.mockResolvedValue({
+      success: true,
+      transaction: "",
+      network: "eip155:8453",
     });
   });
 
@@ -1401,6 +1444,122 @@ describe("sc_llm_x402", () => {
 
       expect(res.statusCode).toBe(402);
       expect(mockVerifyPayment).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("the exact alternative", () => {
+    const exactPayload = {
+      accepted: {
+        scheme: "exact",
+        network: "eip155:8453",
+        asset: USDC_ADDRESSES["eip155:8453"],
+      },
+      payload: { transferWithAuthorization: "0xsigned" },
+    };
+
+    /** One accepts entry appended AFTER the batch-settlement ones — the ordering is the
+     *  contract (channel buyers read their entries first, channel-less clients fall
+     *  through); the mock's batch accepts are empty, so appended-last also means
+     *  index-0-of-one here. */
+    it("appends the exact alternative after the batch-settlement accepts", async () => {
+      const res = await handle(makeEvent() as never, {});
+
+      expect(res.statusCode).toBe(402);
+      const challenge = (mockCreate402Response.mock.calls[0] as unknown[])[0] as {
+        accepts: Record<string, unknown>[];
+      };
+      const exactEntries = challenge.accepts.filter((entry) => entry["scheme"] === "exact");
+      expect(exactEntries).toHaveLength(1);
+      expect(challenge.accepts[challenge.accepts.length - 1]).toEqual({
+        scheme: "exact",
+        network: "eip155:8453",
+        amount: "10000",
+        asset: USDC_ADDRESSES["eip155:8453"],
+        payTo: VALID_ADDRESS,
+        maxTimeoutSeconds: 60,
+        extra: { name: "USD Coin", version: "2" },
+      });
+    });
+
+    it("serves and settles an exact payment at the flat price, metering bypassed", async () => {
+      mockExtractPaymentPayload.mockReturnValue(exactPayload);
+
+      const res = await handle(makeEvent() as never, {});
+
+      expect(res.statusCode).toBe(200);
+      // The exact server, for both payment steps; the batch pipeline never runs.
+      expect(mockCreateResourceServer).toHaveBeenCalledOnce();
+      expect(mockExactVerifyPayment).toHaveBeenCalledTimes(1);
+      expect(mockExactVerifyPayment).toHaveBeenCalledWith(
+        exactPayload,
+        expect.objectContaining({
+          scheme: "exact",
+          network: "eip155:8453",
+          amount: "10000",
+          asset: USDC_ADDRESSES["eip155:8453"],
+          payTo: VALID_ADDRESS,
+        }),
+      );
+      // Flat price: the settle amount is exactly what was verified, NOT the usage-derived
+      // getSettleAmount of the batch path.
+      expect(mockExactSettlePayment).toHaveBeenCalledTimes(1);
+      expect((mockExactSettlePayment.mock.calls[0] as unknown[])[1]).toEqual(
+        expect.objectContaining({ scheme: "exact", amount: "10000" }),
+      );
+      expect(res.headers?.["Payment-Response"] ?? res.headers?.["payment-response"]).toBe(
+        "encoded",
+      );
+      expect(mockCreateLLMResourceServer).not.toHaveBeenCalled();
+      expect(mockEnhancePaymentRequirements).not.toHaveBeenCalled();
+      expect(mockVerifyPayment).not.toHaveBeenCalled();
+      expect(mockSettlePayment).not.toHaveBeenCalled();
+      // Mistral really ran (mainnet offer — no mock completion unless asked).
+      expect(mockCallLLMAPI).toHaveBeenCalledTimes(1);
+      expect(mockCallLLMAPI.mock.calls[0][1]).toBe(false); // useMock
+    });
+
+    it("rejects an exact payment naming a network it never offered", async () => {
+      mockExtractPaymentPayload.mockReturnValue({
+        accepted: {
+          scheme: "exact",
+          network: "eip155:84532", // Base Sepolia — batch-settlement testnet, never exact
+          asset: USDC_ADDRESSES["eip155:84532"],
+        },
+        payload: { transferWithAuthorization: "0xsigned" },
+      });
+
+      const res = await handle(makeEvent() as never, {});
+
+      expect(res.statusCode).toBe(402);
+      expect(mockExactVerifyPayment).not.toHaveBeenCalled();
+      expect(mockExactSettlePayment).not.toHaveBeenCalled();
+      expect(mockCallLLMAPI).not.toHaveBeenCalled();
+    });
+
+    it("answers an invalid exact payment with a plain 402, not the batch corrective", async () => {
+      mockExtractPaymentPayload.mockReturnValue(exactPayload);
+      mockExactVerifyPayment.mockResolvedValue({ isValid: false, invalidReason: "expired" });
+
+      const res = await handle(makeEvent() as never, {});
+
+      expect(res.statusCode).toBe(402);
+      expect(JSON.parse(res.body).error).toMatch(/expired/);
+      // No channel state to resync — no SDK corrective re-challenge.
+      expect(mockCreatePaymentRequiredResponse).not.toHaveBeenCalled();
+      expect(mockExactSettlePayment).not.toHaveBeenCalled();
+      expect(mockCallLLMAPI).not.toHaveBeenCalled();
+    });
+
+    it("does not settle an exact payment when the model call fails", async () => {
+      mockExtractPaymentPayload.mockReturnValue(exactPayload);
+      mockCallLLMAPI.mockRejectedValue(new Error("mistral down"));
+
+      const res = await handle(makeEvent() as never, {});
+
+      expect(res.statusCode).toBe(500);
+      expect(mockExactSettlePayment).not.toHaveBeenCalled();
+      // Exact holds no lock, so the batch path's lock release must not run either.
+      expect(mockReleaseLock).not.toHaveBeenCalled();
     });
   });
 });

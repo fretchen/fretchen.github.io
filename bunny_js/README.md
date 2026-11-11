@@ -130,7 +130,6 @@ it is inert without another credential, plain — and plain stays inspectable wh
 | `RPC_URL_EIP155_10`, `RPC_URL_EIP155_8453` | secret (`--secret`)     | viem chain reads — NOT in `.env`: production runs unset on viem's public defaults (the accepted tradeoff in scw_js's serverless.yml). Set as `--secret` only if rate limits bite — real values embed an API key |
 | `FACILITATOR_URL`                          | plain (code default ok) | `https://facilitator.fretchen.eu`                                                                                                                                                                               |
 | `LLM_WITHDRAW_DELAY_SECONDS`               | plain (code default ok) | 86400 — must match production                                                                                                                                                                                   |
-| `SEARCH_SERVICE_URL`                       | plain                   | advertised `resource.url` base; the bunny trial URL while trialing, production default otherwise                                                                                                                |
 | `SCW_COCKPIT_PUSH_TOKEN`                   | secret (`--secret`)     | Cockpit push-only token — authenticates the Loki log flush to the observability data source (see the observability README/implementation plan)                                                                  |
 | `COCKPIT_LOKI_URL`                         | plain                   | push URL of the custom Cockpit logs data source — public and inert without the token                                                                                                                            |
 
@@ -259,12 +258,11 @@ and the `.bunny/script.json` link comes out of the create step. One-time sequenc
 3. `npm run deploy` (searchapi) / `bunny scripts deploy dist/llm.js <id>` /
    `bunny scripts deploy dist/mcp.js <id>` — publishes each; the output prints the live
    `*.bunny.run` URL.
-4. `bunny scripts env set SEARCH_SERVICE_URL https://<that-url>.bunny.run` on the searchapi
-   script and redeploy, so the 402 advertises the trial origin instead of the parity default.
-   (llm/mcp have no equivalent — their 402s quote the spec's committed server URL.)
-5. Unpaid smoke: `curl -D - 'https://<that-url>.bunny.run/search?q=x402'` → 402 +
-   `Payment-Required` header.
-6. For the GitHub Action: `bunny scripts show` (or `list`) gives each script id; the deploy
+4. Unpaid smoke: `curl -D - 'https://<that-url>.bunny.run/search?q=x402'` → 402 +
+   `Payment-Required` header. The 402's `resource.url` keeps naming the production origin
+   (it is derived from the committed spec, like the llm twin) — the resource url is the
+   payment scope, not the serving origin, so a trial does not change it.
+5. For the GitHub Action: `bunny scripts show` (or `list`) gives each script id; the deploy
    keys are in the dashboard (Script -> Deployments -> Settings). Add each pair as the
    `BUNNYJS_*` / `BUNNYLLM_*` / `BUNNYMCP_*` repo secrets.
 

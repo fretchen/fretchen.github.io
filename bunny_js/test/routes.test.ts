@@ -588,7 +588,9 @@ describe("the 402 challenge", () => {
     const res = await handle(makeRequest("GET", "search", { auth: null, query: { q: "x402" } }));
 
     const { resource } = JSON.parse(res.body) as { resource: { url: string } };
-    expect(resource.url).toMatch(/\/search$/);
+    // The full production origin from the committed spec — never a serving origin (a leftover
+    // trial env once advertised the *.bunny.run URL here, which indexers could not attribute).
+    expect(resource.url).toBe("https://web-agent.fretchen.eu/search");
   });
 
   /** One bazaar block per route (docs.x402.org/extensions/bazaar): the block names the method

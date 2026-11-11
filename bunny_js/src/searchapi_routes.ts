@@ -65,12 +65,15 @@ const MAINNET_NETWORKS = ["eip155:10", "eip155:8453"];
 const MAX_TIMEOUT_SECONDS = 30;
 
 /**
- * Base for the advertised `resource.url` — the production custom domain by default, so the
- * twin's published terms match the Scaleway original; set SEARCH_SERVICE_URL to the
- * bunny-provided URL when deploying the trial so the advertised origin names where the
- * trial is actually served.
+ * BASE URL for the advertised `resource.url`, derived from the committed spec — the same
+ * pattern as the llm twin, and the published terms themselves. There is deliberately no env
+ * override anymore: `SEARCH_SERVICE_URL` was a trial-period mechanism (advertise where the
+ * trial was actually served) and its leftover value kept advertising the `*.bunny.run` origin
+ * in production, which indexers then could not attribute to web-agent.fretchen.eu. The
+ * resource url is the payment scope, not the serving origin — it keeps naming the production
+ * identity wherever the script is served from.
  */
-const SERVICE_URL = process.env.SEARCH_SERVICE_URL ?? "https://web-agent.fretchen.eu";
+const SERVICE_URL = openapiSpec.servers[0].url;
 
 /** The favicon as raw bytes — web Response bodies are bytes, not Scaleway base64 strings. */
 const FAVICON_BYTES = Uint8Array.from(atob(faviconBase64), (c) => c.charCodeAt(0));

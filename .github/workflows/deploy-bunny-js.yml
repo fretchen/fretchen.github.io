@@ -8,7 +8,7 @@ name: Deploy Bunny JS twins
 #
 # This workflow ships CODE only. Each script's environment (BRAVE_API_KEY,
 # MISTRAL_API_KEY, the receiver authorizer key, the S3 channel-store credentials, RPC
-# URLs, SEARCH_SERVICE_URL, the Cockpit observability pair SCW_COCKPIT_PUSH_TOKEN +
+# URLs, the Cockpit observability pair SCW_COCKPIT_PUSH_TOKEN +
 # COCKPIT_LOKI_URL) is configured on the script itself — bunny dashboard or
 # `bunny scripts env set` — and is deliberately not part of CI: a repo leak must not be
 # a secrets leak.

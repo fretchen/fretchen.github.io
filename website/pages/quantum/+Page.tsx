@@ -13,24 +13,24 @@ const QuantumPage: React.FC = () => {
       </PageHeader>
 
       <CardList>
-        <Card title="Quantum Basics" description="Fundamentals of quantum mechanics." link="/quantum/basics" />
+        <Card title="Quantum Basics" description="Fundamentals of quantum mechanics." link="/quantum/basics/" />
 
         <Card
           title="Quantum Machine Learning for Beginners"
           description="Introduction to quantum machine learning."
-          link="/quantum/qml"
+          link="/quantum/qml/"
         />
 
         <Card
           title="AMO Physics"
           description="Atomic, Molecular, and Optical Physics: experiments and applications."
-          link="/quantum/amo"
+          link="/quantum/amo/"
         />
 
         <Card
           title="Quantum Hardware"
           description="Introduction to quantum hardware platforms."
-          link="/quantum/hardware"
+          link="/quantum/hardware/"
         />
       </CardList>
     </div>

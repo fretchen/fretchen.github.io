@@ -40,7 +40,7 @@ export function buildRootPage(input: RootPageInput): string {
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<link rel="icon" href="/favicon.png" type="image/jpeg">
+<link rel="icon" href="/favicon.png" type="image/png">
 <title>${escapeHtml(input.title)}</title>
 </head>
 <body>

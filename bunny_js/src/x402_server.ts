@@ -491,6 +491,63 @@ export async function createBatchSettlementPaymentRequirements({
   };
 }
 
+/**
+ * The exact-scheme alternative the sellers append to their batch-settlement 402s.
+ *
+ * Why it exists: a stock x402 client can sign an EIP-3009 authorization but cannot open
+ * batch-settlement channels — for those callers the channel-only challenge was unpayable.
+ * Terms are deliberately the flattest possible: one network (Base mainnet), one token
+ * (USDC), one price per call (10000 atomic = $0.01).
+ *
+ * The price IS the facilitator's per-settle fee (0.01), so a settled exact call nets the
+ * seller zero minus the upstream cost — an accepted trade for the simplicity it buys
+ * (decided 2026-11). It also means an exact price below $0.01 would lose money on every
+ * call, which is why /fetch quotes 10000 under exact despite quoting 1000 under
+ * batch-settlement — the two schemes price independently.
+ */
+export const EXACT_ALTERNATIVE_NETWORK = "eip155:8453" as const;
+export const EXACT_ALTERNATIVE_AMOUNT_ATOMIC = "10000";
+
+/**
+ * The one accepts entry the exact alternative consists of — also the per-call requirements
+ * the paid path verifies and settles against (single source; see genimg_x402_token.ts for
+ * the production exact flow this mirrors).
+ */
+export function createExactAlternative(payTo: string): SdkPaymentRequirements {
+  const usdc = offeredStablecoins(EXACT_ALTERNATIVE_NETWORK).find((coin) => coin.symbol === "USDC");
+  if (!usdc) {
+    // Config error (chain-utils' token list changed), not a caller error — throws into the
+    // 402 path's existing try/catch and surfaces as the same "Server configuration error".
+    throw new Error("USDC is not offered on the exact-alternative network");
+  }
+  return {
+    scheme: "exact",
+    network: EXACT_ALTERNATIVE_NETWORK as `${string}:${string}`,
+    amount: EXACT_ALTERNATIVE_AMOUNT_ATOMIC,
+    asset: usdc.address,
+    payTo,
+    maxTimeoutSeconds: 60,
+    extra: tokenExtra(usdc),
+  };
+}
+
+/**
+ * Appends the exact alternative AFTER the batch-settlement entries — the order is the
+ * contract: existing channel buyers read accepts[0..n-1] as the preferred (EURe-first)
+ * way to pay, and a client that cannot wire batch-settlement falls through to the exact
+ * entry at the end. The extensions stay the batch builder's own (Permit2/bazaar).
+ */
+export function withExactAlternative<
+  T extends {
+    x402Version: number;
+    resource: { url: string };
+    accepts: unknown[];
+    extensions?: Record<string, unknown>;
+  },
+>(challenge: T, payTo: string): T {
+  return { ...challenge, accepts: [...challenge.accepts, createExactAlternative(payTo)] };
+}
+
 export interface PaymentRequirementsOptions {
   resourceUrl: string;
   description: string;
@@ -685,6 +742,22 @@ export function formatUsdcAtomicAsDecimalUsd(atomicAmount: string, decimals: big
   const fraction = (atomic % divisor).toString().padStart(Number(decimals), "0");
   const trimmedFraction = fraction.replace(/0+$/, "");
   return trimmedFraction ? `${whole}.${trimmedFraction}` : whole.toString();
+}
+
+/**
+ * A PriceList as the root pages display it: every accepted token priced in its own units, in
+ * the seller's preference order (EURe, EURC, USDC on Base — the same order the 402 lists),
+ * € for the euro tokens and $ for USDC, decimals read from the token registry so EURe's
+ * 18-decimal prices format correctly. Pages built with this can never quote fewer tokens
+ * (or a different order) than the challenge does.
+ */
+export function formatParallelPrices(price: PriceList): string {
+  return offeredStablecoins("eip155:8453")
+    .map((coin) => {
+      const display = formatUsdcAtomicAsDecimalUsd(price[coin.symbol], BigInt(coin.decimals));
+      return `${coin.symbol === "USDC" ? "$" : "€"}${display} in ${coin.symbol}`;
+    })
+    .join(", ");
 }
 
 export function createSettlementHeaders(

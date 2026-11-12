@@ -687,6 +687,22 @@ export function formatUsdcAtomicAsDecimalUsd(atomicAmount: string, decimals: big
   return trimmedFraction ? `${whole}.${trimmedFraction}` : whole.toString();
 }
 
+/**
+ * A PriceList as the root pages display it: every accepted token priced in its own units, in
+ * the seller's preference order (EURe, EURC, USDC on Base — the same order the 402 lists),
+ * € for the euro tokens and $ for USDC, decimals read from the token registry so EURe's
+ * 18-decimal prices format correctly. Pages built with this can never quote fewer tokens
+ * (or a different order) than the challenge does. (Twin of bunny_js/x402_server.ts.)
+ */
+export function formatParallelPrices(price: PriceList): string {
+  return offeredStablecoins("eip155:8453")
+    .map((coin) => {
+      const display = formatUsdcAtomicAsDecimalUsd(price[coin.symbol], BigInt(coin.decimals));
+      return `${coin.symbol === "USDC" ? "$" : "€"}${display} in ${coin.symbol}`;
+    })
+    .join(", ");
+}
+
 export function createSettlementHeaders(
   settlementResult: Record<string, unknown>,
 ): Record<string, string> {

@@ -12,9 +12,11 @@
  *   fails after it never settles, orphaning the lock for MAX_TIMEOUT_SECONDS).
  */
 import { logger } from "./logger.js";
+import { isTestnet } from "@fretchen/chain-utils";
 import { offeredStablecoins, resolvePaidStablecoin } from "./stablecoin_pricing.js";
 import { searchWeb, QueryError } from "./search_service.js";
 import { fetchExternalHtml, FetchUrlError, parseHttpsUrl } from "./web_fetch_service.js";
+import { standInFetch, standInSearch } from "./search_stand_in.js";
 import {
   DESCRIPTION,
   FetchQuerySchema,
@@ -37,24 +39,33 @@ import openapiSpec from "./openapi.search.json" with { type: "json" };
 import { buildSearchBazaarExtension } from "./bazaar_discovery.js";
 import { toResponse } from "./response.js";
 import {
+  EXACT_ALTERNATIVE_AMOUNT_ATOMIC,
+  EXACT_ALTERNATIVE_NETWORK,
   create402Response,
   createBatchSettlementPaymentRequirements,
+  createExactAlternative,
   createLLMResourceServer,
+  createResourceServer,
   createSettlementHeaders,
   extractPaymentPayload,
+  formatParallelPrices,
+  formatUsdcAtomicAsDecimalUsd,
+  getBatchSettlementNetworks,
   releaseLock,
+  withExactAlternative,
   type SdkPaymentPayload,
   type SdkPaymentRequirements,
 } from "./x402_server.js";
 
 /**
- * Mainnet only, unlike the chat, which also accepts Base Sepolia. Testnet USDC is free, and
- * both routes spend real money on the caller's behalf — Brave bills per query, and /fetch is
- * egress. Advertising a testnet would hand anyone a metered API for nothing. The cost is
- * that the paid path cannot be exercised on a testnet at all: at $0.001 a call, a real
- * run is cheaper than the setup it replaces. (Copied from scw_js/search_api.ts.)
+ * The batch-settlement networks, mainnet PLUS Base Sepolia — unlike the scw original, which
+ * was mainnet-only. Adverting a testnet is safe now BECAUSE the paid path never touches the
+ * metered upstreams there: a testnet payment gets the marked stand-in answers instead
+ * (search_stand_in.ts), while the full challenge/verify/settle machinery runs for real on
+ * free test tokens — the try-before-buy the agents asked for. Metered Brave/egress only
+ * run for mainnet payments; the regression test pins that forever.
  */
-const MAINNET_NETWORKS = ["eip155:10", "eip155:8453"];
+const OFFERED_NETWORKS = getBatchSettlementNetworks();
 
 /**
  * Advertised and verified lock TTL, a quarter of the chat's LLM_MAX_TIMEOUT_SECONDS. It
@@ -102,18 +113,12 @@ const ROOT_PAGE = buildRootPage({
       label: "stateless MCP endpoint — same tools as JSON-RPC 2.0 over POST (web_search)",
     },
   ],
-  price: ROUTES.map((route) => {
-    const info = (
-      openapiSpec.paths as Record<
-        string,
-        Record<string, { "x-payment-info"?: { price: { amount: string } } }>
-      >
-    )[`/${route}`].get["x-payment-info"];
-    return `GET /${route} — $${info?.price.amount ?? "?"} per call`;
-  }),
-  payment:
-    "x402 (HTTP 402): no account, no API key. An unpaid request answers 402 with the machine-readable Payment-Required challenge — exact terms (scheme batch-settlement, network, token, amount) are in the challenge, then retry the same request with the payment attached.",
-  tryIt: `curl '${SERVICE_URL}/search?q=erc-8004'\n# → HTTP 402 + Payment-Required header: the terms. No wallet needed for this first look.`,
+  price: ROUTES.map(
+    (route) =>
+      `GET /${route} — channel call: ${formatParallelPrices(PRICE_ATOMIC[route])}; or exact: $${formatUsdcAtomicAsDecimalUsd(EXACT_ALTERNATIVE_AMOUNT_ATOMIC)} flat (USDC, Base mainnet)`,
+  ),
+  payment: `x402 (HTTP 402): no account, no API key. The 402 lists both schemes — batch-settlement channels first (the preferred way to pay) and an exact alternative at the end (one EIP-3009 signature per call, for clients without channel wiring). Pay in USDC (Base or Optimism) or EURC/EURe (Base); the challenge carries every token's per-network terms. Retry the same request with the payment attached.`,
+  tryIt: `curl '${SERVICE_URL}/search?q=erc-8004'\n# → HTTP 402 + Payment-Required header: the terms. No wallet needed for this first look.\n# Testnet note: a payment on Base Sepolia settles in free test tokens and the answer is a marked mock — the full flow, real results on mainnet only.`,
   errors:
     "402 = unpaid (challenge in the Payment-Required header); 404 = no such route; everything else is standard HTTP. Response schemas: openapi.json.",
 });
@@ -165,7 +170,16 @@ function parseArgs(route: Route, queryParams: Record<string, string>): Args {
   return { route, url: parseHttpsUrl(parsed.data.url).toString() };
 }
 
-function run(args: Args): Promise<unknown> {
+/**
+ * The upstream call for one paid request — the ONE place the metered services are touched,
+ * which is why the testnet gate lives here and nowhere else: a testnet payment gets the
+ * marked stand-in answers (search_stand_in.ts) and the metered upstreams never run.
+ */
+async function run(args: Args, useMock: boolean): Promise<unknown> {
+  if (useMock) {
+    logger.info({ route: args.route }, "Serving stand-in answer (testnet payment)");
+    return args.route === "search" ? standInSearch(args.q) : standInFetch(args.url);
+  }
   return args.route === "search" ? searchWeb(args.q) : fetchExternalHtml(args.url);
 }
 
@@ -191,8 +205,17 @@ function acceptedNetwork(payload: Record<string, unknown>): string | null {
   return typeof network === "string" ? network : null;
 }
 
+/** The scheme the payer built their payload against, or null if they named none. */
+function acceptedScheme(payload: Record<string, unknown>): string | null {
+  const accepted = payload["accepted"] as Record<string, unknown> | undefined;
+  const scheme = accepted?.["scheme"];
+  return typeof scheme === "string" ? scheme : null;
+}
+
 /**
  * Serve one route against a payment: verify, run, and settle **only if the run succeeded**.
+ * The batch-settlement path below is the original; payments carrying the exact alternative
+ * (the last accepts entry of the 402, see x402_server.ts) take their own, channel-free flow.
  *
  * Settle-after-success is what makes an upstream failure free for the caller. It leaves a
  * verify without a matching settle, which holds the channel lock for MAX_TIMEOUT_SECONDS —
@@ -204,12 +227,123 @@ async function servePaid(
   payload: Record<string, unknown>,
   receiverAddress: `0x${string}`,
 ): Promise<Response> {
+  if (acceptedScheme(payload) === "exact") {
+    return serveExact(route, args, payload, receiverAddress);
+  }
+  return serveBatchSettlement(route, args, payload, receiverAddress);
+}
+
+/**
+ * The exact alternative's paid flow: one EIP-3009 signature per call, Base mainnet USDC,
+ * flat EXACT_ALTERNATIVE_AMOUNT_ATOMIC (see x402_server.ts for why the price is what it is).
+ * Deliberately resembles the batch flow (verify → run → settle-on-success → Payment-Response)
+ * while touching NONE of the channel machinery: no enhancePaymentRequirements, no channel
+ * lock, no releaseLock — there is no state for any of it to act on.
+ */
+async function serveExact(
+  route: Route,
+  args: Args,
+  payload: Record<string, unknown>,
+  receiverAddress: `0x${string}`,
+): Promise<Response> {
+  // The exact entry was offered on exactly one network/token; anything else is the caller
+  // paying against terms we never issued.
   const network = acceptedNetwork(payload);
-  if (!network || !MAINNET_NETWORKS.includes(network)) {
+  const paidAsset = (payload["accepted"] as Record<string, unknown> | undefined)?.["asset"];
+  const exactRequirements = createExactAlternative(receiverAddress);
+  if (network !== EXACT_ALTERNATIVE_NETWORK || paidAsset !== exactRequirements.asset) {
     return jsonResponse(402, {
-      error: `Unsupported or missing network. This endpoint accepts ${MAINNET_NETWORKS.join(", ")}`,
+      error: `Unsupported exact payment terms. This endpoint's exact scheme accepts ${
+        EXACT_ALTERNATIVE_NETWORK
+      } and ${exactRequirements.asset} only`,
     });
   }
+
+  const resourceServer = createResourceServer();
+
+  let verification: {
+    isValid: boolean;
+    invalidReason?: string;
+    invalidMessage?: string;
+    payer?: string;
+  };
+  try {
+    verification = await resourceServer.verifyPayment(
+      payload as SdkPaymentPayload,
+      exactRequirements,
+    );
+  } catch (err) {
+    logger.error({ err }, "Payment verification error");
+    return jsonResponse(402, { error: `Payment verification failed: ${(err as Error).message}` });
+  }
+
+  if (!verification.isValid) {
+    logger.warn(
+      { reason: verification.invalidReason, message: verification.invalidMessage },
+      "Payment verification failed",
+    );
+    // A plain 402, not the batch path's corrective re-challenge: exact has no channel state
+    // to resync — the client retries with a fresh signature against the challenge it has.
+    return jsonResponse(402, {
+      error: `Payment verification failed: ${verification.invalidReason ?? "unknown"}`,
+      ...(verification.payer ? { payer: verification.payer } : {}),
+    });
+  }
+
+  let data: unknown;
+  try {
+    // Exact is offered on Base mainnet only — the metered upstream always runs there.
+    data = await run(args, false);
+  } catch (err) {
+    // Nothing settled and nothing to release — exact holds no locks.
+    logger.warn({ err, route }, "Run failed after exact verify");
+    return errorResponseFor(err);
+  }
+
+  let settlement: Record<string, unknown> & { success: boolean; errorReason?: string };
+  try {
+    settlement = await resourceServer.settlePayment(
+      payload as SdkPaymentPayload,
+      exactRequirements,
+    );
+  } catch (err) {
+    logger.error({ err }, "Settlement error");
+    return jsonResponse(402, { error: `Settlement failed: ${(err as Error).message}` });
+  }
+
+  if (!settlement.success) {
+    logger.error({ settlement }, "Settlement failed");
+    return jsonResponse(402, {
+      error: `Settlement failed: ${settlement.errorReason ?? "unknown"}`,
+    });
+  }
+
+  logger.info(
+    { route, network, scheme: "exact", amount: exactRequirements.amount },
+    "Served and settled",
+  );
+  return new Response(JSON.stringify(data), {
+    status: 200,
+    headers: { ...CORS_HEADERS, ...createSettlementHeaders(settlement) },
+  });
+}
+
+/** The original batch-settlement flow (channels, vouchers, shared locks with the chat). */
+async function serveBatchSettlement(
+  route: Route,
+  args: Args,
+  payload: Record<string, unknown>,
+  receiverAddress: `0x${string}`,
+): Promise<Response> {
+  const network = acceptedNetwork(payload);
+  if (!network || !OFFERED_NETWORKS.includes(network)) {
+    return jsonResponse(402, {
+      error: `Unsupported or missing network. This endpoint accepts ${OFFERED_NETWORKS.join(", ")}`,
+    });
+  }
+  // A testnet payment settles free test tokens and answers with the marked stand-in
+  // (see run()); the metered upstreams run for mainnet payments only.
+  const useMock = isTestnet(network);
 
   // Price the stablecoin the buyer's channel is in (see sc_llm_x402.ts) — checked before any
   // server setup, since an unoffered asset is the caller's error, not ours.
@@ -295,7 +429,7 @@ async function servePaid(
 
   let data: unknown;
   try {
-    data = await run(args);
+    data = await run(args, useMock);
   } catch (err) {
     // Nothing is settled: an upstream that failed is not something to charge for. But verify took
     // the channel lock, which the chat shares — release it, or the user's next message is
@@ -353,7 +487,7 @@ async function challenge(route: Route, receiverAddress: `0x${string}`): Promise<
     price: PRICE_ATOMIC[route],
     payTo: receiverAddress,
     scheme,
-    networks: MAINNET_NETWORKS,
+    networks: OFFERED_NETWORKS,
     maxTimeoutSeconds: MAX_TIMEOUT_SECONDS,
     // One bazaar block per route: the block names the method and the query parameters, and the
     // two routes sell different things at different prices. (Copied.)
@@ -362,7 +496,10 @@ async function challenge(route: Route, receiverAddress: `0x${string}`): Promise<
     tags: ["search", "web", "x402"],
     iconUrl: `${openapiSpec.servers[0].url}/favicon.png`,
   });
-  return toResponse(create402Response(paymentRequirements));
+  // Append the exact alternative AFTER the batch entries — order is the contract (see
+  // withExactAlternative): channel buyers keep their preferred entries, channel-less
+  // clients fall through to the exact one.
+  return toResponse(create402Response(withExactAlternative(paymentRequirements, receiverAddress)));
 }
 
 function isHexAddress(addr: unknown): addr is `0x${string}` {

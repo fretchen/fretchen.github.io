@@ -11,9 +11,13 @@ Four Bunny Edge Scripts, each deployed as **one bundled file**:
 
 All four are live. Three of them are **sellers** — unpaid requests get the honest `402` +
 `Payment-Required` challenge; retry with the payment attached settles and returns the
-result. The channel state lives in the shared S3 bucket, claimed by `scw_js`'s
-`llmx402cron` (the edge has no cron), which is also why `x402_facilitator/` keeps only
-`walletreportcron`.
+result. The sellers' 402 lists **two schemes**: batch-settlement channel entries first
+(the preferred way to pay), plus an appended **exact alternative** — one EIP-3009 signature
+per call, flat $0.01 USDC on Base mainnet — for stock clients without channel wiring; the
+flat price is decoupled from the channel prices (see `withExactAlternative` in
+[`src/x402_server.ts`](./src/x402_server.ts) for the fee rationale). The channel state lives
+in the shared S3 bucket, claimed by `scw_js`'s `llmx402cron` (the edge has no cron), which is
+also why `x402_facilitator/` keeps only `walletreportcron`.
 
 The sellers are ERC-8004-registered agents on Base. Every origin serves:
 

@@ -231,6 +231,10 @@ describe("mcp_routes (stateless paid MCP endpoint)", () => {
         // the free first look: initialize and tools/list respond unpaid.
         expect(body).toContain("https://llm-agent.fretchen.eu/");
         expect(body).toContain("https://web-agent.fretchen.eu/");
+        // /fetch is REST-only (no MCP tool) — the page must still name the seller's
+        // most-called route and where it lives, or an MCP-only agent never finds it.
+        expect(body).toContain("GET /fetch");
+        expect(body).toContain("single-page fetch");
         expect(body).toContain(".well-known/agent-registration.json");
         expect(body).toContain("https://mcp-agent.fretchen.eu/mcp");
         expect(body).toContain("tools/list");
@@ -339,7 +343,7 @@ describe("mcp_routes (stateless paid MCP endpoint)", () => {
   // ════════════════════════════════════════════════════════════════════════════
 
   describe("tools/call — the payment gate (no free path, by the real handlers)", () => {
-    it("answers an unpaid web_search with the real mainnet-only demands and never touches Brave", async () => {
+    it("answers an unpaid web_search with the real demands and never touches Brave", async () => {
       const res = await rpc({
         jsonrpc: "2.0",
         id: 3,
@@ -355,11 +359,11 @@ describe("mcp_routes (stateless paid MCP endpoint)", () => {
       expect(result.isError).toBe(true);
       expect(result.structuredContent.x402Version).toBe(2);
       expect(result.structuredContent.accepts.length).toBeGreaterThan(0);
-      // The security pin, on the real challenge path: search is mainnet-only — testnet
-      // coins must never buy metered Brave queries. A translation layer that minted its
-      // own accepts broke this once; it cannot anymore.
+      // Mainnets plus Base Sepolia — testnet is offered because a testnet payment buys the
+      // MARKED STAND-IN, never metered Brave. A translation layer that minted its own
+      // accepts broke the network pin once; it cannot anymore.
       for (const accept of result.structuredContent.accepts) {
-        expect(["eip155:10", "eip155:8453"]).toContain(accept.network);
+        expect(["eip155:10", "eip155:8453", "eip155:84532"]).toContain(accept.network);
       }
       expect(mockSearchWeb).not.toHaveBeenCalled();
     });
@@ -425,7 +429,7 @@ describe("mcp_routes (stateless paid MCP endpoint)", () => {
       expect(result._meta["x402/payment-response"]).toMatchObject({ success: true });
     });
 
-    it("rejects a paid web_search on testnet with the handler's own network refusal", async () => {
+    it("runs and settles a paid web_search on testnet via the handler's own stand-in rule", async () => {
       const res = await rpc(
         {
           jsonrpc: "2.0",
@@ -437,15 +441,21 @@ describe("mcp_routes (stateless paid MCP endpoint)", () => {
       );
       if ("error" in res)
         throw new Error(`expected result, got: ${JSON.stringify(res).slice(0, 300)}`);
-      const result = res.result as {
-        isError: boolean;
-        structuredContent: { error: string };
-      };
-      expect(result.isError).toBe(true);
-      expect(result.structuredContent.error).toContain("Unsupported or missing network");
-      // Refused before anything metered runs.
+      expect(mockVerifyPayment).toHaveBeenCalledTimes(1);
+      expect(mockSettlePayment).toHaveBeenCalledTimes(1);
+      // The REAL testnet-stand-in rule, exercised through MCP: a worthless-coin payment
+      // must buy the marked mock answer, never metered Brave.
       expect(mockSearchWeb).not.toHaveBeenCalled();
-      expect(mockVerifyPayment).not.toHaveBeenCalled();
+      const result = res.result as {
+        isError?: boolean;
+        structuredContent: { results: Array<{ title: string; text: string }> };
+        _meta: Record<string, unknown>;
+      };
+      expect(result.isError).not.toBe(true);
+      expect(result.structuredContent.results[0].title).toContain("testnet mock");
+      expect(result.structuredContent.results[0].text).toContain("testnet mock");
+      // The settlement receipt, decoded from the handler's Payment-Response header.
+      expect(result._meta["x402/payment-response"]).toMatchObject({ success: true });
     });
 
     it("runs and settles a paid web_search on mainnet and returns the receipt", async () => {

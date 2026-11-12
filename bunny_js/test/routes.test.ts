@@ -7,6 +7,7 @@ import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 // being asserted is that even a CORRECT signature is ignored.
 import { privateKeyToAccount } from "viem/accounts";
 import { USDC_ADDRESSES, EURC_ADDRESSES } from "@fretchen/chain-utils";
+import { TESTNET_MOCK_MARKER } from "../src/search_stand_in.js";
 
 // DNS is stubbed so these stay hermetic: /fetch resolves every hostname before connecting, and a
 // test that needs a working resolver fails on an offline machine for reasons that have nothing to
@@ -29,6 +30,9 @@ const {
   mockCreatePaymentRequiredResponse,
   mockEnhancePaymentRequirements,
   mockReleaseLock,
+  mockCreateResourceServer,
+  mockExactVerifyPayment,
+  mockExactSettlePayment,
 } = vi.hoisted(() => ({
   mockCreateLLMResourceServer: vi.fn(),
   mockCreateBatchSettlementPaymentRequirements: vi.fn(),
@@ -40,16 +44,69 @@ const {
   mockCreatePaymentRequiredResponse: vi.fn(),
   mockEnhancePaymentRequirements: vi.fn(),
   mockReleaseLock: vi.fn(),
+  // The exact alternative's server (createResourceServer — no channels, no scheme object).
+  mockCreateResourceServer: vi.fn(),
+  mockExactVerifyPayment: vi.fn(),
+  mockExactSettlePayment: vi.fn(),
 }));
 
-vi.mock("../src/x402_server.js", () => ({
-  createLLMResourceServer: mockCreateLLMResourceServer,
-  createBatchSettlementPaymentRequirements: mockCreateBatchSettlementPaymentRequirements,
-  create402Response: mockCreate402Response,
-  extractPaymentPayload: mockExtractPaymentPayload,
-  createSettlementHeaders: mockCreateSettlementHeaders,
-  releaseLock: mockReleaseLock,
-}));
+vi.mock("../src/x402_server.js", async () => {
+  // The real registry — which asset is offered where is part of what these tests check, so
+  // the exact-alternative helpers mirror the real implementation against it.
+  const { USDC_ADDRESSES } = await import("@fretchen/chain-utils");
+  const exactAlternativeEntry = (payTo: string) => ({
+    scheme: "exact",
+    network: "eip155:8453",
+    amount: "10000",
+    asset: USDC_ADDRESSES["eip155:8453"],
+    payTo,
+    maxTimeoutSeconds: 60,
+    extra: { name: "USD Coin", version: "2" },
+  });
+  return {
+    createLLMResourceServer: mockCreateLLMResourceServer,
+    createBatchSettlementPaymentRequirements: mockCreateBatchSettlementPaymentRequirements,
+    create402Response: mockCreate402Response,
+    extractPaymentPayload: mockExtractPaymentPayload,
+    createSettlementHeaders: mockCreateSettlementHeaders,
+    releaseLock: mockReleaseLock,
+    // Real values, as the routes import them.
+    EXACT_ALTERNATIVE_NETWORK: "eip155:8453",
+    EXACT_ALTERNATIVE_AMOUNT_ATOMIC: "10000",
+    // Real value (x402_server.ts's batch networks — mainnets plus the testnet mock path).
+    getBatchSettlementNetworks: () => ["eip155:10", "eip155:8453", "eip155:84532"],
+    // Real implementation (pure bigint math, no side effects) — keep in sync with
+    // x402_server.ts's actual formatUsdcAtomicAsDecimalUsd.
+    formatUsdcAtomicAsDecimalUsd: (atomicAmount: string) => {
+      const atomic = BigInt(atomicAmount);
+      const divisor = 1_000_000n;
+      const whole = atomic / divisor;
+      const fraction = (atomic % divisor).toString().padStart(6, "0");
+      const trimmedFraction = fraction.replace(/0+$/, "");
+      return trimmedFraction ? `${whole}.${trimmedFraction}` : whole.toString();
+    },
+    // Real semantics, EURe-first as the production preference orders it: every token priced
+    // in its own units, so the page can never quote fewer tokens than the challenge.
+    formatParallelPrices: (price: { EURe: string; EURC: string; USDC: string }) => {
+      const fmt = (atomic: string, decimals: bigint, symbol: "EURe" | "EURC" | "USDC") =>
+        `${symbol === "USDC" ? "$" : "€"}${(() => {
+          const a = BigInt(atomic);
+          const div = 10n ** decimals;
+          const whole = a / div;
+          const frac = (a % div).toString().padStart(Number(decimals), "0").replace(/0+$/, "");
+          return frac ? `${whole}.${frac}` : whole.toString();
+        })()} in ${symbol}`;
+      return `${fmt(price.EURe, 18n, "EURe")}, ${fmt(price.EURC, 6n, "EURC")}, ${fmt(price.USDC, 6n, "USDC")}`;
+    },
+    // Real semantics for the pure helpers — the tests below pin the entry they produce.
+    createExactAlternative: exactAlternativeEntry,
+    withExactAlternative: (challenge: { accepts: unknown[] }, payTo: string) => ({
+      ...challenge,
+      accepts: [...(challenge.accepts ?? []), exactAlternativeEntry(payTo)],
+    }),
+    createResourceServer: mockCreateResourceServer,
+  };
+});
 
 /** The seller's own address — `NFT_WALLET_PUBLIC_KEY`, shared with the chat so both land on one
  *  payment channel. Anvil account #2, standing in for it. */
@@ -180,6 +237,18 @@ beforeEach(async () => {
   mockExtractPaymentPayload.mockReturnValue(null);
   mockVerifyPayment.mockResolvedValue({ isValid: true, payer: "0xpayer" });
   mockSettlePayment.mockResolvedValue({ success: true, transaction: "", network: "eip155:10" });
+  // The exact alternative's server: same shapes, its own mocks, so the two schemes' call
+  // paths can be asserted apart.
+  mockCreateResourceServer.mockImplementation(() => ({
+    verifyPayment: mockExactVerifyPayment,
+    settlePayment: mockExactSettlePayment,
+  }));
+  mockExactVerifyPayment.mockResolvedValue({ isValid: true, payer: "0xpayer" });
+  mockExactSettlePayment.mockResolvedValue({
+    success: true,
+    transaction: "",
+    network: "eip155:8453",
+  });
   mockCreatePaymentRequiredResponse.mockResolvedValue({
     x402Version: 2,
     error: "channel_busy",
@@ -509,7 +578,7 @@ describe("discovery", () => {
     const res = await handleRequest(discoveryRequest("GET", "favicon.png"));
 
     expect(res.status).toBe(200);
-    expect(res.headers.get("content-type")).toBe("image/jpeg");
+    expect(res.headers.get("content-type")).toBe("image/png");
     expect((await res.arrayBuffer()).byteLength).toBeGreaterThan(0);
   });
 
@@ -541,9 +610,15 @@ describe("discovery", () => {
       expect(res.body).toContain(".well-known/agent-registration.json");
       expect(res.body).toContain(".well-known/oasf.json");
       expect(res.body).toContain("https://mcp-agent.fretchen.eu/mcp");
-      // Prices restated on the page must be the spec's x-payment-info values.
-      expect(res.body).toContain("GET /search — $0.01 per call");
-      expect(res.body).toContain("GET /fetch — $0.001 per call");
+      // Prices on the page are generated from PRICE_ATOMIC — every accepted token in its
+      // own units, EURe first as the seller's preference orders it — plus the flat exact
+      // alternative; never a single-token restatement.
+      expect(res.body).toContain(
+        "GET /search — channel call: €0.01 in EURe, €0.01 in EURC, $0.01 in USDC; or exact: $0.01 flat (USDC, Base mainnet)",
+      );
+      expect(res.body).toContain(
+        "GET /fetch — channel call: €0.001 in EURe, €0.001 in EURC, $0.001 in USDC; or exact: $0.01 flat (USDC, Base mainnet)",
+      );
       expect(res.body).toContain("curl 'https://web-agent.fretchen.eu/search?q=erc-8004'");
       expect(res.body).toContain("402");
       expect(mockCreateBatchSettlementPaymentRequirements).not.toHaveBeenCalled();
@@ -567,9 +642,15 @@ describe("the 402 challenge", () => {
   ])("quotes %s at %s atomic units", async (route, amount) => {
     const res = await handle(makeRequest("GET", route, { auth: null }));
 
-    const { accepts } = JSON.parse(res.body) as { accepts: { amount: string }[] };
+    const { accepts } = JSON.parse(res.body) as {
+      accepts: { amount: string; scheme?: string }[];
+    };
     expect(res.statusCode).toBe(402);
-    expect(accepts.every((entry) => entry.amount === amount)).toBe(true);
+    // The route's own price applies to every entry except the exact alternative (whose
+    // flat per-call price is pinned in its own test below).
+    const routeEntries = accepts.filter((entry) => entry.scheme !== "exact");
+    expect(routeEntries.length).toBeGreaterThan(0);
+    expect(routeEntries.every((entry) => entry.amount === amount)).toBe(true);
   });
 
   /**
@@ -588,12 +669,26 @@ describe("the 402 challenge", () => {
   });
 
   /** Testnet USDC is free and both routes spend real money, so a testnet payment would buy
-   *  metered Brave queries for nothing. */
-  test("offers mainnet only", async () => {
+   *  metered Brave queries for nothing. The exact alternative is Base MAINNET — it joins the
+   * mainnet-only fold rather than widening it. */
+  test("offers the batch networks: mainnets plus the testnet mock path", async () => {
     const res = await handle(makeRequest("GET", "search", { auth: null }));
 
-    const { accepts } = JSON.parse(res.body) as { accepts: { network: string }[] };
-    expect(accepts.map((entry) => entry.network).sort()).toEqual(["eip155:10", "eip155:8453"]);
+    const { accepts } = JSON.parse(res.body) as { accepts: { network: string; scheme?: string }[] };
+    expect(
+      accepts
+        .filter((entry) => entry.scheme !== "exact")
+        .map((entry) => entry.network)
+        .sort(),
+    ).toEqual(["eip155:10", "eip155:8453", "eip155:84532"]);
+    expect(
+      accepts.every(
+        (entry) =>
+          entry.network === "eip155:10" ||
+          entry.network === "eip155:8453" ||
+          entry.network === "eip155:84532",
+      ),
+    ).toBe(true);
   });
 
   test("quotes the route, not the query string, as the resource", async () => {
@@ -816,7 +911,9 @@ describe("the paid path", () => {
   });
 
   test("refuses a payment on a network it does not sell on", async () => {
-    mockExtractPaymentPayload.mockReturnValue(payment("eip155:84532"));
+    // Optimism Sepolia: in no network list here — not batch (no contract deployment there)
+    // and not the exact alternative (Base mainnet only). The refusal stays a plain 402.
+    mockExtractPaymentPayload.mockReturnValue(payment("eip155:11155420"));
 
     const res = await handle(makeRequest("GET", "search", { auth: null, query: { q: "x402" } }));
 
@@ -857,5 +954,191 @@ describe("the paid path", () => {
     expect(res.statusCode).toBe(200);
     expect(mockVerifyPayment).toHaveBeenCalled();
     expect(mockSettlePayment).toHaveBeenCalled();
+  });
+});
+
+/**
+ * The exact alternative: the accepts entry appended AFTER the batch-settlement entries —
+ * one EIP-3009 signature per call, flat $0.01 USDC on Base mainnet, no channels. It exists
+ * for stock x402 clients that cannot open channels at all.
+ */
+describe("the exact alternative", () => {
+  const exactPayload = {
+    accepted: {
+      scheme: "exact",
+      network: "eip155:8453",
+      asset: USDC_ADDRESSES["eip155:8453"],
+    },
+    payload: { transferWithAuthorization: "0xsigned" },
+  };
+
+  /** One accepts entry, appended last, exact terms; the batch entries stay untouched ahead
+   *  of it — the ordering IS the contract (channel buyers read their entries first). */
+  test("appends one exact entry after the batch-settlement entries", async () => {
+    for (const route of ["search", "fetch"] as const) {
+      const res = await handle(makeRequest("GET", route, { auth: null }));
+
+      const { accepts } = JSON.parse(res.body) as {
+        accepts: Record<string, unknown>[];
+      };
+      const exactEntries = accepts.filter((entry) => entry["scheme"] === "exact");
+      expect(exactEntries).toHaveLength(1);
+      expect(accepts[accepts.length - 1]["scheme"]).toBe("exact");
+      expect(exactEntries[0]).toEqual({
+        scheme: "exact",
+        network: "eip155:8453",
+        amount: "10000",
+        asset: USDC_ADDRESSES["eip155:8453"],
+        payTo: RECEIVER,
+        maxTimeoutSeconds: 60,
+        extra: { name: "USD Coin", version: "2" },
+      });
+    }
+  });
+
+  test("serves and settles an exact payment without touching channel machinery", async () => {
+    mockExtractPaymentPayload.mockReturnValue(exactPayload);
+
+    const res = await handle(makeRequest("GET", "search", { auth: null, query: { q: "x402" } }));
+
+    expect(res.statusCode).toBe(200);
+    // The exact server, for both payment steps; the batch server is never built.
+    expect(mockCreateResourceServer).toHaveBeenCalledOnce();
+    expect(mockExactVerifyPayment).toHaveBeenCalledTimes(1);
+    expect(mockExactVerifyPayment).toHaveBeenCalledWith(
+      exactPayload,
+      expect.objectContaining({
+        scheme: "exact",
+        network: "eip155:8453",
+        amount: "10000",
+        asset: USDC_ADDRESSES["eip155:8453"],
+        payTo: RECEIVER,
+        maxTimeoutSeconds: 60,
+      }),
+    );
+    // Flat price: settle verifies and settles the same amount (no metering, no enhancement).
+    expect(mockExactSettlePayment).toHaveBeenCalledTimes(1);
+    expect((mockExactSettlePayment.mock.calls[0] as unknown[])[1]).toEqual(
+      expect.objectContaining({ scheme: "exact", amount: "10000" }),
+    );
+    expect(res.headers["payment-response"]).toBe("encoded");
+    // None of the channel pipeline may run.
+    expect(mockCreateLLMResourceServer).not.toHaveBeenCalled();
+    expect(mockEnhancePaymentRequirements).not.toHaveBeenCalled();
+    expect(mockVerifyPayment).not.toHaveBeenCalled();
+    expect(mockSettlePayment).not.toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledTimes(1); // the paid Brave call did run
+  });
+
+  test("rejects an exact payment on network terms it never offered", async () => {
+    mockExtractPaymentPayload.mockReturnValue({
+      accepted: {
+        scheme: "exact",
+        network: "eip155:10", // Optimism USDC — offered for batch-settlement, never for exact
+        asset: USDC_ADDRESSES["eip155:10"],
+      },
+      payload: { transferWithAuthorization: "0xsigned" },
+    });
+
+    const res = await handle(makeRequest("GET", "search", { auth: null, query: { q: "x402" } }));
+
+    expect(res.statusCode).toBe(402);
+    expect(mockExactVerifyPayment).not.toHaveBeenCalled();
+    expect(mockExactSettlePayment).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  test("answers an invalid exact payment with a plain 402, not the batch corrective", async () => {
+    mockExtractPaymentPayload.mockReturnValue(exactPayload);
+    mockExactVerifyPayment.mockResolvedValue({ isValid: false, invalidReason: "expired" });
+
+    const res = await handle(makeRequest("GET", "search", { auth: null, query: { q: "x402" } }));
+
+    expect(res.statusCode).toBe(402);
+    expect(JSON.parse(res.body).error).toMatch(/expired/);
+    // No channel state to resync — so no SDK corrective and no advert of the failed payment.
+    expect(mockCreatePaymentRequiredResponse).not.toHaveBeenCalled();
+    expect(mockExactSettlePayment).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  test("does not settle an exact payment when the upstream fails", async () => {
+    mockExtractPaymentPayload.mockReturnValue(exactPayload);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: false, status: 502, statusText: "Bad Gateway" }),
+    );
+
+    const res = await handle(makeRequest("GET", "search", { auth: null, query: { q: "x402" } }));
+
+    expect(res.statusCode).toBe(500);
+    expect(mockExactSettlePayment).not.toHaveBeenCalled();
+    // Exact holds no lock, so the batch path's lock release must not run either.
+    expect(mockReleaseLock).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The testnet stand-in: a paid request on Base Sepolia runs the FULL x402 machinery —
+ * challenge, validation, channel verify, settle-on-success, the Payment-Response header —
+ * but answers with the marked stand-in (search_stand_in.ts) instead of the metered
+ * upstreams. The invariant is one-sided and absolute: testnet money (free) must never
+ * buy Brave queries or /fetch egress; mainnet money must always get the real thing.
+ */
+describe("the testnet stand-in", () => {
+  beforeEach(() => {
+    mockExtractPaymentPayload.mockReturnValue(payment("eip155:84532"));
+  });
+
+  test("serves and settles a paid /search with the marked stand-in, upstream untouched", async () => {
+    const res = await handle(makeRequest("GET", "search", { auth: null, query: { q: "x402" } }));
+
+    expect(res.statusCode).toBe(200);
+    expect(mockVerifyPayment).toHaveBeenCalledTimes(1);
+    expect(mockSettlePayment).toHaveBeenCalledTimes(1);
+    expect(res.headers["payment-response"]).toBe("encoded");
+    // The security invariant: testnet money never reaches Brave.
+    expect(fetch).not.toHaveBeenCalled();
+
+    const body = JSON.parse(res.body) as {
+      results: { title: string; text: string; url: string }[];
+    };
+    expect(body.results).toHaveLength(3);
+    for (const result of body.results) {
+      expect(result.title).toContain(TESTNET_MOCK_MARKER);
+      expect(result.url).toContain("web-agent.fretchen.eu");
+    }
+    // Echo: the caller's own query arrives in the stand-in answer.
+    expect(body.results[0].title).toContain("x402");
+  });
+
+  test("serves and settles a paid /fetch with the marked stand-in, upstream untouched", async () => {
+    const res = await handle(
+      makeRequest("GET", "fetch", { auth: null, query: { url: "https://example.com/" } }),
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(mockVerifyPayment).toHaveBeenCalledTimes(1);
+    expect(mockSettlePayment).toHaveBeenCalledTimes(1);
+    expect(res.headers["payment-response"]).toBe("encoded");
+    // The security invariant: testnet money never triggers egress.
+    expect(fetch).not.toHaveBeenCalled();
+
+    const body = JSON.parse(res.body) as { finalUrl: string; html: string; contentType: string };
+    expect(body.finalUrl).toBe("https://example.com/");
+    expect(body.html).toContain(TESTNET_MOCK_MARKER);
+    expect(body.html).toContain("no real web"); // loud it is
+  });
+
+  /** The other side of the invariant, pinned where it is defined: the same caller, the same
+   *  route, only the network flipped — and the metered upstream runs. */
+  test("flips back to the real upstream for a mainnet payment", async () => {
+    mockExtractPaymentPayload.mockReturnValue(payment("eip155:10"));
+
+    const res = await handle(makeRequest("GET", "search", { auth: null, query: { q: "x402" } }));
+
+    expect(res.statusCode).toBe(200);
+    expect(fetch).toHaveBeenCalledTimes(1); // the paid Brave call did run
+    expect(JSON.stringify(res.body)).not.toContain(TESTNET_MOCK_MARKER);
   });
 });

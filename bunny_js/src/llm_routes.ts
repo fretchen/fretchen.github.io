@@ -36,20 +36,26 @@ import {
   MAX_PRICE_ATOMIC,
   getSettleAmount,
 } from "./llm_schemas.js";
-import { isTestnet } from "@fretchen/chain-utils";
+import { isTestnet, type SettlementTokenInfo } from "@fretchen/chain-utils";
 import { logger } from "./logger.js";
 import { offeredStablecoins, resolvePaidStablecoin } from "./stablecoin_pricing.js";
 import { toResponse } from "./response.js";
 import {
   createLLMResourceServer,
+  EXACT_ALTERNATIVE_AMOUNT_ATOMIC,
+  EXACT_ALTERNATIVE_NETWORK,
   createBatchSettlementPaymentRequirements,
   create402Response,
+  createExactAlternative,
+  createResourceServer,
   extractPaymentPayload,
   createSettlementHeaders,
+  formatParallelPrices,
   getBatchSettlementNetworks,
   LLM_MAX_TIMEOUT_SECONDS,
   formatUsdcAtomicAsDecimalUsd,
   releaseLock,
+  withExactAlternative,
   type SdkPaymentPayload,
   type SdkPaymentRequirements,
 } from "./x402_server.js";
@@ -103,10 +109,9 @@ const ROOT_PAGE = buildRootPage({
     },
   ],
   price: [
-    `POST / — metered by real token usage, at most $${formatUsdcAtomicAsDecimalUsd(MAX_PRICE_ATOMIC.USDC)} per request`,
+    `POST / — metered per request, ceiling ${formatParallelPrices(MAX_PRICE_ATOMIC)}; or exact: $${formatUsdcAtomicAsDecimalUsd(EXACT_ALTERNATIVE_AMOUNT_ATOMIC)} flat (USDC, Base mainnet)`,
   ],
-  payment:
-    "x402 (HTTP 402): no account, no API key. An unpaid request answers 402 with the machine-readable Payment-Required challenge — exact terms (scheme batch-settlement, network, token, ceiling) are in the challenge, then retry the same request with the payment attached.",
+  payment: `x402 (HTTP 402): no account, no API key. The 402 lists both schemes — batch-settlement channels first (the preferred way to pay: metered by real token usage under the ceiling) and an exact alternative at the end (one EIP-3009 signature per call, unmetered, for clients without channel wiring). Pay in USDC (Base or Optimism) or EURC/EURe (Base); the challenge carries every token's per-network terms. Retry the same request with the payment attached.`,
   tryIt: `curl -X POST '${openapiSpec.servers[0].url}/' -H 'Content-Type: application/json' -d '{"model":"${advertisedModelIds()[0]}","messages":[{"role":"user","content":"ping"}]}'\n# → HTTP 402 + Payment-Required header: the terms. No wallet needed for this first look.\n# Testnet note: on Base Sepolia the payment settles and the completion is a mocked answer — a free end-to-end test.`,
   errors:
     "402 = unpaid or invalid payment (challenge in the Payment-Required header); 400 = invalid request (OpenAI-shaped error body); 404 = unknown model. Response schemas: openapi.json.",
@@ -249,7 +254,12 @@ export async function handleLLMRequest(request: Request): Promise<Response> {
       tags: ["llm", "chat", "x402"],
       iconUrl: `${openapiSpec.servers[0].url}/favicon.png`,
     });
-    return toResponse(create402Response(paymentRequirements));
+    // Append the exact alternative AFTER the batch entries — order is the contract (see
+    // withExactAlternative): channel buyers keep their preferred entries, channel-less
+    // clients fall through to the exact one.
+    return toResponse(
+      create402Response(withExactAlternative(paymentRequirements, receiverAddressForChallenge)),
+    );
   }
 
   // OpenAI chat-completions request body — everything we do not consume is FORWARDED to the
@@ -345,74 +355,115 @@ export async function handleLLMRequest(request: Request): Promise<Response> {
     );
   }
 
-  let resourceServer: ReturnType<typeof createLLMResourceServer>["resourceServer"];
-  let scheme: ReturnType<typeof createLLMResourceServer>["scheme"];
-  try {
-    ({ resourceServer, scheme } = createLLMResourceServer(receiverAddress));
-  } catch (err) {
-    logger.error({ err }, "Failed to configure batch-settlement resource server");
-    return jsonError(500, "Server configuration error");
-  }
-
   // Non-null: the unpaid case already returned the 402 challenge above, before validation.
   const paymentPayload = paymentPayloadEarly;
-
-  const clientNetwork = (paymentPayload as Record<string, unknown>)["accepted"]
-    ? (((paymentPayload as Record<string, unknown>)["accepted"] as Record<string, unknown>)[
-        "network"
-      ] as string | undefined)
-    : undefined;
-
-  if (!clientNetwork || !getBatchSettlementNetworks().includes(clientNetwork)) {
-    return jsonError(402, "Unsupported or missing network for batch-settlement payment");
-  }
-
-  // SECURITY: testnet must never reach the real Mistral API (scw parity). An explicit
-  // `useDummyData: false` on a testnet network is always a caller error — reject loudly.
-  if (isTestnet(clientNetwork) && useDummyData === false) {
-    return jsonError(
-      400,
-      "Real inference is not available on testnet — this network always returns a mocked LLM response. Omit useDummyData or set it to true, or use a mainnet network for a real completion.",
-    );
-  }
-  // Never spend real inference budget on a valueless testnet payment (scw parity).
-  const useMock = useDummyData === true || isTestnet(clientNetwork);
-
-  // Price the stablecoin the buyer's channel is in, not a fixed one (scw parity).
   const accepted = (paymentPayload as Record<string, unknown>)["accepted"] as
     Record<string, unknown> | undefined;
-  const coin = resolvePaidStablecoin(clientNetwork, accepted?.["asset"]);
-  if (!coin) {
-    logger.warn({ clientNetwork, asset: accepted?.["asset"] }, "Payment asset not offered");
-    return jsonError(
-      402,
-      `Unsupported payment asset on ${clientNetwork} — offered: ${offeredStablecoins(clientNetwork)
-        .map((offered) => `${offered.symbol} ${offered.address}`)
-        .join(", ")}`,
-    );
-  }
-  const baseRequirements: SdkPaymentRequirements = {
-    scheme: "batch-settlement",
-    network: clientNetwork as `${string}:${string}`,
-    amount: MAX_PRICE_ATOMIC[coin.symbol],
-    asset: coin.address,
-    payTo: receiverAddress,
-    maxTimeoutSeconds: LLM_MAX_TIMEOUT_SECONDS,
-    extra: { name: coin.name, version: coin.version },
-  };
-  // Must be the SAME enhanced requirements the client signed its channelConfig against —
-  // a raw object here makes the facilitator reject every deposit with
-  // receiver_authorizer_mismatch (scw parity; confirmed via a real Base Sepolia run).
-  const paymentRequirements = await scheme.enhancePaymentRequirements(
-    baseRequirements,
-    {
-      x402Version: 2,
+  const clientNetwork = accepted?.["network"] as string | undefined;
+
+  // ─── Scheme fork ────────────────────────────────────────────────────────────────────
+  // The 402 lists the batch-settlement entries first and the exact alternative last (see
+  // withExactAlternative); the payment names which one it pays against. The exact path is
+  // channel-free — no enhancePaymentRequirements, no channel lock — which is also why an
+  // invalid exact payment answers a plain 402 below instead of the batch path's corrective
+  // resync (there is no channel state to resync).
+  const isExact = accepted?.["scheme"] === "exact";
+
+  let resourceServer: ReturnType<typeof createLLMResourceServer>["resourceServer"];
+  let paymentRequirements: SdkPaymentRequirements;
+  let useMock: boolean;
+  let coin: SettlementTokenInfo;
+
+  if (isExact) {
+    // The exact entry was offered on exactly one (network, token); anything else is a
+    // caller paying against terms we never issued.
+    const exactRequirements = createExactAlternative(receiverAddress);
+    if (
+      clientNetwork !== EXACT_ALTERNATIVE_NETWORK ||
+      accepted?.["asset"] !== exactRequirements.asset
+    ) {
+      return jsonError(
+        402,
+        `Unsupported exact payment terms. This endpoint's exact scheme accepts ${EXACT_ALTERNATIVE_NETWORK} and ${exactRequirements.asset} only`,
+      );
+    }
+    // Mainnet-only offer, so the testnet mock branch cannot apply; only an explicit
+    // useDummyData still selects the stand-in.
+    useMock = useDummyData === true;
+    // Guaranteed by the terms check above (the asset IS ours), but stay symmetric with the
+    // batch branch rather than trust an invariant across two modules.
+    const resolvedCoin = resolvePaidStablecoin(EXACT_ALTERNATIVE_NETWORK, exactRequirements.asset);
+    if (!resolvedCoin) {
+      logger.error(
+        { network: EXACT_ALTERNATIVE_NETWORK, asset: exactRequirements.asset },
+        "Config error: exact-alternative asset not offered",
+      );
+      return jsonError(500, "Server configuration error");
+    }
+    coin = resolvedCoin;
+    resourceServer = createResourceServer();
+    paymentRequirements = exactRequirements;
+  } else {
+    let scheme: ReturnType<typeof createLLMResourceServer>["scheme"];
+    try {
+      ({ resourceServer, scheme } = createLLMResourceServer(receiverAddress));
+    } catch (err) {
+      logger.error({ err }, "Failed to configure batch-settlement resource server");
+      return jsonError(500, "Server configuration error");
+    }
+
+    if (!clientNetwork || !getBatchSettlementNetworks().includes(clientNetwork)) {
+      return jsonError(402, "Unsupported or missing network for batch-settlement payment");
+    }
+
+    // SECURITY: testnet must never reach the real Mistral API (scw parity). An explicit
+    // `useDummyData: false` on a testnet network is always a caller error — reject loudly.
+    if (isTestnet(clientNetwork) && useDummyData === false) {
+      return jsonError(
+        400,
+        "Real inference is not available on testnet — this network always returns a mocked LLM response. Omit useDummyData or set it to true, or use a mainnet network for a real completion.",
+      );
+    }
+    // Never spend real inference budget on a valueless testnet payment (scw parity).
+    useMock = useDummyData === true || isTestnet(clientNetwork);
+
+    // Price the stablecoin the buyer's channel is in, not a fixed one (scw parity).
+    const resolvedCoin = resolvePaidStablecoin(clientNetwork, accepted?.["asset"]);
+    if (!resolvedCoin) {
+      logger.warn({ clientNetwork, asset: accepted?.["asset"] }, "Payment asset not offered");
+      return jsonError(
+        402,
+        `Unsupported payment asset on ${clientNetwork} — offered: ${offeredStablecoins(
+          clientNetwork,
+        )
+          .map((offered) => `${offered.symbol} ${offered.address}`)
+          .join(", ")}`,
+      );
+    }
+    coin = resolvedCoin;
+    const baseRequirements: SdkPaymentRequirements = {
       scheme: "batch-settlement",
       network: clientNetwork as `${string}:${string}`,
-      extra: baseRequirements.extra,
-    },
-    [],
-  );
+      amount: MAX_PRICE_ATOMIC[coin.symbol],
+      asset: coin.address,
+      payTo: receiverAddress,
+      maxTimeoutSeconds: LLM_MAX_TIMEOUT_SECONDS,
+      extra: { name: coin.name, version: coin.version },
+    };
+    // Must be the SAME enhanced requirements the client signed its channelConfig against —
+    // a raw object here makes the facilitator reject every deposit with
+    // receiver_authorizer_mismatch (scw parity; confirmed via a real Base Sepolia run).
+    paymentRequirements = await scheme.enhancePaymentRequirements(
+      baseRequirements,
+      {
+        x402Version: 2,
+        scheme: "batch-settlement",
+        network: clientNetwork as `${string}:${string}`,
+        extra: baseRequirements.extra,
+      },
+      [],
+    );
+  }
 
   let verification: {
     isValid: boolean;
@@ -431,13 +482,21 @@ export async function handleLLMRequest(request: Request): Promise<Response> {
   }
 
   if (!verification.isValid) {
-    // Through createPaymentRequiredResponse (not a hand-rolled body) so the SDK's corrective
-    // enrichment runs — channelState/voucherState for cumulative mismatches, which the client
-    // SDK's processCorrectivePaymentRequired needs to resync and retry (scw parity).
     logger.warn(
       { reason: verification.invalidReason, message: verification.invalidMessage },
       "Payment verification failed",
     );
+    if (isExact) {
+      // Plain 402, not the batch corrective re-challenge: exact holds no channel state to
+      // resync — the client retries with a fresh signature against the challenge it has.
+      return jsonError(
+        402,
+        `Payment verification failed: ${verification.invalidReason ?? "unknown"}`,
+      );
+    }
+    // Through createPaymentRequiredResponse (not a hand-rolled body) so the SDK's corrective
+    // enrichment runs — channelState/voucherState for cumulative mismatches, which the client
+    // SDK's processCorrectivePaymentRequired needs to resync and retry (scw parity).
     const paymentRequired = await resourceServer.createPaymentRequiredResponse(
       [paymentRequirements],
       {
@@ -485,16 +544,22 @@ export async function handleLLMRequest(request: Request): Promise<Response> {
     logger.error({ err: error }, "Error during answer generation");
     // Verified but never settled: release the channel lock, or the next message waits out
     // LLM_MAX_TIMEOUT_SECONDS (the lock TTL) behind `channel_busy` for an answer that was
-    // never charged.
-    await releaseLock(resourceServer, paymentPayload as SdkPaymentPayload, paymentRequirements);
+    // never charged. Exact holds no lock, so there is nothing to release.
+    if (!isExact) {
+      await releaseLock(resourceServer, paymentPayload as SdkPaymentPayload, paymentRequirements);
+    }
     return jsonError(500, (error as Error).message);
   }
 
   // Settling with a DIFFERENT (smaller, real-usage) amount than verifyPayment() used is
   // intentional (scw parity — see getSettleAmount() in llm_schemas.ts): handleBeforeSettle
-  // only checks against the voucher's signed ceiling, not against what verify saw.
-  const settleAmount = getSettleAmount(llmData.usage, coin.symbol);
-  const settleRequirements = { ...paymentRequirements, amount: settleAmount };
+  // only checks against the voucher's signed ceiling, not against what verify saw. The
+  // exact alternative has no ceiling concept — its price is the flat per-call amount, so
+  // the settle amount equals the verified one.
+  const settleRequirements = isExact
+    ? paymentRequirements
+    : { ...paymentRequirements, amount: getSettleAmount(llmData.usage, coin.symbol) };
+  const settleAmount = settleRequirements.amount;
 
   try {
     const settlement = await resourceServer.settlePayment(

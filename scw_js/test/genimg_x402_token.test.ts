@@ -612,14 +612,14 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       const response = await handle(event, {});
 
       expect(response.statusCode).toBe(200);
-      expect(response.headers["Content-Type"]).toBe("image/jpeg");
+      expect(response.headers["Content-Type"]).toBe("image/png");
       expect(response.headers["Access-Control-Allow-Origin"]).toBe("*");
       expect(response.isBase64Encoded).toBe(true);
-      // Valid base64 that decodes to a JPEG (SOI marker 0xFFD8).
+      // Valid base64 that decodes to a PNG (signature 0x8950).
       const bytes = Buffer.from(response.body, "base64");
       expect(bytes.length).toBeGreaterThan(0);
-      expect(bytes[0]).toBe(0xff);
-      expect(bytes[1]).toBe(0xd8);
+      expect(bytes[0]).toBe(0x89);
+      expect(bytes[1]).toBe(0x50);
     });
 
     test("should answer a HEAD /favicon.png probe with 200 and an image content-type", async () => {
@@ -633,7 +633,7 @@ describe("genimg_x402_token.js - x402 v2 Token Payment Tests", () => {
       const response = await handle(event, {});
 
       expect(response.statusCode).toBe(200);
-      expect(response.headers["Content-Type"]).toBe("image/jpeg");
+      expect(response.headers["Content-Type"]).toBe("image/png");
       expect(response.body).toBe("");
     });
 

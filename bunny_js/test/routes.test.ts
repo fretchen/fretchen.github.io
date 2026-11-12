@@ -578,7 +578,7 @@ describe("discovery", () => {
     const res = await handleRequest(discoveryRequest("GET", "favicon.png"));
 
     expect(res.status).toBe(200);
-    expect(res.headers.get("content-type")).toBe("image/jpeg");
+    expect(res.headers.get("content-type")).toBe("image/png");
     expect((await res.arrayBuffer()).byteLength).toBeGreaterThan(0);
   });
 

@@ -431,11 +431,11 @@ describe("sc_llm_x402", () => {
     it("serves the favicon as raw bytes on GET /favicon.png", async () => {
       const res = await handleLLMRequest(makeEvent({ httpMethod: "GET", path: "/favicon.png" }));
       expect(res.status).toBe(200);
-      expect(res.headers.get("content-type")).toBe("image/jpeg");
+      expect(res.headers.get("content-type")).toBe("image/png");
       const bytes = new Uint8Array(await res.arrayBuffer());
       expect(bytes.length).toBeGreaterThan(0);
-      expect(bytes[0]).toBe(0xff);
-      expect(bytes[1]).toBe(0xd8);
+      expect(bytes[0]).toBe(0x89);
+      expect(bytes[1]).toBe(0x50);
     });
 
     it("answers a HEAD /favicon.png probe with 200 and an image content-type", async () => {
@@ -444,7 +444,7 @@ describe("sc_llm_x402", () => {
         {},
       );
       expect(res.statusCode).toBe(200);
-      expect(res.headers["content-type"]).toBe("image/jpeg");
+      expect(res.headers["content-type"]).toBe("image/png");
       expect(res.body).toBe("");
     });
 

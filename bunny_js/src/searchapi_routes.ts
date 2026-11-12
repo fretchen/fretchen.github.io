@@ -12,9 +12,11 @@
  *   fails after it never settles, orphaning the lock for MAX_TIMEOUT_SECONDS).
  */
 import { logger } from "./logger.js";
+import { isTestnet } from "@fretchen/chain-utils";
 import { offeredStablecoins, resolvePaidStablecoin } from "./stablecoin_pricing.js";
 import { searchWeb, QueryError } from "./search_service.js";
 import { fetchExternalHtml, FetchUrlError, parseHttpsUrl } from "./web_fetch_service.js";
+import { standInFetch, standInSearch } from "./search_stand_in.js";
 import {
   DESCRIPTION,
   FetchQuerySchema,
@@ -48,6 +50,7 @@ import {
   extractPaymentPayload,
   formatParallelPrices,
   formatUsdcAtomicAsDecimalUsd,
+  getBatchSettlementNetworks,
   releaseLock,
   withExactAlternative,
   type SdkPaymentPayload,
@@ -55,13 +58,14 @@ import {
 } from "./x402_server.js";
 
 /**
- * Mainnet only, unlike the chat, which also accepts Base Sepolia. Testnet USDC is free, and
- * both routes spend real money on the caller's behalf — Brave bills per query, and /fetch is
- * egress. Advertising a testnet would hand anyone a metered API for nothing. The cost is
- * that the paid path cannot be exercised on a testnet at all: at $0.001 a call, a real
- * run is cheaper than the setup it replaces. (Copied from scw_js/search_api.ts.)
+ * The batch-settlement networks, mainnet PLUS Base Sepolia — unlike the scw original, which
+ * was mainnet-only. Adverting a testnet is safe now BECAUSE the paid path never touches the
+ * metered upstreams there: a testnet payment gets the marked stand-in answers instead
+ * (search_stand_in.ts), while the full challenge/verify/settle machinery runs for real on
+ * free test tokens — the try-before-buy the agents asked for. Metered Brave/egress only
+ * run for mainnet payments; the regression test pins that forever.
  */
-const MAINNET_NETWORKS = ["eip155:10", "eip155:8453"];
+const OFFERED_NETWORKS = getBatchSettlementNetworks();
 
 /**
  * Advertised and verified lock TTL, a quarter of the chat's LLM_MAX_TIMEOUT_SECONDS. It
@@ -114,7 +118,7 @@ const ROOT_PAGE = buildRootPage({
       `GET /${route} — channel call: ${formatParallelPrices(PRICE_ATOMIC[route])}; or exact: $${formatUsdcAtomicAsDecimalUsd(EXACT_ALTERNATIVE_AMOUNT_ATOMIC)} flat (USDC, Base mainnet)`,
   ),
   payment: `x402 (HTTP 402): no account, no API key. The 402 lists both schemes — batch-settlement channels first (the preferred way to pay) and an exact alternative at the end (one EIP-3009 signature per call, for clients without channel wiring). Pay in USDC (Base or Optimism) or EURC/EURe (Base); the challenge carries every token's per-network terms. Retry the same request with the payment attached.`,
-  tryIt: `curl '${SERVICE_URL}/search?q=erc-8004'\n# → HTTP 402 + Payment-Required header: the terms. No wallet needed for this first look.`,
+  tryIt: `curl '${SERVICE_URL}/search?q=erc-8004'\n# → HTTP 402 + Payment-Required header: the terms. No wallet needed for this first look.\n# Testnet note: a payment on Base Sepolia settles in free test tokens and the answer is a marked mock — the full flow, real results on mainnet only.`,
   errors:
     "402 = unpaid (challenge in the Payment-Required header); 404 = no such route; everything else is standard HTTP. Response schemas: openapi.json.",
 });
@@ -166,7 +170,16 @@ function parseArgs(route: Route, queryParams: Record<string, string>): Args {
   return { route, url: parseHttpsUrl(parsed.data.url).toString() };
 }
 
-function run(args: Args): Promise<unknown> {
+/**
+ * The upstream call for one paid request — the ONE place the metered services are touched,
+ * which is why the testnet gate lives here and nowhere else: a testnet payment gets the
+ * marked stand-in answers (search_stand_in.ts) and the metered upstreams never run.
+ */
+async function run(args: Args, useMock: boolean): Promise<unknown> {
+  if (useMock) {
+    logger.info({ route: args.route }, "Serving stand-in answer (testnet payment)");
+    return args.route === "search" ? standInSearch(args.q) : standInFetch(args.url);
+  }
   return args.route === "search" ? searchWeb(args.q) : fetchExternalHtml(args.url);
 }
 
@@ -279,7 +292,8 @@ async function serveExact(
 
   let data: unknown;
   try {
-    data = await run(args);
+    // Exact is offered on Base mainnet only — the metered upstream always runs there.
+    data = await run(args, false);
   } catch (err) {
     // Nothing settled and nothing to release — exact holds no locks.
     logger.warn({ err, route }, "Run failed after exact verify");
@@ -322,11 +336,14 @@ async function serveBatchSettlement(
   receiverAddress: `0x${string}`,
 ): Promise<Response> {
   const network = acceptedNetwork(payload);
-  if (!network || !MAINNET_NETWORKS.includes(network)) {
+  if (!network || !OFFERED_NETWORKS.includes(network)) {
     return jsonResponse(402, {
-      error: `Unsupported or missing network. This endpoint accepts ${MAINNET_NETWORKS.join(", ")}`,
+      error: `Unsupported or missing network. This endpoint accepts ${OFFERED_NETWORKS.join(", ")}`,
     });
   }
+  // A testnet payment settles free test tokens and answers with the marked stand-in
+  // (see run()); the metered upstreams run for mainnet payments only.
+  const useMock = isTestnet(network);
 
   // Price the stablecoin the buyer's channel is in (see sc_llm_x402.ts) — checked before any
   // server setup, since an unoffered asset is the caller's error, not ours.
@@ -412,7 +429,7 @@ async function serveBatchSettlement(
 
   let data: unknown;
   try {
-    data = await run(args);
+    data = await run(args, useMock);
   } catch (err) {
     // Nothing is settled: an upstream that failed is not something to charge for. But verify took
     // the channel lock, which the chat shares — release it, or the user's next message is
@@ -470,7 +487,7 @@ async function challenge(route: Route, receiverAddress: `0x${string}`): Promise<
     price: PRICE_ATOMIC[route],
     payTo: receiverAddress,
     scheme,
-    networks: MAINNET_NETWORKS,
+    networks: OFFERED_NETWORKS,
     maxTimeoutSeconds: MAX_TIMEOUT_SECONDS,
     // One bazaar block per route: the block names the method and the query parameters, and the
     // two routes sell different things at different prices. (Copied.)

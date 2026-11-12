@@ -7,6 +7,7 @@ import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 // being asserted is that even a CORRECT signature is ignored.
 import { privateKeyToAccount } from "viem/accounts";
 import { USDC_ADDRESSES, EURC_ADDRESSES } from "@fretchen/chain-utils";
+import { TESTNET_MOCK_MARKER } from "../src/search_stand_in.js";
 
 // DNS is stubbed so these stay hermetic: /fetch resolves every hostname before connecting, and a
 // test that needs a working resolver fails on an offline machine for reasons that have nothing to
@@ -72,6 +73,8 @@ vi.mock("../src/x402_server.js", async () => {
     // Real values, as the routes import them.
     EXACT_ALTERNATIVE_NETWORK: "eip155:8453",
     EXACT_ALTERNATIVE_AMOUNT_ATOMIC: "10000",
+    // Real value (x402_server.ts's batch networks — mainnets plus the testnet mock path).
+    getBatchSettlementNetworks: () => ["eip155:10", "eip155:8453", "eip155:84532"],
     // Real implementation (pure bigint math, no side effects) — keep in sync with
     // x402_server.ts's actual formatUsdcAtomicAsDecimalUsd.
     formatUsdcAtomicAsDecimalUsd: (atomicAmount: string) => {
@@ -668,7 +671,7 @@ describe("the 402 challenge", () => {
   /** Testnet USDC is free and both routes spend real money, so a testnet payment would buy
    *  metered Brave queries for nothing. The exact alternative is Base MAINNET — it joins the
    * mainnet-only fold rather than widening it. */
-  test("offers mainnet only", async () => {
+  test("offers the batch networks: mainnets plus the testnet mock path", async () => {
     const res = await handle(makeRequest("GET", "search", { auth: null }));
 
     const { accepts } = JSON.parse(res.body) as { accepts: { network: string; scheme?: string }[] };
@@ -677,9 +680,14 @@ describe("the 402 challenge", () => {
         .filter((entry) => entry.scheme !== "exact")
         .map((entry) => entry.network)
         .sort(),
-    ).toEqual(["eip155:10", "eip155:8453"]);
+    ).toEqual(["eip155:10", "eip155:8453", "eip155:84532"]);
     expect(
-      accepts.every((entry) => entry.network === "eip155:10" || entry.network === "eip155:8453"),
+      accepts.every(
+        (entry) =>
+          entry.network === "eip155:10" ||
+          entry.network === "eip155:8453" ||
+          entry.network === "eip155:84532",
+      ),
     ).toBe(true);
   });
 
@@ -903,7 +911,9 @@ describe("the paid path", () => {
   });
 
   test("refuses a payment on a network it does not sell on", async () => {
-    mockExtractPaymentPayload.mockReturnValue(payment("eip155:84532"));
+    // Optimism Sepolia: in no network list here — not batch (no contract deployment there)
+    // and not the exact alternative (Base mainnet only). The refusal stays a plain 402.
+    mockExtractPaymentPayload.mockReturnValue(payment("eip155:11155420"));
 
     const res = await handle(makeRequest("GET", "search", { auth: null, query: { q: "x402" } }));
 
@@ -1065,5 +1075,70 @@ describe("the exact alternative", () => {
     expect(mockExactSettlePayment).not.toHaveBeenCalled();
     // Exact holds no lock, so the batch path's lock release must not run either.
     expect(mockReleaseLock).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The testnet stand-in: a paid request on Base Sepolia runs the FULL x402 machinery —
+ * challenge, validation, channel verify, settle-on-success, the Payment-Response header —
+ * but answers with the marked stand-in (search_stand_in.ts) instead of the metered
+ * upstreams. The invariant is one-sided and absolute: testnet money (free) must never
+ * buy Brave queries or /fetch egress; mainnet money must always get the real thing.
+ */
+describe("the testnet stand-in", () => {
+  beforeEach(() => {
+    mockExtractPaymentPayload.mockReturnValue(payment("eip155:84532"));
+  });
+
+  test("serves and settles a paid /search with the marked stand-in, upstream untouched", async () => {
+    const res = await handle(makeRequest("GET", "search", { auth: null, query: { q: "x402" } }));
+
+    expect(res.statusCode).toBe(200);
+    expect(mockVerifyPayment).toHaveBeenCalledTimes(1);
+    expect(mockSettlePayment).toHaveBeenCalledTimes(1);
+    expect(res.headers["payment-response"]).toBe("encoded");
+    // The security invariant: testnet money never reaches Brave.
+    expect(fetch).not.toHaveBeenCalled();
+
+    const body = JSON.parse(res.body) as {
+      results: { title: string; text: string; url: string }[];
+    };
+    expect(body.results).toHaveLength(3);
+    for (const result of body.results) {
+      expect(result.title).toContain(TESTNET_MOCK_MARKER);
+      expect(result.url).toContain("web-agent.fretchen.eu");
+    }
+    // Echo: the caller's own query arrives in the stand-in answer.
+    expect(body.results[0].title).toContain("x402");
+  });
+
+  test("serves and settles a paid /fetch with the marked stand-in, upstream untouched", async () => {
+    const res = await handle(
+      makeRequest("GET", "fetch", { auth: null, query: { url: "https://example.com/" } }),
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(mockVerifyPayment).toHaveBeenCalledTimes(1);
+    expect(mockSettlePayment).toHaveBeenCalledTimes(1);
+    expect(res.headers["payment-response"]).toBe("encoded");
+    // The security invariant: testnet money never triggers egress.
+    expect(fetch).not.toHaveBeenCalled();
+
+    const body = JSON.parse(res.body) as { finalUrl: string; html: string; contentType: string };
+    expect(body.finalUrl).toBe("https://example.com/");
+    expect(body.html).toContain(TESTNET_MOCK_MARKER);
+    expect(body.html).toContain("no real web"); // loud it is
+  });
+
+  /** The other side of the invariant, pinned where it is defined: the same caller, the same
+   *  route, only the network flipped — and the metered upstream runs. */
+  test("flips back to the real upstream for a mainnet payment", async () => {
+    mockExtractPaymentPayload.mockReturnValue(payment("eip155:10"));
+
+    const res = await handle(makeRequest("GET", "search", { auth: null, query: { q: "x402" } }));
+
+    expect(res.statusCode).toBe(200);
+    expect(fetch).toHaveBeenCalledTimes(1); // the paid Brave call did run
+    expect(JSON.stringify(res.body)).not.toContain(TESTNET_MOCK_MARKER);
   });
 });

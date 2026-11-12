@@ -277,33 +277,21 @@ export async function handle(
             payTo: receiverAddress,
           });
 
-          // Partition the idle channels and drive each one separately. `refundIdleChannels`
-          // (the SDK's batch entry point) selects every channel with balance != 0, builds
-          // `refundAmount = balance - chargedCumulativeAmount`, and aborts the whole batch on
-          // the first channel that fails. A fully-claimed record — the payer spent their whole
-          // deposit, the claim moved it out, but claims never delete records, only successful
-          // refunds do — therefore produces a 0-amount refund the contract always rejects with
-          // ZeroRefund, and that one rejection blocked every other refund behind it
-          // (2026-10-11, Base/EURe). Refunding each channel through the public `refund([id])`
-          // in its own try/catch, and deleting records the chain provably holds nothing for,
-          // is the whole fix. `refund([id])` applies the SDK's live-pending-request filter
-          // itself but NOT the idle threshold, so the idle predicate lives here now —
-          // `balance !== 0` and quiet past REFUND_IDLE_SECS, the same shape as the SDK's own
-          // getIdleChannelsForRefundFromChannels (its >= boundary differs by one millisecond;
-          // ours aligns with findStuckChannels below so the sweep and its post-condition can
-          // never disagree about which channels were due).
+          // The SDK batch below aborts on the first channel the facilitator rejects, so the
+          // records it would reject are handled here, first: fully-claimed records deleted
+          // (a 0-amount refund reverts ZeroRefund and stranded every refund behind it,
+          // 2026-10-11), anomalous ones flagged but kept — a later claim needs their
+          // vouchers. Refundable records are left to the batch, whose idle predicate runs a
+          // moment later with a hair wider boundary; the one used here stays aligned with
+          // findStuckChannels below.
           const storage = scheme.getStorage();
           const channels = await storage.list();
           const chainOf = new Map(synced.map((s) => [s.channelId, s]));
-          // The same idle threshold findStuckChannels applies below — deliberately one shape
-          // in two places rather than a shared helper the post-condition cannot be pointed at.
           const idleBefore = Date.now() - REFUND_IDLE_SECS * 1000;
           const idle = channels.filter(
             (c) => BigInt(c.balance) !== 0n && c.lastRequestTimestamp < idleBefore,
           );
-          refunds = 0;
           garbageCollected = 0;
-          const failedChannels: Array<{ channelId: string; error: string }> = [];
           for (const channel of idle) {
             const balance = BigInt(channel.balance);
             const charged = BigInt(channel.chargedCumulativeAmount);
@@ -316,16 +304,7 @@ export async function handle(
             const chainTotalClaimed = BigInt(sync?.chainTotalClaimed ?? channel.totalClaimed);
 
             if (balance > charged) {
-              // Unspent escrow the payer can still be refunded. One channel per call, one
-              // try/catch each: a failure here is logged and the sweep moves on.
-              try {
-                refunds += (await manager.refund([channel.channelId])).length;
-              } catch (err) {
-                failedChannels.push({
-                  channelId: channel.channelId,
-                  error: (err as Error).message,
-                });
-              }
+              // Unspent escrow the payer can still be refunded — the SDK batch below owns it.
               continue;
             }
 
@@ -384,29 +363,14 @@ export async function handle(
               "Fully charged idle channels still hold escrow that no claim drained — the refund sweep cannot return what the payer has signed to us",
             );
           }
-          if (failedChannels.length > 0) {
-            refundError = `${failedChannels.length} of ${idle.length} refund(s) failed`;
-            logger.error(
-              {
-                network,
-                asset,
-                failedChannels,
-                refunded: refunds,
-                garbageCollected,
-                idle: idle.length,
-              },
-              "Refund sweep failed",
-            );
-          } else {
-            // `idle` is the observability hook for the sweep's cost model: refund([id])
-            // re-lists storage per channel (the SDK's public API), so large idle counts mean
-            // quadratic S3 reads — see the review notes. Watch this number before ever
-            // chunking the refund loop.
-            logger.info(
-              { network, asset, refunds, garbageCollected, idle: idle.length },
-              "Refund sweep completed",
-            );
-          }
+          // One batched call for everything the pre-pass left in place. A failure aborts
+          // this token's refunds for the run — no per-channel isolation is the tradeoff; the
+          // stuckChannels post-condition still alerts.
+          refunds = (await manager.refundIdleChannels({ idleSecs: REFUND_IDLE_SECS })).length;
+          logger.info(
+            { network, asset, refunds, garbageCollected, idle: idle.length },
+            "Refund sweep completed",
+          );
         } catch (err) {
           refundError = (err as Error).message;
           logger.error({ err, network, asset }, "Refund sweep failed");

@@ -35,14 +35,11 @@ import {
   erc20Abi,
   formatUnits,
   http,
-  type Address,
-  type Chain,
-} from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import {
+  privateKeyToAccount,
   getRpcUrl,
   getViemChain,
   loadPrivateKey,
+  type Address,
   type SettlementTokenInfo,
 } from "@fretchen/chain-utils";
 import { facilitatorFeeFor } from "../fee_config.js";
@@ -110,7 +107,7 @@ function units(atomic: bigint, decimals: number): string {
 
 function publicClientFor(network: string) {
   return createPublicClient({
-    chain: getViemChain(network) as Chain, // single viem copy for TS 6 — see llm_x402_cron.ts
+    chain: getViemChain(network),
     transport: http(getRpcUrl(network)),
   });
 }
@@ -148,7 +145,7 @@ async function readBalance(pair: FeePair, owner: Address): Promise<bigint | null
 
 async function approve(pair: FeePair, spender: Address, amount: bigint): Promise<void> {
   const account = privateKeyToAccount(loadPrivateKey("NFT_WALLET_PRIVATE_KEY"));
-  const chain = getViemChain(pair.network) as Chain; // single viem copy for TS 6
+  const chain = getViemChain(pair.network);
   const wallet = createWalletClient({ account, chain, transport: http(getRpcUrl(pair.network)) });
   const hash = await wallet.writeContract({
     address: pair.coin.address,

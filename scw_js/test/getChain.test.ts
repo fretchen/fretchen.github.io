@@ -15,21 +15,24 @@
  * - Mismatch causes settlement to fail AFTER expensive operations complete
  */
 import { describe, test, expect } from "vitest";
-import { createPublicClient, http, type Chain } from "viem";
-import { optimism, optimismSepolia, base, baseSepolia } from "viem/chains";
-
-// Import functions under test
-import { getExpectedNetworks, validatePaymentNetwork } from "../getChain.js";
-
-// Import from chain-utils
 import {
+  createPublicClient,
+  http,
+  optimism,
+  optimismSepolia,
+  base,
+  baseSepolia,
   getGenAiNFTMainnetNetworks,
   getGenAiNFTTestnetNetworks,
   getViemChain,
   getUSDCConfig,
   getRpcUrl,
   toCAIP2,
+  type Chain,
 } from "@fretchen/chain-utils";
+
+// Import functions under test
+import { getExpectedNetworks, validatePaymentNetwork } from "../getChain.js";
 
 // USDC contracts expose name() and version() functions for EIP-712 domain
 // Note: They do NOT implement EIP-5267 eip712Domain(), so we read individual functions

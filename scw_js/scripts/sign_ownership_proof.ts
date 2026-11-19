@@ -11,8 +11,7 @@
  * Usage (from scw_js/): npx tsx scripts/sign_ownership_proof.ts <origin-url>
  */
 import dotenv from "dotenv";
-import { privateKeyToAccount } from "viem/accounts";
-import { loadPrivateKey } from "@fretchen/chain-utils";
+import { loadPrivateKey, privateKeyToAccount } from "@fretchen/chain-utils";
 
 // Resolves relative to cwd (scw_js/), matching how npm run dev:* scripts are invoked.
 dotenv.config();

@@ -9,8 +9,7 @@ import {
   sanitizeResourceServiceMetadata,
   type SanitizedResourceServiceMetadata,
 } from "@x402/extensions/bazaar";
-import { loadPrivateKey } from "@fretchen/chain-utils";
-import { privateKeyToAccount } from "viem/accounts";
+import { loadPrivateKey, privateKeyToAccount } from "@fretchen/chain-utils";
 import { S3ChannelStorage } from "./x402_channel_storage.js";
 import { EXPOSED_X402_HEADERS } from "./utils.js";
 import { logger } from "./logger.js";

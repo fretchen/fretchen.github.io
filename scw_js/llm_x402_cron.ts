@@ -1,9 +1,10 @@
 import { logger } from "./logger.js";
-import { createPublicClient, http, type Chain } from "viem";
 import {
+  createPublicClient,
   getSettlementTokens,
   getViemChain,
   getRpcUrl,
+  http,
   type SettlementTokenInfo,
 } from "@fretchen/chain-utils";
 import {
@@ -133,9 +134,7 @@ async function readFeeAllowanceClaimsLeft(
   }
   try {
     const publicClient = createPublicClient({
-      // The symlinked chain-utils' dist types resolve viem through its own node_modules copy;
-      // TS 6 refuses to treat that Chain and ours as the same type. Pin to this package's copy.
-      chain: getViemChain(network) as Chain,
+      chain: getViemChain(network),
       transport: http(getRpcUrl(network)),
     });
     const allowance = await publicClient.readContract({

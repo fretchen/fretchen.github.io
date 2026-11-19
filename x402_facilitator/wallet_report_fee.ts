@@ -7,9 +7,7 @@
  * same sitting. The stakes are low and one-sided: nothing funds-bearing runs here anymore,
  * a drift only mis-estimates the report's nominal-fee arithmetic.
  */
-import type { Address } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import { loadPrivateKey } from "@fretchen/chain-utils";
+import { loadPrivateKey, privateKeyToAccount, type Address } from "@fretchen/chain-utils";
 import { logger } from "./logger";
 
 /**

@@ -8,7 +8,7 @@
  */
 
 import { describe, test, expect } from "vitest";
-import { hashTypedData, keccak256, toHex } from "viem";
+import { hashTypedData, keccak256, toHex } from "@fretchen/chain-utils";
 
 describe("EIP-712 Reference Tests", () => {
   // Offizielle Test-Daten aus der EIP-712 Spezifikation

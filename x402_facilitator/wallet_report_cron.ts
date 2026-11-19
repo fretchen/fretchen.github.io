@@ -35,7 +35,7 @@ import {
   formatEther,
   type Address,
   type Abi,
-} from "viem";
+} from "@fretchen/chain-utils";
 import { logger } from "./logger";
 import { feeAmountFor, getFacilitatorAddress } from "./wallet_report_fee";
 import { getChainConfig, getFeeTokens, getRpcUrl } from "./chain_utils";

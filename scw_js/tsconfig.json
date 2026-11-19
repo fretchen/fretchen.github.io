@@ -7,6 +7,7 @@
     "verbatimModuleSyntax": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
+    "rootDir": "..",
     "outDir": "dist",
     "declaration": false,
     "noEmit": true

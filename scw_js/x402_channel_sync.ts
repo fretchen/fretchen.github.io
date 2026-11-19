@@ -1,4 +1,4 @@
-import { createPublicClient, http } from "viem";
+import { createPublicClient, http, type Chain } from "viem";
 import { getViemChain, getRpcUrl } from "@fretchen/chain-utils";
 import type { Channel, ChannelStorage } from "@x402/evm/batch-settlement/server";
 import { logger } from "./logger.js";
@@ -78,7 +78,7 @@ export async function resyncChannelState(
   { dryRun = false }: { dryRun?: boolean } = {},
 ): Promise<ChannelSyncResult[]> {
   const client = createPublicClient({
-    chain: getViemChain(network),
+    chain: getViemChain(network) as Chain, // single viem copy for TS 6 — see llm_x402_cron.ts
     transport: http(getRpcUrl(network)),
   });
 

@@ -28,60 +28,60 @@ export const mockGenerateAndUploadImage = vi.fn();
 export const mockUploadToS3 = vi.fn();
 
 // ===== GLOBAL MOCK SETUP =====
-export function setupGlobalMocks() {
-  // Mock viem
-  vi.mock("viem", () => mockViemFunctions);
-  vi.mock("viem/chains", () => ({
-    sepolia: { id: 11155111, name: "Sepolia" },
-    optimism: { id: 10, name: "OP Mainnet" },
-    optimismSepolia: { id: 11155420, name: "OP Sepolia" },
-    base: { id: 8453, name: "Base" },
-    baseSepolia: { id: 84532, name: "Base Sepolia" },
-  }));
-  vi.mock("viem/accounts", () => ({
-    privateKeyToAccount: mockViemFunctions.privateKeyToAccount,
-  }));
+// vi.mock calls must stay at module top level: vitest 5 hoists them above this
+// module's exports, so they register as soon as a test file imports this file —
+// still before the dynamic imports of the handlers under test.
+vi.mock("viem", () => mockViemFunctions);
+vi.mock("viem/chains", () => ({
+  sepolia: { id: 11155111, name: "Sepolia" },
+  optimism: { id: 10, name: "OP Mainnet" },
+  optimismSepolia: { id: 11155420, name: "OP Sepolia" },
+  base: { id: 8453, name: "Base" },
+  baseSepolia: { id: 84532, name: "Base Sepolia" },
+}));
+vi.mock("viem/accounts", () => ({
+  privateKeyToAccount: mockViemFunctions.privateKeyToAccount,
+}));
 
-  // Setup default privateKeyToAccount mock
-  mockViemFunctions.privateKeyToAccount.mockImplementation((_) => ({
-    address: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
-    signMessage: vi.fn(),
-    signTransaction: vi.fn(),
-    signTypedData: vi.fn(),
-  }));
+// Default privateKeyToAccount mock
+mockViemFunctions.privateKeyToAccount.mockImplementation((_) => ({
+  address: "0xAAEBC1441323B8ad6Bdf6793A8428166b510239C",
+  signMessage: vi.fn(),
+  signTransaction: vi.fn(),
+  signTypedData: vi.fn(),
+}));
 
-  // Setup parseEther mock to work like the real function
-  mockViemFunctions.parseEther.mockImplementation((eth) => {
-    return BigInt(parseFloat(eth) * 1e18);
-  });
+// parseEther mock that works like the real function
+mockViemFunctions.parseEther.mockImplementation((eth) => {
+  return BigInt(parseFloat(eth) * 1e18);
+});
 
-  // Mock x402/client
-  vi.mock("x402/client", () => ({
-    preparePaymentHeader: mockPreparePaymentHeader,
-  }));
+// Mock x402/client
+vi.mock("x402/client", () => ({
+  preparePaymentHeader: mockPreparePaymentHeader,
+}));
 
-  // Setup parseAbiItem default
-  mockViemFunctions.parseAbiItem.mockReturnValue({
-    id: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-    signature: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-  });
+// Default parseAbiItem
+mockViemFunctions.parseAbiItem.mockReturnValue({
+  id: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+  signature: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+});
 
-  // Mock S3 client
-  vi.mock("@fretchen/s3-utils", () => ({
-    getS3Object: mockGetS3Object,
-    putS3Object: mockPutS3Object,
-  }));
+// Mock S3 client
+vi.mock("@fretchen/s3-utils", () => ({
+  getS3Object: mockGetS3Object,
+  putS3Object: mockPutS3Object,
+}));
 
-  // Mock image_service
-  vi.mock("../image_service.js", () => ({
-    generateAndUploadImage: mockGenerateAndUploadImage,
-    uploadToS3: mockUploadToS3,
-    JSON_BASE_PATH: "https://my-imagestore.s3.nl-ams.scw.cloud/",
-  }));
+// Mock image_service
+vi.mock("../image_service.js", () => ({
+  generateAndUploadImage: mockGenerateAndUploadImage,
+  uploadToS3: mockUploadToS3,
+  JSON_BASE_PATH: "https://my-imagestore.s3.nl-ams.scw.cloud/",
+}));
 
-  // Global fetch mock
-  global.fetch = vi.fn();
-}
+// Global fetch mock
+global.fetch = vi.fn();
 
 // ===== MOCK CONTRACT SETUP =====
 export function createMockContract() {

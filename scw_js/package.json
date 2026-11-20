@@ -32,7 +32,7 @@
     "@fastify/url-data": "^6.0.4",
     "@scaleway/serverless-functions": "^1.1.2",
     "@types/node": "^26.1.0",
-    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/coverage-v8": "^5.1.0",
     "@vitest/eslint-plugin": "^1.6.27",
     "eslint": "^10.0.0",
     "eslint-plugin-node": "^11.1.0",
@@ -42,7 +42,7 @@
     "tsdown": "^0.23.1",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.58.2",
-    "vitest": "^4.1.11"
+    "vitest": "^5.1.0"
   },
   "dependencies": {
     "@fretchen/chain-utils": "file:../shared/chain-utils",

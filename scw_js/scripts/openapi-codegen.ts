@@ -131,6 +131,7 @@ export function toComponentSchema(schema: z.ZodType): Record<string, unknown> {
  * The golden-file tests compare parsed JSON, so formatting never affects them either way.
  */
 export function writeSpec(outputPath: string, spec: object): void {
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- dev codegen script, outputPath is a repo-local CLI arg
   writeFileSync(outputPath, JSON.stringify(spec, null, 2) + "\n");
   console.log(`Generated ${outputPath}`);
 }

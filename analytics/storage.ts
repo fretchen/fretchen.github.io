@@ -57,9 +57,11 @@ export class FileHitStorage implements HitStorage {
 
   async getWithMeta(key: string): Promise<GetResult | null> {
     const filePath = this.pathFor(key);
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- key = pinned ALLOWED_SITE + UTC timestamp, never request data
     if (!existsSync(filePath)) {
       return null;
     }
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- same key derivation as above
     const body = await readFile(filePath, "utf8");
     return { body, etag: this.etagOf(body) };
   }
@@ -73,7 +75,9 @@ export class FileHitStorage implements HitStorage {
       return { ok: false, status: 412 };
     }
     const filePath = this.pathFor(key);
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- same key derivation as above
     await mkdir(path.dirname(filePath), { recursive: true });
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- same key derivation as above
     await writeFile(filePath, body, "utf8");
     return { ok: true, etag: this.etagOf(body) };
   }

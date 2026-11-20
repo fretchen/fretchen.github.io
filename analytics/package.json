@@ -45,6 +45,7 @@
     "@vitest/coverage-v8": "^5.1.0",
     "dotenv": "^18.0.10",
     "eslint": "^10.15.0",
+    "eslint-plugin-security": "^4.2.1",
     "prettier": "^3.10.1",
     "serverless-scaleway-functions": ">=0.4.16",
     "tsdown": "^0.23.7",

@@ -32,7 +32,7 @@
     "@fastify/url-data": "^6.0.4",
     "@scaleway/serverless-functions": "^1.1.2",
     "@types/node": "^26.1.0",
-    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/coverage-v8": "^5.1.0",
     "@vitest/eslint-plugin": "^1.6.27",
     "eslint": "^10.0.0",
     "eslint-plugin-node": "^11.1.0",
@@ -42,15 +42,15 @@
     "tsdown": "^0.23.1",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.58.2",
-    "vitest": "^4.1.11"
+    "vitest": "^5.1.0"
   },
   "dependencies": {
     "@fretchen/chain-utils": "file:../shared/chain-utils",
     "@fretchen/s3-utils": "file:../shared/s3-utils",
     "@x402/core": "^2.23.0",
     "@x402/evm": "^2.23.0",
-    "@x402/extensions": "~2.30.0",
-    "@x402/mcp": "~2.30.0",
+    "@x402/extensions": "~2.31.0",
+    "@x402/mcp": "~2.31.0",
     "dotenv": "^18.0.1",
     "pino": "^10.3.1",
     "tsx": "^4.23.12",

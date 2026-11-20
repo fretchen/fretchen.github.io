@@ -35,22 +35,22 @@
   "dependencies": {
     "@fretchen/chain-utils": "file:../shared/chain-utils",
     "@fretchen/s3-utils": "file:../shared/s3-utils",
-    "isbot": "^5.2.2",
-    "viem": "^2.57.4"
+    "isbot": "^5.2.3",
+    "viem": "^2.58.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",
     "@scaleway/serverless-functions": "^1.1.2",
-    "@types/node": "^25.0.10",
+    "@types/node": "^26.6.6",
     "@vitest/coverage-v8": "^5.1.0",
-    "dotenv": "^17.4.2",
-    "eslint": "^10.0.0",
-    "prettier": "^3.0.0",
+    "dotenv": "^18.0.10",
+    "eslint": "^10.15.0",
+    "prettier": "^3.10.1",
     "serverless-scaleway-functions": ">=0.4.16",
-    "tsdown": "^0.23.1",
+    "tsdown": "^0.23.7",
     "tsx": "^4.23.5",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.60.0",
+    "typescript-eslint": "^8.73.0",
     "vitest": "^5.1.0"
   },
   "engines": {

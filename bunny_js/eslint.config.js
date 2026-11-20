@@ -1,4 +1,5 @@
 import js from "@eslint/js";
+import securityPlugin from "eslint-plugin-security";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
@@ -45,6 +46,23 @@ export default tseslint.config(
       "arrow-spacing": "error",
       "template-curly-spacing": "error",
       "object-shorthand": "error",
+    },
+  },
+  // Security hotspot rules (eslint-plugin-security): recommended set on source files,
+  // noisy/irrelevant rules off. detect-object-injection fires on every computed property
+  // access; the CSRF/mustache rules assume Express/server-side templates we don't use;
+  // Buffer noAssert is a deprecated pattern. Unambiguous rules are errors.
+  {
+    files: ["src/**/*.ts", "scripts/**/*.ts"],
+    plugins: { security: securityPlugin },
+    rules: {
+      ...securityPlugin.configs.recommended.rules,
+      "security/detect-object-injection": "off",
+      "security/detect-no-csrf-before-method-override": "off",
+      "security/detect-disable-mustache-escape": "off",
+      "security/detect-buffer-noassert": "off",
+      "security/detect-pseudoRandomBytes": "error",
+      "security/detect-eval-with-expression": "error",
     },
   },
   // Test files: type-aware like the rest of the package, plus vitest globals.

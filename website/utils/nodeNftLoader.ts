@@ -5,7 +5,7 @@
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { createPublicClient, http, type Chain } from "viem";
+import { createPublicClient, http } from "viem";
 import { getGenAiNFTAddress, GenImNFTv4ABI, getViemChain } from "@fretchen/chain-utils";
 import { NFTMetadata, TokenRef, tokenRefKey } from "../types/BlogPost";
 
@@ -109,10 +109,7 @@ export async function loadMultipleNFTMetadataNode(refs: TokenRef[]): Promise<Rec
   const tokenURIByKey = new Map<string, UriResult>();
   for (const [network, networkRefs] of byNetwork) {
     const publicClient = createPublicClient({
-      // getViemChain's Chain comes from chain-utils' own viem copy (the file: dep
-      // installs its dev tree); structurally identical, but TS 6 no longer accepts
-      // the cross-copy assignability.
-      chain: getViemChain(network) as Chain,
+      chain: getViemChain(network),
       transport: http(undefined, { timeout: FETCH_TIMEOUT_MS, retryCount: 1 }),
     });
     const address = getGenAiNFTAddress(network);

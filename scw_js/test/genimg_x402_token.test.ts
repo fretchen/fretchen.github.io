@@ -17,7 +17,6 @@ import { describe, test, expect, beforeAll, beforeEach, afterEach, vi } from "vi
 
 // Import common setup
 import {
-  setupGlobalMocks,
   createMockContract,
   setupTestEnvironment,
   cleanupTestEnvironment,
@@ -28,9 +27,6 @@ import {
   mockViemFunctions,
   mockGenerateAndUploadImage,
 } from "./setup.js";
-
-// Setup global mocks
-setupGlobalMocks();
 
 // A minimal valid x-payment header — enough to clear the 402 challenge and reach
 // request validation, without a facilitator mock. Used by tests that assert on

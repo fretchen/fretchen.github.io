@@ -6,8 +6,29 @@
 version: 2
 updates:
   - package-ecosystem: "npm"
+    # website needs its own ignore set, so it gets its own block
     directories:
       - "website"
+    schedule:
+      interval: "weekly"
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"
+    ignore:
+      # website keeps eslint-plugin-react, whose peer range is eslint <10.
+      # Lift this once it ships eslint-10 support.
+      - dependency-name: "eslint"
+        versions: [">=10.0.0"]
+      - dependency-name: "@eslint/js"
+        versions: [">=10.0.0"]
+      # typescript-eslint 8.x declares a peer range of typescript <6.1.0.
+      # Lift this once typescript-eslint supports TypeScript 7.
+      - dependency-name: "typescript"
+        versions: [">=6.1.0"]
+
+  - package-ecosystem: "npm"
+    directories:
       - "eth"
       - "scw_js"
       - "x402_facilitator"

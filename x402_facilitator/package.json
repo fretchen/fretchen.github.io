@@ -42,7 +42,7 @@
     "@eslint/js": "^10.0.0",
     "@scaleway/serverless-functions": "^1.1.2",
     "@types/node": "^25.0.10",
-    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/coverage-v8": "^5.1.0",
     "eslint": "^10.0.0",
     "prettier": "^3.0.0",
     "serverless-scaleway-functions": ">=0.4.16",
@@ -50,7 +50,7 @@
     "tsx": "^4.23.13",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.60.0",
-    "vitest": "^4.1.11"
+    "vitest": "^5.1.0"
   },
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-gnu": "*",

@@ -5,6 +5,18 @@ import {
   isTestnet,
   loadPrivateKey,
   getRpcUrl,
+  getContract,
+  createWalletClient,
+  createPublicClient,
+  http,
+  parseEther,
+  privateKeyToAccount,
+  type PublicClient,
+  type WalletClient,
+  type Chain,
+  type Account,
+  type Transport,
+  type GetContractReturnType,
 } from "@fretchen/chain-utils";
 import { parseJsonBody, CORS_HEADERS, errorResponse, openAiError } from "./utils.js";
 import {
@@ -14,21 +26,7 @@ import {
   type ImageGenerationResponse,
 } from "./genimg_schemas.js";
 import type { z } from "zod";
-import {
-  getContract,
-  createWalletClient,
-  createPublicClient,
-  http,
-  parseEther,
-  type PublicClient,
-  type WalletClient,
-  type Chain,
-  type Account,
-  type Transport,
-  type GetContractReturnType,
-} from "viem";
 import { generateAndUploadImage, JSON_BASE_PATH, type Provider } from "./image_service.js";
-import { privateKeyToAccount } from "viem/accounts";
 import {
   createResourceServer,
   createPaymentRequirements,

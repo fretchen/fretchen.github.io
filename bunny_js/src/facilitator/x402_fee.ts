@@ -17,14 +17,14 @@ import {
   http,
   getContract,
   nonceManager,
+  privateKeyToAccount,
+  loadPrivateKey,
   WaitForTransactionReceiptTimeoutError,
   type Address,
   type Abi,
   type Hex,
-} from "viem";
-import { privateKeyToAccount } from "viem/accounts";
+} from "@fretchen/chain-utils";
 import { logger } from "../logger";
-import { loadPrivateKey } from "@fretchen/chain-utils";
 import { findFeeToken, getChainConfig, getRpcUrl } from "./chain_utils";
 
 // ═══════════════════════════════════════════════════════════════

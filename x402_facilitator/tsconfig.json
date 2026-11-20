@@ -12,6 +12,7 @@
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
+    "rootDir": "..",
     "noEmit": true
   },
   "include": ["*.ts", "scripts/**/*.ts", "test/**/*.ts"],

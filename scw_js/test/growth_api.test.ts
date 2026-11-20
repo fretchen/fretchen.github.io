@@ -13,7 +13,7 @@ vi.mock("@fretchen/s3-utils", () => ({
 // @fretchen/chain-utils, which resolves its own copy of viem through the
 // symlinked workspace package — a `vi.mock("viem")` in this package cannot
 // reach it. Signing for real is also the stronger test.
-import { privateKeyToAccount } from "viem/accounts";
+import { privateKeyToAccount } from "@fretchen/chain-utils";
 
 // ===== Test data =====
 

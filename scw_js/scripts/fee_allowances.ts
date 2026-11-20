@@ -35,13 +35,11 @@ import {
   erc20Abi,
   formatUnits,
   http,
-  type Address,
-} from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import {
+  privateKeyToAccount,
   getRpcUrl,
   getViemChain,
   loadPrivateKey,
+  type Address,
   type SettlementTokenInfo,
 } from "@fretchen/chain-utils";
 import { facilitatorFeeFor } from "../fee_config.js";
@@ -108,7 +106,10 @@ function units(atomic: bigint, decimals: number): string {
 }
 
 function publicClientFor(network: string) {
-  return createPublicClient({ chain: getViemChain(network), transport: http(getRpcUrl(network)) });
+  return createPublicClient({
+    chain: getViemChain(network),
+    transport: http(getRpcUrl(network)),
+  });
 }
 
 async function readAllowance(

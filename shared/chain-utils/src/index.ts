@@ -163,3 +163,6 @@ export {
   verifySignedMessage,
   type BearerPayload,
 } from "./auth-protocol";
+
+// The viem facade — see src/viem.ts. Consumers import viem through this package.
+export * from "./viem";

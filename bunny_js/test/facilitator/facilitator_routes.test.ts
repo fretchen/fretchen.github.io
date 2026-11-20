@@ -496,7 +496,6 @@ describe("facilitator routes (verify + settle)", () => {
           throw new Error("the body must not be read when Content-Length already refuses");
         },
       } as unknown as Request;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       await expect(readCappedBody(req)).resolves.toBe("too-large");
     });
 

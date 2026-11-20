@@ -1,5 +1,4 @@
-import { createPublicClient, http } from "viem";
-import { getViemChain, getRpcUrl } from "@fretchen/chain-utils";
+import { createPublicClient, getViemChain, getRpcUrl, http } from "@fretchen/chain-utils";
 import type { Channel, ChannelStorage } from "@x402/evm/batch-settlement/server";
 import { logger } from "./logger.js";
 

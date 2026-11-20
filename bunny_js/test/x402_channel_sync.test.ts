@@ -3,14 +3,13 @@ import type { Channel, ChannelStorage } from "@x402/evm/batch-settlement/server"
 
 const { mockReadContract } = vi.hoisted(() => ({ mockReadContract: vi.fn() }));
 
-vi.mock("viem", async () => {
-  const actual = await vi.importActual("viem");
-  return { ...actual, createPublicClient: vi.fn(() => ({ readContract: mockReadContract })) };
-});
-
+// The module takes its viem surface through the chain-utils facade (see
+// shared/VIEM_TS6_NOTES.md), so the client factory is mocked where it is imported from.
 vi.mock("@fretchen/chain-utils", () => ({
   getViemChain: vi.fn(() => ({ id: 10 })),
   getRpcUrl: vi.fn(() => "https://rpc.example"),
+  createPublicClient: vi.fn(() => ({ readContract: mockReadContract })),
+  http: vi.fn(() => "transport"),
 }));
 
 import { resyncChannelState } from "../src/x402_channel_sync.js";

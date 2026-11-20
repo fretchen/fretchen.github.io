@@ -16,8 +16,7 @@
  * this contract is precisely that spread — every `base.extra` key survives enhancement.
  */
 import { describe, expect, it } from "vitest";
-import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import { EURE_ADDRESSES } from "@fretchen/chain-utils";
+import { EURE_ADDRESSES, generatePrivateKey, privateKeyToAccount } from "@fretchen/chain-utils";
 import {
   createBatchSettlementPaymentRequirements,
   createPaymentRequirements,

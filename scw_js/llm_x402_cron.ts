@@ -1,9 +1,10 @@
 import { logger } from "./logger.js";
-import { createPublicClient, http } from "viem";
 import {
+  createPublicClient,
   getSettlementTokens,
   getViemChain,
   getRpcUrl,
+  http,
   type SettlementTokenInfo,
 } from "@fretchen/chain-utils";
 import {

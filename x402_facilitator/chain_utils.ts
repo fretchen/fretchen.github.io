@@ -5,7 +5,6 @@
  * Uses @fretchen/chain-utils for chain/address data.
  */
 
-import type { Chain } from "viem";
 import {
   getViemChain,
   tryGetEIP3009SplitterAddress,
@@ -14,6 +13,7 @@ import {
   getSettlementTokens,
   type Network,
   type SettlementTokenInfo,
+  type Chain,
 } from "@fretchen/chain-utils";
 
 export interface ChainConfig {

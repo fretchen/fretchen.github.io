@@ -10,7 +10,7 @@
  * schemes coexist on the same /verify and /settle endpoints.
  */
 
-import { createPublicClient, createWalletClient, http, type Account } from "viem";
+import { createPublicClient, createWalletClient, http, type Account } from "@fretchen/chain-utils";
 import { x402Facilitator } from "@x402/core/facilitator";
 import { toFacilitatorEvmSigner } from "@x402/evm";
 import { ExactEvmScheme } from "@x402/evm/exact/facilitator";

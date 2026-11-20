@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { privateKeyToAccount } from "viem/accounts";
+import { privateKeyToAccount } from "@fretchen/chain-utils";
 
 // The handler's module-level storage is S3HitStorage; the range logic below is
 // tested directly against MemoryHitStorage instead.

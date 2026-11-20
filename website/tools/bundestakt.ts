@@ -129,9 +129,7 @@ interface RawClaimsResponse {
 // the model can explain a failure instead of the whole chat message crashing.
 
 export type BundestaktResult =
-  | { status: "ok"; [key: string]: unknown }
-  | { status: "not_found" }
-  | { status: "fetch_failed"; reason: string };
+  { status: "ok"; [key: string]: unknown } | { status: "not_found" } | { status: "fetch_failed"; reason: string };
 
 /** Turns a fetch-time error (thrown by `fetchSitzungen`/`fetchClaims`) into a result. */
 export { fetchFailed } from "./failure";

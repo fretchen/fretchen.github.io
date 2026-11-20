@@ -81,10 +81,7 @@ export const fetchUrlTool: X402Tool = {
  * a url that is not an absolute https one, and a proxy response that is not the envelope.
  */
 export type FetchToolResult =
-  | PageResult
-  | { status: "invalid_url"; url: string; hint: string }
-  | { status: "invalid_response" }
-  | PaymentFailure;
+  PageResult | { status: "invalid_url"; url: string; hint: string } | { status: "invalid_response" } | PaymentFailure;
 
 /** Turns a fetch-time error (thrown by `fetchViaProxy`) into a result. */
 export { fetchFailed } from "./failure";

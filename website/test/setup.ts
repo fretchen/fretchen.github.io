@@ -112,16 +112,14 @@ interface MockAccountData {
   chainId?: number;
 }
 
-export const mockAccountData = vi.fn(
-  (): MockAccountData => ({
-    address: "0x123456789abcdef",
-    isConnected: false,
-    status: "disconnected",
-    isConnecting: false,
-    isDisconnected: true,
-    isReconnecting: false,
-  }),
-);
+export const mockAccountData = vi.fn((): MockAccountData => ({
+  address: "0x123456789abcdef",
+  isConnected: false,
+  status: "disconnected",
+  isConnecting: false,
+  isDisconnected: true,
+  isReconnecting: false,
+}));
 
 // Contract Mocks
 // Same reasoning as `MockAccountData` above: `.mockReturnValue()` is called with
@@ -136,15 +134,13 @@ interface MockReadContractData {
   refetch: ReturnType<typeof vi.fn>;
 }
 
-export const mockReadContractData = vi.fn(
-  (): MockReadContractData => ({
-    data: undefined,
-    error: null,
-    isPending: false,
-    isLoading: false,
-    refetch: vi.fn(),
-  }),
-);
+export const mockReadContractData = vi.fn((): MockReadContractData => ({
+  data: undefined,
+  error: null,
+  isPending: false,
+  isLoading: false,
+  refetch: vi.fn(),
+}));
 
 export const mockWriteContractData = vi.fn(() => ({
   writeContract: vi.fn(),

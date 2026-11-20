@@ -177,8 +177,7 @@ export async function fetchAgentRegistration(origin: string): Promise<Erc8004Reg
     if (!res.ok) return null;
     const file = (await res.json()) as { name?: unknown; image?: unknown; registrations?: unknown };
     const first = (Array.isArray(file.registrations) ? file.registrations[0] : undefined) as
-      | { agentId?: unknown; agentRegistry?: unknown }
-      | undefined;
+      { agentId?: unknown; agentRegistry?: unknown } | undefined;
     if (typeof first?.agentId !== "number" || typeof first.agentRegistry !== "string") return null;
     return {
       agentId: first.agentId,

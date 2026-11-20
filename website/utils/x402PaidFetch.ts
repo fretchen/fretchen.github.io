@@ -438,9 +438,8 @@ export async function createPaidFetch({
   // Dynamic, browser-only: keeps the @x402 runtime out of SSR.
   const { x402Client, wrapFetchWithPayment, x402HTTPClient } = await import("@x402/fetch");
   const { toClientEvmSigner } = await import("@x402/evm");
-  const { BatchSettlementEvmScheme, readChannelBalanceAndTotalClaimed } = await import(
-    "@x402/evm/batch-settlement/client"
-  );
+  const { BatchSettlementEvmScheme, readChannelBalanceAndTotalClaimed } =
+    await import("@x402/evm/batch-settlement/client");
 
   // readContract is documented as "optional" on ClientEvmSigner (only "required for extension
   // enrichment" per the SDK's own JSDoc), but batch-settlement's corrective-402 recovery

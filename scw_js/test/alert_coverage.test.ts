@@ -67,6 +67,14 @@ describe("scw_js alert coverage", () => {
     }
   });
 
+  // payments.yaml filters have no level gate, so this logger.warn's phrase must match none
+  // of them. If it starts matching, it was reworded into collision or promoted to
+  // logger.error — then give it an alert phrase or an EXEMPT entry, deliberately.
+  it("the post-condition warn phrase pages nobody", () => {
+    const phrase = "Post-sweep escrow check could not run — S3 list timed out";
+    expect(isCovered(scwJsRules, phrase)).toBe(false);
+  });
+
   for (const { file, message } of messages) {
     it(`"${message}" (${file}) is alertable`, () => {
       if (message in EXEMPT) {

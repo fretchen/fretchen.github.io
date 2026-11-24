@@ -84,6 +84,8 @@ interface NetworkResult {
   escrowHeld?: string;
   /** Channels that should have been refunded by now and were not — see assertSweptClean. */
   stuckChannels?: string[];
+  /** Post-condition escrow read failed (transient S3 stall) — shown, not paged; next run re-verifies. */
+  checkError?: string;
   error?: string;
 }
 
@@ -377,24 +379,37 @@ export async function handle(
           logger.error({ err, network, asset }, "Refund sweep failed");
         }
 
-        // The sweep's post-condition, checked against storage as it now stands. Runs even when the
-        // refund step threw: a failed sweep is exactly when escrow is most likely left behind.
-        const remaining = await scheme.getStorage().list();
-        // `balance` is cumulative DEPOSITS — claims do not decrement it, they move funds out via
-        // `totalClaimed` (the SDK validates a voucher's cumulative maxClaimable against `balance`,
-        // so it has to keep growing). Summing `balance` alone therefore reports money that has
-        // already been collected as still at risk, in the field printed next to the stuck-escrow
-        // error. Clamped at zero so a record caught mid-drift reads as nothing held rather than a
-        // negative total.
-        const escrowHeld = remaining.reduce((sum, c) => {
-          const held = BigInt(c.balance) - BigInt(c.totalClaimed);
-          return sum + (held > 0n ? held : 0n);
-        }, 0n);
-        const stuckChannels = findStuckChannels(remaining);
-        if (stuckChannels.length > 0) {
-          logger.error(
-            { network, asset, stuckChannels, escrowHeld: escrowHeld.toString() },
-            "Channels are past the refund threshold and still hold escrow — the sweep did not do its job",
+        // The sweep's post-condition. Only the read can fail here; a stalled S3 list must not
+        // land in the outer catch as "claimAndSettle failed" (2026-11-23) — warn + checkError
+        // on the row, the audit re-verifies next run. Warn, and phrased to match no alert
+        // filter (pinned in test/alert_coverage.test.ts).
+        let checkError: string | undefined;
+        let escrowHeld: bigint | undefined;
+        let stuckChannels: string[] = [];
+        try {
+          // `balance` is cumulative DEPOSITS — claims do not decrement it, they move funds out via
+          // `totalClaimed` (the SDK validates a voucher's cumulative maxClaimable against `balance`,
+          // so it has to keep growing). Summing `balance` alone therefore reports money that has
+          // already been collected as still at risk, in the field printed next to the stuck-escrow
+          // error. Clamped at zero so a record caught mid-drift reads as nothing held rather than a
+          // negative total.
+          const remaining = await scheme.getStorage().list();
+          escrowHeld = remaining.reduce((sum, c) => {
+            const held = BigInt(c.balance) - BigInt(c.totalClaimed);
+            return sum + (held > 0n ? held : 0n);
+          }, 0n);
+          stuckChannels = findStuckChannels(remaining);
+          if (stuckChannels.length > 0) {
+            logger.error(
+              { network, asset, stuckChannels, escrowHeld: escrowHeld.toString() },
+              "Channels are past the refund threshold and still hold escrow — the sweep did not do its job",
+            );
+          }
+        } catch (err) {
+          checkError = (err as Error).message;
+          logger.warn(
+            { err, network, asset },
+            "Post-sweep escrow check could not run — S3 list timed out",
           );
         }
 
@@ -409,7 +424,8 @@ export async function handle(
           ...(garbageCollected !== undefined && { garbageCollected }),
           ...(anomalousChannels !== undefined && { anomalousChannels }),
           ...(claimsLeft !== null && { feeAllowanceClaimsLeft: claimsLeft }),
-          escrowHeld: escrowHeld.toString(),
+          ...(escrowHeld !== undefined && { escrowHeld: escrowHeld.toString() }),
+          ...(checkError !== undefined && { checkError }),
           ...(stuckChannels.length > 0 && { stuckChannels }),
         });
       } catch (err) {

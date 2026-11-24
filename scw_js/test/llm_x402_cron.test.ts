@@ -509,6 +509,59 @@ describe("llm_x402_cron", () => {
   });
 
   // ═══════════════════════════════════════════════════════════
+  // The post-condition read itself failing (2026-11-23): warn + checkError, no page —
+  // while the sweep-failure signal is preserved.
+  // ═══════════════════════════════════════════════════════════
+
+  it("reports a failed post-condition read as checkError without failing the run", async () => {
+    // list() runs three times per pair: partition (1), refund mock (2), post-condition (3).
+    let calls = 0;
+    mockStorageList.mockImplementation(async () => {
+      calls += 1;
+      if (calls === 3) {
+        throw new DOMException("The operation was aborted due to timeout", "TimeoutError");
+      }
+      return [];
+    });
+
+    const res = await handle(makeEvent() as never, {});
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body) as { results: Array<Record<string, unknown>> };
+    expect(body.results).toHaveLength(RUNS.length);
+    const first = body.results[0];
+    expect(first.checkError).toContain("aborted due to timeout");
+    expect(first.claims).toBe(1);
+    expect(first.error).toBeUndefined();
+    expect(first.escrowHeld).toBeUndefined();
+    expect(first.stuckChannels).toBeUndefined();
+    // Only this pair lost its audit; later pairs listed fine.
+    expect(body.results.slice(1).every((r) => r.checkError === undefined)).toBe(true);
+  });
+
+  it("keeps the sweep-failure page when the post-condition read also fails", async () => {
+    mockRefundIdleChannels.mockRejectedValue(new Error("batch reverted"));
+    // With the refund batch throwing, list() runs partition (1), then the read (2).
+    let calls = 0;
+    mockStorageList.mockImplementation(async () => {
+      calls += 1;
+      if (calls === 2) {
+        throw new DOMException("The operation was aborted due to timeout", "TimeoutError");
+      }
+      return [];
+    });
+
+    const res = await handle(makeEvent() as never, {});
+
+    expect(res.statusCode).toBe(500);
+    const body = JSON.parse(res.body) as { results: Array<Record<string, unknown>> };
+    const first = body.results[0];
+    expect(first.refundError).toContain("batch reverted");
+    expect(first.checkError).toContain("aborted due to timeout");
+    expect(first.error).toBeUndefined();
+  });
+
+  // ═══════════════════════════════════════════════════════════
   // The sweep's pre-pass: refundable / fully-claimed (garbage-collected) / anomalous.
   // The 2026-10-11 incident: a fully-claimed record with balance != 0 poisoned the batch
   // with a ZeroRefund — the pre-pass deletes such records before the batch runs.
